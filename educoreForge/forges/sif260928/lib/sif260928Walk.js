@@ -36,7 +36,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'refuse'));
-const { EDGE_TYPES } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const { EDGE_TYPES, rootOwnershipEdgeTypeFor } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const SIF260928_NODE_KIND_TABLE = require('./sif260928NodeKindTable');
 const questions = require('./sif260928Questions');
 const codesets = require('./sif260928Codesets');
@@ -210,6 +210,8 @@ const emitObjectTree = ({ rowList, resolvedTableTitleByRefIdName, kit }) => {
 			carriedProperties: kit.carriedProperties({ parsedObject: { objectName, fieldCount, tableTitleName: tableTitleNameByObjectPath.get(objectPath) }, carryList: OBJECT_CARRY_LIST }),
 			origin: `object ${objectPath}`,
 		});
+		// ⟪campaign P3, W-C-1⟫ a node parented on the root is REACHED from it, by the edge its role names
+		kit.addEdge({ edgeType: rootOwnershipEdgeTypeFor(objectKind.role), fromStableId: kit.rootStableId, toStableId: stableIdOfPath(objectPath), edgeContext: `root ownership ${objectPath}` });
 	});
 
 	const containerKind = SIF260928_NODE_KIND_TABLE.container;

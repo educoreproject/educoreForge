@@ -117,6 +117,25 @@ const EDGE_TYPES = {
 	REFERENCES_OBJECT: 'REFERENCES_OBJECT',
 };
 
+// ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE ⟪campaign P3, W-C-1 (V1-C28, G5)⟫ — the ONE table a root-parented node's ownership edge
+// is read from: a node whose parentId is the standard root is reached from the root by the edge its role names here. Each
+// row is licensed by its EDGE_TYPES definition ("root or container to a class"; "class (or root) to a property"; "property,
+// field or root to the option set"). A role with no row has no root ownership edge, and rootOwnershipEdgeTypeFor refuses it
+// by name rather than guessing (sif260928 minted its Objects, Questions and Codesets on the root with NO edge, so all
+// 39,267 of its nodes were unreachable from the root).
+const ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE = Object.freeze({
+	[DME_ROLES.CLASS]: EDGE_TYPES.HAS_CLASS,
+	[DME_ROLES.PROPERTY]: EDGE_TYPES.HAS_PROPERTY,
+	[DME_ROLES.OPTION_SET]: EDGE_TYPES.HAS_OPTION_SET,
+	[DME_ROLES.SUPPORT]: EDGE_TYPES.HAS_SUPPORT,
+});
+const rootOwnershipEdgeTypeFor = (role) => {
+	if (!Object.prototype.hasOwnProperty.call(ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE, role)) {
+		throw new Error(`vocabulary: role ${role} has no root ownership edge type (ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE); a node of this role cannot hang on the root`);
+	}
+	return ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE[role];
+};
+
 // EMBED-TEXT VECTOR INDEX DESCRIPTOR ⟪R-ET-24⟫ -- the one home for the second vector index's names: the
 // label it covers, the property it indexes, and the suffix appended to the graph name to name the index
 // (<graphName>_embedText_vector). P4's index DDL is built from it, so the loader and any reader cannot
@@ -1061,6 +1080,8 @@ const vocabulary = {
 	NODE_LABELS,
 	DME_ROLES,
 	EDGE_TYPES,
+	ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE,
+	rootOwnershipEdgeTypeFor,
 	EMBED_TEXT_VECTOR,
 	EDGE_ENDPOINT_KIND_PAIR_LIST_BY_TYPE,
 	MAPPING_EDGE_TYPES,

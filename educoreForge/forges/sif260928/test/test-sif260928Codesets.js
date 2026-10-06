@@ -73,6 +73,7 @@ const RULED_CODESET_COUNT = 131;
 const RULED_CODESET_VALUE_COUNT = 4055;
 // ⟪campaign P3, W-C-2 / S3⟫ the Field -> Codeset edge is HAS_OPTION_SET (it was CONSTRAINED_BY); the count is the same
 const RULED_FIELD_OPTION_SET_COUNT = 1495;
+const RULED_ROOT_OPTION_SET_ENDPOINT_LABELS = 'Sif260928Root>Sif260928Codeset';
 const RULED_REFERENCES_OBJECT_COUNT = 607;
 const RULED_REFERENCES_OBJECT_VIA_MAP_COUNT = 200;
 // A5's text edges, rebuilt from C1's question map and segment table alone (DEVLOG-A5.md): not A4's
@@ -93,6 +94,10 @@ const RULED_QUESTION_REF_ID_LIST_SHA256 = '7f4ed86ec57a07b1759c4c87e5b54ad1aac42
 const RULED_EDGE_ENDPOINT_LABELS_BY_TYPE = Object.freeze({
 	HAS_VALUE: 'Sif260928Codeset>Sif260928CodesetValue',
 	HAS_OPTION_SET: 'Sif260928Field>Sif260928Codeset',
+	// ⟪campaign P3, W-C-1⟫ the root's ownership edges (test-sif260928RootReachability owns them); HAS_OPTION_SET has two
+	// shapes since then, so the root shape is admitted below by its own row
+	HAS_CLASS: 'Sif260928Root>Sif260928Object',
+	HAS_PROPERTY: 'Sif260928Root>Sif260928Question',
 	REFERENCES_OBJECT: 'Sif260928Field>Sif260928Object',
 });
 
@@ -381,9 +386,9 @@ const kindsConjunctList = [
 		evaluate: overForged((forged) => {
 			const labelByStableId = new Map(forged.nodes.map((oneNode) => [oneNode.stableId, oneNode.labels[1]]));
 			const edgeCountByType = countBy(forged.edges, (oneEdge) => oneEdge.type);
-			const ruledEdgeCountByType = { ...RULED_EARLIER_EDGE_COUNT_BY_TYPE, HAS_VALUE: RULED_CODESET_VALUE_COUNT, HAS_OPTION_SET: RULED_FIELD_OPTION_SET_COUNT, REFERENCES_OBJECT: RULED_REFERENCES_OBJECT_COUNT, EMBEDS_TEXT_OF: RULED_EMBEDS_TEXT_OF_COUNT };
+			const ruledEdgeCountByType = { ...RULED_EARLIER_EDGE_COUNT_BY_TYPE, HAS_VALUE: RULED_CODESET_VALUE_COUNT, HAS_OPTION_SET: RULED_FIELD_OPTION_SET_COUNT + RULED_CODESET_COUNT, HAS_CLASS: 159, HAS_PROPERTY: 5018, REFERENCES_OBJECT: RULED_REFERENCES_OBJECT_COUNT, EMBEDS_TEXT_OF: RULED_EMBEDS_TEXT_OF_COUNT };
 			const endpointWrongList = forged.edges
-				.filter((oneEdge) => RULED_EDGE_ENDPOINT_LABELS_BY_TYPE[oneEdge.type] !== undefined && `${labelByStableId.get(oneEdge.fromRef.id)}>${labelByStableId.get(oneEdge.toRef.id)}` !== RULED_EDGE_ENDPOINT_LABELS_BY_TYPE[oneEdge.type])
+				.filter((oneEdge) => RULED_EDGE_ENDPOINT_LABELS_BY_TYPE[oneEdge.type] !== undefined && `${labelByStableId.get(oneEdge.fromRef.id)}>${labelByStableId.get(oneEdge.toRef.id)}` !== RULED_EDGE_ENDPOINT_LABELS_BY_TYPE[oneEdge.type] && `${labelByStableId.get(oneEdge.fromRef.id)}>${labelByStableId.get(oneEdge.toRef.id)}` !== RULED_ROOT_OPTION_SET_ENDPOINT_LABELS)
 				.map((oneEdge) => `${oneEdge.type} ${oneEdge.fromRef.id} -> ${oneEdge.toRef.id}`);
 			return {
 				pass: sortedEntriesText(edgeCountByType) === sortedEntriesText(ruledEdgeCountByType) && endpointWrongList.length === 0,

@@ -86,6 +86,10 @@ const RULED_A4_EDGE_COUNT_BY_TYPE = Object.freeze({ HAS_VALUE: 4055, HAS_OPTION_
 // A5: one EMBEDS_TEXT_OF per distinct (text, Question or Object) pair, rebuilt from C1's question map and
 // segment table alone (14,380 Question pairs and 159 Object names; DEVLOG-A5.md)
 const RULED_A5_EDGE_COUNT_BY_TYPE = Object.freeze({ EMBEDS_TEXT_OF: 14539 });
+// ⟪campaign P3, W-C-1⟫ the root's ownership edges, one per root-parented node: 159 Objects, 5,018 Questions, 131 Codesets
+// (HAS_OPTION_SET's total is the 1,495 Field edges PLUS these 131; test-sif260928RootReachability owns the split)
+const RULED_ROOT_OWNERSHIP_EDGE_COUNT_BY_TYPE = Object.freeze({ HAS_CLASS: 159, HAS_PROPERTY: 5018 });
+const RULED_ROOT_OPTION_SET_EDGE_COUNT = 131;
 // Measured on the TSV by A2 BEFORE the tree existed (scratch script over the forge's loader):
 // 699 three-segment Containers, and 3,138 attributes on an element that is itself a row, over
 // 2,645 such elements. The other two rows follow: 6,586 - 699, and the 14,431 Fields not directly
@@ -370,7 +374,7 @@ registerMutationTwin({
 const unchangedConjunctList = [
 	{
 		conjunctId: 'earlierCountsUnchanged',
-		title: 'the nodes are exactly 1 root, 159 Objects, 6,586 Containers, 15,620 Fields, 5,018 Questions, 131 Codesets, 4,055 CodesetValues and (A5) 7,698 text nodes; the edges are HAS_FIELD, HAS_CHILD, HAS_INSTANCE, HAS_VALUE, HAS_OPTION_SET, REFERENCES_OBJECT and (A5) EMBEDS_TEXT_OF only; each Object still carries fieldCount = its rows',
+		title: 'the nodes are exactly 1 root, 159 Objects, 6,586 Containers, 15,620 Fields, 5,018 Questions, 131 Codesets, 4,055 CodesetValues and (A5) 7,698 text nodes; the edges are HAS_FIELD, HAS_CHILD, HAS_INSTANCE, HAS_VALUE, HAS_OPTION_SET, REFERENCES_OBJECT, (A5) EMBEDS_TEXT_OF and (P3 W-C-1) the root ownership HAS_CLASS / HAS_PROPERTY / HAS_OPTION_SET only; each Object still carries fieldCount = its rows',
 		twinNameList: ['oneRowNotMinted'],
 		evaluate: overForged((forged) => {
 			const countByLabel = countBy(forged.nodes, (oneNode) => oneNode.labels[1]);
@@ -379,7 +383,7 @@ const unchangedConjunctList = [
 			const fieldCountWrongList = nodeListByLabel(forged, 'Sif260928Object').filter((oneNode) => oneNode.properties.fieldCount !== rowCountByObjectPath[oneNode.properties.path]).map((oneNode) => oneNode.stableId);
 			const ruledHasChildTotal = Object.values(RULED_HAS_CHILD_COUNT_BY_KIND_PAIR).reduce((soFar, pairCount) => soFar + pairCount, 0);
 			return {
-				pass: sortedEntriesText(countByLabel) === sortedEntriesText(RULED_NODE_COUNT_BY_LABEL) && sortedEntriesText(edgeCountByType) === sortedEntriesText({ HAS_FIELD: RULED_HAS_FIELD_COUNT, HAS_CHILD: ruledHasChildTotal, HAS_INSTANCE: RULED_HAS_INSTANCE_COUNT, ...RULED_A4_EDGE_COUNT_BY_TYPE, ...RULED_A5_EDGE_COUNT_BY_TYPE }) && fieldCountWrongList.length === 0,
+				pass: sortedEntriesText(countByLabel) === sortedEntriesText(RULED_NODE_COUNT_BY_LABEL) && sortedEntriesText(edgeCountByType) === sortedEntriesText({ HAS_FIELD: RULED_HAS_FIELD_COUNT, HAS_CHILD: ruledHasChildTotal, HAS_INSTANCE: RULED_HAS_INSTANCE_COUNT, ...RULED_A4_EDGE_COUNT_BY_TYPE, HAS_OPTION_SET: RULED_A4_EDGE_COUNT_BY_TYPE.HAS_OPTION_SET + RULED_ROOT_OPTION_SET_EDGE_COUNT, ...RULED_A5_EDGE_COUNT_BY_TYPE, ...RULED_ROOT_OWNERSHIP_EDGE_COUNT_BY_TYPE }) && fieldCountWrongList.length === 0,
 				detail: `nodes ${JSON.stringify(countByLabel)}; edges ${JSON.stringify(edgeCountByType)}; Objects whose fieldCount is not their row count ${fieldCountWrongList.length}${firstOf(fieldCountWrongList)}`,
 			};
 		}),

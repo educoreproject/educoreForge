@@ -27,7 +27,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const crypto = require('crypto');
-const { EDGE_TYPES } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const { EDGE_TYPES, rootOwnershipEdgeTypeFor } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const SIF260928_NODE_KIND_TABLE = require('./sif260928NodeKindTable');
 
 // sif260928:codeset/<sha256 of the verbatim cell> and sif260928:codesetValue/<that sha>/<value>; the
@@ -89,6 +89,8 @@ const emitCodesets = ({ codesetFactsList, kit, fieldStableIdOfXpath }) => {
 			carriedProperties: kit.carriedProperties({ parsedObject: codesetFacts, carryList: CODESET_CARRY_LIST }),
 			origin: `codeset ${codesetFacts.formatCellText.slice(0, 80)}`,
 		});
+		// ⟪campaign P3, W-C-1⟫ a node parented on the root is REACHED from it, by the edge its role names
+		kit.addEdge({ edgeType: rootOwnershipEdgeTypeFor(codesetKind.role), fromStableId: kit.rootStableId, toStableId: codesetStableId, edgeContext: `root ownership ${codesetFacts.codesetPath}` });
 		codesetFacts.valueTextList.forEach((valueText, valueIndex) => {
 			const codesetValuePath = `${CODESET_VALUE_PATH_PREFIX}${codesetFacts.codesetDigest}/${valueText}`;
 			kit.emitOptionValue({

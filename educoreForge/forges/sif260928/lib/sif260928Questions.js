@@ -28,7 +28,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const crypto = require('crypto');
-const { EDGE_TYPES } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const { EDGE_TYPES, rootOwnershipEdgeTypeFor } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const SIF260928_NODE_KIND_TABLE = require('./sif260928NodeKindTable');
 const { contextTextOf } = require('./sif260928ContextText');
 
@@ -119,6 +119,8 @@ const emitQuestions = ({ questionFactsList, kit, fieldStableIdOfXpath }) => {
 			carriedProperties: kit.carriedProperties({ parsedObject: questionFacts, carryList: QUESTION_CARRY_LIST }),
 			origin: `question ${questionFacts.questionRefId}`,
 		});
+		// ⟪campaign P3, W-C-1⟫ a node parented on the root is REACHED from it, by the edge its role names
+		kit.addEdge({ edgeType: rootOwnershipEdgeTypeFor(questionKind.role), fromStableId: kit.rootStableId, toStableId: questionStableId, edgeContext: `root ownership ${questionFacts.questionRefId}` });
 		questionFacts.fieldXpathList.forEach((fieldXpath) => {
 			kit.addEdge({ edgeType: EDGE_TYPES.HAS_INSTANCE, fromStableId: questionStableId, toStableId: fieldStableIdOfXpath(fieldXpath), edgeContext: `HAS_INSTANCE ${fieldXpath}` });
 		});
