@@ -55,6 +55,11 @@ const sqliteInstance = require(path.join(TREE_LIB, 'sqlite-instance', 'sqlite-in
 // vectorCache and decision-store — the schema here is ours, not sqlite-instance's object mapping.)
 const RAW_OPTS = { noTableNameOk: true, suppressStatementLog: true };
 
+// PUT_JUDGMENT_RESULT_NAME_LIST — what putJudgment reports (W-B-7, V1-C14, 2026-10-06): stored is true only when THIS put
+// inserted the row; alreadyPresent is true when the address was already held (first write wins, nothing written). Both
+// are read off the insert's own changes() count, never assumed. Until 2026-10-06 every put answered { stored: true }.
+const PUT_JUDGMENT_RESULT_NAME_LIST = Object.freeze(['stored', 'alreadyPresent']);
+
 // START OF moduleFunction() ============================================================
 
 const judgmentCache = () => {
@@ -269,7 +274,15 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 					callback(`judgmentCache.putJudgment: ${err}`);
 					return;
 				}
-				callback('', { stored: true });
+				// better-sqlite3 is synchronous on one connection, so changes() here is this INSERT's own count
+				getRows('SELECT changes() AS changeCount;', (changesErr, rows) => {
+					if (changesErr) {
+						callback(`judgmentCache.putJudgment: changes() failed after the insert: ${changesErr}`);
+						return;
+					}
+					const changeCount = Number(rows[0].changeCount);
+					callback('', { stored: changeCount === 1, alreadyPresent: changeCount === 0 });
+				});
 			},
 		);
 	};
@@ -282,5 +295,7 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 };
 
 // END OF moduleFunction() ============================================================
+
+judgmentCache.PUT_JUDGMENT_RESULT_NAME_LIST = PUT_JUDGMENT_RESULT_NAME_LIST;
 
 module.exports = judgmentCache;

@@ -115,10 +115,12 @@ const makeJudgmentCacheDouble = () => {
 				return;
 			}
 			const refId = refIdFor({ promptHash, model, rendererVersion });
-			if (rowByRefId[refId] === undefined) {
+			const addressWasFree = rowByRefId[refId] === undefined;
+			if (addressWasFree) {
 				rowByRefId[refId] = { promptHash, model, rendererVersion, generation: generation == null ? null : generation, judgment: cloneJson(judgment) };
 			}
-			callback('', { stored: true });
+			// the real cache's report (W-B-7): stored only when THIS put wrote the row; alreadyPresent when first-write-wins kept the old one
+			callback('', { stored: addressWasFree, alreadyPresent: !addressWasFree });
 		},
 	};
 	return cache;

@@ -145,6 +145,9 @@ const ABSENT_CATEGORY_MARK = 'absent';
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const isNonBlank = (value) => typeof value === 'string' && value.trim() !== '';
+// sortedJsonText — JSON with object members in sorted order, so two judgment payloads compare by content and not by
+// the order their writers happened to build them in (W-B-7's alreadyPresent comparison)
+const sortedJsonText = (candidate) => JSON.stringify(candidate, (unusedName, member) => (isPlainObject(member) ? Object.keys(member).sort().reduce((sortedObject, memberName) => ({ ...sortedObject, [memberName]: member[memberName] }), {}) : member));
 
 // mapChoiceToStableId — the ordinal → the rendered list; refuses anything outside choiceEnum
 const mapChoiceToStableId = ({ choice, choiceEnum, renderedPoolStableIdList }) => {
@@ -435,14 +438,31 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 				return;
 			}
 			// decided = persisted: putJudgment BEFORE delivery, exactly the payload the cache requires
+			const putPayload = { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) };
 			judgmentCache.putJudgment(
-				{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) } },
-				(putError) => {
+				{ ...cacheKey, generation, judgment: putPayload },
+				(putError, putReport) => {
 					if (putError) {
 						callback(`${moduleName}: putJudgment FAILED for promptHash ${question.promptHash} (FATAL, never a warning): ${putError}`);
 						return;
 					}
-					deliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage, reaskUserPrompt });
+					if (!putReport.alreadyPresent) {
+						deliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage, reaskUserPrompt });
+						return;
+					}
+					// W-B-7 (2026-10-06): another writer stored this address between our miss and our put, and first write
+					// wins. The same answer is harmless; a different one would be delivered here and replayed differently later.
+					judgmentCache.getJudgment(cacheKey, (rereadError, stored) => {
+						if (rereadError) {
+							callback(`${moduleName}: getJudgment after an alreadyPresent put failed for promptHash ${question.promptHash}: ${rereadError}`);
+							return;
+						}
+						if (sortedJsonText(stored.judgment) !== sortedJsonText(putPayload)) {
+							callback(`${moduleName}: promptHash ${question.promptHash} was already judged by another writer in this run and the answers differ (first-writer-wins is the cache's rule; this run's answer is discarded, not stored)`);
+							return;
+						}
+						deliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage, reaskUserPrompt });
+					});
 				},
 			);
 		});

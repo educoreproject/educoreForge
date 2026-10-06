@@ -13,7 +13,8 @@
 //   BG-CACHE (a) an identical rendered question is served from the cache across two judgings (spy count); (b) a hit
 //   whose chosenStableId is not in the CURRENT rendered list is REFUSED; (c) a DEBUG run leaves the row count UNCHANGED
 //   and writes NO row; (d) putJudgment failure is FATAL; (e) the report carries liveJudgmentCount / cacheHitCount and the
-//   budget guard HALTS by name.
+//   budget guard HALTS by name; (g) a put the cache reports alreadyPresent with a DIFFERENT stored answer is refused
+//   by name (W-B-7, 2026-10-06).
 //   BG-JUDGE (a) an out-of-range choice is refused by name; a mapper reading the UNSORTED read-order list → the picked
 //   stableId differs from the rendered one → red; (a') putJudgment receives EXACTLY { choice, category, rationale,
 //   chosenStableId }; (b) abstention → NO edge, record abstained, counted separately from orphan; (c) a pick without
@@ -198,7 +199,7 @@ replayConjunctList[replayConjunctList.length - 1].evaluate = (scenario, callback
 		});
 	});
 };
-scenarioTwin({ registry: twinRegistry, gateId: 'BG-REPLAY', conjunctId: 'c_realClientWarmCacheLiveJudgmentZero', twinName: 'cacheNeverStores', leverKind: 'productionMutation', mutate: (scenario) => { scenario.stores.judgmentCache.putJudgment = (unusedArgs, callback) => callback(''); } });
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-REPLAY', conjunctId: 'c_realClientWarmCacheLiveJudgmentZero', twinName: 'cacheNeverStores', leverKind: 'productionMutation', mutate: (scenario) => { scenario.stores.judgmentCache.putJudgment = (unusedArgs, callback) => callback('', { stored: false, alreadyPresent: false }); } });
 replayConjunctList.push(
 	runConjunct({
 		conjunctId: 'd_deletedCardRefusedNamingIt',
@@ -317,7 +318,7 @@ cacheConjunctList[0].evaluate = (scenario, callback) => {
 		});
 	});
 };
-scenarioTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 'a_identicalQuestionServedFromCache', twinName: 'cacheNeverStores', leverKind: 'productionMutation', mutate: (scenario) => { scenario.stores.judgmentCache.putJudgment = (unusedArgs, callback) => callback(''); } });
+scenarioTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 'a_identicalQuestionServedFromCache', twinName: 'cacheNeverStores', leverKind: 'productionMutation', mutate: (scenario) => { scenario.stores.judgmentCache.putJudgment = (unusedArgs, callback) => callback('', { stored: false, alreadyPresent: false }); } });
 cacheConjunctList.push(
 	runConjunct({
 		conjunctId: 'b_staleHitRefused',
@@ -347,6 +348,28 @@ cacheConjunctList.push(
 		judge: nameInRefusal(/putJudgment FAILED for promptHash .* \(FATAL, never a warning\): disk full \(double\)/),
 	}),
 	runConjunct({
+		conjunctId: 'g_alreadyPresentDifferentAnswerRefused',
+		title: 'W-B-7: a put the cache reports alreadyPresent (another writer stored this address first) whose stored answer DIFFERS from this run\'s is REFUSED by name, never delivered as if stored',
+		twinNameList: ['ignoreAlreadyPresent'],
+		shape: (scenario) => {
+			useRealClientDouble(scenario, {});
+			const cache = scenario.stores.judgmentCache;
+			const innerGet = cache.getJudgment;
+			let getCount = 0;
+			// the first read misses (so the judge is asked); the put then finds the address held by a contradicting answer
+			cache.getJudgment = (getArgs, callback) => {
+				getCount += 1;
+				if (getCount === 1) {
+					innerGet(getArgs, callback);
+					return;
+				}
+				callback('', { judgment: { choice: 'NONE', category: 'none', rationale: 'another writer said no', chosenStableId: null }, generation: null, createdAt: null });
+			};
+			cache.putJudgment = (unusedArgs, callback) => callback('', { stored: false, alreadyPresent: true });
+		},
+		judge: nameInRefusal(/promptHash .* was already judged by another writer in this run and the answers differ \(first-writer-wins is the cache's rule; this run's answer is discarded, not stored\)/),
+	}),
+	runConjunct({
 		conjunctId: 'e_reportCarriesCountsAndBudgetHalts',
 		title: 'the report carries judgeSpend { asked, servedFromCache, abstained } and the DECLARED budget guard HALTS by name (judgeBudgetOverride 1 with several judged subjects)',
 		twinNameList: ['budgetTrimsInsteadOfHalting'],
@@ -374,6 +397,7 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 'c_debugRunWritesNoRow', twinName: 'debugDoubleWrites', fileName: JUDGE_FILE, find: '\t\t\tif (isDebugClient) {\n\t\t\t\tdeliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage, reaskUserPrompt });\n\t\t\t\treturn;\n\t\t\t}', replace: '\t\t\tif (false && isDebugClient) {\n\t\t\t\tdeliver({ judgment: judged, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage });\n\t\t\t\treturn;\n\t\t\t}' });
 // under the debug-writes twin judgmentCache is present in the scenario stores (the framework requires it on rebridge), so the write lands
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 'd_putJudgmentFailureIsFatal', twinName: 'swallowPutError', fileName: JUDGE_FILE, find: '\t\t\t\t\tif (putError) {\n\t\t\t\t\t\tcallback(`${moduleName}: putJudgment FAILED', replace: '\t\t\t\t\tif (false && putError) {\n\t\t\t\t\t\tcallback(`${moduleName}: putJudgment FAILED' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 'g_alreadyPresentDifferentAnswerRefused', twinName: 'ignoreAlreadyPresent', fileName: JUDGE_FILE, find: '\t\t\t\t\tif (!putReport.alreadyPresent) {', replace: '\t\t\t\t\tif (true || !putReport.alreadyPresent) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 'e_reportCarriesCountsAndBudgetHalts', twinName: 'budgetTrimsInsteadOfHalting', fileName: JUDGE_FILE, find: '\t\tif (budget.judgmentCountSoFar >= budget.maxJudgmentCount) {', replace: '\t\tif (false && budget.judgmentCountSoFar >= budget.maxJudgmentCount) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CACHE', conjunctId: 'e_reportCountsUnderBudget', twinName: 'countsDroppedFromReport', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\t\t\t\t\t\tconst counts = { cardinalityCensus: block.header.cardinalityCensus, contentionCensus: block.header.contentionCensus, edgesWritten: materialised.edgesWritten, conflictCount: report.conflictCount, judgeSpend: report.judgeSpend,', replace: '\t\t\t\t\t\t\t\t\t\tconst counts = { cardinalityCensus: block.header.cardinalityCensus, contentionCensus: block.header.contentionCensus, edgesWritten: materialised.edgesWritten, conflictCount: report.conflictCount, judgeSpend: null,' });
 
@@ -661,7 +685,7 @@ const judgeConjunctList = [
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_outOfRangeChoiceRefused', twinName: 'clampOrdinal', fileName: JUDGE_FILE, find: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { error:", replace: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { chosenCardStableId: renderedPoolStableIdList[Math.min(renderedPoolStableIdList.length, Number(choice)) - 1] };\n\t\treturn { error:" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_pickMappedThroughRenderedOrder', twinName: 'mapThroughReversedList', fileName: JUDGE_FILE, find: '\tconst chosenCardStableId = renderedPoolStableIdList[ordinal - 1];', replace: '\tconst chosenCardStableId = renderedPoolStableIdList.slice().reverse()[ordinal - 1];' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'aPrime_putJudgmentPayloadExactlyFourKeys', twinName: 'payloadLacksChosenStableId', fileName: JUDGE_FILE, find: "\t\t\t\t{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) } },", replace: "\t\t\t\t{ ...cacheKey, generation, judgment: { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged), model: judgeClient.model } }," });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'aPrime_putJudgmentPayloadExactlyFourKeys', twinName: 'payloadLacksChosenStableId', fileName: JUDGE_FILE, find: "\t\t\tconst putPayload = { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) };", replace: "\t\t\tconst putPayload = { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged), model: judgeClient.model };" }); // re-anchored 2026-10-06: W-B-7 names the payload putPayload
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'b_abstentionNoEdgeCountedSeparately', twinName: 'abstainYieldsEdgeToFirstCandidate', leverKind: 'productionMutation', mutate: (scenario) => {
 	// an abstention that yields an edge to the first candidate (three coordinated faults in the judge component)
 	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), find: "\tif (choice === ABSTAIN_TOKEN) {\n\t\treturn { chosenCardStableId: null };\n\t}", replace: "\tif (choice === ABSTAIN_TOKEN) {\n\t\treturn { chosenCardStableId: renderedPoolStableIdList[0] };\n\t}" });
@@ -882,6 +906,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 7 + 20 + 3 + 4, expectedTwinCount: 9 + 7 + 20 + 3 + 4 },
+	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 8 + 20 + 3 + 4, expectedTwinCount: 9 + 8 + 20 + 3 + 4 }, // BG-CACHE 7 → 8: (g) W-B-7, 2026-10-06
 	() => harness.report(),
 );

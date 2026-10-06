@@ -14,7 +14,8 @@
 //     chosenStableId) refused by name.
 //   SECTION 4 — roundtrip: put then get returns the exact payload + generation; a get under a
 //     DIFFERENT model or rendererVersion is a MISS (never served across the boundary); idempotent
-//     re-put is a no-op and FIRST WRITE WINS (decided-time truth).
+//     re-put is a no-op and FIRST WRITE WINS (decided-time truth); each put REPORTS what it did,
+//     { stored, alreadyPresent } (W-B-7, 2026-10-06).
 //   SECTION 5 — DISK TRUTH: the row is visible to a FRESH connection on the same file immediately
 //     after putJudgment's callback fires (the decided = persisted contract), and the database is
 //     in WAL journal mode.
@@ -143,8 +144,11 @@ judgmentCacheModule.open({ databaseFilePath }, (openErr, cache) => {
 		harness.accepts('a get before any put succeeds', missErr ? [missErr] : []);
 		harness.equal('  and is a MISS ({ judgment: null }) — absence is an answer, not an error', missResult.judgment, null);
 
-		cache.putJudgment({ ...GOOD_KEY, generation: 'testBridge-evidence-v1', judgment: GOOD_JUDGMENT }, (putErr) => {
+		cache.putJudgment({ ...GOOD_KEY, generation: 'testBridge-evidence-v1', judgment: GOOD_JUDGMENT }, (putErr, putReport) => {
 			harness.accepts('the first put succeeds', putErr ? [putErr] : []);
+			// W-B-7 (V1-C14): putJudgment REPORTS what it did — PUT_JUDGMENT_RESULT_NAME_LIST, read off the insert's own changes()
+			harness.equal('  and REPORTS it stored the row: { stored: true, alreadyPresent: false }', JSON.stringify(putReport), JSON.stringify({ stored: true, alreadyPresent: false }));
+			harness.equal('  and the report carries exactly the declared PUT_JUDGMENT_RESULT_NAME_LIST', JSON.stringify(Object.keys(putReport || {})), JSON.stringify(require('../judgment-cache').PUT_JUDGMENT_RESULT_NAME_LIST));
 
 			cache.getJudgment(GOOD_KEY, (hitErr, hitResult) => {
 				harness.accepts('the get after put succeeds', hitErr ? [hitErr] : []);
@@ -164,8 +168,9 @@ judgmentCacheModule.open({ databaseFilePath }, (openErr, cache) => {
 				// FIRST WRITE WINS: a second put under the same address with a DIFFERENT payload is a
 				// no-op — the decided-time truth is what replays, never a later re-judgment.
 				const contradictingJudgment = { ...GOOD_JUDGMENT, choice: 'NONE', chosenStableId: null, category: 'none', rationale: 'a later contradictory answer' };
-				cache.putJudgment({ ...GOOD_KEY, judgment: contradictingJudgment }, (rePutErr) => {
+				cache.putJudgment({ ...GOOD_KEY, judgment: contradictingJudgment }, (rePutErr, rePutReport) => {
 					harness.accepts('an idempotent re-put succeeds (no error)', rePutErr ? [rePutErr] : []);
+					harness.equal('  and REPORTS it stored nothing: { stored: false, alreadyPresent: true } (W-B-7; it used to claim stored: true)', JSON.stringify(rePutReport), JSON.stringify({ stored: false, alreadyPresent: true }));
 					cache.getJudgment(GOOD_KEY, (e4, r4) => {
 						harness.equal(
 							'  FIRST WRITE WINS: the ORIGINAL decided-time payload is retained, the contradiction ignored',
