@@ -497,6 +497,13 @@ const announcedFidelityGateStub = ({ xLog, graphName }, cb) => {
 	cb('', { gate: 'fidelity', verdict: 'notRun', detail: 'HERMETIC STUB: R-1 not run (no live graph in this suite)', inventedTotal: null });
 };
 
+// ⟪campaign P2, W-A-11⟫ the embeddingCoverage gate arrives as the same kind of SELF-ANNOUNCING stub: the suite has no live
+// graph to count, and the stub's truth is that the census did not run
+const announcedEmbeddingCoverageStub = ({ xLog }, cb) => {
+	xLog.status('  [embeddingCoverage] HERMETIC STUB — census NOT RUN (this suite has no live graph; the production default is the real gate)');
+	cb('', { gate: 'embeddingCoverage', verdict: 'notRun', detail: 'HERMETIC STUB: census not run (no live graph in this suite)' });
+};
+
 // the RT-13 stage arrives as the same kind of SELF-ANNOUNCING stub (never a silent skip): the
 // real runner writes the stage summary into the canonical dataStores/buildLogs home on every
 // build, which a hermetic suite must not touch. The real runner is proven in its own suite
@@ -664,7 +671,7 @@ const runBuildWith = (recipe, componentOverrides, callback) => {
 			xLog,
 			standardsDatabase: standardsDatabase,
 			components,
-			cedsFidelityGateRunner: announcedFidelityGateStub, roundTripStageRunner: announcedRoundTripStageStub,
+			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 		},
 		(err, result) => callback({ err, result, xLog, standardsDatabase }),
 	);
@@ -1108,7 +1115,7 @@ const stageRebridgeWiring = () => {
 		const xLog = capturingXLog();
 		const standardsDatabase = standardsDatabaseDouble();
 		const components = { forger: workingForger(), replayManager: workingReplayManager(), bridgeMaker: captureBridgeMaker, manifestEditor: workingManifestEditor() };
-		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, cedsFidelityGateRunner: announcedFidelityGateStub, roundTripStageRunner: announcedRoundTripStageStub, ...extraDeps }, (err, result) => cb({ err, result }));
+		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub, ...extraDeps }, (err, result) => cb({ err, result }));
 	};
 
 	// scoped --rebridge WITH a stub llmClient injected: the build runs the (doubled) pre-pass path hermetically.
@@ -1342,7 +1349,7 @@ const stageRealManifestEditor = () => {
 		{
 			xLog,
 			standardsDatabase: standardsDatabase,
-			cedsFidelityGateRunner: announcedFidelityGateStub, roundTripStageRunner: announcedRoundTripStageStub,
+			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 			components: {
 				forger: workingForger(),
 				replayManager: workingReplayManager(),
@@ -1627,7 +1634,7 @@ const stageHubFoldedIntoBase = () => {
 		{
 			xLog,
 			standardsDatabase,
-			cedsFidelityGateRunner: announcedFidelityGateStub, roundTripStageRunner: announcedRoundTripStageStub,
+			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 			components: {
 				forger: hubFoldingForger(syntheticCedsBaseNodeEdges),
 				replayManager: retainingReplayManager(),
@@ -1916,7 +1923,7 @@ const stageStoreReaderRefusal = () => {
 				bridgeMaker: workingBridgeMaker(),
 				manifestEditor: workingManifestEditor(),
 			},
-			cedsFidelityGateRunner: announcedFidelityGateStub,
+			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub,
 			roundTripStageRunner: announcedRoundTripStageStub,
 		},
 		(err, result) => {
@@ -2011,6 +2018,7 @@ const buildCapturingVectorize = (vectorizeDep, done) => {
 		// hermetic: the real R-1 gate no-ops here (no ceds token) but the real RT-13 runner
 		// would write its stage summary into the canonical buildLogs home — stubbed, announced.
 		roundTripStageRunner: announcedRoundTripStageStub,
+		embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, // campaign P2 (W-A-11): no live graph to count
 		components: {
 			forger: capturingForger,
 			replayManager: workingReplayManager(),
@@ -2181,7 +2189,7 @@ const stageManifestPersistedToStore = () => {
 				{
 					xLog: capturingXLog(),
 					standardsDatabase,
-					cedsFidelityGateRunner: announcedFidelityGateStub, roundTripStageRunner: announcedRoundTripStageStub,
+					cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 					components: {
 						forger: workingForger(),
 						replayManager: workingReplayManager(),

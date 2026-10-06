@@ -366,6 +366,11 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 			// suite run — the `cedsLif_<stamp>/` litter Phase 3 W2 wiped. The build-log root is now a
 			// deps seam; point it at this suite's scratch dir, disposed with the store below.
 			buildLogsDirPath: path.join(scratchDir, 'buildLogs'),
+			// ⟪campaign P2, W-A-11⟫ the embeddingCoverage gate, a self-announcing stub (no live graph in this suite)
+			embeddingCoverageGateRunner: ({ xLog }, gateDone) => {
+				xLog.status('  [embeddingCoverage] HERMETIC STUB — census NOT RUN (no live graph in this suite)');
+				gateDone('', { gate: 'embeddingCoverage', verdict: 'notRun', detail: 'HERMETIC STUB: census not run' });
+			},
 			cedsFidelityGateRunner: ({ xLog, graphName }, gateDone) => {
 				xLog.status(
 					`  [fidelity] HERMETIC STUB — R-1 NOT RUN for '${graphName}' (no live graph ` +

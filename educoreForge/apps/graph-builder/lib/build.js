@@ -62,6 +62,7 @@ const { readOptionalBooleanValue } = require('./optional-boolean-value');
 // marker comes from ONE table (SCHEMA_BLOCK_KIND_SUFFIX), never a literal composed here.
 const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const bridgeCollisionRuleLib = require(path.join(__dirname, 'bridgeCollisionRule'));
+const embeddingCoverageGateLib = require(path.join(__dirname, 'embedding-coverage-gate'));
 // ⟪campaign P2, W-A-3⟫ the frozen decision block header carries the frameworkFingerprint the passport reports
 const decisionBlockLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'decisionBlock'));
 
@@ -587,7 +588,13 @@ const roundTripRowFor = (roundTripStageReport) => {
 let materializeCounter = 0;
 const resolvedSchemaBlocksCounter = () => (materializeCounter += 1);
 
-const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, storeReader, roundTripStageRunner, roundTripStageSpec, frameworkFingerprintList }, callback) => {
+const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, storeReader, roundTripStageRunner, roundTripStageSpec, frameworkFingerprintList, embeddingCoverageGateRunner }, callback) => {
+	// ⟪campaign P2, W-A-11⟫ the embeddingCoverage gate arrives INJECTED like the fidelity gate (both in-module callers resolve
+	// it from deps with the real gate, embedding-coverage-gate.js, as the documented default); absence is refused here.
+	if (typeof embeddingCoverageGateRunner !== 'function') {
+		callback(`materialize failed: an embeddingCoverageGateRunner is REQUIRED (the caller resolves deps.embeddingCoverageGateRunner with the real gate as its documented default) — an unstated gate would be indistinguishable from a passed one`);
+		return;
+	}
 	// ⟪campaign P2, W-A-3⟫ the decision blocks' framework fingerprints for the passport: a LIST, empty when no decision block
 	// was materialised (every -replay). Absence is refused — it would read as a fingerprint never asked for.
 	if (!Array.isArray(frameworkFingerprintList)) {
@@ -717,6 +724,12 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 							// reports stageRan false WITH a disposition), so each branch below is a fact
 							// the runner stated rather than an inference from silence.
 							const roundTripRow = roundTripRowFor(roundTripStageReport);
+							// ⟪campaign P2, W-A-11⟫ the embeddingCoverage row: the census over the materialised graph, before finish
+							embeddingCoverageGateRunner({ containerHandle: goldEval, schemaBlockTextList: resolvedSchemaBlocks, xLog }, (coverageError, embeddingCoverageRow) => {
+							if (coverageError) {
+								callback(`materialize failed: ${coverageError}`);
+								return;
+							}
 
 							// THE FIDELITY ROW IS THE RUNNER'S OWN REPORT (lane R, 2026-10-05; FINDING 5-A of
 							// 2026-09-01 closed). From 2026-09-01 until then there was NO fidelity row, by ruling:
@@ -729,7 +742,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 									inGraph: goldEval,
 									manifestRefId: manifestId,
 									storeReader,
-									gateResults: [fidelityAttestation, roundTripRow],
+									gateResults: [fidelityAttestation, roundTripRow, embeddingCoverageRow],
 									frameworkFingerprintList,
 								},
 								(finishError, finishReport) => {
@@ -760,6 +773,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 									});
 								},
 							);
+							});
 						},
 					);
 				},
@@ -1252,6 +1266,8 @@ const build = (recipe, deps, callback) => {
 	// landing (92aecda) until now, so every hermetic ceds-recipe build died at materialize on a
 	// `docker inspect` of a double's fake container.
 	const cedsFidelityGateRunner = deps.cedsFidelityGateRunner || runCedsFidelityGate;
+	// ⟪campaign P2, W-A-11⟫ the real embeddingCoverage gate is the documented default; suites inject a stub
+	const embeddingCoverageGateRunner = deps.embeddingCoverageGateRunner || embeddingCoverageGateLib.runEmbeddingCoverageGate;
 	// ⟪RT-13.4 / R-WO-17⟫ the recipe's stage opt-in. roundTripStage is a legitimately-optional
 	// boolean with a DOCUMENTED default of false during the big-bang retrofit (stated in -help;
 	// doctrine §7.4 grants recipes the DEV choice) — and the default is never SILENT: the stage
@@ -2307,6 +2323,7 @@ const build = (recipe, deps, callback) => {
 						commandLineParameters: process.global && process.global.commandLineParameters,
 						// ⟪R-P2-1⟫ the injected-or-real fidelity gate, resolved once at the top of build()
 						fidelityGateRunner: cedsFidelityGateRunner,
+						embeddingCoverageGateRunner,
 						// ⟪R-P2-2⟫ the same per-build resolver the harvest used — restore stamps each
 						// ref-carrying node's vector back onto its graph node
 						storeResolver: vectorStoreResolver,
@@ -2473,6 +2490,7 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 					// passes no standardTokens, so the real gate no-ops here exactly as before —
 					// the seam changes nothing about -replay's behavior.)
 					fidelityGateRunner: deps.cedsFidelityGateRunner || runCedsFidelityGate,
+					embeddingCoverageGateRunner: deps.embeddingCoverageGateRunner || embeddingCoverageGateLib.runEmbeddingCoverageGate,
 					// ⟪R-P2-2⟫ a -replay of stored ref-style blocks resolves vectors from the same
 					// canonical home (deps-injectable for tests, real resolver by default)
 					storeResolver:

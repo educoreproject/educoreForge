@@ -57,7 +57,7 @@ const INTEGER_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 	'byteCount', 'classCount', 'closeMappedProperties', 'codeCount', 'codePosition', 'contentEdgeCount', 'contentNodeCount',
 	'contextPathCount', 'depth', 'documentDepth', 'documentPosition', 'embeddingDims', 'emitTimeRowCount', 'exactMappedProperties',
 	'exemplarCount', 'explicitlyOmittedTotal', 'fieldCount', 'finishTimeRowCount', 'instanceCount', 'inventedTotal', 'lostTotal',
-	'meaningBearingEdgeCount', 'optionValueCount', 'position', 'propertyCount', 'sequence', 'sequenceOrdinal', 'sequencePosition',
+	'meaningBearingEdgeCount', 'missingVectorTotal', 'optionValueCount', 'position', 'propertyCount', 'sequence', 'sequenceOrdinal', 'sequencePosition',
 	'siblingCount', 'sourceLineNumber', 'standardCount', 'subdomainPosition', 'totalDigits', 'unkindedMappingEdgeCount',
 	'valueCount', 'valueOrdinal', 'verifiedCount', 'xpathDepth',
 ]);
@@ -127,6 +127,7 @@ const ATTESTATION_FIELD_LIST = Object.freeze([
 	{ name: 'standardCount', type: 'integer', channel: 'channelA', gateList: ['roundTrip'] },
 	{ name: 'exemplarCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'] },
 	{ name: 'verifiedCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'] },
+	{ name: 'missingVectorTotal', type: 'integer', channel: 'channelA', gateList: ['embeddingCoverage'] },
 	{ name: 'evidencePath', type: 'string', channel: 'promotionStamp' }, { name: 'evidenceSha256', type: 'string', channel: 'promotionStamp' },
 ].map((oneRow) => Object.freeze(oneRow.gateList ? { ...oneRow, gateList: Object.freeze(oneRow.gateList) } : oneRow)));
 const ATTESTATION_CHANNEL_LIST = Object.freeze(['channelA', 'channelB', 'promotionStamp']);

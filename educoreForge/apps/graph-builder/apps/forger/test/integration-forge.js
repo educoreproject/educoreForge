@@ -301,10 +301,12 @@ replayManager.create({ purpose: `${standardTokens.join('')}Proof` }, (createErr,
 													}
 													runCypher(
 														handle,
-														`MATCH (n:ForgedNode) WHERE n.embedding IS NULL OR size(n.embedding) <> 1024 RETURN count(n) AS v`,
+														// ⟪campaign P2, W-A-11⟫ searchText ⇒ a 1024-dim vector; declared non-embeddable roles and DmeEmbedText
+														// carry no searchText and are outside this predicate (the old "every node" claim was false by design)
+														`MATCH (n:ForgedNode) WHERE n.searchText IS NOT NULL AND (n.embedding IS NULL OR size(n.embedding) <> 1024) RETURN count(n) AS v`,
 														(e7, r7) => {
 															if (e7) { harness.ok('embedding gate query', false, e7); finish(handle, 1); return; }
-															harness.equal('G6 every node carries a 1024-dim embedding', asNumber(r7[0].v), 0);
+															harness.equal('G6 every node carrying searchText carries a 1024-dim embedding; declared non-embeddable roles and DmeEmbedText are outside this predicate', asNumber(r7[0].v), 0);
 															afterEmbedding();
 														},
 													);
