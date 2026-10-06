@@ -51,7 +51,7 @@ const conjunctJudgeByRefId = {
 		buildLibFor(mutationList).frameworkFingerprintListFor({ decisionStore: decisionStoreDouble, pairKeyList: ['toy::A', 'toy::MISSING'] }, (err) =>
 			done({ pass: /the decision block for toy::MISSING could not be read for its frameworkFingerprint/.test(String(err)), detail: String(err || 'admitted a pairKey with no stored block') })),
 	d_materializeRefusesANonList: (mutationList, done) =>
-		buildLibFor(mutationList).materializeSchemaBlocks({ storeResolver: () => {}, fidelityGateRunner: () => {}, storeReader: { getManifest: () => {} }, roundTripStageRunner: () => {}, roundTripStageSpec: {}, replay: { create: (spec, callback) => callback('reached create') } }, (err) =>
+		buildLibFor(mutationList).materializeSchemaBlocks({ finishReportFilePath: null, embeddingCoverageGateRunner: () => {}, storeResolver: () => {}, fidelityGateRunner: () => {}, storeReader: { getManifest: () => {} }, roundTripStageRunner: () => {}, roundTripStageSpec: {}, replay: { create: (spec, callback) => callback('reached create') } }, (err) =>
 			done({ pass: /frameworkFingerprintList is REQUIRED as a list/.test(String(err)), detail: String(err) })),
 };
 const TWIN_LIST = [

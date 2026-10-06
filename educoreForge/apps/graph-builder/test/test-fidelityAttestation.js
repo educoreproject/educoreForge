@@ -85,6 +85,7 @@ const runMaterialize = (buildLib, fidelityGateRunner, done) => {
 			roundTripStageSpec: { mode: 'double' },
 			frameworkFingerprintList: [], // campaign P2 (W-A-3): materialize requires the list; no decision block here
 			embeddingCoverageGateRunner: (spec, callback) => callback('', { gate: 'embeddingCoverage', verdict: 'notRun', detail: 'double: census not run' }), // campaign P2 (W-A-11)
+			finishReportFilePath: null, // campaign P2 (W-A-8): no run directory here
 		},
 		(materializeError) => done({ materializeError, gateResults: finishCallList.length ? finishCallList[0].gateResults : null }),
 	);

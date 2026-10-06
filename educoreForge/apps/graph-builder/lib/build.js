@@ -585,10 +585,40 @@ const roundTripRowFor = (roundTripStageReport) => {
 	};
 };
 
+// ⟪campaign P2, W-A-8 / V1-C22⟫ the finish report's parts that reach the build log: DATA, one status line per path, so the
+// passport summary, the degraded edge families, the exemplar counts and the XOR recheck stop dying inside the callback.
+const FINISH_REPORT_LOG_FIELD_LIST = Object.freeze([
+	'passport.summary',
+	'passport.edgeReportList',
+	'passport.degradedList',
+	'passport.trust',
+	'exemplarVerification.summary',
+	'exemplarVerification.rowCounts',
+	'exemplarVerification.zeroRowFindings',
+	'verificationAttestation.summary',
+	'xorRecheck',
+]);
+const valueAtPath = (sourceObject, dottedPath) => dottedPath.split('.').reduce((soFar, oneSegment) => (soFar === undefined || soFar === null ? undefined : soFar[oneSegment]), sourceObject);
+// finishReportLogLinesFor — the finish report -> { lineList, pickedByPath }: one '[finish] <path>: <value>' line per declared
+// path (a string value as-is, anything else as JSON), plus one line per degraded edge family naming its absenceMeaning
+const finishReportLogLinesFor = (finishReport) => {
+	const pickedByPath = FINISH_REPORT_LOG_FIELD_LIST.reduce((soFar, onePath) => ({ ...soFar, [onePath]: valueAtPath(finishReport, onePath) }), {});
+	const lineList = FINISH_REPORT_LOG_FIELD_LIST.map((onePath) => `[finish] ${onePath}: ${typeof pickedByPath[onePath] === 'string' ? pickedByPath[onePath] : JSON.stringify(pickedByPath[onePath])}`).concat(
+		(valueAtPath(finishReport, 'passport.degradedList') || []).map((oneEntry) => `[finish] DEGRADED ${oneEntry.edgeType}: ${oneEntry.absenceMeaning}`),
+	);
+	return { lineList, pickedByPath };
+};
+
 let materializeCounter = 0;
 const resolvedSchemaBlocksCounter = () => (materializeCounter += 1);
 
-const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, storeReader, roundTripStageRunner, roundTripStageSpec, frameworkFingerprintList, embeddingCoverageGateRunner }, callback) => {
+const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, storeReader, roundTripStageRunner, roundTripStageSpec, frameworkFingerprintList, embeddingCoverageGateRunner, finishReportFilePath }, callback) => {
+	// ⟪campaign P2, W-A-8⟫ where the whole finish report is written: a path for a -build (its run directory), or an EXPLICIT
+	// null for a -replay, which has no run directory (the log lines are printed either way)
+	if (finishReportFilePath !== null && (typeof finishReportFilePath !== 'string' || !finishReportFilePath)) {
+		callback(`materialize failed: finishReportFilePath is REQUIRED — a path for the run's finishReport.json, or null when the caller has no run directory (a -replay)`);
+		return;
+	}
 	// ⟪campaign P2, W-A-11⟫ the embeddingCoverage gate arrives INJECTED like the fidelity gate (both in-module callers resolve
 	// it from deps with the real gate, embedding-coverage-gate.js, as the documented default); absence is refused here.
 	if (typeof embeddingCoverageGateRunner !== 'function') {
@@ -752,6 +782,14 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 										// NOT the product it claims to be.
 										callback(finishError);
 										return;
+									}
+									// ⟪campaign P2, W-A-8⟫ the finish report reaches the build log, and the run directory when there is one
+									const { lineList: finishLogLineList } = finishReportLogLinesFor(finishReport);
+									finishLogLineList.forEach((oneLine) => xLog.status(`  ${oneLine}`));
+									if (finishReportFilePath !== null) {
+										fs.mkdirSync(path.dirname(finishReportFilePath), { recursive: true });
+										fs.writeFileSync(finishReportFilePath, `${JSON.stringify(finishReport, null, '\t')}\n`);
+										xLog.status(`  [finish] the whole finish report -> ${finishReportFilePath}`);
 									}
 									// NOT deleted — this graph is the product. roundTripSummaryPath rides
 									// the result only when the stage wrote a summary (a -replay's visible
@@ -2333,6 +2371,7 @@ const build = (recipe, deps, callback) => {
 						// the recipe's enablement, and the build's own run directory for the verdicts
 						// and the certification summary (RT-6: the verdict lands with the build outputs).
 						roundTripStageRunner,
+						finishReportFilePath: path.join(buildReportsDirPath, 'finishReport.json'),
 						roundTripStageSpec: {
 							mode: 'build',
 							enabled: roundTripStageEnabled,
@@ -2506,6 +2545,8 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 					roundTripStageSpec: { mode: 'replayNotApplicable' },
 					// a replay materialises stored blocks and runs no bridge: no decision block header is read
 					frameworkFingerprintList: [],
+					// a -replay has no run directory: the finish report reaches the log only
+					finishReportFilePath: null,
 				},
 				callback,
 			);
@@ -2575,6 +2616,8 @@ module.exports.materializeSchemaBlocks = materializeSchemaBlocks;
 // ⟪campaign P2, W-A-3⟫ the decision blocks' framework fingerprints for the passport, gated directly (test-frameworkFingerprintList)
 module.exports.frameworkFingerprintListFor = frameworkFingerprintListFor;
 module.exports.roundTripRowFor = roundTripRowFor;
+module.exports.finishReportLogLinesFor = finishReportLogLinesFor;
+module.exports.FINISH_REPORT_LOG_FIELD_LIST = FINISH_REPORT_LOG_FIELD_LIST;
 module.exports.fidelityAttestationFaultFor = fidelityAttestationFaultFor;
 module.exports.resolveRebridge = resolveRebridge;
 module.exports.pairInRebridgeScope = pairInRebridgeScope;

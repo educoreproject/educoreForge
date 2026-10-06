@@ -56,7 +56,7 @@ const runMaterialize = (mutationList, embeddingCoverageGateRunner, done) => {
 			fidelityGateRunner: (spec, callback) => callback('', { gate: 'fidelity', verdict: 'notRun', detail: 'double' }),
 			storeResolver: () => {}, storeReader: { getManifest: () => {} },
 			roundTripStageRunner: (spec, callback) => callback('', { stageRan: false, disposition: 'double: stage not run' }),
-			roundTripStageSpec: { mode: 'double' }, frameworkFingerprintList: [], embeddingCoverageGateRunner,
+			roundTripStageSpec: { mode: 'double' }, frameworkFingerprintList: [], embeddingCoverageGateRunner, finishReportFilePath: null,
 		},
 		(materializeError) => done({ materializeError, gateResults: finishCallList.length ? finishCallList[0].gateResults : null }),
 	);
