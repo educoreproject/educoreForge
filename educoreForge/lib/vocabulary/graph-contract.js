@@ -217,6 +217,20 @@ const vectorIndexNameFor = ({ graphName, slotPropertyName } = {}) => {
 	return `${graphName}${vectorIndexSlotTable()[slotPropertyName].indexNameSuffix}`;
 };
 
+// BRIDGE PAIR LABELS (W-B-13, V1-C29). A bridge run stamps both endpoints of every edge it writes with a pair-scoped label
+// <prefix>_<SOURCE>_<HUB> so the harvest can select the pair's nodes; it is BUILD SCAFFOLD, re-applied by replay from the
+// relationship blocks, and the finish strips it (bridge-label-finisher) because a hub's label set would otherwise vary by
+// recipe. The grammar is declared here and gated; the pattern travels as its source text (a RegExp is not JSON).
+const BRIDGE_PAIR_LABEL_PREFIX = 'BridgedRelation';
+const BRIDGE_PAIR_LABEL_PATTERN_SOURCE = '^BridgedRelation_[A-Z0-9]+_[A-Z0-9]+$';
+const pairScopedLabelFor = ({ sourceToken, hubToken } = {}) => {
+	const pairScopedLabel = `${BRIDGE_PAIR_LABEL_PREFIX}_${`${sourceToken}`.toUpperCase()}_${`${hubToken}`.toUpperCase()}`;
+	if (!new RegExp(BRIDGE_PAIR_LABEL_PATTERN_SOURCE).test(pairScopedLabel)) {
+		throw new Error(`pairScopedLabelFor: '${pairScopedLabel}' does not match the declared grammar ${BRIDGE_PAIR_LABEL_PATTERN_SOURCE} (source and hub tokens must be [A-Za-z0-9]+)`);
+	}
+	return pairScopedLabel;
+};
+
 // ---------------------------------------------------------------------
 // THE JSON DOCUMENT, ITS CANONICAL TEXT AND ITS SHA
 // ---------------------------------------------------------------------
@@ -244,6 +258,8 @@ const graphContractDocument = () => {
 		usagePatternFieldList: USAGE_PATTERN_FIELD_LIST,
 		selfDocRetiredFieldNameByLabel: SELF_DOC_RETIRED_FIELD_NAME_BY_LABEL,
 		vectorIndexSlotTable: vectorIndexSlotTable(),
+		bridgePairLabelPrefix: BRIDGE_PAIR_LABEL_PREFIX,
+		bridgePairLabelPatternSource: BRIDGE_PAIR_LABEL_PATTERN_SOURCE,
 	};
 };
 
@@ -286,6 +302,9 @@ module.exports = Object.freeze({
 	vectorIndexSlotTable,
 	vectorIndexNameRefusal,
 	vectorIndexNameFor,
+	BRIDGE_PAIR_LABEL_PREFIX,
+	BRIDGE_PAIR_LABEL_PATTERN_SOURCE,
+	pairScopedLabelFor,
 	graphContractDocument,
 	canonicalJsonText,
 	graphContractSha256,

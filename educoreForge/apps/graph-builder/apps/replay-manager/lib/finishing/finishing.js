@@ -64,6 +64,8 @@ const moduleFunction =
 		//   frozen registry (its content source) and reads through the injected readQuery handed to emit();
 		//   an applier gets nothing at construction and acts through the runCypher handed to apply(). The
 		//   asymmetry is the point — an emitter that wanted runCypher would have to ask for it in writing.
+		// ⟪campaign P2, W-B-13⟫ strips the bridge pair-scoped scaffold labels before anything reads the graph's label set
+		const bridgeLabelFinisher = require('./lib/bridge-label-finisher')({ vocabulary });
 		const schemaViewFinisher = require('./lib/schema-view-finisher')({ vocabulary });
 		const schemaConstraintFinisher = require('./lib/schema-constraint-finisher')({ vocabulary });
 		const manifestRecipeFinisher = require('./lib/manifest-recipe-finisher')({ vocabulary });
@@ -81,6 +83,14 @@ const moduleFunction =
 		//   — TWO writes, because graphMeta is an APPLIER and closes the contiguous emit run. That falls
 		//   out of the maximal-contiguous rule; it was not arranged for.
 		const REGISTRY = [
+			// ⟪campaign P2, W-B-13⟫ FIRST: the pair labels are build scaffold (harvest ran at build time); stripping them
+			// before schemaView means the view and its coverage gate see the finished graph's real label set.
+			{
+				name: 'bridgeLabel',
+				mode: MODE_APPLY,
+				enabled: true,
+				finisher: bridgeLabelFinisher,
+			},
 			{
 				name: 'schemaView',
 				mode: MODE_EMIT,

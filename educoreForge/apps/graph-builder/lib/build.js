@@ -333,7 +333,8 @@ const ANTHROPIC_CONFIG_FILE_PATH =
 // These are handed DOWN: init stamps them, harvest selects on them, so the producing side and the
 // harvesting side agree by parameter instead of by two hopeful literals.
 const BASE_GRAPH_LABEL = 'StandardBase';
-const RELATION_LABEL = 'BridgedRelation';
+// ⟪campaign P2, W-B-13⟫ the bridge pair-label prefix has one home, graph-contract (BRIDGE_PAIR_LABEL_PREFIX)
+const RELATION_LABEL = vocabulary.BRIDGE_PAIR_LABEL_PREFIX;
 
 // minimal sequential async iterator (err-string convention). taskListPlus sequences a KNOWN list
 // of steps; this sequences an unknown-length list of items, each of which is itself a taskList.
