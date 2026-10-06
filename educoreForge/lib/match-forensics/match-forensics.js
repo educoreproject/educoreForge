@@ -32,6 +32,59 @@
 const path = require('path');
 const fs = require('fs');
 
+// THE RECORD CONTRACT (W-B-8, V1-C15 / V1-S83/S88/S89; campaign P3 2026-10-06). The writer owns the shape: three kinds
+// of record reach this trail, each with ONE declared key set, and appendRecord refuses any other by name, listing the
+// extra and the missing keys. Before this, the only reader (retrieval-metrics, now retired) read a pre-framework shape
+// none of today's records carried, and nothing noticed.
+//   judgment        one accepted judgment (judgeComponent deliver); 'predicate' is present only under a rule with a slot
+//   refusedAttempt  a first attempt refused for its rationale's form, written before the one bounded re-ask
+//   mappingReview   a conflict review (bridge-framework, kind 'MappingReview')
+// attempts: the number of provider HTTP requests this judgment cost, retries and second questions included (Jev: pick +
+// relation). usage: null, or exactly JUDGE_USAGE_FIELD_LIST, each a non-negative integer (Jev answers in snake_case;
+// its client converts at the wire).
+const JUDGE_USAGE_FIELD_LIST = Object.freeze(['inputTokens', 'outputTokens']);
+const MATCH_FORENSICS_RECORD_FIELD_LIST = Object.freeze([
+	'promptHash', 'rendererVersion', 'judgeModel', 'decisionAlgorithm', 'systemPrompt', 'userPrompt', 'reaskUserPrompt',
+	'renderedPoolStableIdList', 'choice', 'chosenCardStableId', 'category', 'reportedCategoryOnAbstain', 'sourceElementIdeaList',
+	'candidateIdeaList', 'sortedCandidateList', 'ideaCoverage', 'rationale', 'confidence', 'cacheHit', 'attempts', 'usage',
+	'discardedPredicateKeyCount', 'reaskCount',
+]);
+const MATCH_FORENSICS_REFUSED_ATTEMPT_FIELD_LIST = Object.freeze([
+	'promptHash', 'rendererVersion', 'judgeModel', 'decisionAlgorithm', 'systemPrompt', 'userPrompt', 'renderedPoolStableIdList',
+	'choice', 'chosenCardStableId', 'category', 'rationale', 'confidence', 'cacheHit', 'attempts', 'usage', 'refusedAttempt', 'reaskFollows',
+]);
+const MATCH_FORENSICS_MAPPING_REVIEW_FIELD_LIST = Object.freeze(['kind', 'conflictList']);
+const MATCH_FORENSICS_RECORD_SHAPE_BY_KIND = Object.freeze({
+	judgment: Object.freeze({ requiredFieldList: MATCH_FORENSICS_RECORD_FIELD_LIST, optionalFieldList: Object.freeze(['predicate']) }),
+	refusedAttempt: Object.freeze({ requiredFieldList: MATCH_FORENSICS_REFUSED_ATTEMPT_FIELD_LIST, optionalFieldList: Object.freeze([]) }),
+	mappingReview: Object.freeze({ requiredFieldList: MATCH_FORENSICS_MAPPING_REVIEW_FIELD_LIST, optionalFieldList: Object.freeze([]) }),
+});
+// recordKindOf — the discriminator: a mappingReview names its kind, a refused attempt carries refusedAttempt, else a judgment
+const recordKindOf = (record) => (record.kind === 'MappingReview' ? 'mappingReview' : Object.prototype.hasOwnProperty.call(record, 'refusedAttempt') ? 'refusedAttempt' : 'judgment');
+const usageViolation = (usage) => {
+	if (usage === null) {
+		return '';
+	}
+	const usageKeyList = usage !== null && typeof usage === 'object' && !Array.isArray(usage) ? Object.keys(usage).sort() : null;
+	if (usageKeyList === null || JSON.stringify(usageKeyList) !== JSON.stringify(JUDGE_USAGE_FIELD_LIST.slice().sort()) || !JUDGE_USAGE_FIELD_LIST.every((oneName) => Number.isInteger(usage[oneName]) && usage[oneName] >= 0)) {
+		return `usage ${JSON.stringify(usage)} is neither null nor exactly { ${JUDGE_USAGE_FIELD_LIST.join(', ')} } of non-negative integers`;
+	}
+	return '';
+};
+// recordShapeViolation — '' when the record is exactly one declared kind's key set (and its usage is declared), else why not
+const recordShapeViolation = (record) => {
+	const recordKind = recordKindOf(record);
+	const shape = MATCH_FORENSICS_RECORD_SHAPE_BY_KIND[recordKind];
+	const keyList = Object.keys(record);
+	const extraList = keyList.filter((oneName) => shape.requiredFieldList.indexOf(oneName) === -1 && shape.optionalFieldList.indexOf(oneName) === -1);
+	const missingList = shape.requiredFieldList.filter((oneName) => keyList.indexOf(oneName) === -1);
+	if (extraList.length || missingList.length) {
+		return `matchForensics.appendRecord: a '${recordKind}' record must carry exactly its declared fields (MATCH_FORENSICS_RECORD_SHAPE_BY_KIND); extra [${extraList.join(', ')}], missing [${missingList.join(', ')}]`;
+	}
+	const usageFault = recordKind === 'mappingReview' ? '' : usageViolation(record.usage);
+	return usageFault ? `matchForensics.appendRecord: ${usageFault} (JUDGE_USAGE_FIELD_LIST)` : '';
+};
+
 // START OF moduleFunction() ============================================================
 
 const matchForensics = () => {
@@ -94,6 +147,11 @@ const makeApi = ({ baseDirPath }) => {
 			callback('matchForensics.appendRecord: record is required and must be a plain object');
 			return;
 		}
+		const shapeViolation = recordShapeViolation(record);
+		if (shapeViolation) {
+			callback(shapeViolation);
+			return;
+		}
 
 		const pairDir = path.join(baseDirPath, pairKey);
 		let mkdirFault = '';
@@ -127,5 +185,12 @@ const makeApi = ({ baseDirPath }) => {
 };
 
 // END OF moduleFunction() ============================================================
+
+matchForensics.JUDGE_USAGE_FIELD_LIST = JUDGE_USAGE_FIELD_LIST;
+matchForensics.MATCH_FORENSICS_RECORD_FIELD_LIST = MATCH_FORENSICS_RECORD_FIELD_LIST;
+matchForensics.MATCH_FORENSICS_REFUSED_ATTEMPT_FIELD_LIST = MATCH_FORENSICS_REFUSED_ATTEMPT_FIELD_LIST;
+matchForensics.MATCH_FORENSICS_MAPPING_REVIEW_FIELD_LIST = MATCH_FORENSICS_MAPPING_REVIEW_FIELD_LIST;
+matchForensics.MATCH_FORENSICS_RECORD_SHAPE_BY_KIND = MATCH_FORENSICS_RECORD_SHAPE_BY_KIND;
+matchForensics.recordShapeViolation = recordShapeViolation;
 
 module.exports = matchForensics;

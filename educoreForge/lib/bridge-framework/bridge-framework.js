@@ -1014,7 +1014,8 @@ const moduleFunction =
 						merged.subjectCollisionList.forEach((oneCollision) => report.refusalList.push({ kind: 'subjectCollision', subjectStableId: oneCollision.subjectStableId, assertingSubjectList: oneCollision.assertingSubjectList, targetSetBySubjectKey: oneCollision.targetSetBySubjectKey }));
 						report.subjectNodeReport = { subjectCount: subjectGroupList.length, resolved: merged.leafList.length + merged.subjectCollisionList.length, refused: merged.sourceGapList.length, leaves: merged.leafList.length, manyToOneSubjectCount: merged.manyToOneSubjectCount, collisions: merged.subjectCollisionList.length, hookCallCount };
 						say(`subjects: ${subjectGroupList.length} distinct; leaves ${merged.leafList.length}; sourceGap ${merged.sourceGapList.length}; subjectCollision ${merged.subjectCollisionList.length} (subjectStableIdFor called ${hookCallCount}×)`);
-						next('', { ...args, subjectGroupList, leafList: merged.leafList, sourceGapList: merged.sourceGapList, subjectCollisionList: merged.subjectCollisionList, manyToOneSubjectCount: merged.manyToOneSubjectCount, windowMark });
+						// a documentary basis has no scope file: every walked subject group is in scope (W-B-9)
+						next('', { ...args, subjectGroupList, leafList: merged.leafList, sourceGapList: merged.sourceGapList, subjectCollisionList: merged.subjectCollisionList, manyToOneSubjectCount: merged.manyToOneSubjectCount, windowMark, labelledSubjectCount: subjectGroupList.length, inScopeSubjectCount: subjectGroupList.length });
 					});
 					},
 					// graphLabel — subjects ARE graph nodes carrying the declared label, narrowed to a declared evaluation
@@ -1101,7 +1102,7 @@ const moduleFunction =
 							report.subjectNodeReport = { subjectCount: leafList.length, resolved: leafList.length, refused: 0, leaves: leafList.length, manyToOneSubjectCount: 0, collisions: 0, hookCallCount: 0 };
 							const settingsText = retrievalMethodRow.settingsPairListFor(retrievalDeclaration).map(([settingLabel, settingValue]) => `${settingLabel} ${settingValue}`).join(' ');
 							say(`subjects: ${leafList.length} '${subjectSource.label}' node(s) in scope (of ${labelledNodeList.length} labelled); retrieval index ${retrievalState.hubVectorIndex.recordCount} card(s) × ${retrievalState.hubVectorIndex.dimension}d (${retrievalState.hubVectorIndex.embeddingModelVersion}); ${settingsText}`);
-							next('', { ...args, subjectGroupList: leafList, leafList, sourceGapList: [], subjectCollisionList: [], manyToOneSubjectCount: 0, windowMark, retrievalMethodRow, retrievalState, scopeDigest });
+							next('', { ...args, subjectGroupList: leafList, leafList, sourceGapList: [], subjectCollisionList: [], manyToOneSubjectCount: 0, windowMark, retrievalMethodRow, retrievalState, scopeDigest, labelledSubjectCount: labelledNodeList.length, inScopeSubjectCount: inScopeNodeList.length });
 						});
 					},
 				});
@@ -1683,6 +1684,8 @@ const moduleFunction =
 						edgeCount: materialiserLib.plannedEdgeList(decisionRecordList).length,
 						contentionCensus: args.contention,
 						indexCollisionCount: args.contention.contendedKeyCount,
+						labelledSubjectCount: args.labelledSubjectCount,
+						inScopeSubjectCount: args.inScopeSubjectCount,
 					});
 					const retrievalHeader = candidateRetrievalHeaderValueFor(bridgeDeclaration.candidateRetrieval);
 					if (retrievalHeader.error) {

@@ -31,8 +31,12 @@ const contentionCensus = ({ cardListByCanonicalKey, tier } = {}) => {
 	};
 };
 
-// cardinalityCensus({ decisionRecordList, subjectCollisionList, sourceGapList, ...counters })
+// cardinalityCensus({ decisionRecordList, subjectCollisionList, sourceGapList, labelledSubjectCount, inScopeSubjectCount, ...counters })
 //   → { perTarget: {...}, perSubject: {...} }  — every member EQUAL-comparable, no band
+// labelledSubjectCount / inScopeSubjectCount (W-B-9, V1-C12; campaign P3 2026-10-06): the subjects the source carries and the
+// ones the declared scope kept. REQUIRED integers, no default: until this the only trace of a subject the scope left out
+// was one status line in the build log (SIF: 1 of 5,018), and a frozen block said nothing. perSubject gains
+// labelledSubjectCount and outOfScopeSubjectCount (= labelled − in scope, refused by name if negative).
 const cardinalityCensus = ({
 	decisionRecordList,
 	subjectCollisionList,
@@ -45,9 +49,17 @@ const cardinalityCensus = ({
 	edgeCount,
 	contentionCensus: contention,
 	indexCollisionCount,
+	labelledSubjectCount,
+	inScopeSubjectCount,
 } = {}) => {
 	if (!Array.isArray(decisionRecordList) || !Array.isArray(subjectCollisionList) || !Array.isArray(sourceGapList)) {
 		throw refuse.byName({ moduleName, what: 'cardinalityCensus needs decisionRecordList, subjectCollisionList and sourceGapList (arrays)', where: 'the acceptance instrument counts records, never guesses' });
+	}
+	if (!Number.isInteger(labelledSubjectCount) || labelledSubjectCount < 0 || !Number.isInteger(inScopeSubjectCount) || inScopeSubjectCount < 0) {
+		throw refuse.byName({ moduleName, what: `cardinalityCensus needs labelledSubjectCount and inScopeSubjectCount as non-negative integers (got ${JSON.stringify(labelledSubjectCount)}, ${JSON.stringify(inScopeSubjectCount)})`, where: 'the scope census is required, never defaulted: a block must say how many subjects its scope left out (W-B-9)' });
+	}
+	if (inScopeSubjectCount > labelledSubjectCount) {
+		throw refuse.byName({ moduleName, what: `inScopeSubjectCount ${inScopeSubjectCount} exceeds labelledSubjectCount ${labelledSubjectCount}`, where: 'a scope narrows the labelled population; it cannot widen it (W-B-9)' });
 	}
 	const perTarget = {
 		targetCount: decisionRecordList.length,
@@ -120,6 +132,8 @@ const cardinalityCensus = ({
 		// per SUBJECT: every asserting subject of a collided leaf is one subjectCollision subject (SPEC §10.4: 7 leaves = 31 subjects)
 		subjectCollisionCount: subjectCollisionList.reduce((soFar, oneCollision) => soFar + (Array.isArray(oneCollision.assertingSubjectList) ? oneCollision.assertingSubjectList.length : 1), 0),
 		sourceGapCount: sourceGapList.length,
+		labelledSubjectCount,
+		outOfScopeSubjectCount: labelledSubjectCount - inScopeSubjectCount,
 	};
 	Object.keys(bucketBySubjectStableId).forEach((oneStableId) => {
 		const bucket = bucketBySubjectStableId[oneStableId];

@@ -25,7 +25,7 @@ SYNOPSIS
      graphBuilder   -validate --recipePath=<path>
      graphBuilder   -replay   --standardsDatabaseFilePath=<path> --manifestRefId=<refId>
      graphBuilder   -deps
-     graphBuilder   -retrievalMetrics --pairKey=<pairKey> [--generation=<generation>]
+     graphBuilder   -retrievalMetrics   (RETIRED: refuses by name)
      graphBuilder   -cedsRoundTrip --containerName=<name> [--sourcePath=<path>]
                                    [--outPath=<path>] [--reportPath=<path>]
      graphBuilder   -cedsGates --containerName=<name> [--reportJsonPath=<path>]
@@ -86,25 +86,10 @@ COMMANDS
                   { manifestId, boltUrl, memberCount }.
      -deps        List the resolvable standard tokens, versions, and hub group aliases.
      -retrievalMetrics
-                  MEASURE how well candidate selection is working, from the forensic match log
-                  a --rebridge already wrote. READ-ONLY and FREE -- no graph, no standards
-                  database, no decision store, no LLM, no Voyage. It reads the record shape the
-                  RETIRED semantic bridge wrote (cosine ranks, nominations); a bridge-framework
-                  judgment (2026-08-16 onward) is a plain choice among a small qualified pool and
-                  carries no retrieval rank, so this command does not measure it. Per
-                  pair+generation it reports:
-                  the WINNER RANK DISTRIBUTION (where the chosen candidate sat once the pool is
-                  re-sorted by retrieval cosine -- display order is NOT rank, because the composer
-                  appends nominated candidates after the cosine top-K); COSINE TOP-1 ACCURACY;
-                  RECALL within the cosine cutoff; RESCUE ATTRIBUTION; the ABSTENTION LINT; and
-                  POOL COMPOSITION. Prints a readable report on stdout AND writes a JSON sidecar.
-
-                  RESCUE ATTRIBUTION REPORTS TWO SEPARATE NUMBERS AND WILL NOT CONFLATE THEM.
-                  A GENUINE rescue is a winner that carried a nomination AND sat outside the
-                  cosine cutoff, so the nomination is the ONLY reason it was in the pool at all.
-                  "The winner merely carried a nomination" is the WEAKER claim -- cosine may well
-                  have retrieved it anyway. Reporting the second as the first is the specific
-                  error this verb was built to end (155 reported where the true count was 20).
+                  RETIRED 2026-10-06 (campaign P3, W-B-8). It read a pre-framework forensic record shape
+                  that no bridge-framework judgment carries; the retrieval evidence now lives in each
+                  decision record's retrievalVoteList (decision store). The verb refuses by name; its
+                  code is kept in codeAttic/retrieval-metrics/.
      -cedsGates
                   RUN THE CEDS FIDELITY GATE SUITE -- 46 gates declared as DATA in
                   forges/ceds/gates/cedsFidelityGates.jsonc, evaluated against the named
@@ -349,42 +334,6 @@ OPTIONS
                            (a throwaway for a spend test) also passes --createStore=true. 'false'
                            disables the cache (parsed once, by the orchestrator, into the boolean the
                            embedder obeys; it used to create a file named 'false').
-     --pairKey=<pairKey>   Which standard pairing to measure, e.g. --pairKey=CEDS::CASE. REQUIRED
-                           for -retrievalMetrics; there is NO default -- a measurement is always
-                           ABOUT one pairing, and there is no meaningful aggregate across pairings
-                           that judge different standards.
-     --generation=<generation>
-                           Which frozen generation's trail to measure, e.g.
-                           --generation=caseEvidenceBridge-evidence-v2. OPTIONAL for
-                           -retrievalMetrics: absent, EVERY generation under the pair is measured
-                           and reported. Comparing generations side by side is why they are kept
-                           side by side; choosing one silently is exactly the question a default
-                           would answer wrongly.
-     --matchForensicsDirPath=<path>
-                           Where the FORENSIC MATCH LOG is READ from -- the same directory -build
-                           WRITES with --matchForensicsDirPath (the reader's parameter is named
-                           for what it reads, the writer's for what it writes). OPTIONAL for
-                           -retrievalMetrics: it DEFAULTS to the same documented canonical home,
-                           system/dataStores/matchForensics. Unlike the writer's, this path is
-                           never created -- a metrics run against a directory that does not exist
-                           has nothing to measure and says so by name.
-     --cosineCutoff=<n>    The cosine rank at or within which a candidate would have been
-                           retrieved by cosine ALONE -- the composer's own retrieval top-K,
-                           restated as an analysis parameter because the log does not record it.
-                           OPTIONAL for -retrievalMetrics, DEFAULTS TO 15. It governs RECALL and
-                           the GENUINE-rescue test. It does NOT move the rank histogram's bin
-                           edges, which are fixed by the measurement contract so numbers stay
-                           comparable across runs. Only a positive integer is accepted.
-     --abstentionFlagPercent=<n>
-                           The share of abstentions above which an abstention-lint phrase probe
-                           becomes a FLAGGED SIGNAL. OPTIONAL for -retrievalMetrics, DEFAULTS TO 5
-                           (i.e. >5%). Stated as a PERCENT on the command line.
-     --sidecarDirPath=<path>
-                           Where the JSON sidecar is written. OPTIONAL for -retrievalMetrics:
-                           absent, each sidecar is written BESIDE the trail it measures, as
-                           <pairDir>/<generation>.retrievalMetrics.json, so a stored number can
-                           always be traced back to the trail and the instrument version that
-                           produced it.
      --containerName=<name>
                            Which MATERIALIZED graph to compile back into RDF/XML. REQUIRED for
                            -cedsRoundTrip; there is NO default -- a fidelity measurement is always
@@ -515,11 +464,6 @@ OUTPUT
      -validate: JSON validation verdict on stdout.
      -replay:   JSON { manifestId, boltUrl, memberCount } on stdout (progress on stderr).
      -deps:     JSON discovery listing on stdout.
-     -retrievalMetrics:
-                A readable per-pair+generation report on stdout; the machine-readable metrics as
-                a JSON sidecar on disk (its path announced on stderr). The report text and the
-                sidecar are rendered from the SAME metrics object and never recompute anything,
-                so the two can never disagree about a number.
      -cedsRoundTrip:
                 The readable fidelity report on stdout AND on disk at --reportPath, its JSON
                 sidecar beside it, and the compiled RDF/XML at --outPath (all three paths

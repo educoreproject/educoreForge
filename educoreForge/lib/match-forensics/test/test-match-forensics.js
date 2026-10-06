@@ -12,6 +12,10 @@
 //     <base>/<pairKey>/<generation>.jsonl, in append order, each line parsing back to the exact
 //     record; a SECOND pair gets its OWN directory (the organize-by-standard layout); the per-pair
 //     directory is prepared on demand.
+//   SECTION 4 — the record contract (W-B-8, campaign P3): each of the three record kinds must carry exactly its declared
+//     fields (MATCH_FORENSICS_RECORD_SHAPE_BY_KIND); a judgment without ideaCoverage, a record with an undeclared key,
+//     and a usage outside JUDGE_USAGE_FIELD_LIST are refused by name. TWIN: a module double whose declared list drops
+//     ideaCoverage accepts the record that lacks it — observed red.
 //
 // Run: node lib/match-forensics/test/test-match-forensics.js
 
@@ -40,7 +44,16 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const matchForensicsModule = require('../match-forensics')();
+const matchForensicsLib = require('../match-forensics');
+const matchForensicsModule = matchForensicsLib();
+const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
+
+// a record of one declared kind, every declared field present (values are placeholders of a plausible type)
+const recordOfKind = (fieldList, overrideByName = {}) => {
+	const record = fieldList.reduce((accumulator, oneName) => ({ ...accumulator, [oneName]: oneName === 'usage' ? { inputTokens: 1, outputTokens: 2 } : oneName === 'attempts' ? 1 : `${oneName}-value` }), {});
+	return { ...record, ...overrideByName };
+};
+const judgmentRecord = (overrideByName) => recordOfKind(matchForensicsLib.MATCH_FORENSICS_RECORD_FIELD_LIST, overrideByName);
 
 const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'edfMatchForensicsGate-'));
 const baseDirPath = path.join(scratchDir, 'matchForensics'); // does NOT exist yet — prepared on demand
@@ -94,9 +107,11 @@ matchForensicsModule.open({ baseDirPath }, (openErr, forensics) => {
 	// =====================================================================
 	harness.section('SECTION 3 — the append-only JSONL layout, organized by pair');
 	// =====================================================================
-	const recordOne = { timestamp: 't1', sourceStableId: 's1', judgedVia: 'live', response: { choice: '1' } };
-	const recordTwo = { timestamp: 't2', sourceStableId: 's2', judgedVia: 'cache:abc', response: { choice: 'NONE' } };
-	const recordOtherPair = { timestamp: 't3', sourceStableId: 'p1', judgedVia: 'live' };
+	// W-B-8: the records are the declared kinds now (the pre-framework { timestamp, sourceStableId, judgedVia, response }
+	// shape these lines used to carry is exactly what the contract refuses)
+	const recordOne = judgmentRecord({ choice: '1' });
+	const recordTwo = judgmentRecord({ choice: 'NONE', usage: null });
+	const recordOtherPair = recordOfKind(matchForensicsLib.MATCH_FORENSICS_MAPPING_REVIEW_FIELD_LIST, { kind: 'MappingReview', conflictList: [] });
 
 	forensics.appendRecord({ pairKey: 'CEDS::SIF', generation: 'sifEvidenceBridge-evidence-v2', record: recordOne }, (e1, r1) => {
 		harness.accepts('the first append succeeds (directory prepared on demand)', e1 ? [e1] : []);
@@ -120,8 +135,47 @@ matchForensicsModule.open({ baseDirPath }, (openErr, forensics) => {
 				harness.equal('the LIF trail carries exactly its one record', lifLines.length, 1);
 				harness.equal('  and it is the exact record appended', lifLines[0], JSON.stringify(recordOtherPair));
 
-				harness.report();
+				contractSection(() => harness.report());
 			});
 		});
 	});
+
+	// =====================================================================
+	// SECTION 4 — the record contract (W-B-8)
+	// =====================================================================
+	const contractSection = (done) => {
+		harness.section('SECTION 4 — the record contract: three declared kinds, refused by name otherwise (W-B-8)');
+		const withoutIdeaCoverage = judgmentRecord();
+		delete withoutIdeaCoverage.ideaCoverage;
+		const refusedAttempt = recordOfKind(matchForensicsLib.MATCH_FORENSICS_REFUSED_ATTEMPT_FIELD_LIST, { usage: null });
+		const caseList = [
+			{ label: 'a judgment WITHOUT ideaCoverage is refused, naming it', record: withoutIdeaCoverage, expect: /'judgment' record must carry exactly its declared fields.*missing \[ideaCoverage\]/ },
+			{ label: 'a judgment with an undeclared key is refused, naming it', record: judgmentRecord({ timestamp: 't1' }), expect: /extra \[timestamp\]/ },
+			{ label: 'usage in snake_case is refused, naming the declared list', record: judgmentRecord({ usage: { input_tokens: 1, output_tokens: 2 } }), expect: /usage .* is neither null nor exactly \{ inputTokens, outputTokens \}/ },
+			{ label: 'a judgment under a predicate rule (with predicate) is accepted', record: judgmentRecord({ predicate: 'exactMatch' }), expect: null },
+			{ label: 'a refused attempt of its declared shape is accepted', record: refusedAttempt, expect: null },
+		];
+		const runCase = (remainingList) => {
+			if (!remainingList.length) {
+				// THE TWIN: drop ideaCoverage from the declared list in a module double — the record lacking it is then accepted
+				const doubleLib = moduleDouble.loadWithMutations({
+					modulePath: path.join(__dirname, '..', 'match-forensics.js'),
+					mutationList: [{ modulePath: path.join(__dirname, '..', 'match-forensics.js'), find: "'candidateIdeaList', 'sortedCandidateList', 'ideaCoverage', 'rationale',", replace: "'candidateIdeaList', 'sortedCandidateList', 'rationale'," }],
+				});
+				harness.equal('TWIN (ideaCoverage dropped from MATCH_FORENSICS_RECORD_FIELD_LIST) observed RED: the record lacking it is accepted', doubleLib.recordShapeViolation(withoutIdeaCoverage), '');
+				done();
+				return;
+			}
+			const oneCase = remainingList[0];
+			forensics.appendRecord({ pairKey: 'CEDS::CONTRACT', generation: 'contract-v1', record: oneCase.record }, (appendError) => {
+				if (oneCase.expect === null) {
+					harness.accepts(oneCase.label, appendError ? [appendError] : []);
+				} else {
+					harness.match(oneCase.label, appendError, oneCase.expect);
+				}
+				runCase(remainingList.slice(1));
+			});
+		};
+		runCase(caseList);
+	};
 });

@@ -326,7 +326,7 @@ const caseList = [
 			harness.equal('category still comes from the PICK confidence', verdict && verdict.category, 'strong');
 			harness.match('the rationale carries the relation and its confidence beside the pick', verdict && verdict.rationale, /chose "Has Organization Identifier".*Relation: broadMatch with probability 0\.6 and confidence 0\.55\. Next: closeMatch \(0\.2\)/);
 			harness.equal('attempts count both calls', verdict && verdict.attempts, 2);
-			harness.equal('usage sums both calls', JSON.stringify(verdict && verdict.usage), JSON.stringify({ input_tokens: 140, output_tokens: 15 }));
+			harness.equal('usage sums both calls, in the forensic contract\'s camelCase shape (W-B-8)', JSON.stringify(verdict && verdict.usage), JSON.stringify({ inputTokens: 140, outputTokens: 15 }));
 			harness.equal('jevConfidence stays the PICK confidence (the cascade escalates on it)', verdict && verdict.jevConfidence, 0.9);
 			harness.equal('jevRelationConfidence is carried as evidence', verdict && verdict.jevRelationConfidence, 0.55);
 			done();
@@ -379,6 +379,26 @@ const caseList = [
 			harness.match('refused naming the status', rerankError, /relation question failed: .*HTTP 400 after 1 attempt/);
 			harness.equal('no verdict', verdict, undefined);
 			harness.equal('two calls', transport.sentPayloadList.length, 2);
+			done();
+		});
+	},
+	// W-B-8 (campaign P3): usage leaves the client as { inputTokens, outputTokens }; a wire usage without integer counts is
+	// refused by name rather than carried into a forensic record that would then be refused (or, before W-B-8, carried as is)
+	(done) => {
+		const partialUsageBody = { ...answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }), usage: { input_tokens: 100 } };
+		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: partialUsageBody }]);
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+			harness.section('W-B-8: A WIRE USAGE WITHOUT BOTH INTEGER COUNTS IS REFUSED BY NAME');
+			harness.match('refused naming the usage', rerankError, /usage for 'matchingCandidate' is \{"input_tokens":100\}; input_tokens and output_tokens must be non-negative integers/);
+			harness.equal('no verdict', verdict, undefined);
+			done();
+		});
+	},
+	(done) => {
+		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+			harness.section('W-B-8: A ONE-CALL VERDICT CARRIES USAGE IN THE DECLARED SHAPE');
+			harness.equal('usage is { inputTokens, outputTokens }', JSON.stringify(verdict && verdict.usage), JSON.stringify({ inputTokens: 100, outputTokens: 10 }));
 			done();
 		});
 	},

@@ -322,7 +322,14 @@ const moduleFunction = (constructionOptions = {}) => {
 					askCallback(`${moduleName}: ${refusal}`);
 					return;
 				}
-				askCallback('', { answer, attempts: attemptNumber, usage: postResult.responseBody.usage });
+				// W-B-8: usage leaves this client in the forensic contract's shape (match-forensics JUDGE_USAGE_FIELD_LIST,
+				// { inputTokens, outputTokens }); Jev answers in snake_case. A count that is not a non-negative integer is refused.
+				const wireUsage = postResult.responseBody.usage || {};
+				if (!Number.isInteger(wireUsage.input_tokens) || wireUsage.input_tokens < 0 || !Number.isInteger(wireUsage.output_tokens) || wireUsage.output_tokens < 0) {
+					askCallback(`${moduleName}: Jev's usage for '${questionId}' is ${JSON.stringify(postResult.responseBody.usage)}; input_tokens and output_tokens must be non-negative integers`);
+					return;
+				}
+				askCallback('', { answer, attempts: attemptNumber, usage: { inputTokens: wireUsage.input_tokens, outputTokens: wireUsage.output_tokens } });
 			});
 		};
 		attemptOnce(1);

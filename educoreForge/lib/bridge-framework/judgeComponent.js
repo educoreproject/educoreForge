@@ -226,7 +226,7 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 		if (abstentionPredicateVerdict.error) {
 			return { error: abstentionPredicateVerdict.error };
 		}
-		return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: categoryIsAbsent ? ABSENT_CATEGORY_MARK : clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, ...abstentionPredicateVerdict.predicateByFieldName, discardedPredicateKeyCount: abstentionPredicateVerdict.discardedPredicateKeyCount };
+		return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, ideaCoverage: clientReturn.ideaCoverage, chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: categoryIsAbsent ? ABSENT_CATEGORY_MARK : clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, ...abstentionPredicateVerdict.predicateByFieldName, discardedPredicateKeyCount: abstentionPredicateVerdict.discardedPredicateKeyCount };
 	}
 	// A PICK is unchanged: it asserts something about a candidate, so it carries both a category and a
 	// rationale or it is refused. Only the abstention arm was ever the defect.
@@ -251,7 +251,7 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	if (pickPredicateVerdict.error) {
 		return { error: pickPredicateVerdict.error };
 	}
-	return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, ...pickPredicateVerdict.predicateByFieldName, discardedPredicateKeyCount: pickPredicateVerdict.discardedPredicateKeyCount };
+	return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, ideaCoverage: clientReturn.ideaCoverage, chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, ...pickPredicateVerdict.predicateByFieldName, discardedPredicateKeyCount: pickPredicateVerdict.discardedPredicateKeyCount };
 };
 
 // ⟪RULING 13:15⟫ REASK_INSTRUCTION_BY_FAULT — the bounded re-ask is now TWO faults, so the instruction is a
@@ -346,6 +346,9 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					sourceElementIdeaList: judgment.sourceElementIdeaList === undefined ? null : judgment.sourceElementIdeaList,
 					candidateIdeaList: judgment.candidateIdeaList === undefined ? null : judgment.candidateIdeaList,
 					sortedCandidateList: judgment.sortedCandidateList === undefined ? null : judgment.sortedCandidateList,
+					// W-B-8 (V1-S89): the coverage a text judge computed for its own pick, required of the model by the schema
+					// and extracted by llmClient/Ollama, was dropped here. Null where none was reported (Jev, debug, a cache hit).
+					ideaCoverage: judgment.ideaCoverage === undefined ? null : judgment.ideaCoverage,
 					rationale: judgment.rationale,
 					confidence: judgment.confidence,
 					cacheHit,

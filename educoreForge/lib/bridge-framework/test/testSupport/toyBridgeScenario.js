@@ -38,6 +38,7 @@ const graphDoubleLib = require(path.join(FRAMEWORK_DIR, 'graphDouble'));
 const pluginRegistryLib = require(path.join(FRAMEWORK_DIR, 'pluginRegistry'));
 const contentAddress = require(path.join(FRAMEWORK_DIR, '..', 'content-address', 'content-address'))();
 const debugJudgeLib = require(path.join(BRIDGE_MAKER_LIB_DIR, 'debugJudge'));
+const matchForensicsLib = require(path.join(FRAMEWORK_DIR, '..', 'match-forensics', 'match-forensics'));
 
 const cloneJson = (value) => JSON.parse(JSON.stringify(value));
 const HANG_GUARD_MS = 4000;
@@ -134,6 +135,12 @@ const makeMatchForensicsDouble = ({ baseDirPath }) => {
 		appendRecord: ({ pairKey, generation, record } = {}, callback) => {
 			if (typeof pairKey !== 'string' || pairKey.trim() === '' || typeof generation !== 'string' || generation.trim() === '' || !record || typeof record !== 'object' || Array.isArray(record)) {
 				callback('matchForensics.appendRecord: pairKey, generation and a record object are required');
+				return;
+			}
+			// the SAME record contract as lib/match-forensics (W-B-8): a record of an undeclared shape is refused here too
+			const shapeViolation = matchForensicsLib.recordShapeViolation(record);
+			if (shapeViolation) {
+				callback(shapeViolation);
 				return;
 			}
 			recordList.push({ pairKey, generation, record: cloneJson(record) });
