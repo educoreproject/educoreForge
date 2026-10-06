@@ -11,6 +11,7 @@
 //       writer on the member; likewise attestation and self-doc fields (<Label>.<name>), list- and integer-valued names
 //   (b) buildMembers({ hubNameList: ['CEDS'] }) carries the five HAS_CEDS_* edge types; emit reads the hubs from the graph
 //   (c) the role labels (DmeEditHistoryEntry, DmeRestriction, DmeVocabularyTerm, …) are nodeLabel members
+//   (e) every forge declaration's label family (rootLabel and its prefix) is producer-local (fleet finding: old SIF)
 //   (d) COVERAGE over the frozen gold census (157 labels, 34 relationship types): residue EMPTY; and residueFor names a
 //       planted uncatalogued label; the coverage finisher refuses a residue by name
 // RED TWINS: embeddingDimsUndeclared (the contract row removed, a graph-contract double) -> (a) red — the cross-check
@@ -98,5 +99,23 @@ const twinCoverage = loadBuildJsDouble({ buildJsPath: COVERAGE_PATH, mutationLis
 const twinResidue = twinCoverage.residueFor({ labelList: census.labelList, relationshipTypeList: census.relationshipTypeList, memberValueList });
 harness.ok("(d) observed RED with the StandardBase pattern removed", twinResidue.indexOf('StandardBase') !== -1, twinResidue.join(', '));
 harness.note(`RED-OBSERVED d twin='standardBasePatternRemoved' → residue [${twinResidue.join(', ')}]`);
+
+// (e) campaign P2 fleet finding: every forge's per-standard label family is producer-local — the root label and any label
+// minted under its prefix. The gold census held no old-SIF graph, so 'Sif<Kind>' (forges/sif, rootLabel SifRoot) was missing
+// from the pattern list and the embedded sifOnly build was refused at finish naming ten Sif* labels.
+const forgeDeclarationPathList = fs.readdirSync(path.join(__dirname, '..', '..', '..', '..', '..', '..', '..', 'forges'), { withFileTypes: true })
+	.filter((oneEntry) => oneEntry.isDirectory())
+	.map((oneEntry) => path.join(__dirname, '..', '..', '..', '..', '..', '..', '..', 'forges', oneEntry.name, 'lib'))
+	.filter((oneDirPath) => fs.existsSync(oneDirPath))
+	.reduce((soFar, oneDirPath) => soFar.concat(fs.readdirSync(oneDirPath).filter((oneName) => /ForgeDeclaration\.js$/.test(oneName)).map((oneName) => path.join(oneDirPath, oneName))), []);
+const forgeFamilyLabelList = forgeDeclarationPathList.map((oneDeclarationPath) => require(oneDeclarationPath).rootLabel).filter(Boolean)
+	.reduce((soFar, oneRootLabel) => soFar.concat([oneRootLabel, `${oneRootLabel.replace(/(Root|Ontology)$/, '')}ProbeKind`]), []);
+const forgeFamilyResidueFor = (coverageModule) => coverageModule.residueFor({ labelList: forgeFamilyLabelList, relationshipTypeList: [], memberValueList: [] });
+const forgeFamilyResidue = forgeFamilyResidueFor(coverage);
+harness.ok(`(e) every forge's label family (${forgeDeclarationPathList.length} declarations: ${forgeFamilyLabelList.filter((one, position) => position % 2 === 0).join(', ')}) is producer-local`, forgeDeclarationPathList.length >= 5 && forgeFamilyResidue.length === 0, forgeFamilyResidue.join(', ') || 'no residue');
+const preFixPatternList = ['^(Ceds|Edfi|Sif260928|Pesc[A-Za-z0-9]+)[A-Z]', '^StandardBase$', '^BridgedRelation_'];
+const preFixResidue = forgeFamilyResidueFor(require(COVERAGE_PATH)({ vocabulary: { ...vocabulary, PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST: preFixPatternList } }));
+harness.ok('(e) observed RED with the pre-fix pattern list (no old-SIF family)', preFixResidue.some((oneLabel) => /^Sif[A-Z]/.test(oneLabel)), preFixResidue.join(', '));
+harness.note(`RED-OBSERVED e twin='oldSifFamilyUndeclared' → residue [${preFixResidue.join(', ')}]`);
 
 harness.report();

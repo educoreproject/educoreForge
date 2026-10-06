@@ -50,7 +50,9 @@ const LIST_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 // block (StandardBase), or because they are bridge scaffold stripped at finish (BridgedRelation_*, kept here for the
 // relationship blocks). Every OTHER live label and relationship type must be a SchemaView member; the finish-time
 // coverage gate (schema-view-coverage-finisher) proves it. Sources, not RegExps: the contract is JSON.
-const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif260928|Pesc[A-Za-z0-9]+)[A-Z]', '^StandardBase$', '^BridgedRelation_']);
+// Sif is the old SIF forge (forges/sif, rootLabel SifRoot); the gold census held none of its labels, the fleet's embedded
+// sifOnly build did (campaign P2). Every forge declaration's rootLabel family must match (test-schemaViewContractProjection e).
+const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif|Sif260928|Pesc[A-Za-z0-9]+)[A-Z]', '^StandardBase$', '^BridgedRelation_']);
 // names that END in List / Keys but are JSON strings or literals by declaration: the name-rule test exempts exactly these
 const LIST_NAME_RULE_EXEMPTION_BY_NAME = Object.freeze({
 	importList: 'JSON string (pesc-release-forge walk.js)',
