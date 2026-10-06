@@ -25,7 +25,8 @@
 //       Integer never equals 1 → the write is REFUSED ("reported 1 edges, not 1") → red
 //   (c) HUB CARDS + RE-WIDEN — readHubCards({ referenceTier: 'property' }) returns 2,777 cards; the qualified
 //       P001572 cards carry qualifierKeys as a LIST of one (the golden stores one-element lists as SCALARS —
-//       RULING P8, re-widened at the read boundary); twin: the re-widen skipped → a string → red
+//       RULING P8, re-widened at the read boundary — since campaign P2 W-A-1 replay stores the list itself); twin: qualifierKeys
+//       dropped from the replay engine's list registry → a string → red
 //   (d) BLINDING ON THE WIRE — forEvidence() records carry NONE of the declared blinded names (495 Ed-Fi properties
 //       carry cedsId in the graph); forWalk({ channelPropertyList: [] }) REFUSES BY NAME a read of cedsId;
 //       twin: blindedRecordFor keeps the names → an evidence record carries cedsId → red
@@ -106,6 +107,8 @@ const graphWriterLib = require(graphWriterPath);
 const materialiserLib = require(path.join(frameworkDir, 'materialiser'));
 const moduleDouble = require(path.join(treeRoot, 'lib', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 const replayBlockLib = require(path.join(treeRoot, 'lib', 'replay', 'replay-block'))();
+const replayEnginePath = path.join(treeRoot, 'lib', 'replay', 'replay-engine.js');
+const { loadBuildJsDouble } = require(path.join(treeRoot, 'lib', 'bridge-framework', 'test', 'testSupport', 'bridgeTwinFactories'));
 const standardsDatabaseModule = require(path.join(treeRoot, 'lib', 'standards-database', 'standards-database'));
 const replayManagerModule = require(path.join(__dirname, '..', 'apps', 'replay-manager'));
 const buildLib = require(path.join(__dirname, '..', 'lib', 'build'))();
@@ -252,14 +255,16 @@ const hubCardConjunct = ({ handle, realReader }) => {
 		const listShaped = qualifiedList.filter((oneCard) => Array.isArray(oneCard.qualifierKeys));
 		harness.equal('    every one of them carries qualifierKeys as an ARRAY (the golden stores a one-element list as a scalar; the reader re-widens)', listShaped.length, qualifiedList.length);
 		harness.equal('    seven carry exactly ONE qualifier', qualifiedList.filter((oneCard) => Array.isArray(oneCard.qualifierKeys) && oneCard.qualifierKeys.length === 1).length, 7);
-		// (c) RED: the re-widen at the read boundary skipped (graphSeamRules is a RELATIVE sibling of the reader — compiled through the double)
-		const widenTwin = readerFor({ handle, readerLib: mutatedReaderLib([{ modulePath: graphSeamRulesPath, find: "			widened[oneSlot] = widened[oneSlot] === '' ? [] : [widened[oneSlot]];", replace: '			widened[oneSlot] = widened[oneSlot];' }]) });
-		widenTwin.readHubCards({ referenceTier: 'property' }, (twinError, twinCards) => {
-			const twinQualified = (twinCards || []).filter((oneCard) => oneCard.canonicalKey === QUALIFIED_KEY);
-			const stringShaped = twinQualified.filter((oneCard) => typeof oneCard.qualifierKeys === 'string');
-			harness.ok(`(c) RED-OBSERVED — with the re-widen skipped ${stringShaped.length} qualified cards carry qualifierKeys as a STRING`, (twinError && /qualifierKeys/.test(twinError)) || stringShaped.length > 0, twinError || 'no string-shaped card seen');
-			widenTwin.close(() => blindingConjunct({ handle, realReader }));
-		});
+		// (c) RED (campaign P2): replay now KEEPS qualifierKeys as a list (W-A-1, graph-contract §1), so the read-boundary
+		// re-widen has nothing left to widen (its branch is retired in P3) and a twin that skips it is blind. The twin therefore
+		// moves to where the list is now kept: qualifierKeys dropped from the replay engine's list registry, the stored
+		// one-element list collapses to a STRING again — the defect this conjunct guards.
+		const oneQualifierCard = qualifiedList.find((oneCard) => Array.isArray(oneCard.qualifierKeys) && oneCard.qualifierKeys.length === 1);
+		const storedQualifierKeysOf = (mutationList) => (mutationList.length === 0 ? require(replayEnginePath) : loadBuildJsDouble({ buildJsPath: replayEnginePath, mutationList }))().pgToStored({ qualifierKeys: [oneQualifierCard ? oneQualifierCard.qualifierKeys[0] : 'none'] }).qualifierKeys;
+		harness.ok('    replay stores a one-element qualifierKeys as a LIST (W-A-1) — why the cards arrive as arrays', Array.isArray(storedQualifierKeysOf([])), JSON.stringify(storedQualifierKeysOf([])));
+		const twinStored = storedQualifierKeysOf([{ find: 'const keepAsList = LIST_VALUED_PROPERTY_NAME_SET.has(onePropertyName);', replace: "const keepAsList = onePropertyName !== 'qualifierKeys' && LIST_VALUED_PROPERTY_NAME_SET.has(onePropertyName);" }]);
+		harness.ok(`(c) RED-OBSERVED — with qualifierKeys dropped from the replay list registry it is stored as ${JSON.stringify(twinStored)}`, typeof twinStored === 'string', JSON.stringify(twinStored));
+		blindingConjunct({ handle, realReader });
 	});
 };
 
