@@ -143,6 +143,15 @@ const kitConjunctList = [
 		twinName: 'disablePrecedingIdCheck', fileName: KIT_FILE,
 		find: '\t\tif (precedingProperties !== undefined && precedingProperties._id !== undefined) {', replace: '\t\tif (false && precedingProperties !== undefined && precedingProperties._id !== undefined) {',
 	}),
+	// ⟪campaign P2, W-C-15⟫ a universal name in precedingProperties was silently overwritten; now refused by name
+	refusalCase({
+		registry: twinRegistry, gateId: KIT_GATE_ID, conjunctId: 'precedingUniversalCollision',
+		title: "a universal name ('path') in precedingProperties is refused, never silently overwritten",
+		shape: (scenario) => withWalkExtra(scenario, ({ kit }) => { mintClass(kit, 'toy:class/Extra', { precedingProperties: { path: 'x' } }); }),
+		regex: /precedingProperties name 'path' collides with a universal property/,
+		twinName: 'disablePrecedingCollisionCheck', fileName: KIT_FILE,
+		find: '\t\tif (precedingCollisionName !== undefined) {', replace: '\t\tif (false && precedingCollisionName !== undefined) {',
+	}),
 	refusalCase({
 		registry: twinRegistry, gateId: KIT_GATE_ID, conjunctId: 'unknownRole',
 		title: 'an unknown role is refused naming DME_ROLES',
@@ -272,6 +281,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'G-KIT + G-REFERENT', gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 24, expectedTwinCount: 24 },
+	{ harness, familyName: 'G-KIT + G-REFERENT', gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 25, expectedTwinCount: 25 }, // campaign P2 W-C-15: +1 (precedingUniversalCollision)
 	() => harness.report(),
 );

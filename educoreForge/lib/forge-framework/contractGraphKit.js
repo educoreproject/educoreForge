@@ -218,6 +218,18 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 		if (precedingProperties !== undefined && precedingProperties._id !== undefined) {
 			throw refuse.byName({ moduleName, what: `makeNode: '_id' supplied by the caller in precedingProperties (from ${originText})`, where: 'the FRAMEWORK stamps _id: stableId; a hook MUST NOT set it' });
 		}
+		// ⟪campaign P2, W-C-15 / V1-C47⟫ a precedingProperties name that collides with a universal property (or with an explicit
+		// description) was SILENTLY OVERWRITTEN by the kit's own stamp below; it is refused by name instead. CEDS feeds its
+		// OPEN annotation set here, so a future release carrying, say, a 'path' predicate now refuses at the kit rather than
+		// losing that predicate's value. (Measured 2026-10-06 over CEDS 14: its annotation names — alternative, closeMatch,
+		// comment, creator, decimalPlaces, definition, deprecated, equivalentProperty, isDefinedBy, maxInclusive, minInclusive,
+		// minLength, prefLabel, range — collide with none.)
+		const precedingCollisionName = precedingProperties === undefined
+			? undefined
+			: Object.keys(precedingProperties).find((oneName) => universalMintPropertyNameList.indexOf(oneName) !== -1 || (oneName === 'description' && description !== undefined));
+		if (precedingCollisionName !== undefined) {
+			throw refuse.byName({ moduleName, what: `makeNode: precedingProperties name '${precedingCollisionName}' collides with a universal property (from ${originText})`, where: `the universal set (${universalMintPropertyNameList.join(', ')}) is the framework's; a source predicate with that local name must be renamed by the parser before it reaches the kit` });
+		}
 		if (carriedPropertiesArg !== undefined) {
 			if (carriedPropertiesArg._id !== undefined) {
 				throw refuse.byName({ moduleName, what: `makeNode: '_id' supplied by the caller in carriedProperties (from ${originText})`, where: 'the FRAMEWORK stamps _id: stableId; a hook MUST NOT set it' });
