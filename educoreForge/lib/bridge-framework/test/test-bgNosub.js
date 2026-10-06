@@ -675,7 +675,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 //     test-gStandardMetadata.js 134 (new);
 //   item 2 (FINDING 5-A): build.js 85 and build-attestation-finisher.js 33 (the fidelity row is the runner's report).
 // forger/, lib/replay/, every forge entry and hooks file: UNTOUCHED. SEAM_PATH_LIST byte-identical. Fresh red observed on d39755c (DEVLOG-R).
-const PHASE3_ANCHOR_TAG = 'postLeftoversRSeamDiffEmpty-100526'; // re-anchored by EMERALD_OCEAN, leftovers lane R
+// campaign P0 RE-ANCHOR (SILVER_ECHO, 2026-10-06; pre-authorised, WORKORDER-P0-securityFoundations-100626 / NOTES 5):
+// postLeftoversRSeamDiffEmpty-100526 -> postCampaignP0SeamDiffEmpty-100626, tag cut ON this commit. CENSUS (git diff --stat
+// postLeftoversRSeamDiffEmpty-100526 -- the seam paths) at 0d6ffd9: ONE file, campaign P0 5b59b19 (W-C-11): build.js 36 (the vector
+// cache path is handed down by actions.js's STORE_FAMILY_RESOLUTION_TABLE; build.js no longer reads the command line for it).
+// forger/, lib/replay/, replay-manager/, every forge entry/declaration/hooks file and lib/forge-framework SOURCE: UNTOUCHED.
+// SEAM_PATH_LIST byte-identical. Fresh red observed on the re-anchor commit (DEVLOG-P0).
+const PHASE3_ANCHOR_TAG = 'postCampaignP0SeamDiffEmpty-100626'; // re-anchored by SILVER_ECHO, campaign P0
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
