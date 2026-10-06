@@ -60,9 +60,11 @@ const DERIVED_PLUGIN_FILE_PATH = path.join(BUNDLE_DIR_PATH, 'bridges', 'edfiCeds
 const RETIRED_FOLDER_NAME = 'cedsAuthoredCrosswalk_DO_NOT_USE';
 const FORMER_FOLDER_NAME = 'cedsAuthoredCrosswalk';
 const RETIRED_CSV_FILE_NAME_LIST = Object.freeze(['EdFiEntityDescriptorsToCEDS.csv', 'EdFiEntityElementsToCEDS.csv']);
-// sha256 of forges/edfi/bridges/edfiCedsDerivedPlugin.js at goldJev/A 937734f (`shasum -a 256`, 2026-10-02):
-// the brief requires the derived plugin UNCHANGED, so its bytes are pinned rather than trusted
-const DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A = 'dd4cd0218e7359f3b9c49e7662f7102d99c652c88fa2411472d269b2ff705615';
+// sha256 of forges/edfi/bridges/edfiCedsDerivedPlugin.js (`shasum -a 256`). Pinned at goldJev/A 937734f (2026-10-02,
+// dd4cd021…); RE-ANCHORED 2026-10-06 by campaign P3 (W-B-5, CARDINAL_HORIZON): the plugin gained exactly the two opt-ins
+// its gold siblings declare (promptIdentifierScan with the hub id list, blockRecordsJudgeConfig) and nothing else — still
+// no channel (the second DERIVED check). The bytes stay pinned rather than trusted.
+const DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A = '272dd5ac50b63aaf1710f17cb09b4616638845b6b91406192fffa45be04dd7f7';
 
 // a node property naming CEDS, or a cross-reference of any kind, can only have come from a crosswalk:
 // Ed-Fi's own MetaEd publishes no CEDS anchor (the walk's scan uses the same rule)
@@ -146,7 +148,7 @@ const judgeDerived = () => {
 	const derivedPlugin = require(DERIVED_PLUGIN_FILE_PATH);
 	const actualSha256 = sha256OfFile(DERIVED_PLUGIN_FILE_PATH);
 	return [
-		{ label: 'DERIVED: edfiCedsDerivedPlugin.js is byte-identical to goldJev/A 937734f', pass: actualSha256 === DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A, detail: `sha256 ${actualSha256}` },
+		{ label: 'DERIVED: edfiCedsDerivedPlugin.js is byte-identical to its pinned bytes (campaign P3 W-B-5 re-anchor)', pass: actualSha256 === DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A, detail: `sha256 ${actualSha256}` },
 		{ label: 'DERIVED: edfiCedsDerivedPlugin declares no source channel (it opens no file)', pass: Array.isArray(derivedPlugin.bridgeDeclaration.sourceChannelList) && derivedPlugin.bridgeDeclaration.sourceChannelList.length === 0, detail: JSON.stringify(derivedPlugin.bridgeDeclaration.sourceChannelList) },
 	];
 };

@@ -397,6 +397,17 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	compatibilityDeclarationList: Object.freeze({ required: true, kind: 'compatibilityDeclarationList' }),
 });
 
+// DERIVED_PLUGIN_PER_STANDARD_KEY_LIST — the declaration keys in which two derived plugins of ONE recipe may legitimately
+// differ (W-B-5, V1-C07/V1-S78, campaign P3 2026-10-06). Every OTHER key must be canonically identical across the derived
+// plugins a recipe runs (test-bgSiblingDeclarations), so an opt-in one sibling predates (Ed-Fi lacked
+// blockRecordsJudgeConfig and promptIdentifierScan) is a named red, not an unnoticed drift. A dotted name relaxes ONE
+// member of an object-valued key; the rest of that object must still agree.
+const DERIVED_PLUGIN_PER_STANDARD_KEY_LIST = Object.freeze([
+	'bridgeName', 'standardKey', 'sourceCuriePrefix', 'subjectCuriePrefix', 'subjectSource', 'candidateRetrieval', 'renderingAllowList',
+	'blindingDeclaration', 'evidenceHooksDeclared', 'globalGuidanceList', 'materialisationFanout', 'judgmentPartition',
+	'promptIdentifierScan.identifierListPath',
+]);
+
 const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
 // walkChannelListOf — the declared WALK channels that carry a classification (the table walk validates
 // sourceChannelList BEFORE every key that references it, so an unlisted/invalid list here is already refused;
@@ -1372,6 +1383,7 @@ const canonicalJsonText = (value) => {
 
 module.exports = {
 	BRIDGE_DECLARATION_CONTRACT,
+	DERIVED_PLUGIN_PER_STANDARD_KEY_LIST,
 	BRIDGE_HOOK_CONTRACT,
 	HOOK_NAME_LIST,
 	KIND_CHECKER_REGISTRY,

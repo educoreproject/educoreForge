@@ -125,6 +125,20 @@ const bridgeDeclaration = Object.freeze({
 	// braces: the allow-list already makes these unreachable by the renderer, and this removes them at the
 	// seam. Two independent mechanisms, because the value of an audit is that one of them failing is visible.
 	blindingDeclaration: ['cedsId', 'crossRefs', 'cedsOriginalAnchorPropertyName', 'cedsOptionCode', 'cedsOptionOriginalAnchorPropertyName'],
+	// ⟪2026-10-06, W-B-5 (G8), campaign P3⟫ the two opt-ins every sibling declares and this plugin predated. The identifier
+	// list is byte-identical to SIF's and every PESC release's: it is the union of SIF's 354 column ids and the bare form of
+	// every P/C id the live CEDS hub's card URIs carry (phase D4, RULING EBONY_DREAM 2026-09-29) — a list of HUB ids, so it
+	// serves any source bridged to that hub. Measured before the switch on GOLD_EVAL_261005_jevAcceptance: 0 of 1,904
+	// EdfiProperty nodes carry a six-digit run in any field this plugin renders (name, path, description, propertyType,
+	// owningConstructName, owningConstructType), so the scan has nothing of Ed-Fi's to refuse. ONE hit refuses the run.
+	promptIdentifierScan: {
+		identifierPatternList: [
+			{ patternName: 'cedsPropertyId', regexSource: 'P\\d{6}' },
+			{ patternName: 'cedsClassId', regexSource: 'C\\d{6}' },
+		],
+		identifierListPath: 'bridges/edfiCedsIdList.json',
+	},
+	blockRecordsJudgeConfig: true,
 	// ⟪PROMPT v2 — 2026-09-11, OCEAN_SUMMIT, TQ-authorised: "Revise the prompt to include meaning and whatever
 	// else you think will help and rerun the set."⟫ globalGuidance turned ON. The block has existed, guarded and
 	// empty, since the framework was built; these are the first lines to go in it, and every one of them was

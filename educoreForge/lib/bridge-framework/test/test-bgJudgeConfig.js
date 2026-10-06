@@ -12,7 +12,7 @@
 //                   (a2) changing maxTokens in the ini moves the block id; (a3) the tool-schema sha follows the tool text;
 //                   (b) opted out, the toy derived block equals the branch-cut text with frameworkFingerprint masked;
 //                   (m) unmasked, the two differ in exactly that one header key.
-//   BG-JUDGECONFIG-ORACLE  (§1.7) the shipped Ed-Fi and PESC plugins register with the key absent; (R1 = gate c) run E's
+//   BG-JUDGECONFIG-ORACLE  (§1.7) the shipped pesc260805 plugins register with the key absent; (R1 = gate c) run E's
 //                   frozen block parses unchanged and keeps its id.
 //
 // Run: node lib/bridge-framework/test/test-bgJudgeConfig.js [-verbose]
@@ -69,7 +69,9 @@ const INI_MAX_TOKENS = 2000;
 const INI_MAX_TOKENS_CHANGED = 2500;
 
 const SHIPPED_DERIVED_PLUGIN_LIST = [
-	{ bridgeName: 'edfiCedsDerivedPlugin', bundleDirName: 'edfi', pluginPath: 'forges/edfi/bridges/edfiCedsDerivedPlugin.js' },
+	// edfiCedsDerivedPlugin LEFT this list 2026-10-06 (campaign P3, W-B-5): it now declares blockRecordsJudgeConfig like its
+	// gold siblings (BG-SIBLINGS holds them together). The two pesc260805 plugins still declare nothing, so (a) still proves
+	// that an absent key registers.
 	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded, "known to be garbage"): edfiCedsCrosswalkPlugin moved to forges/edfi/retiredBridges/, out of the roster
 	{ bridgeName: 'pescCedsDerivedPlugin', bundleDirName: 'pesc260805', pluginPath: 'forges/pesc260805/bridges/pescCedsDerivedPlugin.js' },
 	{ bridgeName: 'pescOptionSetCedsDerivedPlugin', bundleDirName: 'pesc260805', pluginPath: 'forges/pesc260805/bridges/pescOptionSetCedsDerivedPlugin.js' },
@@ -277,7 +279,7 @@ const libFor = (scenario, fileName, requirePath) => (scenario.frameworkMutationL
 const oracleConjunctList = [
 	pureConjunct({
 		conjunctId: 'a_shippedPluginsRegisterWithKeyAbsent',
-		title: '§1.7: the shipped Ed-Fi and PESC plugins declare no blockRecordsJudgeConfig and every one still registers',
+		title: '§1.7: the shipped pesc260805 plugins declare no blockRecordsJudgeConfig and every one still registers',
 		twinNameList: ['judgeConfigKeyMadeRequired'],
 		judge: (scenario) => {
 			const contractLib = libFor(scenario, CONTRACT_FILE, '../bridgePluginContract');

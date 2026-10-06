@@ -13,7 +13,7 @@
 //                   declared, the toy derived block equals the branch-cut text with frameworkFingerprint masked; (m)
 //                   unmasked, the two differ in exactly that one header key; (e) the one rationale re-ask prompt is
 //                   scanned too (EBONY_DREAM), with (e0) its unplanted companion passing through the re-ask.
-//   BG-PROMPTSCAN-ORACLE  (§1.7) the shipped Ed-Fi and PESC derived plugins register with the key absent; (R1) run E's
+//   BG-PROMPTSCAN-ORACLE  (§1.7) the shipped pesc260805 derived plugins register with the key absent; (R1) run E's
 //                   frozen block parses unchanged and its block id is the frozen literal.
 //
 // Run: node lib/bridge-framework/test/test-bgPromptScan.js [-verbose]
@@ -62,7 +62,7 @@ const FRAMEWORK_FINGERPRINT_TEXT_RE = /"frameworkFingerprint":"[0-9a-f]{64}"/g;
 
 // the plugins §1.7 says must stay byte-unchanged AND keep registering while the new key is absent
 const SHIPPED_DERIVED_PLUGIN_LIST = [
-	{ bridgeName: 'edfiCedsDerivedPlugin', bundleDirName: 'edfi', pluginPath: 'forges/edfi/bridges/edfiCedsDerivedPlugin.js' },
+	// edfiCedsDerivedPlugin LEFT this list 2026-10-06 (campaign P3, W-B-5): it declares the scan like its gold siblings now
 	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded, "known to be garbage"): edfiCedsCrosswalkPlugin moved to forges/edfi/retiredBridges/, out of the roster
 	{ bridgeName: 'pescCedsDerivedPlugin', bundleDirName: 'pesc260805', pluginPath: 'forges/pesc260805/bridges/pescCedsDerivedPlugin.js' },
 	{ bridgeName: 'pescOptionSetCedsDerivedPlugin', bundleDirName: 'pesc260805', pluginPath: 'forges/pesc260805/bridges/pescOptionSetCedsDerivedPlugin.js' },
@@ -273,7 +273,7 @@ const runEBlockTextFor = (scenario) => {
 const oracleConjunctList = [
 	pureConjunct({
 		conjunctId: 'a_shippedPluginsRegisterWithKeyAbsent',
-		title: '§1.7: the shipped Ed-Fi and PESC plugins declare no promptIdentifierScan and every one still registers',
+		title: '§1.7: the shipped pesc260805 plugins declare no promptIdentifierScan and every one still registers',
 		twinNameList: ['scanKeyMadeRequired'],
 		judge: (scenario) => {
 			const contractLib = contractFor(scenario);
