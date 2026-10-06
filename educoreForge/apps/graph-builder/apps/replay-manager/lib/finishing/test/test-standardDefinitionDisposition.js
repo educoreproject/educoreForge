@@ -42,7 +42,8 @@ const realFinisherFactory = require(FINISHER_PATH);
 const finisherFor = (mutationList) => (mutationList.length === 0 ? realFinisherFactory : moduleDouble.loadWithMutations({ modulePath: FINISHER_PATH, mutationList }))({ vocabulary });
 
 // a root row as the derivation query returns it; the counts are what the conjunct varies
-const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, unkindedMappingEdgeCount = 0, standardKind = null, standardUsageTips = null }) => ({
+// ⟪campaign P3, W-C-4⟫ a root row carries the forge-declared family and release label (the finisher refuses a root without them)
+const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, unkindedMappingEdgeCount = 0, standardKind = null, standardUsageTips = null, standardFamily = 'Toy', releaseLabel = 'Toy' }) => ({
 	sourceKey: 'Toy',
 	standardKey: 'toy',
 	standardName: 'Toy',
@@ -59,6 +60,8 @@ const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, un
 	mappingEdgeTypes: exactMappedProperties > 0 ? ['EXACT_MATCH'] : [],
 	standardKind,
 	standardUsageTips,
+	standardFamily,
+	releaseLabel,
 });
 const readQueryOver = (rowList) => (queryArguments, callback) => callback('', { records: rowList.map((oneRow) => ({ get: (fieldName) => oneRow[fieldName] })) });
 
@@ -78,6 +81,19 @@ const conjunctJudgeByRefId = {
 		finisher.emit({ readQuery: readQueryOver([rootRow({ exactMappedProperties: 2, mappingKindList: [], mappingSourceList: [], unkindedMappingEdgeCount: 2 })]) }, (emitError) => {
 			const refusedByName = typeof emitError === 'string' && /REFUSED: Toy \(2\) carry mapping edges with no mappingKind/.test(emitError);
 			done({ pass: refusedByName, detail: emitError ? emitError.slice(0, 160) : 'emitted without refusing' });
+		});
+	},
+	g_familylessRootRefusedByName: (finisher, done) => {
+		finisher.emit({ readQuery: readQueryOver([rootRow({ exactMappedProperties: 1, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'], standardFamily: null })]) }, (emitError, emitted) => {
+			const refusedByName = typeof emitError === 'string' && /REFUSED: Toy \(standardFamily null, releaseLabel "Toy"\) carry no forge-declared family and release label/.test(emitError);
+			const carried = emitted && emitted.nodes ? emitted.nodes.map((oneNode) => `${oneNode.properties.standardFamily}/${oneNode.properties.releaseLabel}`).join(',') : '';
+			done({ pass: refusedByName, detail: emitError ? emitError.slice(0, 200) : `emitted without refusing (${carried})` });
+		});
+	},
+	gPrime_familyAndLabelCarriedToTheCard: (finisher, done) => {
+		finisher.emit({ readQuery: readQueryOver([rootRow({ exactMappedProperties: 1, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'], standardFamily: 'PESC', releaseLabel: 'CollegeTranscript' })]) }, (emitError, emitted) => {
+			const properties = emitted && emitted.nodes && emitted.nodes[0] ? emitted.nodes[0].properties : {};
+			done({ pass: !emitError && properties.standardFamily === 'PESC' && properties.releaseLabel === 'CollegeTranscript', detail: emitError || `card standardFamily ${JSON.stringify(properties.standardFamily)}, releaseLabel ${JSON.stringify(properties.releaseLabel)}` });
 		});
 	},
 	e_tipsFromRootNeverInvented: (finisher, done) => {
@@ -101,6 +117,18 @@ const conjunctJudgeByRefId = {
 };
 
 const TWIN_LIST = [
+	{
+		conjunctRefId: 'g_familylessRootRefusedByName',
+		twinName: 'familyRefusalRemoved',
+		find: "				const familylessRowList = rows.filter((oneRow) => typeof oneRow.standardFamily !== 'string' || !oneRow.standardFamily || typeof oneRow.releaseLabel !== 'string' || !oneRow.releaseLabel);",
+		replace: '				const familylessRowList = [];',
+	},
+	{
+		conjunctRefId: 'gPrime_familyAndLabelCarriedToTheCard',
+		twinName: 'familyNotCarried',
+		find: '					standardFamily: oneRow.standardFamily,\n',
+		replace: '',
+	},
 	{
 		conjunctRefId: 'e_tipsFromRootNeverInvented',
 		twinName: 'kindInventedForUnlisted',

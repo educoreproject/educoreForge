@@ -211,8 +211,8 @@ const STANDARD_DEFINITION_FIELD_LIST = Object.freeze([
 	{ name: 'unkindedMappingEdgeCount', type: 'integer', required: false, meaning: 'match edges carrying no mappingKind' },
 	{ name: 'standardKind', type: 'string', required: true, meaning: 'what kind of standard it is, as its forge declares' },
 	{ name: 'standardUsageTips', type: 'string', required: false, meaning: 'how to read the standard in this graph, as its forge declares; absent when the forge declares null (forgeDeclarationContract allows it: sif, pesc260805)' },
-	{ name: 'standardFamily', type: 'string', required: false, meaning: 'the family the standard belongs to (CEDS, EdFi, SIF, PESC)' },
-	{ name: 'releaseLabel', type: 'string', required: false, meaning: 'the release within the family, version-free' },
+	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
+	{ name: 'releaseLabel', type: 'string', required: true, meaning: 'which member of its family the standard is, version-free (CollegeTranscript, not CollegeTranscript-1.8.0); a one-member family repeats the family name' },
 ].map((oneRow) => Object.freeze(oneRow)));
 const USAGE_PATTERN_FIELD_LIST = Object.freeze([
 	{ name: 'patternName', type: 'string', required: true, meaning: 'the exemplar\'s name' },

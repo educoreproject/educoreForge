@@ -97,6 +97,7 @@ const moduleFunction =
 			       root.sourceFormat AS sourceFormat, root.sourceUrl AS sourceUrl,
 			       root.stableId AS rootStableId,
 			       root.standardKind AS standardKind, root.standardUsageTips AS standardUsageTips,
+			       root.standardFamily AS standardFamily, root.releaseLabel AS releaseLabel,
 			       propertyCount, classCount, optionValueCount,
 			       exactMappedProperties, closeMappedProperties,
 			       mappingKindList, mappingSourceList, unkindedMappingEdgeCount,
@@ -162,6 +163,10 @@ const moduleFunction =
 					mappingKindList,
 					mappingSourceList,
 					...(oneRow.standardKind ? { standardKind: oneRow.standardKind } : {}),
+					// ⟪campaign P3, W-C-4⟫ REQUIRED, never spread-if-present: a root without them was forged before the contract, and
+					// the rows are refused by name before shaping (below)
+					standardFamily: oneRow.standardFamily,
+					releaseLabel: oneRow.releaseLabel,
 					...(oneRow.standardUsageTips ? { standardUsageTips: oneRow.standardUsageTips } : {}),
 					// SORTED — collect() order is not stable and this node is in fingerprint scope.
 					mappingEdgeTypes: sorted(oneRow.mappingEdgeTypes).filter((oneType) => oneType !== 'null'),
@@ -200,6 +205,8 @@ const moduleFunction =
 					rootStableId: oneRecord.get('rootStableId'),
 					standardKind: oneRecord.get('standardKind'),
 					standardUsageTips: oneRecord.get('standardUsageTips'),
+					standardFamily: oneRecord.get('standardFamily'),
+					releaseLabel: oneRecord.get('releaseLabel'),
 					propertyCount: oneRecord.get('propertyCount'),
 					classCount: oneRecord.get('classCount'),
 					optionValueCount: oneRecord.get('optionValueCount'),
@@ -219,6 +226,17 @@ const moduleFunction =
 						`standard-definition-finisher REFUSED: ${unkindedRowList.map((oneRow) => `${oneRow.sourceKey} (${Number(oneRow.unkindedMappingEdgeCount)})`).join(', ')} ` +
 							`carry mapping edges with no mappingKind, so the standard's mappingKindList cannot be read from the graph. Every mapping ` +
 							`edge the bridge framework writes carries one (lane P, 2026-10-04); an edge without it predates that or came from elsewhere.`,
+					);
+					return;
+				}
+
+				// ⟪campaign P3, W-C-4⟫ every root declares its family and release label (forge declaration, stamped on the root); a
+				// root without them is a block forged before the contract — refused by name, never a card that guesses
+				const familylessRowList = rows.filter((oneRow) => typeof oneRow.standardFamily !== 'string' || !oneRow.standardFamily || typeof oneRow.releaseLabel !== 'string' || !oneRow.releaseLabel);
+				if (familylessRowList.length > 0) {
+					callback(
+						`standard-definition-finisher REFUSED: ${familylessRowList.map((oneRow) => `${oneRow.sourceKey} (standardFamily ${JSON.stringify(oneRow.standardFamily)}, releaseLabel ${JSON.stringify(oneRow.releaseLabel)})`).join(', ')} ` +
+							`carry no forge-declared family and release label on their root: the block was forged before the contract (W-C-4). Re-forge it.`,
 					);
 					return;
 				}

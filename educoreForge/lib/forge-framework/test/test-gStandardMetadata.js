@@ -12,6 +12,10 @@
 //   (e) a declared standardUsageTips: null leaves the root WITHOUT the property (absent is absent, never invented text)
 //   (f) every bundle of the gold recipe (CEDS, Ed-Fi, SIF260928, the seven PESC releases) is accepted and declares
 //       dataStandard with non-empty tips, and the seven PESC releases share one text
+//   ⟪campaign P3, W-C-4 (V1-C32, CONTRACTS §7)⟫ the FAMILY a standard belongs to and WHICH member of it this release is:
+//   (g) a declaration without standardFamily is REFUSED by name; (h) a family outside vocabulary.STANDARD_FAMILY_LIST is
+//   REFUSED; (i) a blank releaseLabel is REFUSED; (j) the root carries both; (k) the gold bundles declare a family in the
+//   list — the seven PESC releases PESC with seven DISTINCT version-free labels, CEDS / EdFi / SIF one each.
 // RED TWINS, each observed in memory: (a) the contract row made optional; (b) the closed-value check accepting anything;
 // (c) the tips checker accepting ''; (d) the root dropping standardKind; (e) null stamped as a property; (f) the PESC release
 // declaration builder forgetting the tips.
@@ -64,6 +68,9 @@ const GOLD_BUNDLE_DECLARATION_PATH_LIST = [
 	),
 );
 const PESC_RELEASE_BUNDLE_PREFIX = 'PESC-';
+// the families the gold recipe's bundles declare (W-C-4): written here as literals so the gate states the contract it checks
+const EXPECTED_GOLD_FAMILY_BY_SOURCE_PREFIX = Object.freeze({ CEDS: 'CEDS', EdFi: 'EdFi', SIF260928: 'SIF', 'PESC-': 'PESC' });
+const familyExpectedFor = (standardSource) => EXPECTED_GOLD_FAMILY_BY_SOURCE_PREFIX[Object.keys(EXPECTED_GOLD_FAMILY_BY_SOURCE_PREFIX).find((onePrefix) => standardSource.indexOf(onePrefix) === 0)];
 
 const conjunctJudgeByRefId = {
 	a_missingKindRefused: (mutationList) => {
@@ -107,6 +114,45 @@ const conjunctJudgeByRefId = {
 		const pescShareOneText = pescTipsList.length === 7 && pescTipsList.every((oneTips) => oneTips === pescTipsList[0]);
 		return { pass: faultList.length === 0 && pescShareOneText, detail: faultList.length ? faultList.join('; ') : `${declarationList.length} bundles declare dataStandard + tips; PESC releases share one text: ${pescShareOneText}` };
 	},
+	g_missingFamilyRefused: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: undefined }));
+		return { pass: /forgeDeclaration is missing required property 'standardFamily'/.test(message), detail: message || 'accepted a declaration with no standardFamily' };
+	},
+	h_familyOutsideVocabularyRefused: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'Pesc' }));
+		return { pass: /forgeDeclaration 'standardFamily' 'Pesc' is not one of: /.test(message), detail: message || "accepted standardFamily 'Pesc'" };
+	},
+	i_blankReleaseLabelRefused: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ releaseLabel: ' ' }));
+		return { pass: /forgeDeclaration 'releaseLabel'/.test(message), detail: message || 'accepted a blank releaseLabel' };
+	},
+	j_rootCarriesFamilyAndLabel: (mutationList) => {
+		// a root builder that drops the family is refused by its own REQUIRED_PROPERTIES.STANDARD_ROOT check: that refusal is
+		// the conjunct failing, not the suite crashing
+		let properties = {};
+		let buildRefusal = '';
+		try {
+			properties = rootPropertiesFor(mutationList, toyForgeDeclaration);
+		} catch (buildError) {
+			buildRefusal = buildError.message;
+		}
+		if (buildRefusal) {
+			return { pass: false, detail: `the root build refused: ${buildRefusal.slice(0, 200)}` };
+		}
+		return { pass: typeof properties.standardFamily === 'string' && properties.standardFamily === toyForgeDeclaration.standardFamily && typeof properties.releaseLabel === 'string' && properties.releaseLabel === toyForgeDeclaration.releaseLabel, detail: `root standardFamily ${JSON.stringify(properties.standardFamily)}, releaseLabel ${JSON.stringify(properties.releaseLabel)}` };
+	},
+	k_goldBundlesDeclareFamilyAndLabel: (mutationList) => {
+		const releaseBuilder = loadFor(RELEASE_DECLARATION_PATH, mutationList);
+		const declarationList = GOLD_BUNDLE_DECLARATION_PATH_LIST.map((oneDeclarationPath) =>
+			path.basename(oneDeclarationPath) === 'declaration.js'
+				? releaseBuilder.buildForgeDeclaration({ releaseDeclarationData: require(path.join(path.dirname(oneDeclarationPath), 'releaseDeclaration.json')), releaseDeclarationName: oneDeclarationPath })
+				: require(oneDeclarationPath),
+		);
+		const faultList = declarationList.filter((oneDeclaration) => oneDeclaration.standardFamily !== familyExpectedFor(oneDeclaration.standardSource) || typeof oneDeclaration.releaseLabel !== 'string' || !oneDeclaration.releaseLabel.trim() || /\d+\.\d+/.test(oneDeclaration.releaseLabel)).map((oneDeclaration) => `${oneDeclaration.standardSource}: ${JSON.stringify(oneDeclaration.standardFamily)} / ${JSON.stringify(oneDeclaration.releaseLabel)}`);
+		const pescLabelList = declarationList.filter((oneDeclaration) => oneDeclaration.standardFamily === 'PESC').map((oneDeclaration) => oneDeclaration.releaseLabel);
+		const distinctPescLabelCount = new Set(pescLabelList).size;
+		return { pass: faultList.length === 0 && pescLabelList.length === 7 && distinctPescLabelCount === 7, detail: faultList.length ? faultList.join('; ') : `${declarationList.length} bundles; PESC labels ${distinctPescLabelCount} distinct of ${pescLabelList.length} (${pescLabelList.join(', ')})` };
+	},
 };
 
 const TWIN_LIST = [
@@ -116,6 +162,11 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'd_rootCarriesDeclaredValues', twinName: 'rootDropsKind', modulePath: ROOT_PATH, find: '\t\tstandardKind,\n\t\t...(standardUsageTips', replace: '\t\t...(standardUsageTips' },
 	{ conjunctRefId: 'e_nullTipsLeaveNoProperty', twinName: 'nullStampedAsProperty', modulePath: ROOT_PATH, find: '...(standardUsageTips === null ? {} : { standardUsageTips }),', replace: 'standardUsageTips,' },
 	{ conjunctRefId: 'f_goldBundlesDeclareKindAndTips', twinName: 'releaseBuilderForgetsTips', modulePath: RELEASE_DECLARATION_PATH, find: '\t\tstandardUsageTips: PESC_RELEASE_STANDARD_USAGE_TIPS,\n', replace: '\t\tstandardUsageTips: null,\n' },
+	{ conjunctRefId: 'g_missingFamilyRefused', twinName: 'familyOptional', modulePath: CONTRACT_PATH, find: "standardFamily: Object.freeze({ required: true, kind: 'closedValue'", replace: "standardFamily: Object.freeze({ required: false, kind: 'closedValue'" },
+	{ conjunctRefId: 'h_familyOutsideVocabularyRefused', twinName: 'familyAnyString', modulePath: CONTRACT_PATH, find: "standardFamily: Object.freeze({ required: true, kind: 'closedValue', allowedValueList: STANDARD_FAMILY_LIST }),", replace: "standardFamily: Object.freeze({ required: true, kind: 'nonEmptyString' })," },
+	{ conjunctRefId: 'i_blankReleaseLabelRefused', twinName: 'labelOptional', modulePath: CONTRACT_PATH, find: "releaseLabel: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "releaseLabel: Object.freeze({ required: true, kind: 'nonEmptyString' })," },
+	{ conjunctRefId: 'j_rootCarriesFamilyAndLabel', twinName: 'rootDropsFamily', modulePath: ROOT_PATH, find: '\t\tstandardFamily,\n\t\treleaseLabel,\n', replace: '\t\treleaseLabel,\n' },
+	{ conjunctRefId: 'k_goldBundlesDeclareFamilyAndLabel', twinName: 'releaseBuilderLabelsByFamily', modulePath: RELEASE_DECLARATION_PATH, find: '\t\treleaseLabel: releaseDeclarationData.standard,\n', replace: "\t\treleaseLabel: 'PESC',\n" },
 ];
 
 harness.section('BASELINE — the real contract, root builder and bundle declarations pass every conjunct');

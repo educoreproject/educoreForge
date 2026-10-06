@@ -28,7 +28,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // PURE: returns an Error or null; the caller (forge-framework.js) throws it at injection.
 
 const path = require('path');
-const { DME_ROLES, EMBED_TEXT_VECTOR, STANDARD_KIND_LIST } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, EMBED_TEXT_VECTOR, STANDARD_KIND_LIST, STANDARD_FAMILY_LIST } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require('./refuse');
 const { FRAMEWORK_NON_EMBEDDABLE_ROLE_LIST } = require('./frameworkNonEmbeddableRoles');
 const {
@@ -59,6 +59,11 @@ const FORGE_DECLARATION_CONTRACT = Object.freeze({
 	// every bundle: a bundle with nothing special to say declares standardUsageTips: null, never omits it.
 	standardKind: Object.freeze({ required: true, kind: 'closedValue', allowedValueList: STANDARD_KIND_LIST }),
 	standardUsageTips: Object.freeze({ required: true, kind: 'nonEmptyStringOrNull' }),
+	// ⟪campaign P3, W-C-4; CONTRACTS §7⟫ the family (closed vocabulary) and WHICH member of it this bundle is. releaseLabel is
+	// VERSION-FREE (CollegeTranscript, not CollegeTranscript-1.8.0): the version already lives in version / publishedVersion
+	// and two copies drift; a one-member family repeats the family name. Both stamped on the root, both REQUIRED.
+	standardFamily: Object.freeze({ required: true, kind: 'closedValue', allowedValueList: STANDARD_FAMILY_LIST }),
+	releaseLabel: Object.freeze({ required: true, kind: 'nonBlankString' }),
 	stableUriPropertyName: Object.freeze({ required: true, kind: 'nonEmptyString' }),
 	stableIdPattern: Object.freeze({ required: true, kind: 'stableIdPattern' }),
 	rootStableIdFrom: Object.freeze({
@@ -111,6 +116,9 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 	nonEmptyString: (value) =>
 		typeof value === 'string' && value.length > 0 ? '' : `must be a non-empty string (got ${JSON.stringify(value)})`,
 	// null is a DECLARED absence (the root then carries no such property); '' or a non-string is refused
+	// ⟪campaign P3, W-C-4⟫ a label a reader sees: whitespace alone is not a label
+	nonBlankString: (value) =>
+		typeof value === 'string' && value.trim().length > 0 ? '' : `must be a non-blank string (got ${JSON.stringify(value)})`,
 	nonEmptyStringOrNull: (value) =>
 		value === null || (typeof value === 'string' && value.trim().length > 0) ? '' : `must be a non-empty string or null (got ${JSON.stringify(value)})`,
 	lowercaseString: (value) =>

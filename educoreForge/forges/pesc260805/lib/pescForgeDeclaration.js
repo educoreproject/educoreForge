@@ -28,7 +28,7 @@
 // derived.
 
 const path = require('path');
-const { STANDARD_KIND } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const { STANDARD_KIND, STANDARD_FAMILY } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const { PERMISSIVE_STABLE_ID_PATTERN } = require(
 	path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'migrationAllowanceRegistry'),
 );
@@ -58,6 +58,9 @@ const pescForgeDeclaration = Object.freeze({
 	// bundle's 'PESC260805' matched) describe instance nodes reached by HAS_INSTANCE, and this incumbent forge mints none (code fact,
 	// 2026-10-05: no HAS_INSTANCE in its source). No manual is better than a false one.
 	standardKind: STANDARD_KIND.DATA_STANDARD,
+	// ⟪campaign P3, W-C-4⟫ the family and which member of it, version-free (CONTRACTS §7)
+	standardFamily: STANDARD_FAMILY.PESC,
+	releaseLabel: 'pesc260805',
 	standardUsageTips: null,
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// THE SHARED PERMISSIVE PATTERN, and the choice is MEASURED rather than defensive. PESC's

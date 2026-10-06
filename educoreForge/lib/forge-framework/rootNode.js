@@ -133,7 +133,7 @@ const build = ({ forgeDeclaration, metadata, describedRoot, activeAllowanceById 
 	}
 
 	const rootStableId = resolveRootStableId({ forgeDeclaration, metadata });
-	const { standardKey, standardSource, standardDisplayName, stableUriPropertyName, rootLabel, parserVersion, mappingInstruction, standardKind, standardUsageTips } = forgeDeclaration;
+	const { standardKey, standardSource, standardDisplayName, stableUriPropertyName, rootLabel, parserVersion, mappingInstruction, standardKind, standardUsageTips, standardFamily, releaseLabel } = forgeDeclaration;
 
 	const candidateProperties = {
 		_id: rootStableId,
@@ -160,6 +160,9 @@ const build = ({ forgeDeclaration, metadata, describedRoot, activeAllowanceById 
 		// nothing to say, and the root carries no such property (absent is absent)
 		standardKind,
 		...(standardUsageTips === null ? {} : { standardUsageTips }),
+		// ⟪campaign P3, W-C-4⟫ declared by the forge; always present, never null (REQUIRED_PROPERTIES.STANDARD_ROOT enforces it)
+		standardFamily,
+		releaseLabel,
 		...extraProperties,
 	};
 	rootOmitPropertyList.forEach((oneName) => {

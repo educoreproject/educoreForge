@@ -24,7 +24,7 @@
 // once and read twice, exactly as CEDS's 'uri' is.
 const STABLE_URI_PROPERTY_NAME = 'sifStableId';
 const path = require('path');
-const { STANDARD_KIND } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const { STANDARD_KIND, STANDARD_FAMILY } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 
 // the native annotation column the CEDS anchor is read from (forgeSif.js:65). Recorded as the
 // mappingInstruction's declared origin, and carried on every annotated field as its crossRef locator.
@@ -40,6 +40,9 @@ const sifForgeDeclaration = Object.freeze({
 	// bundle's 'SIF' matched) describe instance nodes reached by HAS_INSTANCE, and this incumbent forge mints none (code fact,
 	// 2026-10-05: no HAS_INSTANCE in its source). No manual is better than a false one.
 	standardKind: STANDARD_KIND.DATA_STANDARD,
+	// ⟪campaign P3, W-C-4⟫ the family and which member of it, version-free (CONTRACTS §7)
+	standardFamily: STANDARD_FAMILY.SIF,
+	releaseLabel: 'sif',
 	standardUsageTips: null,
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// the REAL predicate, verbatim from normalize.js:63 SIF_STABLE_ID_RE, as data (FR6).

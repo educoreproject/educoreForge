@@ -20,7 +20,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
-const { DME_ROLES, STANDARD_KIND } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const { DME_ROLES, STANDARD_KIND, STANDARD_FAMILY } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const { deriveReleaseNames } = require('./releaseNames');
 const { MANIFEST_ENTRY_INPUT_NAME, MANIFEST_ENTRY_FILE_NAME } = require('./manifestEntryLoader');
 const { donorSourceInputListFor } = require('./documentationDonorSet');
@@ -69,6 +69,10 @@ const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName 
 		standardDisplayName: releaseDeclarationData.standardDisplayName,
 		standardKind: PESC_RELEASE_STANDARD_KIND,
 		standardUsageTips: PESC_RELEASE_STANDARD_USAGE_TIPS,
+		// ⟪campaign P3, W-C-4⟫ every release is a member of the PESC family; its label is the release's own `standard` token
+		// (CollegeTranscript, …), which every releaseDeclaration.json already carries, so the seven bundles are untouched
+		standardFamily: STANDARD_FAMILY.PESC,
+		releaseLabel: releaseDeclarationData.standard,
 		stableUriPropertyName,
 		stableIdPattern: Object.freeze({ pattern: releaseDeclarationData.stableIdPatternText, trimmed: true }),
 		rootStableIdFrom: 'declared',

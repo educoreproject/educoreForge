@@ -47,7 +47,7 @@ const PROBE_PATH = path.join(__dirname, 'testSupport', 'pureProxyFingerprintProb
 // proxyFingerprintByStandard; DEVLOG-G0 deliverable 2), measured at 97feee9. Never edited to match a
 // measurement.
 const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
-	ceds: '2ca5765633ffc22f836e5942dc7e28f053dd71d187739327395a153a070d3690',
+	ceds: '264e995d7c7939ebd9d04fd0a4bb731b0a1d7d1e840a563e6d17831f5776ef78',
 	// edfi RE-PINNED 2026-10-02 (PRISM_LATTICE, goldJev lane F): G0's 814ce961570c… -> 04abc77b…. NOT edited to match a
 	// measurement: a RULED base move. TQ excluded the CEDS-authored crosswalk from every graph (2026-09-10, 2026-10-01), so the
 	// Ed-Fi forge no longer stamps its CEDS ids (3,045 nodes) and its root no longer names it; expectedFingerprints.json
@@ -58,9 +58,11 @@ const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
 	// and the framework stamps them on every root. ceds ed4785ba… -> 2ca57656…, edfi 04abc77b… -> 75695d22…, sif 72029d9a… ->
 	// dcf20728…, pesc260805 87c90588… -> 10fccef6…. With exactly those two root lines removed from rootNode.js this suite measured
 	// all four EQUAL to the previous literals (8/8); expectedFingerprints.json carries the same move.
-	edfi: '75695d225be6b0e5221adff7801a479bf5498396863e0210315ae023beb48953',
-	sif: 'dcf207282a0df450ea753ab6970d9326a7b333e683281ab71c9c01575bd26a64',
-	pesc260805: '10fccef65d8262c16efc9589cfc204eb3d6326698011166065cc8027795a2025',
+	// ALL FOUR RE-PINNED 2026-10-06 (CARDINAL_HORIZON, campaign P3 W-C-4): NOT edited to match a measurement: a RULED base
+	// move. Each forge declares standardFamily + releaseLabel and the framework stamps both on every root; with exactly those two root lines (and their REQUIRED_PROPERTIES rows) removed the probe measured all four EQUAL to the previous literals (evidence/P3/WC4-proxy-withoutTheTwoRootLines.json); expectedFingerprints.json carries the same move. ceds 2ca57656… -> 264e995d…, edfi 75695d22… -> 1aa1a1a9…, sif dcf20728… -> 6d808b95…, pesc260805 10fccef6… -> 4cc1c778….
+	edfi: '1aa1a1a9059f3fd86db3d080fbcc043d168ab8c8b6fe925681b4ba6ed5a37e43',
+	sif: '6d808b95326d4e251cc96d5803a33fc22beb8d4722bad532bf096a90cc42c04d',
+	pesc260805: '4cc1c778015f5cb539d5fbbeb66b2d64f3467aaa01a40d36ff80dfd5d7f78365',
 });
 const STANDARD_TOKEN_LIST = Object.keys(G0_PROXY_FINGERPRINT_BY_STANDARD);
 
