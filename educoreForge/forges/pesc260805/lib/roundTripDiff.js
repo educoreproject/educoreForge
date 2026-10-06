@@ -166,6 +166,8 @@ const moduleFunction =
 			};
 
 			let whitespaceOnlyDifference = 0;
+			const lostItemList = [];
+			const inventedItemList = [];
 			const whitespaceOnlyDifferenceSamples = [];
 			let matched = 0;
 			// A13 vocabulary: notReproduced is the raw set difference; only contentGap is LOSS.
@@ -208,6 +210,8 @@ const moduleFunction =
 				} else {
 					contentGap += 1;
 				}
+				// ⟪campaign P3, W-C-14 (ONE verdict shape)⟫ every lost statement, uncapped, with its category
+				lostItemList.push({ statementKey: oneIdentity, statement: { subject: oneStatement.subject, predicate: oneStatement.predicate, object: String(oneStatement.object) }, lostCategory: predicateAccumulator.lostCategory });
 				if (predicateAccumulator.lostSamples.length < MAX_SAMPLES_PER_PREDICATE) {
 					predicateAccumulator.lostSamples.push(sampleOf(oneStatement));
 				}
@@ -226,6 +230,7 @@ const moduleFunction =
 				invented += 1;
 				predicateAccumulator.invented += 1;
 				kindAccumulator.invented += 1;
+				inventedItemList.push({ statementKey: oneIdentity, statement: { subject: oneStatement.subject, predicate: oneStatement.predicate, object: String(oneStatement.object) } });
 				if (predicateAccumulator.inventedSamples.length < MAX_SAMPLES_PER_PREDICATE) {
 					predicateAccumulator.inventedSamples.push(sampleOf(oneStatement));
 				}
@@ -267,6 +272,8 @@ const moduleFunction =
 			});
 
 			const report = {
+				lostItemList,
+				inventedItemList,
 				reportVersion: REPORT_VERSION,
 				context: context || {},
 				headline: {

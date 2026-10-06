@@ -72,6 +72,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const canonicalLib = require('./lib/roundTripXsdCanonical')();
 const emitterLib = require('./lib/roundTripSourceEmitter')();
 const diffLib = require('./lib/roundTripDiff')();
+const frameworkVerdictAssembler = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
 
 // PHASE 6, R-VAL-4 — THE INDEPENDENT INSTRUMENT, invoked from HERE on TQ's ruling of 2026-08-06:
 // it lives INSIDE the validator rather than beside it, because "the independence that matters is
@@ -348,6 +349,8 @@ const moduleFunction =
 				return;
 			}
 
+			// the A8 census's wall clock (W-C-14)
+			const validationStartedAtMs = Date.now();
 			const taskList = new taskListPlus();
 
 			taskList.push((args, next) => {
@@ -738,11 +741,29 @@ const moduleFunction =
 						...args.graphSummary,
 					},
 					report: args.report,
+					// ⟪campaign P3, W-C-14 (ONE verdict shape, no exceptions)⟫ the complete lost / invented items and the A8 census
+					lostList: args.report.lostItemList.slice(),
+					inventedList: args.report.inventedItemList.slice(),
+					census: {
+						wallClockMs: Date.now() - validationStartedAtMs,
+						peakMemoryBytes: process.memoryUsage().rss,
+						statementCensus: {
+							sourceStatementCount: headline.sourceStatements,
+							graphStatementCount: headline.emittedStatements,
+							matchedCount: headline.matched,
+							comparisonBasis: 'source statement set (roundTripXsdCanonical over the XSD snapshot) vs graph statement set (the source emitter over the graph), keyed by statement identity; invented = graph − source; lost = source − graph',
+						},
+					},
 				};
 
 				verifyVerdictShape({ verdict }, (shapeError) => {
 					if (shapeError) {
 						next(shapeError);
+						return;
+					}
+					const frameworkShape = frameworkVerdictAssembler.verifyVerdictShape(verdict);
+					if (frameworkShape.error) {
+						next(`${moduleName}: the pesc260805 verdict is nonconforming: ${frameworkShape.error}`);
 						return;
 					}
 					diffLib.renderReportText({ report: args.report }, (renderError, renderResult) => {

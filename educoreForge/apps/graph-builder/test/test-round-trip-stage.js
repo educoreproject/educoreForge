@@ -366,20 +366,28 @@ const stageRunBehavior = (done) => {
 		unresolvableTokens: [],
 	});
 
+	// ⟪campaign P3, W-C-14⟫ the stage applies the forge framework's WHOLE verdict shape, so a validator double hands back the
+	// whole shape: its lost items (each with its category), its invented items, a declared limit and the A8 census
+	const wholeShapeVerdict = ({ contentGap = 0, omitted = 0, invented = 0, extra = {} }) => ({
+		roundTripClean: contentGap === 0 && invented === 0,
+		inventedTotal: invented,
+		lostTotal: contentGap,
+		contentGapTotal: contentGap,
+		explicitlyOmittedTotal: omitted,
+		lostList: Array.from({ length: contentGap }, (unused, itemIndex) => ({ statementKey: `gap${itemIndex}`, lostCategory: 'contentGap' })).concat(Array.from({ length: omitted }, (unused, itemIndex) => ({ statementKey: `omit${itemIndex}`, lostCategory: 'explicitlyOmitted' }))),
+		inventedList: Array.from({ length: invented }, (unused, itemIndex) => ({ statementKey: `inv${itemIndex}` })),
+		semanticValidationLimit: 'a toy limit for the stage suite',
+		census: { wallClockMs: 1, peakMemoryBytes: 1, statementCensus: {} },
+		...extra,
+	});
+
 	// ---- the green run: signature captured, LOST tolerated, summary lands ----
 	const outputDirPath = freshTmpDir('runGreen');
 	const capturedSpecList = [];
 	const greenValidator = {
 		validate: (spec, cb) => {
 			capturedSpecList.push(spec);
-			cb('', {
-				roundTripClean: false,
-				inventedTotal: 0,
-				lostTotal: 5,
-				contentGapTotal: 5,
-				explicitlyOmittedTotal: 2,
-				reproduced: 100,
-			});
+			cb('', wholeShapeVerdict({ contentGap: 5, omitted: 2, extra: { reproduced: 100 } }));
 		},
 	};
 	const xLog = capturingXLog();
@@ -442,13 +450,7 @@ const stageRunBehavior = (done) => {
 						enabled: true,
 						roster: makeRoster({
 							validate: (spec2, cb) =>
-								cb('', {
-									roundTripClean: false,
-									inventedTotal: 3,
-									lostTotal: 0,
-									contentGapTotal: 0,
-									explicitlyOmittedTotal: 0,
-								}),
+								cb('', wholeShapeVerdict({ invented: 3 })),
 						}),
 						outputDirPath: inventedDirPath,
 					},

@@ -46,6 +46,29 @@ const roundTripMetaEdCanonical = require('./lib/roundTripMetaEdCanonical')();
 const roundTripEdfiCompiler = require('./lib/roundTripEdfiCompiler')();
 const roundTripSnapshotIntake = require('./lib/roundTripSnapshotIntake')();
 const roundTripDiff = require('./lib/roundTripDiff')();
+const { verifyVerdictShape, LOST_CATEGORY } = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
+
+// normativeVerdictPartFor — ⟪campaign P3, W-C-14; ruling VIOLET_VALLEY 2026-10-06: ONE verdict shape, no exceptions⟫ the
+// members the forge framework's verifyVerdictShape requires and this bespoke verdict lacked until P3: the complete lostList
+// (each lost statement with its lostCategory, read from the diff's own bucketName — the bucket vocabulary IS the two
+// LOST_CATEGORY words), the complete inventedList (the diff's invented statements AND every crosswalk-guard violation,
+// which inventedTotal has always counted), and the A8 census. PURE, so the stage's gate holds it to the shape hermetically.
+//   normativeVerdictPartFor({ report, crosswalkGuardViolationList, wallClockMs, peakMemoryBytes }) → { lostList, inventedList, census }
+const LOST_CATEGORY_BY_BUCKET_NAME = Object.freeze({ explicitlyOmitted: LOST_CATEGORY.EXPLICITLY_OMITTED, contentGap: LOST_CATEGORY.CONTENT_GAP });
+const normativeVerdictPartFor = ({ report, crosswalkGuardViolationList, wallClockMs, peakMemoryBytes }) => ({
+	lostList: report.lostDetailList.map((oneLost) => ({ statementKey: `${oneLost.subject}\u001f${oneLost.predicate}\u001f${oneLost.object}`, statement: oneLost, lostCategory: LOST_CATEGORY_BY_BUCKET_NAME[oneLost.bucketName] })),
+	inventedList: report.inventedDetailList.map((oneInvented) => ({ statementKey: `${oneInvented.subject}\u001f${oneInvented.predicate}\u001f${oneInvented.object}`, statement: oneInvented })).concat(crosswalkGuardViolationList.map((oneViolation) => ({ statementKey: `crosswalkGuard\u001f${JSON.stringify(oneViolation)}`, statement: oneViolation }))),
+	census: {
+		wallClockMs,
+		peakMemoryBytes,
+		statementCensus: {
+			sourceStatementCount: report.headline.sourceStatements,
+			graphStatementCount: report.headline.emittedStatements,
+			matchedCount: report.headline.reproduced,
+			comparisonBasis: 'source statement map (roundTripMetaEdCanonical over the published .metaed) vs graph statement map (the graph-side compiler), keyed by statement; invented = graph − source plus crosswalk-guard violations; lost = source − graph',
+		},
+	},
+});
 
 // -2 (doctrine amendment A13, 2026-08-04): lostTotal counts contentGap ALONE now, with
 // explicitly-omitted declarations reported separately and excluded from loss. Ed-Fi's in-domain
@@ -73,6 +96,8 @@ const moduleFunction = () => {
 		}
 
 		const taskList = new taskListPlus();
+		// the A8 census's wall clock (W-C-14): from the start of the instrument to the verdict
+		const startedAtMs = Date.now();
 
 		// STAGE 1 — snapshot intake: checksum-verify and read every consumed file (RT-3)
 		taskList.push((args, next) => {
@@ -347,7 +372,14 @@ const moduleFunction = () => {
 					edgeCountByType: args.graphRows.edgeCountByType,
 				},
 				report: args.report,
+				...normativeVerdictPartFor({ report: args.report, crosswalkGuardViolationList: args.crosswalkGuardViolationList, wallClockMs: Date.now() - startedAtMs, peakMemoryBytes: process.memoryUsage().rss }),
 			};
+			// ONE SHAPE (W-C-14): held to the forge framework's whole rule before it is written, by the stage's own function
+			const shapeCheck = verifyVerdictShape(verdict);
+			if (shapeCheck.error) {
+				next(`${moduleName}: the Ed-Fi verdict is nonconforming: ${shapeCheck.error}`);
+				return;
+			}
 
 			if (outputPath) {
 				fs.mkdirSync(outputPath, { recursive: true });
@@ -429,7 +461,7 @@ const moduleFunction = () => {
 		});
 	};
 
-	return { validate, validateWithReader, VERDICT_VERSION, STANDARD_SOURCE };
+	return { validate, validateWithReader, normativeVerdictPartFor, VERDICT_VERSION, STANDARD_SOURCE };
 };
 
 module.exports = moduleFunction;

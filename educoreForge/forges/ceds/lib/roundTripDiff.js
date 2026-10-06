@@ -173,6 +173,12 @@ const moduleFunction =
 
 			let matched = 0;
 			let lost = 0;
+			// ⟪campaign P3, W-C-14 (ruling VIOLET_VALLEY 2026-10-06: ONE verdict shape, no exceptions)⟫ the COMPLETE lost and
+			// invented item lists, uncapped, beside the per-predicate samples: the verdict's lostList / inventedList are built
+			// from these. Empty when the round trip is clean, so the cost lands only on a lossy run, where it is the evidence.
+			const lostItemList = [];
+			const inventedItemList = [];
+			const itemOf = (statementKey, statement) => ({ statementKey, statement: { subject: statement.subject, predicate: statement.predicate, objectKind: statement.objectKind, object: String(statement.object), datatype: statement.datatype || '' } });
 
 			sourceStatements.forEach((oneStatement, oneKey) => {
 				const predicateAccumulator = predicateRow(oneStatement.predicate);
@@ -189,6 +195,7 @@ const moduleFunction =
 				lost += 1;
 				predicateAccumulator.lost += 1;
 				kindAccumulator.lost += 1;
+				lostItemList.push(itemOf(oneKey, oneStatement));
 				if (predicateAccumulator.lostSamples.length < MAX_SAMPLES_PER_PREDICATE) {
 					predicateAccumulator.lostSamples.push(sampleOf(oneStatement));
 				}
@@ -207,6 +214,7 @@ const moduleFunction =
 				invented += 1;
 				predicateAccumulator.invented += 1;
 				kindAccumulator.invented += 1;
+				inventedItemList.push(itemOf(oneKey, oneStatement));
 				if (predicateAccumulator.inventedSamples.length < MAX_SAMPLES_PER_PREDICATE) {
 					predicateAccumulator.inventedSamples.push(sampleOf(oneStatement));
 				}
@@ -309,6 +317,8 @@ const moduleFunction =
 				canonicalizationFaults: []
 					.concat(((sourceStats || {}).faults || []).map((one) => `source: ${one}`))
 					.concat(((emittedStats || {}).faults || []).map((one) => `emitted: ${one}`)),
+				lostItemList,
+				inventedItemList,
 			};
 
 			callback('', { report });

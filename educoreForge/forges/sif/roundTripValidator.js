@@ -65,6 +65,25 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const canonicalLib = require('./lib/roundTripSifCanonical')();
 const compilerLib = require('./lib/roundTripSifCompiler')();
 const diffLib = require('./lib/roundTripDiff')();
+const { verifyVerdictShape } = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
+
+// normativeVerdictPartFor — ⟪campaign P3, W-C-14; ruling VIOLET_VALLEY 2026-10-06: ONE verdict shape, no exceptions⟫ the
+// complete lostList (the diff's lostDetailList, whose items already carry the lostCategory words), the complete
+// inventedList and the A8 census, which this bespoke verdict lacked. PURE.
+const normativeVerdictPartFor = ({ report, wallClockMs, peakMemoryBytes }) => ({
+	lostList: report.lostDetailList.map((oneLost) => ({ statementKey: `${oneLost.subject}\u001f${oneLost.predicate}\u001f${oneLost.object}`, statement: oneLost, lostCategory: oneLost.lostCategory })),
+	inventedList: report.inventedDetailList.map((oneInvented) => ({ statementKey: `${oneInvented.subject}\u001f${oneInvented.predicate}\u001f${oneInvented.object}`, statement: oneInvented })),
+	census: {
+		wallClockMs,
+		peakMemoryBytes,
+		statementCensus: {
+			sourceStatementCount: report.headline.sourceStatements,
+			graphStatementCount: report.headline.emittedStatements,
+			matchedCount: report.headline.matched,
+			comparisonBasis: 'source statement set (roundTripSifCanonical over the snapshot) vs graph statement set (the graph-side compiler), keyed by statement; invented = graph − source; lost = source − graph',
+		},
+	},
+});
 
 // -2 (doctrine amendment A13, 2026-08-04): lostTotal counts contentGap ALONE now, with
 // explicitly-omitted declarations reported separately and excluded from loss. SIF's
@@ -426,7 +445,14 @@ const moduleFunction =
 						edgeCounts: args.graphSummary.edgeCounts,
 					},
 					report: args.report,
+					...normativeVerdictPartFor({ report: args.report, wallClockMs: Date.now() - startedAtMs, peakMemoryBytes: memoryUsage.rss }),
 				};
+				// ONE SHAPE (W-C-14): held to the forge framework's whole rule before it is written
+				const shapeCheck = verifyVerdictShape(verdict);
+				if (shapeCheck.error) {
+					next(`${moduleName}: the SIF verdict is nonconforming: ${shapeCheck.error}`);
+					return;
+				}
 				diffLib.renderReportText({ report: args.report }, (renderError, renderResult) => {
 					if (renderError) {
 						next(renderError);
@@ -533,6 +559,7 @@ const moduleFunction =
 			validate,
 			validateWithReader,
 			verifySnapshotDir,
+			normativeVerdictPartFor,
 			VERDICT_VERSION,
 		};
 	};

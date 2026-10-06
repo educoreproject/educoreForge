@@ -99,7 +99,11 @@ const VERDICT_FILE_NAME = 'roundTripVerdict.json';
 // ⟪campaign P2, W-C-14 / V1-C46⟫ ONE normative list: the stage reads the forge framework's declaration (verdictAssembler's
 // typed NORMATIVE_VERDICT_FIELD_LIST) instead of keeping a third copy, and checks each field's TYPE as well as its presence
 // (before P2 an `inventedTotal: null` passed: null > 0 is false).
-const { NORMATIVE_VERDICT_FIELD_NAME_LIST, normativeFieldShapeError } = require(path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
+// ⟪campaign P3, W-C-14; ruling VIOLET_VALLEY 2026-10-06: ONE verdict shape, no exceptions⟫ the stage applies the forge
+// framework's WHOLE rule (verifyVerdictShape: normative fields typed and finite, the complete lost and invented item lists,
+// the A13 identity, the declared limit, the A8 census) to every bundle's verdict. P2 applied only the normative half because
+// the bespoke CEDS / Ed-Fi verdicts carried counts and no item lists; every bespoke validator now emits the whole shape.
+const { NORMATIVE_VERDICT_FIELD_NAME_LIST, verifyVerdictShape } = require(path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
 const STAGE_SUMMARY_FILE_NAME = 'roundTripStageSummary.json';
 const STAGE_SUBDIR_NAME = 'roundTrip';
 
@@ -277,7 +281,7 @@ const moduleFunction =
 						`instrument, refused by name (never read through an alternative-name chain).`,
 				};
 			}
-			const typeShapeError = normativeFieldShapeError(verdict);
+			const typeShapeError = verifyVerdictShape(verdict).error;
 			if (typeShapeError) {
 				return { error: `the '${oneRow.token}' verdict is nonconforming: ${typeShapeError}` };
 			}

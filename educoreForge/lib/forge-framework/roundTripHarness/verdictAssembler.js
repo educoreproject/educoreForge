@@ -82,21 +82,10 @@ const normativeFieldShapeError = (verdict) => {
 // verifyVerdictShape — refuses a missing normative field, a wrong type, a NaN/Infinity count, a lost
 // item without a valid lostCategory, a lostTotal that is not the contentGap count, a broken A13 identity
 const verifyVerdictShape = (verdict) => {
-	if (!isPlainObject(verdict)) {
-		return { error: `${moduleName} REFUSED: verdict is not an object` };
-	}
-	for (let fieldIndex = 0; fieldIndex < NORMATIVE_VERDICT_FIELD_LIST.length; fieldIndex++) {
-		const { fieldName, expectedType } = NORMATIVE_VERDICT_FIELD_LIST[fieldIndex];
-		const value = verdict[fieldName];
-		if (value === undefined) {
-			return { error: `${moduleName} REFUSED: verdict lacks normative field '${fieldName}' (Profile §8.2: the stage adjudicates on ${NORMATIVE_VERDICT_FIELD_NAME_LIST.join(', ')} and never reads through an alternative-name chain)` };
-		}
-		if (typeof value !== expectedType) {
-			return { error: `${moduleName} REFUSED: verdict field '${fieldName}' is a ${typeof value}, expected ${expectedType}` };
-		}
-		if (expectedType === 'number' && !Number.isFinite(value)) {
-			return { error: `${moduleName} REFUSED: verdict field '${fieldName}' is ${String(value)} — a count must be finite` };
-		}
+	// the normative half first, in its own words (a null names itself as null) — ONE implementation (campaign P3, W-C-14)
+	const normativeError = normativeFieldShapeError(verdict);
+	if (normativeError) {
+		return { error: normativeError };
 	}
 	if (!Array.isArray(verdict.lostList)) {
 		return { error: `${moduleName} REFUSED: verdict lacks lostList — every LOST item must be listed with its lostCategory (A7/A13)` };
@@ -120,6 +109,11 @@ const verifyVerdictShape = (verdict) => {
 	}
 	if (verdict.roundTripClean !== (verdict.contentGapTotal === 0 && verdict.inventedTotal === 0)) {
 		return { error: `${moduleName} REFUSED: A13 identity broken — roundTripClean ${verdict.roundTripClean} !== (contentGapTotal ${verdict.contentGapTotal} === 0 && inventedTotal ${verdict.inventedTotal} === 0)` };
+	}
+	// ⟪campaign P3, W-C-14 (ONE shape, no exceptions)⟫ the invented ITEMS too: every bundle lists what it invented, so a
+	// reader of a non-zero inventedTotal has the statements, not only the count
+	if (!Array.isArray(verdict.inventedList) || verdict.inventedList.length !== verdict.inventedTotal) {
+		return { error: `${moduleName} REFUSED: verdict inventedList ${Array.isArray(verdict.inventedList) ? `has ${verdict.inventedList.length} item(s)` : 'is absent'} but inventedTotal is ${verdict.inventedTotal} — every INVENTED item is listed (W-C-14)` };
 	}
 	if (typeof verdict.semanticValidationLimit !== 'string' || verdict.semanticValidationLimit.trim().length === 0) {
 		return { error: `${moduleName} REFUSED: verdict lacks a non-blank semanticValidationLimit (Profile §8.4: MUST for every forge)` };

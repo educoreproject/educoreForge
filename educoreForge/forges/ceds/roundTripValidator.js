@@ -86,6 +86,30 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const compilerLib = require('./lib/roundTripCompiler')();
 const diffLib = require('./lib/roundTripDiff')();
+const { verifyVerdictShape, LOST_CATEGORY } = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
+
+// normativeVerdictPartFor — ⟪campaign P3, W-C-14; ruling VIOLET_VALLEY 2026-10-06: ONE verdict shape, no exceptions⟫ the
+// members the forge framework's verifyVerdictShape requires and this bespoke verdict lacked until P3: the complete lostList
+// (every lost statement, labelled explicitlyOmitted when its predicate is on the declared registry, else contentGap), the
+// complete inventedList, and the A8 census. PURE, so the stage's gate can hold it to the shape without a graph.
+//   normativeVerdictPartFor({ report, explicitlyOmittedPredicateList, wallClockMs, peakMemoryBytes }) → { lostList, inventedList, census }
+const normativeVerdictPartFor = ({ report, explicitlyOmittedPredicateList, wallClockMs, peakMemoryBytes }) => {
+	const omittedPredicateSet = new Set(explicitlyOmittedPredicateList);
+	return {
+		lostList: report.lostItemList.map((oneItem) => ({ ...oneItem, lostCategory: omittedPredicateSet.has(oneItem.statement.predicate) ? LOST_CATEGORY.EXPLICITLY_OMITTED : LOST_CATEGORY.CONTENT_GAP })),
+		inventedList: report.inventedItemList.slice(),
+		census: {
+			wallClockMs,
+			peakMemoryBytes,
+			statementCensus: {
+				sourceStatementCount: report.headline.sourceStatements,
+				graphStatementCount: report.headline.emittedStatements,
+				matchedCount: report.headline.matched,
+				comparisonBasis: 'source statement set (roundTripCanonical over the pinned CEDS-Ontology.rdf) vs graph statement set (roundTripCanonical over the RDF/XML compiled from the graph), keyed by the canonical statement key; invented = graph − source; lost = source − graph',
+			},
+		},
+	};
+};
 
 // -2 (doctrine amendment A13, 2026-08-04): lostTotal counts contentGap ALONE, with
 // explicitly-omitted declarations reported separately and excluded from loss. CEDS's registry is
@@ -523,7 +547,15 @@ const moduleFunction =
 						emittedCounts: args.compiled.counts,
 					},
 					report: args.report,
+					...normativeVerdictPartFor({ report: args.report, explicitlyOmittedPredicateList: EXPLICITLY_OMITTED_PREDICATES, wallClockMs: Date.now() - startedAtMs, peakMemoryBytes: memoryUsage.rss }),
 				};
+				// ONE SHAPE (W-C-14): the verdict is held to the forge framework's whole rule before it is written; a verdict
+				// the stage would refuse is refused here, by the same function, naming what is wrong
+				const shapeCheck = verifyVerdictShape(verdict);
+				if (shapeCheck.error) {
+					next(`${moduleName}: the CEDS verdict is nonconforming: ${shapeCheck.error}`);
+					return;
+				}
 				diffLib.renderReportText({ report: args.report }, (renderError, rendered) => {
 					if (renderError) {
 						next(renderError);
@@ -631,6 +663,7 @@ const moduleFunction =
 			validateWithReader,
 			verifySnapshotDir,
 			assembleVerdictNumbers,
+			normativeVerdictPartFor,
 			VERDICT_VERSION,
 			EXPLICITLY_OMITTED_PREDICATES,
 		};
