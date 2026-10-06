@@ -1,0 +1,35 @@
+{
+	"provenance": "distinct (fromKind -> toKind) endpoint pairs of SUBCLASS_OF, HAS_INSTANCE, HAS_CHILD, HAS_OPTION_SET on GOLD_EVAL_261005_jevAcceptance, derived from lane V1's read-only census (dataStructures/evidence-V1/liveGraph/edgeEndpoints.txt, 2026-10-06); a kind is a producer-local label with its standard prefix (Ceds, Edfi, Sif260928, Pesc<Release>) removed. Frozen for the W-C-3 gate.",
+	"endpointKindPairListByType": {
+		"HAS_CHILD": [
+			"Container->Container",
+			"Container->Field",
+			"Field->Field",
+			"GlobalElement->Occurrence",
+			"Object->Container",
+			"Occurrence->Occurrence"
+		],
+		"HAS_INSTANCE": [
+			"Element->Occurrence",
+			"Question->Field"
+		],
+		"HAS_OPTION_SET": [
+			"Element->CodeList",
+			"Property->Descriptor",
+			"Property->Enumeration",
+			"Property->OptionSet"
+		],
+		"SUBCLASS_OF": [
+			"AnonymousType->Type",
+			"AssociationSubclass->Association",
+			"Class->Class",
+			"CodeList->CodeList",
+			"CodeList->DataType",
+			"DataType->CodeList",
+			"DataType->DataType",
+			"DomainEntitySubclass->AbstractEntity",
+			"OptionSet->Class",
+			"Type->Type"
+		]
+	}
+}

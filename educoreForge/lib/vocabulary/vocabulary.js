@@ -139,6 +139,17 @@ const EMBED_TEXT_VECTOR = Object.freeze({
 	indexNameSuffix: '_embedText_vector',
 });
 
+// EDGE_ENDPOINT_KIND_PAIR_LIST_BY_TYPE — ⟪campaign P2, W-C-3 / V1-C30⟫ the endpoint kinds each structural edge type that
+// several forges share may join, as DATA beside the prose (a kind is a producer-local label without its standard prefix:
+// Ceds, Edfi, Sif260928, Pesc<Release>). The prose definitions name every kind listed here, and a live-census gate
+// (lib/vocabulary/test/test-edgeDefinitionCensus.js) proves every pair the graph holds is declared.
+const EDGE_ENDPOINT_KIND_PAIR_LIST_BY_TYPE = Object.freeze({
+	HAS_CHILD: Object.freeze(['Container->Container', 'Container->Field', 'Field->Field', 'GlobalElement->Occurrence', 'Object->Container', 'Occurrence->Occurrence']),
+	HAS_INSTANCE: Object.freeze(['Element->Occurrence', 'Question->Field']),
+	HAS_OPTION_SET: Object.freeze(['Element->CodeList', 'Property->Descriptor', 'Property->Enumeration', 'Property->OptionSet']),
+	SUBCLASS_OF: Object.freeze(['AnonymousType->Type', 'AssociationSubclass->Association', 'Class->Class', 'CodeList->CodeList', 'CodeList->DataType', 'DataType->CodeList', 'DataType->DataType', 'DomainEntitySubclass->AbstractEntity', 'OptionSet->Class', 'Type->Type']),
+});
+
 // LEGACY mapping/bridge edge types (emitter edf-bridge RETIRED 2026-07-04). Kept deliberately: the
 // graph-builder legacy-edge purity gate enumerates these names to prove their ABSENCE (legacy 0),
 // and the schema-view finisher describes them. Proving absence requires the names.
@@ -1056,6 +1067,7 @@ const vocabulary = {
 	DME_ROLES,
 	EDGE_TYPES,
 	EMBED_TEXT_VECTOR,
+	EDGE_ENDPOINT_KIND_PAIR_LIST_BY_TYPE,
 	MAPPING_EDGE_TYPES,
 	CLASSIFICATION_EDGE_TYPES,
 	// schema block taxonomy (targetArchitectureDesign §2 — LOCKED)
