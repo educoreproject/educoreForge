@@ -152,7 +152,22 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 //                                                                   hands down a path or the BOOLEAN false
 // forger.js, shape-forged-graph.js, replay-engine.js, replay-block.js, replayManager.js and round-trip-stage.js: UNTOUCHED. THE SEAM
 // FILE LIST IS UNCHANGED, no exclusion added; the fresh red is observed at the re-anchor commit (DEVLOG-P0).
-const PRE_MIGRATION_REF = 'postCampaignP0GSeamUntouched-100626'; // re-anchored by SILVER_ECHO, campaign P0; the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-06 (CARDINAL_RIVER; campaign P2, pre-authorised by VIOLET_VALLEY 17:42Z — standing rule) ═══
+// postCampaignP0GSeamUntouched-100626 -> postCampaignP2GSeamUntouched-100626, the tag cut ON this re-anchor commit. CENSUS, MEASURED
+// WITH THIS GATE'S OWN COMMAND (git diff --stat postCampaignP0GSeamUntouched-100626 -- <the 7 seam files>) at 53cc1af: FIVE of the
+// seven, every one a campaign P2 entry (replay-time and finish-time changes, the phase's whole subject):
+//   apps/graph-builder/lib/build.js                          | 235  W-A-3 frameworkFingerprintListFor; W-A-4 roundTripRowFor; W-A-8
+//                                                                   finishReportFilePath; W-A-11 embeddingCoverage runner; W-B-13
+//                                                                   RELATION_LABEL from the contract; W-C-8 basedOnManifestRefId;
+//                                                                   W-C-21 forgeCensus runner; R1 runReplayFidelityGate (53cc1af)
+//   lib/replay/replay-engine.js                              |  87  W-A-1/2 lists kept as lists, integers wrapped, GUARD 5;
+//                                                                   W-A-9 no 'replay' default vector index name
+//   apps/graph-builder/apps/replay-manager/replayManager.js  |  21  W-A-3 engineVersionsFor; W-A-7 finishTimeRowCount
+//   apps/graph-builder/lib/round-trip-stage.js               |  17  W-C-14 the normative verdict list type-checked at the stage
+//   apps/graph-builder/apps/forger/forger.js                 |   3  W-C-21 forgeStats
+// shape-forged-graph.js and replay-block.js: UNTOUCHED. THE SEAM FILE LIST IS UNCHANGED, no exclusion added; the fresh red is
+// observed at the re-anchor commit by this gate's own twin (DEVLOG-P2).
+const PRE_MIGRATION_REF = 'postCampaignP2GSeamUntouched-100626'; // re-anchored by CARDINAL_RIVER, campaign P2; the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
