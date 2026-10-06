@@ -725,7 +725,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 //   lib/forge-framework: the (iii) census above (fb4b303).
 // No forge entry, declaration or hooks file moved. THE PATH LIST IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed on the
 // re-anchor commit (DEVLOG-P2).
-const PHASE3_ANCHOR_TAG = 'postCampaignP2SeamDiffEmpty-100626'; // re-anchored by CARDINAL_RIVER, campaign P2
+// campaign P2 SECOND RE-ANCHOR of seamDiffEmpty (CARDINAL_RIVER, 2026-10-06; pre-authorised): postCampaignP2SeamDiffEmpty-100626 ->
+// postCampaignP2SeamDiffEmptyB-100626, tag cut ON this commit. CENSUS at 2e0513d: TWO files, both the self-audit fix fdc4167 —
+// apps/graph-builder/lib/build.js 11 (roundTripRowFor refuses an unmeasured ran standard) and its gate,
+// replay-manager/lib/finishing/test/test-attestationContract.js 11 (conjunct f). Path list unchanged, no exclusion.
+const PHASE3_ANCHOR_TAG = 'postCampaignP2SeamDiffEmptyB-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 (second)
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
