@@ -130,7 +130,13 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // lib/vocabulary/) at the G-SEAM-UNTOUCHED re-anchor: vocabulary.js 15 (BUILD_ATTESTATION_VERDICT, allowed), test/test-sifVocabularyInvariance.js
 // 13 (the ruled PROXY re-pin, allowed) and vocabulary-definitions.js 2 (StandardDefinition's text: kind + tips now read from the
 // root), the one file outside. Base moved, list NOT widened. Fresh red observed on d39755c (DEVLOG-R).
-const POST_D1_BASE_TAG = 'postLeftoversRVocabularyIi-100526'; // re-anchored 2026-10-05 (leftovers lane R) — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR (ii), 2026-10-06 (SILVER_ECHO, campaign P0; pre-authorised) ═══ postLeftoversRVocabularyIi-100526 ->
+// postCampaignP0VocabularyIi-100626, tag cut ON this commit. CENSUS (git diff --stat postLeftoversRVocabularyIi-100526 --
+// lib/vocabulary/) at 01dfe71, all campaign P0 9d90652 (the W-A declarations): vocabulary.js 3 (re-exports graph-contract,
+// allowed), test/test-graphContract.js 133 (new, allowed), and the two files outside: graph-contract.js 260 (new: the
+// declarations of CONTRACTS §0-§5) and tools/emitGraphContractJson.js 52 (new: writes graphContract.json). Base moved, list
+// NOT widened. Fresh red observed on the re-anchor commit (DEVLOG-P0).
+const POST_D1_BASE_TAG = 'postCampaignP0VocabularyIi-100626'; // re-anchored 2026-10-06 (campaign P0) — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
