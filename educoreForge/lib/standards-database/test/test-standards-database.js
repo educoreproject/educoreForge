@@ -211,9 +211,10 @@ function manifestGates(standardsDatabase, otherBlockRefId) {
 				);
 				harness.equal('  and it deduped rather than making a second one', second.alreadyPresent, true);
 
-				standardsDatabase.saveManifest({ name: 'x', members: [] }, (e3, empty) => {
-					harness.ok('an empty membership still addresses (the caller decides if that is sane)', !!empty.refId);
-					harness.ok('  and it is a DIFFERENT address from a populated one', empty.refId !== first.refId);
+				standardsDatabase.saveManifest({ name: 'x', members: [] }, (e3) => {
+					// W-C-9 (V1-S49, 2026-10-06): an empty membership addresses the constant every empty manifest shares;
+					// manifestEditor.save already refused it, the store now does too
+					harness.match('an empty membership is REFUSED (W-C-9)', e3, /empty membership/);
 
 					standardsDatabase.saveManifest(
 						{ name: 'bad', members: [{ schemaBlockRefId: otherBlockRefId, position: 'first' }] },
@@ -353,12 +354,52 @@ function suffixKindGates(standardsDatabase) {
 								agreeErr,
 							);
 
-							cleanup();
-							harness.report();
+							storeInvariantGates(standardsDatabase);
 						},
 					);
 				},
 			);
+		},
+	);
+}
+
+// =====================================================================
+// A function DECLARATION for the same hoisting reason as the gates above.
+// W-C-9 (V1-S48, V1-S51, V1-C40; 2026-10-06): the store's declared invariants, STORE_INVARIANT_BY_NAME.
+function storeInvariantGates(standardsDatabase) {
+	harness.section('STORE INVARIANTS — foreign keys enforced, a dangling member refused atomically, TEXT block column, no dead API (W-C-9)');
+	const { STORE_INVARIANT_BY_NAME } = require('../standards-database');
+	harness.equal('the declared invariants', JSON.stringify(STORE_INVARIANT_BY_NAME), JSON.stringify({ foreignKeysOn: true, emptyManifestRefused: true, blockTextColumnType: 'TEXT' }));
+	harness.ok('getBlockMeta is GONE from the api (no production caller; V1-S51)', standardsDatabase.getBlockMeta === undefined);
+
+	const danglingRefId = 'f'.repeat(64);
+	standardsDatabase.saveManifest(
+		{ name: 'dangling', members: [{ schemaBlockRefId: danglingRefId, position: 0 }] },
+		(danglingErr, danglingResult) => {
+			harness.match('RED PROOF: a member naming a block the store does not hold is REFUSED by SQLite (FOREIGN KEY)', danglingErr, /FOREIGN KEY constraint failed/);
+			const contentAddress = require('../../content-address/content-address')();
+			const danglingManifestRefId = contentAddress.manifestKeyForMembership(contentAddress.dedupMembersByBlockId([{ blockId: danglingRefId, position: 0 }]));
+			standardsDatabase.getManifest({ refId: danglingManifestRefId }, (readErr, readRow) => {
+				harness.ok('  and NOTHING of it was kept: the manifest row rolled back with the refused member', !readErr && readRow === null, readErr || JSON.stringify(readRow).slice(0, 120));
+				void danglingResult;
+
+				// the substrate itself: a connection opened through sqlite-instance has foreign_keys ON
+				const sqliteInstance = require('../../sqlite-instance/sqlite-instance')({});
+				sqliteInstance.initDatabaseInstance(databaseFilePath, (initErr, dbInstance) => {
+					harness.accepts('a substrate connection opens', initErr ? [initErr] : []);
+					dbInstance.getTable('pragmaProbe', { noTableNameOk: true, suppressStatementLog: true }, (tableErr, tableRef) => {
+						tableRef.getData('PRAGMA foreign_keys;', { noTableNameOk: true, suppressStatementLog: true }, (pragmaErr, pragmaRows) => {
+							harness.equal('PRAGMA foreign_keys is 1 on a connection sqlite-instance opened', pragmaRows && pragmaRows[0] && pragmaRows[0].foreign_keys, 1);
+							tableRef.getData('PRAGMA table_info(blocks);', { noTableNameOk: true, suppressStatementLog: true }, (infoErr, infoRows) => {
+								const textColumn = (infoRows || []).find((oneRow) => oneRow.name === 'text');
+								harness.equal('a NEW store declares blocks.text as TEXT (it always held text; V1-C40)', textColumn && textColumn.type, STORE_INVARIANT_BY_NAME.blockTextColumnType);
+								cleanup();
+								harness.report();
+							});
+						});
+					});
+				});
+			});
 		},
 	);
 }

@@ -52,6 +52,15 @@ const vocabulary = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 // with no <!tableName!> substitution tag unless noTableNameOk says the caller means it.
 const RAW_OPTS = { noTableNameOk: true, suppressStatementLog: true };
 
+// STORE_INVARIANT_BY_NAME — what every store this module opens must be (W-C-9, 2026-10-06), read by open, saveManifest,
+// the blocks DDL and the store's test. foreignKeysOn: the declared FOREIGN KEYs are ENFORCED on the connection (sqlite-instance
+// sets the pragma; better-sqlite3 12 also defaults it on, the sqlite3 CLI does not — the store must not depend on which
+// binding opened it, so open verifies it). emptyManifestRefused: an empty membership hashes to the constant every empty
+// manifest shares (manifestEditor.save refuses the same). blockTextColumnType: blocks.text always held TEXT (saveBlock
+// escapes a string); a store created before this declared it BLOB with TEXT affinity, which SQLite tolerates and
+// CREATE TABLE IF NOT EXISTS never retypes.
+const STORE_INVARIANT_BY_NAME = Object.freeze({ foreignKeysOn: true, emptyManifestRefused: true, blockTextColumnType: 'TEXT' });
+
 // The LOCKED block taxonomy is the VOCABULARY REGISTRY's, not this module's. It used to be
 // declared here and re-exported to manifestEditor, which made the store the accidental home of a
 // word list that has nothing to do with sqlite — and forced manifestEditor into a lazy require to
@@ -140,7 +149,14 @@ const standardsDatabase = () => {
 							callback(`standardsDatabase.open '${databaseFilePath}': ${schemaErr}`);
 							return;
 						}
-						callback('', makeApi({ esc, escJson, runSql, getRows, databaseFilePath }));
+						getRows('PRAGMA foreign_keys;', (pragmaErr, pragmaRows) => {
+							const foreignKeysOn = !pragmaErr && pragmaRows && pragmaRows[0] && pragmaRows[0].foreign_keys === 1;
+							if (foreignKeysOn !== STORE_INVARIANT_BY_NAME.foreignKeysOn) {
+								callback(`standardsDatabase.open '${databaseFilePath}': REFUSING — PRAGMA foreign_keys is ${pragmaErr ? `unreadable (${pragmaErr})` : JSON.stringify(pragmaRows)} on this connection, and STORE_INVARIANT_BY_NAME declares foreignKeysOn ${STORE_INVARIANT_BY_NAME.foreignKeysOn}: the manifest membership's FOREIGN KEYs would go unenforced`);
+								return;
+							}
+							callback('', makeApi({ esc, escJson, runSql, getRows, databaseFilePath }));
+						});
 					});
 				});
 			});
@@ -231,7 +247,7 @@ const buildSchema = ({ runSql, getRows }, callback) => {
 				subject TEXT,
 				version      TEXT,
 				requires     TEXT,
-				text         BLOB NOT NULL,
+				text         ${STORE_INVARIANT_BY_NAME.blockTextColumnType} NOT NULL,
 				producedBy   TEXT,
 				createdAt    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 			);`,
@@ -471,9 +487,6 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 	};
 
 	// -----
-	// getBlockMeta — the row WITHOUT the text BLOB, for callers that need what a block IS rather
-	// than what it contains. No content-address recompute, because there is no content to check —
-	// and no multi-hundred-megabyte read to pay for.
 	// findBlockBySubject — LOOK UP a stored block by the name a build would give it, rather than by
 	// its content address. ⟪Item 4, 2026-08-11⟫ this is what lets graphBuilder RETRIEVE an already-forged
 	// base block instead of forging it again: the caller derives the subject the same way phase A
@@ -508,14 +521,6 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 		);
 	};
 
-	const getBlockMeta = ({ refId }, callback) => {
-		getRows(
-			`SELECT refId, kind, subject, version, producedBy, createdAt
-			 FROM blocks WHERE refId=${esc(refId)};`,
-			(err, rows) => callback(err || '', err ? undefined : (rows && rows[0]) || null),
-		);
-	};
-
 	// -----
 	// saveManifest — the manifest's refId IS the hash of its membership, so composing the same set
 	// twice yields the same manifest rather than a second one.
@@ -528,6 +533,13 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 		{ name, description, recipeName, recipeHash, recipeFileName, basedOnManifestRefId, members = [] },
 		callback,
 	) => {
+		if (STORE_INVARIANT_BY_NAME.emptyManifestRefused && (!Array.isArray(members) || members.length === 0)) {
+			callback(
+				'standardsDatabase.saveManifest: refusing an empty membership — its address would be the constant every ' +
+					'empty manifest shares (manifestEditor.save refuses the same; W-C-9)',
+			);
+			return;
+		}
 		const forAddressing = members.map((oneMember) => ({
 			blockId: oneMember.schemaBlockRefId,
 			position: oneMember.position,
@@ -548,7 +560,14 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			return;
 		}
 
+		// ONE TRANSACTION (W-C-9, 2026-10-06): a member the FOREIGN KEY refuses must take the manifest row with it. Written
+		// piecemeal, the row would stay behind under the membership's address and the next save of the same membership
+		// would find it alreadyPresent and report success over a manifest missing its members.
 		const taskList = new taskListPlus();
+
+		taskList.push((args, next) => {
+			runSql('BEGIN IMMEDIATE;', (err) => next(err, { ...args, transactionOpen: !err }));
+		});
 
 		taskList.push((args, next) => {
 			getRows(`SELECT refId FROM manifests WHERE refId=${esc(refId)};`, (err, rows) =>
@@ -585,7 +604,7 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 					         ${esc(oneMember.description)});`,
 					(err) => {
 						if (err) {
-							next(err);
+							next(err, args); // args carry transactionOpen, so the pipe's end rolls back
 							return;
 						}
 						insertNext(index + 1);
@@ -596,11 +615,22 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 		});
 
 		pipeRunner(taskList.getList(), {}, (err, args) => {
-			if (err && err !== 'skipRestOfPipe') {
+			const failed = err && err !== 'skipRestOfPipe';
+			if (!args || !args.transactionOpen) {
 				callback(`standardsDatabase.saveManifest ${refId}: ${err}`);
 				return;
 			}
-			callback('', { refId, memberCount: members.length, alreadyPresent: !!args.alreadyPresent });
+			runSql(failed ? 'ROLLBACK;' : 'COMMIT;', (closeErr) => {
+				if (failed) {
+					callback(`standardsDatabase.saveManifest ${refId}: ${err}${closeErr ? ` (and the ROLLBACK failed: ${closeErr})` : ''}`);
+					return;
+				}
+				if (closeErr) {
+					callback(`standardsDatabase.saveManifest ${refId}: COMMIT failed: ${closeErr}`);
+					return;
+				}
+				callback('', { refId, memberCount: members.length, alreadyPresent: !!args.alreadyPresent });
+			});
 		});
 	};
 
@@ -645,7 +675,6 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 		databaseFilePath,
 		saveBlock,
 		getBlock,
-		getBlockMeta,
 		findBlockBySubject,
 		saveManifest,
 		getManifest,
@@ -656,4 +685,6 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 
 // KINDS is deliberately NOT re-exported here. It lives in lib/vocabulary and every consumer reads
 // it from there; a second door onto a locked taxonomy is how the taxonomy stops being locked.
+standardsDatabase.STORE_INVARIANT_BY_NAME = STORE_INVARIANT_BY_NAME;
+
 module.exports = standardsDatabase;

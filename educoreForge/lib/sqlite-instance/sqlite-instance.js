@@ -652,6 +652,10 @@ const moduleFunction = function ({ unused }) {
 		// contention. Applies to EVERY store opened through sqlite-instance (vector cache, standards
 		// database, decision store), so collision-safety is a property of the substrate, not one caller.
 		db.pragma('busy_timeout = 5000');
+		// FOREIGN KEYS ON, said here rather than inherited (W-C-9, 2026-10-06): better-sqlite3 12 compiles it on by default,
+		// the sqlite3 CLI does not, and a declared FOREIGN KEY must not hold or lapse with the binding. standards-database
+		// verifies it at open (STORE_INVARIANT_BY_NAME.foreignKeysOn).
+		db.pragma('foreign_keys = ON');
 		const getTable = getTableActual(db, defaultOptions);
 		const checkTableExists = checkTableExistsActual(db);
 
