@@ -96,13 +96,10 @@ const VERDICT_FILE_NAME = 'roundTripVerdict.json';
 // adjudicates against; a bundle may carry any additional fields it likes. Declared here rather
 // than inline at the check so the contract is greppable from one name and so adding a field is
 // an edit to a declaration rather than to control flow.
-const NORMATIVE_VERDICT_FIELD_NAMES = [
-	'roundTripClean',
-	'inventedTotal',
-	'lostTotal',
-	'contentGapTotal',
-	'explicitlyOmittedTotal',
-];
+// ⟪campaign P2, W-C-14 / V1-C46⟫ ONE normative list: the stage reads the forge framework's declaration (verdictAssembler's
+// typed NORMATIVE_VERDICT_FIELD_LIST) instead of keeping a third copy, and checks each field's TYPE as well as its presence
+// (before P2 an `inventedTotal: null` passed: null > 0 is false).
+const { NORMATIVE_VERDICT_FIELD_NAME_LIST, normativeFieldShapeError } = require(path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
 const STAGE_SUMMARY_FILE_NAME = 'roundTripStageSummary.json';
 const STAGE_SUBDIR_NAME = 'roundTrip';
 
@@ -268,7 +265,7 @@ const moduleFunction =
 		// Returns { error } (a named refusal or a build-failing invention) or { rowSummary }.
 		// ---------------------------------------------------------------
 		const adjudicateVerdict = ({ oneRow, verdict, verdictDirPath }) => {
-			const missingFields = NORMATIVE_VERDICT_FIELD_NAMES.filter(
+			const missingFields = NORMATIVE_VERDICT_FIELD_NAME_LIST.filter(
 				(oneFieldName) => verdict === undefined || verdict === null || verdict[oneFieldName] === undefined,
 			);
 			if (missingFields.length) {
@@ -279,6 +276,10 @@ const moduleFunction =
 						`per-standard knowledge, and a verdict it cannot adjudicate is a nonconforming ` +
 						`instrument, refused by name (never read through an alternative-name chain).`,
 				};
+			}
+			const typeShapeError = normativeFieldShapeError(verdict);
+			if (typeShapeError) {
+				return { error: `the '${oneRow.token}' verdict is nonconforming: ${typeShapeError}` };
 			}
 			if (verdict.inventedTotal > 0) {
 				return {

@@ -55,6 +55,30 @@ const diffStatementMaps = ({ sourceStatements, graphStatements }) => {
 	return { inventedList, lostList, matchedCount: sourceStatements.size - lostList.length };
 };
 
+// normativeFieldShapeError — ⟪campaign P2, W-C-14⟫ the NORMATIVE half of the shape rule, which every verdict must meet
+// (the RT-13 stage adjudicates every bundle on it): each normative field present, of its declared type, and finite. Split
+// out of verifyVerdictShape so the stage applies exactly this half to the bespoke CEDS / Ed-Fi verdicts too, which carry
+// counts but no per-item lostList or A8 census (their diffs keep a capped sample per predicate — code fact).
+const normativeFieldShapeError = (verdict) => {
+	if (!isPlainObject(verdict)) {
+		return `${moduleName} REFUSED: verdict is not an object`;
+	}
+	for (let fieldIndex = 0; fieldIndex < NORMATIVE_VERDICT_FIELD_LIST.length; fieldIndex++) {
+		const { fieldName, expectedType } = NORMATIVE_VERDICT_FIELD_LIST[fieldIndex];
+		const value = verdict[fieldName];
+		if (value === undefined) {
+			return `${moduleName} REFUSED: verdict lacks normative field '${fieldName}' (Profile §8.2: the stage adjudicates on ${NORMATIVE_VERDICT_FIELD_NAME_LIST.join(', ')} and never reads through an alternative-name chain)`;
+		}
+		if (typeof value !== expectedType || value === null) {
+			return `${moduleName} REFUSED: verdict field '${fieldName}' is ${value === null ? 'null' : `a ${typeof value}`}, expected ${expectedType}`;
+		}
+		if (expectedType === 'number' && !Number.isFinite(value)) {
+			return `${moduleName} REFUSED: verdict field '${fieldName}' is ${String(value)} — a count must be finite`;
+		}
+	}
+	return '';
+};
+
 // verifyVerdictShape — refuses a missing normative field, a wrong type, a NaN/Infinity count, a lost
 // item without a valid lostCategory, a lostTotal that is not the contentGap count, a broken A13 identity
 const verifyVerdictShape = (verdict) => {
@@ -186,6 +210,7 @@ const assembleVerdict = ({
 module.exports = {
 	assembleVerdict,
 	verifyVerdictShape,
+	normativeFieldShapeError,
 	diffStatementMaps,
 	NORMATIVE_VERDICT_FIELD_LIST,
 	NORMATIVE_VERDICT_FIELD_NAME_LIST,
