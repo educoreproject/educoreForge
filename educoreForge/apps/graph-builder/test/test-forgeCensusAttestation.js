@@ -1,0 +1,91 @@
+#!/usr/bin/env node
+'use strict';
+
+// test-forgeCensusAttestation.js — gate for W-C-21 (PLAN G6; campaign P2): the forgeCensus BuildAttestation row compares
+// the forge kit's own counts with the materialised graph, per standard, and fails BY NAME when a code list or code value
+// the forge minted is missing from the graph. Pure: the row function and the runner's no-graph branches.
+//
+// PROVES:
+//   (a) live counts equal to the forge's -> pass
+//   (b) one option value missing (the graph holds 99 of the forged 100 DmeOptionValue) -> fail naming the standard, the
+//       role and both numbers; an edge-type shortfall likewise
+//   (c) a forge result with no stats -> notRun naming the standard (never pass)
+//   (d) a replay (spec null) -> notRun, without touching a graph; an absent spec is refused by name
+//   (e) the census Cypher keeps nodes minted outside the kit (hub cards, hub definition, text nodes) out of the count
+// RED TWINS (in memory, gate double): mismatchIgnored -> (b); statlessReadAsPass -> (c); kitExclusionDropped -> (e).
+
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+const helpText = () => `
+NAME
+     ${moduleName} -- gate: the forgeCensus BuildAttestation row
+SYNOPSIS
+     ${moduleName} [-verbose] [-quiet] [-help]
+EXIT STATUS
+     0 all assertions passed and every twin observed red;  1 otherwise.
+`;
+require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
+const harness = require('../../../test/testLib/harness')(moduleName);
+
+const path = require('path');
+const { loadBuildJsDouble } = require('../../../lib/bridge-framework/test/testSupport/bridgeTwinFactories');
+
+const GATE_PATH = path.join(__dirname, '..', 'lib', 'forge-census-gate.js');
+const gateFor = (mutationList) => (mutationList.length === 0 ? require(GATE_PATH) : loadBuildJsDouble({ buildJsPath: GATE_PATH, mutationList }));
+
+const EXPECTATION = { standardName: 'TOY', nodeCountByRole: { DmeOptionSet: 3, DmeOptionValue: 100, DmeStandardRoot: 1 }, edgeCountByType: { HAS_OPTION_SET: 3, HAS_VALUE: 100 } };
+const LIVE_EQUAL = { TOY: { nodeCountByRole: { DmeOptionSet: 3, DmeOptionValue: 100, DmeStandardRoot: 1, DmeExtraUncounted: 7 }, edgeCountByType: { HAS_OPTION_SET: 3, HAS_VALUE: 100 } } };
+
+const conjunctJudgeByRefId = {
+	a_equalCountsPass: (mutationList, done) => {
+		const row = gateFor(mutationList).forgeCensusRowFor({ expectationList: [EXPECTATION], liveByStandardName: LIVE_EQUAL });
+		done({ pass: row.verdict === 'pass' && row.gate === 'forgeCensus', detail: `${row.verdict}: ${row.detail}` });
+	},
+	b_missingValueFailsByName: (mutationList, done) => {
+		const gate = gateFor(mutationList);
+		const nodeRow = gate.forgeCensusRowFor({ expectationList: [EXPECTATION], liveByStandardName: { TOY: { ...LIVE_EQUAL.TOY, nodeCountByRole: { ...LIVE_EQUAL.TOY.nodeCountByRole, DmeOptionValue: 99 } } } });
+		const edgeRow = gate.forgeCensusRowFor({ expectationList: [EXPECTATION], liveByStandardName: { TOY: { ...LIVE_EQUAL.TOY, edgeCountByType: { HAS_OPTION_SET: 3 } } } });
+		done({ pass: nodeRow.verdict === 'fail' && /TOY: role DmeOptionValue: forged 100, graph 99/.test(nodeRow.detail) && edgeRow.verdict === 'fail' && /edge HAS_VALUE: forged 100, graph 0/.test(edgeRow.detail), detail: `${nodeRow.detail} | ${edgeRow.detail}` });
+	},
+	c_statlessIsNotRun: (mutationList, done) => {
+		const row = gateFor(mutationList).forgeCensusRowFor({ expectationList: [{ standardName: 'TOY' }], liveByStandardName: {} });
+		done({ pass: row.verdict === 'notRun' && /no kit stats for TOY/.test(row.detail), detail: `${row.verdict}: ${row.detail}` });
+	},
+	d_replayNotRunAbsentRefused: (mutationList, done) => {
+		const gate = gateFor(mutationList);
+		gate.runForgeCensusGate({ containerHandle: null, forgeCensusSpec: null }, (replayError, replayRow) =>
+			gate.runForgeCensusGate({ containerHandle: null }, (absentError) =>
+				done({ pass: !replayError && replayRow.verdict === 'notRun' && /replay: no forge ran/.test(replayRow.detail) && /forgeCensusSpec is REQUIRED/.test(absentError), detail: `replay: ${replayError || replayRow.verdict} | absent: ${absentError || 'accepted'}` })));
+	},
+	e_kitOutsidersExcluded: (mutationList, done) => {
+		const gate = gateFor(mutationList);
+		const missingList = ['HubReference', 'HubDefinition', 'DmeEmbedText'].filter((oneLabel) => gate.NODE_CENSUS_CYPHER.indexOf(`NOT n:\`${oneLabel}\``) === -1);
+		done({ pass: missingList.length === 0, detail: missingList.length ? `not excluded: ${missingList.join(', ')}` : 'hub cards, hub definition and text nodes excluded' });
+	},
+};
+const TWIN_LIST = [
+	{ conjunctRefId: 'b_missingValueFailsByName', twinName: 'mismatchIgnored', find: "		return mismatchList.length ? soFar.concat(", replace: "		return false ? soFar.concat(" },
+	{ conjunctRefId: 'c_statlessIsNotRun', twinName: 'statlessReadAsPass', find: '	if (statlessList.length) {\n		return { gate: GATE_NAME, verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN,', replace: '	if (statlessList.length) {\n		return { gate: GATE_NAME, verdict: vocabulary.BUILD_ATTESTATION_VERDICT.PASS,' },
+	{ conjunctRefId: 'e_kitOutsidersExcluded', twinName: 'kitExclusionDropped', find: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition', vocabulary.EMBED_TEXT_VECTOR.label]);", replace: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubDefinition']);" },
+];
+
+const refIdList = Object.keys(conjunctJudgeByRefId);
+const runSequence = (stepList, whenDone) => {
+	const nextStep = (stepIndex) => (stepIndex >= stepList.length ? whenDone() : stepList[stepIndex](() => nextStep(stepIndex + 1)));
+	nextStep(0);
+};
+harness.section('BASELINE — the real gate passes every conjunct');
+runSequence(
+	refIdList.map((oneRefId) => (stepDone) => conjunctJudgeByRefId[oneRefId]([], (verdict) => { harness.ok(`${oneRefId} PASS`, verdict.pass, verdict.detail); stepDone(); })),
+	() => {
+		harness.section('THE TWIN SWEEP — each twin OBSERVED RED under a gate double (in memory)');
+		runSequence(
+			TWIN_LIST.map((oneTwin) => (stepDone) =>
+				conjunctJudgeByRefId[oneTwin.conjunctRefId]([{ find: oneTwin.find, replace: oneTwin.replace }], (verdict) => {
+					harness.ok(`${oneTwin.conjunctRefId} observed RED under '${oneTwin.twinName}'`, !verdict.pass, verdict.detail);
+					harness.note(`RED-OBSERVED ${oneTwin.conjunctRefId} twin='${oneTwin.twinName}' → ${verdict.pass ? 'STILL PASSING' : 'FAIL'}: ${verdict.detail}`);
+					stepDone();
+				})),
+			() => harness.report(),
+		);
+	},
+);

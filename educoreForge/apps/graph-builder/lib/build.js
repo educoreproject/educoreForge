@@ -63,6 +63,7 @@ const { readOptionalBooleanValue } = require('./optional-boolean-value');
 const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const bridgeCollisionRuleLib = require(path.join(__dirname, 'bridgeCollisionRule'));
 const embeddingCoverageGateLib = require(path.join(__dirname, 'embedding-coverage-gate'));
+const forgeCensusGateLib = require(path.join(__dirname, 'forge-census-gate'));
 // ⟪campaign P2, W-A-3⟫ the frozen decision block header carries the frameworkFingerprint the passport reports
 const decisionBlockLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'decisionBlock'));
 
@@ -612,7 +613,13 @@ const finishReportLogLinesFor = (finishReport) => {
 let materializeCounter = 0;
 const resolvedSchemaBlocksCounter = () => (materializeCounter += 1);
 
-const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, storeReader, roundTripStageRunner, roundTripStageSpec, frameworkFingerprintList, embeddingCoverageGateRunner, finishReportFilePath }, callback) => {
+const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, storeReader, roundTripStageRunner, roundTripStageSpec, frameworkFingerprintList, embeddingCoverageGateRunner, finishReportFilePath, forgeCensusGateRunner, forgeCensusSpec }, callback) => {
+	// ⟪campaign P2, W-C-21⟫ the forgeCensus gate (injected, real default in both callers) and its spec: the build's forge
+	// counts, or an EXPLICIT null for a -replay, which forged nothing
+	if (typeof forgeCensusGateRunner !== 'function' || forgeCensusSpec === undefined) {
+		callback(`materialize failed: a forgeCensusGateRunner and a forgeCensusSpec (null for a replay) are REQUIRED — an unstated gate would be indistinguishable from a passed one`);
+		return;
+	}
 	// ⟪campaign P2, W-A-8⟫ where the whole finish report is written: a path for a -build (its run directory), or an EXPLICIT
 	// null for a -replay, which has no run directory (the log lines are printed either way)
 	if (finishReportFilePath !== null && (typeof finishReportFilePath !== 'string' || !finishReportFilePath)) {
@@ -760,6 +767,12 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 								callback(`materialize failed: ${coverageError}`);
 								return;
 							}
+							// ⟪campaign P2, W-C-21⟫ the forgeCensus row: the forge's own counts against the materialised graph
+							forgeCensusGateRunner({ containerHandle: goldEval, forgeCensusSpec, xLog }, (forgeCensusError, forgeCensusRow) => {
+							if (forgeCensusError) {
+								callback(`materialize failed: ${forgeCensusError}`);
+								return;
+							}
 
 							// THE FIDELITY ROW IS THE RUNNER'S OWN REPORT (lane R, 2026-10-05; FINDING 5-A of
 							// 2026-09-01 closed). From 2026-09-01 until then there was NO fidelity row, by ruling:
@@ -772,7 +785,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 									inGraph: goldEval,
 									manifestRefId: manifestId,
 									storeReader,
-									gateResults: [fidelityAttestation, roundTripRow, embeddingCoverageRow],
+									gateResults: [fidelityAttestation, roundTripRow, embeddingCoverageRow, forgeCensusRow],
 									frameworkFingerprintList,
 								},
 								(finishError, finishReport) => {
@@ -811,6 +824,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 									});
 								},
 							);
+							});
 							});
 						},
 					);
@@ -1306,6 +1320,8 @@ const build = (recipe, deps, callback) => {
 	const cedsFidelityGateRunner = deps.cedsFidelityGateRunner || runCedsFidelityGate;
 	// ⟪campaign P2, W-A-11⟫ the real embeddingCoverage gate is the documented default; suites inject a stub
 	const embeddingCoverageGateRunner = deps.embeddingCoverageGateRunner || embeddingCoverageGateLib.runEmbeddingCoverageGate;
+	// ⟪campaign P2, W-C-21⟫ the real forgeCensus gate is the documented default
+	const forgeCensusGateRunner = deps.forgeCensusGateRunner || forgeCensusGateLib.runForgeCensusGate;
 	// ⟪RT-13.4 / R-WO-17⟫ the recipe's stage opt-in. roundTripStage is a legitimately-optional
 	// boolean with a DOCUMENTED default of false during the big-bang retrofit (stated in -help;
 	// doctrine §7.4 grants recipes the DEV choice) — and the default is never SILENT: the stage
@@ -1453,6 +1469,8 @@ const build = (recipe, deps, callback) => {
 		// reported and the harvested base schema block (the bridge restores its dependency bases from these into
 		// the dependency graph so the producer can WALK them).
 		const resolvedVersionByToken = {};
+		// ⟪campaign P2, W-C-21⟫ one entry per forged standard: { standardName, nodeCountByRole, edgeCountByType }
+		const forgeCensusExpectationList = [];
 		const baseBlockByToken = {};
 		// The build's ONE embedding identity (all standards in a run share the run's embedder), captured
 		// in Phase A and reused for the Phase C relationship-block harvest header: a bridged node is an
@@ -1653,6 +1671,8 @@ const build = (recipe, deps, callback) => {
 							// carried per token for Phase C's version-keyed relationship subjects — NOT the
 							// recipe token, NOT bundleVersion.
 							resolvedVersionByToken[std.token] = explicitVersion;
+							// ⟪campaign P2, W-C-21⟫ the kit's counts for this standard, compared with the graph at materialize
+							forgeCensusExpectationList.push({ standardName: forgeReport.standard, nodeCountByRole: (forgeReport.forgeStats || {}).nodeCountByRole, edgeCountByType: (forgeReport.forgeStats || {}).edgeCountByType });
 								// same embedder for every standard in the run — captured for Phase C's
 								// relationship harvest header (undefined on --vectorize=false).
 								buildEmbeddingModelVersion = forgeReport.embeddingModelVersion;
@@ -2362,6 +2382,8 @@ const build = (recipe, deps, callback) => {
 						// ⟪R-P2-1⟫ the injected-or-real fidelity gate, resolved once at the top of build()
 						fidelityGateRunner: cedsFidelityGateRunner,
 						embeddingCoverageGateRunner,
+						forgeCensusGateRunner,
+						forgeCensusSpec: { expectationList: forgeCensusExpectationList },
 						// ⟪R-P2-2⟫ the same per-build resolver the harvest used — restore stamps each
 						// ref-carrying node's vector back onto its graph node
 						storeResolver: vectorStoreResolver,
@@ -2530,6 +2552,9 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 					// the seam changes nothing about -replay's behavior.)
 					fidelityGateRunner: deps.cedsFidelityGateRunner || runCedsFidelityGate,
 					embeddingCoverageGateRunner: deps.embeddingCoverageGateRunner || embeddingCoverageGateLib.runEmbeddingCoverageGate,
+					forgeCensusGateRunner: deps.forgeCensusGateRunner || forgeCensusGateLib.runForgeCensusGate,
+					// a -replay forged nothing: no forge counts to compare
+					forgeCensusSpec: null,
 					// ⟪R-P2-2⟫ a -replay of stored ref-style blocks resolves vectors from the same
 					// canonical home (deps-injectable for tests, real resolver by default)
 					storeResolver:

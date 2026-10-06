@@ -58,6 +58,7 @@ const runMaterialize = (mutationList, finishReportFilePath, done) => {
 		roundTripStageRunner: (spec, callback) => callback('', { stageRan: false, disposition: 'double' }),
 		roundTripStageSpec: { mode: 'double' }, frameworkFingerprintList: [],
 		embeddingCoverageGateRunner: (spec, callback) => callback('', { gate: 'embeddingCoverage', verdict: 'notRun', detail: 'double' }),
+		forgeCensusGateRunner: (spec, callback) => callback('', { gate: 'forgeCensus', verdict: 'notRun', detail: 'double' }), forgeCensusSpec: null,
 	};
 	buildLibFor(mutationList).materializeSchemaBlocks(finishReportFilePath === undefined ? materializeSpec : { ...materializeSpec, finishReportFilePath }, (err) => done({ err: err || '', statusLineList }));
 };

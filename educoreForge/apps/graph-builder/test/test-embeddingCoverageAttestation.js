@@ -56,7 +56,7 @@ const runMaterialize = (mutationList, embeddingCoverageGateRunner, done) => {
 			fidelityGateRunner: (spec, callback) => callback('', { gate: 'fidelity', verdict: 'notRun', detail: 'double' }),
 			storeResolver: () => {}, storeReader: { getManifest: () => {} },
 			roundTripStageRunner: (spec, callback) => callback('', { stageRan: false, disposition: 'double: stage not run' }),
-			roundTripStageSpec: { mode: 'double' }, frameworkFingerprintList: [], embeddingCoverageGateRunner, finishReportFilePath: null,
+			roundTripStageSpec: { mode: 'double' }, frameworkFingerprintList: [], embeddingCoverageGateRunner, finishReportFilePath: null, forgeCensusGateRunner: (spec, callback) => callback('', { gate: 'forgeCensus', verdict: 'notRun', detail: 'double' }), forgeCensusSpec: null,
 		},
 		(materializeError) => done({ materializeError, gateResults: finishCallList.length ? finishCallList[0].gateResults : null }),
 	);
@@ -82,7 +82,7 @@ const conjunctJudgeByRefId = {
 	},
 	e_tailHandsTheRowToFinish: (mutationList, done) =>
 		runMaterialize(mutationList, (spec, callback) => callback('', { gate: 'embeddingCoverage', verdict: 'pass', detail: 'double', missingVectorTotal: 0 }), ({ materializeError, gateResults }) =>
-			done({ pass: !materializeError && Array.isArray(gateResults) && gateResults.map((oneRow) => oneRow.gate).join(',') === 'fidelity,roundTrip,embeddingCoverage', detail: materializeError || JSON.stringify((gateResults || []).map((oneRow) => oneRow.gate)) })),
+			done({ pass: !materializeError && Array.isArray(gateResults) && gateResults.map((oneRow) => oneRow.gate).join(',') === 'fidelity,roundTrip,embeddingCoverage,forgeCensus', detail: materializeError || JSON.stringify((gateResults || []).map((oneRow) => oneRow.gate)) })),
 	f_censusReadsTheFourCounts: (mutationList, done) => {
 		const gateLib = doubleOrReal(GATE_PATH, mutationList);
 		const missingList = gateLib.COUNT_NAME_LIST.filter((oneName) => gateLib.EMBEDDING_COVERAGE_CENSUS_CYPHER.indexOf(`AS ${oneName}`) === -1);
@@ -91,7 +91,7 @@ const conjunctJudgeByRefId = {
 };
 const TWIN_LIST = [
 	{ conjunctRefId: 'b_oneMissingVectorIsFail', modulePath: GATE_PATH, twinName: 'failBranchRemoved', find: 'verdict: missingVectorTotal === 0 ? vocabulary.BUILD_ATTESTATION_VERDICT.PASS : vocabulary.BUILD_ATTESTATION_VERDICT.FAIL,', replace: 'verdict: vocabulary.BUILD_ATTESTATION_VERDICT.PASS,' },
-	{ conjunctRefId: 'e_tailHandsTheRowToFinish', modulePath: BUILD_JS_PATH, twinName: 'tailDropsCoverageRow', find: 'gateResults: [fidelityAttestation, roundTripRow, embeddingCoverageRow],', replace: 'gateResults: [fidelityAttestation, roundTripRow],' },
+	{ conjunctRefId: 'e_tailHandsTheRowToFinish', modulePath: BUILD_JS_PATH, twinName: 'tailDropsCoverageRow', find: 'gateResults: [fidelityAttestation, roundTripRow, embeddingCoverageRow, forgeCensusRow],', replace: 'gateResults: [fidelityAttestation, roundTripRow, forgeCensusRow],' },
 	{ conjunctRefId: 'd_mixedOrUnreadableRefused', modulePath: GATE_PATH, twinName: 'identityCheckRemoved', find: '	if (identityTextSet.size > 1) {', replace: '	if (false) {' },
 ];
 

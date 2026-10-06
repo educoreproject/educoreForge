@@ -86,6 +86,7 @@ const runMaterialize = (buildLib, fidelityGateRunner, done) => {
 			frameworkFingerprintList: [], // campaign P2 (W-A-3): materialize requires the list; no decision block here
 			embeddingCoverageGateRunner: (spec, callback) => callback('', { gate: 'embeddingCoverage', verdict: 'notRun', detail: 'double: census not run' }), // campaign P2 (W-A-11)
 			finishReportFilePath: null, // campaign P2 (W-A-8): no run directory here
+			forgeCensusGateRunner: (spec, callback) => callback('', { gate: 'forgeCensus', verdict: 'notRun', detail: 'double' }), forgeCensusSpec: null, // campaign P2 (W-C-21)
 		},
 		(materializeError) => done({ materializeError, gateResults: finishCallList.length ? finishCallList[0].gateResults : null }),
 	);
@@ -146,7 +147,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'b_genuinePassIsPass', twinName: 'everyPassAllowedLoss', target: 'judgment', find: 'const lossWasAllowed = headline.lost > 0;', replace: 'const lossWasAllowed = true;' },
 	{ conjunctRefId: 'c_allowedLossIsPassWithAllowedLoss', twinName: 'derivedPlainPass', target: 'judgment', find: 'const lossWasAllowed = headline.lost > 0;', replace: 'const lossWasAllowed = false;' },
 	{ conjunctRefId: 'd_allowanceNotNeededIsPass', twinName: 'allowanceRuleNotLossRule', target: 'judgment', find: 'const lossWasAllowed = headline.lost > 0;', replace: 'const lossWasAllowed = allowance > 0;' },
-	{ conjunctRefId: 'e_runnerRowReachesTheGraph', twinName: 'tailDropsFidelityRow', target: 'buildJs', find: 'gateResults: [fidelityAttestation, roundTripRow, embeddingCoverageRow],', replace: 'gateResults: [roundTripRow, embeddingCoverageRow],' },
+	{ conjunctRefId: 'e_runnerRowReachesTheGraph', twinName: 'tailDropsFidelityRow', target: 'buildJs', find: 'gateResults: [fidelityAttestation, roundTripRow, embeddingCoverageRow, forgeCensusRow],', replace: 'gateResults: [roundTripRow, embeddingCoverageRow, forgeCensusRow],' },
 	{ conjunctRefId: 'f_silentRunnerRefused', twinName: 'tailRefusalRemoved', target: 'buildJs', find: '\t\t\t\t\tif (fidelityAttestationFault) {', replace: '\t\t\t\t\tif (false) {' },
 	{ conjunctRefId: 'g_unknownVerdictRefusedByFinisher', twinName: 'finisherVocabularyCheckRemoved', target: 'finisher', find: '\t\t\tif (unknownVerdictList.length) {', replace: '\t\t\tif (false) {' },
 ];

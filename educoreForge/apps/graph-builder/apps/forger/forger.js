@@ -1023,6 +1023,9 @@ const moduleFunction =
 				nodeCount: args.shaped.nodes.length,
 				edgeCount: args.shaped.edges.length,
 				embedCallCount: args.forged.embedCallCount,
+				// ⟪campaign P2, W-C-21⟫ the kit's own counts (nodeCountByRole, edgeCountByType), carried for build.js's forgeCensus
+				// attestation instead of being discarded here (undefined from a bundle that reports none: the row then says so)
+				forgeStats: args.forged.stats,
 				// hub-fold reports (present ONLY when deriveHub ran): the module's §5
 				// prose-divergence rows, the S-3 skip rows, and the derivation counts — carried
 				// for build.js to WRITE into the build's log directory; the forger writes nothing.
