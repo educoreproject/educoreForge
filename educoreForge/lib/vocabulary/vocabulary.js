@@ -977,7 +977,7 @@ const SELF_DOC = {
 		BUILD_ATTESTATION: 'BuildAttestation',
 	},
 	EDGE_TYPES: {
-		BUILT_FROM: 'BUILT_FROM', // GraphProvenance passport -> ManifestRecipe (created at stampProvenance)
+		BUILT_FROM: 'BUILT_FROM', // GraphProvenance passport -> ManifestRecipe (created by passport-writer.write)
 		HAS_BLOCK: 'HAS_BLOCK', // ManifestRecipe -> RecipeBlock member
 		BASED_ON: 'BASED_ON', // ManifestRecipe -> parent ManifestRecipe (the lineage)
 		// ⟪graphSelfDoc, 2026-08-31⟫ the remaining PASSPORT-ROOTED edges. Every edge that roots the
@@ -996,8 +996,8 @@ const SELF_DOC = {
 		DEFINES: 'DEFINES', // StandardDefinition -> DmeStandardRoot
 	},
 	PROVENANCE_TIER: PROVENANCE_TIER.STRUCTURAL, // self-doc edges carry the structural tier
-	MANIFEST_RECIPE_STABLE_ID_PREFIX: 'manifestRecipe:', // + manifestKey
-	RECIPE_BLOCK_STABLE_ID_PREFIX: 'recipeBlock:', // + blockId
+	MANIFEST_RECIPE_STABLE_ID_PREFIX: 'manifestRecipe:', // + manifestRefId
+	RECIPE_BLOCK_STABLE_ID_PREFIX: 'recipeBlock:', // + schemaBlockRefId
 	STANDARD_DEFINITION_STABLE_ID_PREFIX: 'standardDefinition:', // + _source
 	USAGE_PATTERN_STABLE_ID_PREFIX: 'usagePattern:', // + patternName
 	BUILD_ATTESTATION_STABLE_ID_PREFIX: 'buildAttestation:', // + gate name
@@ -1006,7 +1006,7 @@ const SELF_DOC = {
 // =====================================================================
 // GRAPH-META MARKER (Wave B — CRIMSON gate 6). The STRUCTURAL purity exemption: every legitimately
 // source-less node carries :GraphMeta, stamped by the graph-meta finisher (the GraphProvenance passport,
-// minted after finishing, stamps itself in graph-builder.stampProvenance). The G2 purity gate becomes:
+// minted after finishing, stamps itself in passport-writer.write). The G2 purity gate becomes:
 // for EVERY node, (_source IS NOT NULL) XOR (:GraphMeta) — a new meta node type is ONE entry in
 // META_NODE_LABELS; the gate needs zero edits.
 // =====================================================================

@@ -189,6 +189,15 @@ const moduleFunction =
 		//
 		//   It names the FINISHER and the OFFENDING stableId, because "some node was malformed" cannot be
 		//   acted on, and the whole point of moving the check here is that the owner is knowable.
+		// ⟪campaign P2, W-A-5 / V1-C19⟫ the self-doc labels whose properties graph-contract §5 declares: an emitted node carrying
+		//   one must carry every required field of its list (DATA, read by emitResultRefusal below)
+		const SELF_DOC_FIELD_LIST_BY_LABEL = Object.freeze({
+			[vocabulary.SELF_DOC.NODE_LABELS.MANIFEST_RECIPE]: vocabulary.MANIFEST_RECIPE_FIELD_LIST,
+			[vocabulary.SELF_DOC.NODE_LABELS.RECIPE_BLOCK]: vocabulary.RECIPE_BLOCK_FIELD_LIST,
+			[vocabulary.SELF_DOC.NODE_LABELS.STANDARD_DEFINITION]: vocabulary.STANDARD_DEFINITION_FIELD_LIST,
+			[vocabulary.SELF_DOC.NODE_LABELS.USAGE_PATTERN]: vocabulary.USAGE_PATTERN_FIELD_LIST,
+		});
+
 		const emitResultRefusal = (finisherName, result) => {
 			const nodeShape = FINISHER_MODULE_SHAPE.EMITTED_NODE_SHAPE;
 			const edgeShape = FINISHER_MODULE_SHAPE.EMITTED_EDGE_SHAPE;
@@ -237,6 +246,13 @@ const moduleFunction =
 				if (oneNode && oneNode.labels !== undefined && !Array.isArray(oneNode.labels)) {
 					faultList.push(`${nodeLabel}: labels must be an ARRAY`);
 				}
+
+				// ⟪W-A-5⟫ the declared self-doc fields: a required name absent (or null) is a fault, named with its label
+				(Array.isArray((oneNode || {}).labels) ? oneNode.labels : []).filter((oneLabel) => SELF_DOC_FIELD_LIST_BY_LABEL[oneLabel]).forEach((oneLabel) => {
+					SELF_DOC_FIELD_LIST_BY_LABEL[oneLabel]
+						.filter((oneRow) => oneRow.required && ((oneNode.properties || {})[oneRow.name] === undefined || (oneNode.properties || {})[oneRow.name] === null))
+						.forEach((oneRow) => faultList.push(`${nodeLabel}: a :${oneLabel} lacks the required field '${oneRow.name}' (graph-contract §5)`));
+				});
 			});
 
 			edgeList.forEach((oneEdge, onePosition) => {
@@ -423,6 +439,7 @@ const moduleFunction =
 			// provisioning a graph. A refusal that can only be observed by crashing something is not
 			// a refusal anyone can test.
 			emitResultRefusal,
+			SELF_DOC_FIELD_LIST_BY_LABEL,
 		};
 	};
 

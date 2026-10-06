@@ -29,9 +29,9 @@ const TERM_DEFINITIONS = {
 		SchemaView:
 			'A self-describing schema-catalog node (one root plus one member per registry term) generated each build from the vocabulary registry. Code is truth; this is its queryable in-graph projection.',
 		ManifestRecipe:
-			'The in-graph copy of the manifest this graph was replayed from: its key, label, note, creation time, and lineage. Lets a bolt-only consumer see the recipe without the forge store.',
+			'The in-graph copy of the manifest this graph was replayed from: manifestRefId, name, description, recipeName, recipeHash, recipeFileName, createdAt, basedOnManifestRefId (lineage, when recorded) and isRootOfThisGraph. Lets a bolt-only consumer see the recipe without the forge store.',
 		RecipeBlock:
-			'One member block of a ManifestRecipe: block type, subject, version, producer, and content-address (blockId). The graph-side view of a content-addressed store block.',
+			'One member block of a ManifestRecipe: schemaBlockRefId (the content address), kind, subject, version, position, and purpose with purposeSource and purposeTemplateSite. The graph-side view of a content-addressed store block.',
 		StandardDefinition:
 			'The per-source-standard descriptor derived at finishing time: display name, version and its provenance (versionSource), source format, element counts, and mappingKindList / mappingSourceList: the distinct mappingKind and mappingSource values its own match edges carry, in the same vocabulary as the edges, read from the graph (both empty for a standard with no match edge, such as the hub); and standardKind (dataStandard | classificationTaxonomy) and standardUsageTips, guidance for reading this standard, both declared by the forge of that standard and read from its root (standardUsageTips is absent when the forge declares none; both are absent on a standard forged before forges declared them).',
 		GraphMeta:
