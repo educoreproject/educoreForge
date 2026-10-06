@@ -109,7 +109,8 @@ const EDGE_TYPES = {
 	HAS_FIELD: 'HAS_FIELD',
 	HAS_CHILD: 'HAS_CHILD',
 	HAS_INSTANCE: 'HAS_INSTANCE',
-	CONSTRAINED_BY: 'CONSTRAINED_BY',
+	// CONSTRAINED_BY RETIRED ⟪campaign P3, W-C-2; TQ ruling S3, 2026-10-06⟫: SIF's Field -> Codeset link is HAS_OPTION_SET, the
+	// one option-set edge every standard writes, so a reader walking to option sets needs no SIF-only arm.
 	// the one NATIVE relation kind ruled for the new SIF snapshot (supervisor ruling, SPEC §9 A24): Field to
 	// Object, from a RefId field to the object it names. FROM THE FIELD, not from its object, so two
 	// references between the same pair of objects through different fields stay two distinct triples.

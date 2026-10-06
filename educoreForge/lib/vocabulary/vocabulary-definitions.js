@@ -44,7 +44,7 @@ const TERM_DEFINITIONS = {
 	edgeType: {
 		HAS_CLASS: 'Standard root or container to a class/entity node it declares.',
 		HAS_PROPERTY: 'Class (or root) to a property/field it carries.',
-		HAS_OPTION_SET: 'Property or root to the enumerated option set constraining its values: a CEDS property to its option set, an Ed-Fi property to its descriptor or enumeration, a PESC element to its code list.',
+		HAS_OPTION_SET: 'Property, field or root to the enumerated option set constraining its values: a CEDS property to its option set, an Ed-Fi property to its descriptor or enumeration, a PESC element to its code list, a SIF field to its codeset (campaign P3, S3: SIF\'s field-level link uses this one type, not a SIF-only edge).',
 		HAS_VALUE: 'Option set to one of its enumerated option values.',
 		SUBCLASS_OF: 'A node to the parent it specializes within one standard: class to class (CEDS, PESC; Ed-Fi association subclasses to their association and domain-entity subclasses to their abstract entity), option set to class (CEDS models rdfs:subClassOf on option sets, 965 of them), and PESC type, data-type, anonymous-type and code-list derivation, which carries derivationVariety.',
 		HAS_RESTRICTION:
@@ -59,8 +59,6 @@ const TERM_DEFINITIONS = {
 			'Structural parent to its immediate child in one object\'s element tree: an object to a top-level container, a container to a container or field nested directly inside it, or a field to a field nested directly inside it (an element field to one of its own attributes, which the source parents on that element). PESC writes it too: Occurrence to Occurrence, and GlobalElement to Occurrence. It records nesting, where HAS_FIELD records membership. Introduced for the sif260928 forge, whose containers are the element paths the source implies but never lists as rows.',
 		HAS_INSTANCE:
 			'A declared element to each occurrence that stands for it: SIF Question to Field, PESC Element to Occurrence. A SIF question is one distinct (name, description, relative path) the source asks, and a source that repeats a block across objects asks the same question many times; a PESC element is one declaration reached at many document positions. This edge links the one to the many, so a judgement made once about the declaration can be read on every instance. Introduced for the sif260928 forge (Question to Field), written by the PESC release forge too (Element to Occurrence).',
-		CONSTRAINED_BY:
-			'Field to the code list (option set) that constrains its values. The field-level counterpart of HAS_OPTION_SET, kept as its own type so a standard\'s field-to-codeset links are not read as ownership. Introduced for the sif260928 forge (Field to Codeset).',
 		REFERENCES_OBJECT:
 			'A reference field to the object it names: a field whose value is another object\'s identifier, linked to that object. It runs from the FIELD, which is the "via" of the reference, so one object referring to another through several fields keeps one edge per field. Introduced for the sif260928 forge (a RefId Field to an Object); SPEC §9 A24 admits only a curated-map resolution or an exact <Object>RefId name match, and gives an unresolved field no edge.',
 		REFERENCES: 'Generic intra-standard reference between structural nodes.',

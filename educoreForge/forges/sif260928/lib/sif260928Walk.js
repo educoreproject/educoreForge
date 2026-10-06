@@ -16,7 +16,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //       (lib/sif260928Codesets.js; A28).
 //   and adds Object -HAS_FIELD-> Field for every Field, HAS_CHILD along the element tree,
 //   Question -HAS_INSTANCE-> Field for every Field, Codeset -HAS_VALUE-> CodesetValue,
-//   Field -CONSTRAINED_BY-> Codeset for every list-carrying Field, and Field -REFERENCES_OBJECT->
+//   Field -HAS_OPTION_SET-> Codeset for every list-carrying Field (CONSTRAINED_BY until P3 W-C-2), and Field -REFERENCES_OBJECT->
 //   Object for every RefId Field that resolves (lib/sif260928References.js; A24, A28). It returns the
 //   counts, and the xpaths of the RefId Fields that resolved to nothing.
 //

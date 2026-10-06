@@ -10,7 +10,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     of every Field carrying that exact cell.
 //   emitCodesets({ codesetFactsList, kit, fieldStableIdOfXpath }) → mints each Codeset on the root,
 //     its CodesetValues through kit.emitOptionValue (Codeset -HAS_VALUE-> CodesetValue), and
-//     Field -CONSTRAINED_BY-> Codeset for every Field carrying the cell.
+//     Field -HAS_OPTION_SET-> Codeset for every Field carrying the cell (⟪campaign P3, W-C-2 / S3⟫ the one
+//     option-set edge every standard writes; it was CONSTRAINED_BY, a SIF-only type no reader followed).
 //
 // WHERE THE VALUES COME FROM (A28, measured): the snapshot states allowed values only in a Format cell
 // wrapped in one pair of double quotes, which the loader has already split into codeListValueList.
@@ -18,8 +19,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // @...Codeset attribute that only points at a codeset elsewhere, and a Type name, whose values the
 // snapshot does not state, all mint nothing.
 //
-// A Codeset is NAMELESS: the source names none, so the kit counts it as nameless rather than the forge
-// inventing one. Its identity is the cell itself.
+// ⟪campaign P3, G18 (part of S3)⟫ A Codeset is NAMED FROM ITS SOURCE: the snapshot gives a code list no name of
+// its own, but every one is stated in the Format cell of named Fields. The name is the element names of the
+// Fields that carry the cell — each as <parent element>/<field> (a bare 'Code' says nothing), distinct, in the
+// order the Fields first appear — the first CODESET_NAME_ELEMENT_LIMIT of them, then 'and N more'. Its IDENTITY
+// is still the cell itself (stableId = sha256 of the cell), so naming moves no address.
 
 const path = require('path');
 const crypto = require('crypto');
@@ -33,6 +37,16 @@ const CODESET_PATH_PREFIX = 'codeset/';
 const CODESET_VALUE_PATH_PREFIX = 'codesetValue/';
 const CODESET_CARRY_LIST = Object.freeze(['formatCellText', 'valueCount']);
 const CODESET_VALUE_CARRY_LIST = Object.freeze(['valueOrdinal']);
+const CODESET_NAME_ELEMENT_LIMIT = 3;
+
+// '/A/B/GradeLevel/Code' -> 'GradeLevel/Code'
+const elementNameOfXpath = (xpath) => xpath.split('/').filter((oneSegment) => oneSegment !== '').slice(-2).join('/');
+const codesetNameOf = (fieldXpathList) => {
+	const elementNameList = fieldXpathList.map(elementNameOfXpath).filter((oneName, nameIndex, allNameList) => allNameList.indexOf(oneName) === nameIndex);
+	const shownNameList = elementNameList.slice(0, CODESET_NAME_ELEMENT_LIMIT);
+	const hiddenCount = elementNameList.length - shownNameList.length;
+	return hiddenCount > 0 ? `${shownNameList.join(', ')} and ${hiddenCount} more` : shownNameList.join(', ');
+};
 
 const sha256Hex = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 
@@ -69,6 +83,7 @@ const emitCodesets = ({ codesetFactsList, kit, fieldStableIdOfXpath }) => {
 			role: codesetKind.role,
 			perStandardLabel: codesetKind.perStandardLabel,
 			stableId: codesetStableId,
+			name: codesetNameOf(codesetFacts.fieldXpathList),
 			// a code list is shared by Fields across objects, so it hangs on the root
 			structural: { parentId: kit.rootStableId, path: codesetFacts.codesetPath },
 			carriedProperties: kit.carriedProperties({ parsedObject: codesetFacts, carryList: CODESET_CARRY_LIST }),
@@ -88,10 +103,10 @@ const emitCodesets = ({ codesetFactsList, kit, fieldStableIdOfXpath }) => {
 			});
 		});
 		codesetFacts.fieldXpathList.forEach((fieldXpath) => {
-			kit.addEdge({ edgeType: EDGE_TYPES.CONSTRAINED_BY, fromStableId: fieldStableIdOfXpath(fieldXpath), toStableId: codesetStableId, edgeContext: `CONSTRAINED_BY ${fieldXpath}` });
+			kit.addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET, fromStableId: fieldStableIdOfXpath(fieldXpath), toStableId: codesetStableId, edgeContext: `HAS_OPTION_SET ${fieldXpath}` });
 		});
 	});
 	return { codesetCount: codesetFactsList.length, codesetValueCount: codesetFactsList.reduce((soFar, codesetFacts) => soFar + codesetFacts.valueCount, 0) };
 };
 
-module.exports = { codesetFactsListOf, emitCodesets, moduleName };
+module.exports = { codesetFactsListOf, emitCodesets, codesetNameOf, moduleName };

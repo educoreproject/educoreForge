@@ -85,10 +85,15 @@ harness.ok('every DME role is a nodeLabel member (DmeEditHistoryEntry, DmeRestri
 
 harness.section('(d) coverage: every live label and type is a member or producer-local');
 const labelSetText = fs.readFileSync(path.join(CENSUS_DIR, 'goldEval261005LabelAndTypeList.json'), 'utf8');
-const census = JSON.parse(labelSetText);
+const capturedCensus = JSON.parse(labelSetText);
+// ⟪campaign P3⟫ a DECLARED DELTA, not a re-capture: names the capture (GOLD_EVAL_261005, before P3) holds that P3 retired.
+// Each must be ABSENT from the vocabulary, or the delta would hide a real residue (asserted below).
+const RETIRED_SINCE_CAPTURE_RELATIONSHIP_TYPE_LIST = Object.freeze(['CONSTRAINED_BY']); // W-C-2, TQ ruling S3: SIF's Field -> Codeset is HAS_OPTION_SET
+const census = { ...capturedCensus, relationshipTypeList: capturedCensus.relationshipTypeList.filter((oneType) => RETIRED_SINCE_CAPTURE_RELATIONSHIP_TYPE_LIST.indexOf(oneType) === -1) };
 const memberValueList = require(VIEW_PATH)({ vocabulary }).buildMembers({ hubNameList: ['CEDS'] }).members.filter((oneMember) => oneMember.kind === KINDS.NODE_LABEL || oneMember.kind === KINDS.EDGE_TYPE).map((oneMember) => oneMember.value);
 const coverage = require(COVERAGE_PATH)({ vocabulary });
 const residue = coverage.residueFor({ labelList: census.labelList, relationshipTypeList: census.relationshipTypeList, memberValueList });
+harness.ok('every name the declared delta drops is truly retired: absent from EDGE_TYPES and from the captured census only by that delta', RETIRED_SINCE_CAPTURE_RELATIONSHIP_TYPE_LIST.every((oneType) => vocabulary.EDGE_TYPES[oneType] === undefined && capturedCensus.relationshipTypeList.indexOf(oneType) !== -1), RETIRED_SINCE_CAPTURE_RELATIONSHIP_TYPE_LIST.join(', '));
 harness.ok(`the frozen gold census (${census.labelList.length} labels, ${census.relationshipTypeList.length} types) leaves NO residue`, residue.length === 0, residue.join(', '));
 const plantedResidue = coverage.residueFor({ labelList: census.labelList.concat(['UncataloguedProbe']), relationshipTypeList: census.relationshipTypeList, memberValueList });
 harness.equal('a planted uncatalogued label is named', plantedResidue.join(','), 'UncataloguedProbe');

@@ -56,7 +56,10 @@ const SEAM_RULES_PATH = path.join(__dirname, '..', '..', 'bridge-framework', 'gr
 const FINISHER_PATH = path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'replay-manager', 'lib', 'finishing', 'lib', 'schema-view-finisher.js');
 
 // the five rows V1 adds, by member name and value
-const V1_EDGE_TYPE_NAME_LIST = ['HAS_FIELD', 'HAS_CHILD', 'HAS_INSTANCE', 'CONSTRAINED_BY', 'REFERENCES_OBJECT'];
+// ⟪campaign P3, W-C-2 (TQ ruling S3)⟫ CONSTRAINED_BY, the fourth V1 row, is RETIRED: SIF's Field -> Codeset edge is
+// HAS_OPTION_SET. Four V1 rows remain; gate (e) below holds the retirement.
+const V1_EDGE_TYPE_NAME_LIST = ['HAS_FIELD', 'HAS_CHILD', 'HAS_INSTANCE', 'REFERENCES_OBJECT'];
+const RETIRED_V1_EDGE_TYPE_NAME_LIST = ['CONSTRAINED_BY'];
 
 // FROZEN LITERALS for gate (c). 89 was measured at 97feee9 (sifReplacementBase), before any V1 edit:
 // schema-view-finisher.buildMembers().members.length over the unedited registry. Never edited to match a
@@ -77,6 +80,9 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // ⟪campaign P3, W-C-17, 2026-10-06 (CARDINAL_HORIZON)⟫ +5 more, unrelated to V1: five integer-valued names (maxLength,
 // minLength, decimalPlaces, minCount, maxCount) joined graph-contract §2 once the CEDS parser typed them.
 const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5;
+// ⟪campaign P3, W-C-2⟫ rows RETIRED from V1's own five: the real registry is AFTER_V1 + added − retired, and the pre-V1
+// reading (the remaining V1 rows removed) is BEFORE_V1 + added, unchanged.
+const SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1 = RETIRED_V1_EDGE_TYPE_NAME_LIST.length;
 
 // ---------------------------------------------------------------------
 // doubles
@@ -193,9 +199,22 @@ harness.section('(c) the schema-view member count equals the frozen literal, a r
 // =====================================================================
 const realMemberCount = schemaViewCount(vocabulary);
 const preV1MemberCount = schemaViewCount(withoutEdgeTypeRows(V1_EDGE_TYPE_NAME_LIST));
-harness.equal('c_memberCountEqualsLiteral PASS (the registry as it stands)', String(realMemberCount), String(SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1));
-harness.equal('the registry with the five V1 rows removed reproduces the pre-V1 literal', String(preV1MemberCount), String(SCHEMA_VIEW_MEMBER_COUNT_BEFORE_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1));
+harness.equal('c_memberCountEqualsLiteral PASS (the registry as it stands)', String(realMemberCount), String(SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 - SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1));
+harness.equal('the registry with the remaining V1 rows removed reproduces the pre-V1 literal', String(preV1MemberCount), String(SCHEMA_VIEW_MEMBER_COUNT_BEFORE_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1));
 harness.equal('the rise is exactly the number of V1 rows', String(realMemberCount - preV1MemberCount), String(V1_EDGE_TYPE_NAME_LIST.length));
+
+// =====================================================================
+harness.section('(e) ⟪campaign P3, W-C-2⟫ the retired CONSTRAINED_BY is gone: no EDGE_TYPES row, no definition, and the kit refuses it by name');
+// =====================================================================
+const judgeRetired = (subjectVocabulary, kitModule, oneName) => {
+	const { refusalMessage } = addEdgeOutcome(kitFor(kitModule), oneName);
+	const pass = subjectVocabulary.EDGE_TYPES[oneName] === undefined && subjectVocabulary.TERM_DEFINITIONS.edgeType[oneName] === undefined && refusalMessage.indexOf(`edge type '${oneName}' is not a member of EDGE_TYPES`) !== -1;
+	return { pass, detail: `row ${JSON.stringify(subjectVocabulary.EDGE_TYPES[oneName])}; kit ${refusalMessage || 'ACCEPTED'}` };
+};
+RETIRED_V1_EDGE_TYPE_NAME_LIST.forEach((oneName) => {
+	const verdict = judgeRetired(vocabulary, realKitModule, oneName);
+	harness.ok(`e_retiredTypeAbsent ${oneName} PASS`, verdict.pass, verdict.detail);
+});
 
 // =====================================================================
 harness.section('(d) judgedSubjectStableId is in the closed set, and the write seam accepts it');
@@ -243,7 +262,18 @@ const extraRowVocabulary = vocabularyDouble([
 const extraRowCompleteness = judgeDefinitionComplete(extraRowVocabulary);
 harness.ok('the extra-row twin is DEFINED, so the finisher does not refuse it (the red below is the count alone)', extraRowCompleteness.pass, extraRowCompleteness.detail);
 const extraRowCount = schemaViewCount(extraRowVocabulary);
-recordRed({ conjunctRefId: 'c_memberCountEqualsLiteral', twinName: 'definedExtraRow', verdictIsRed: extraRowCount !== SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1, detail: `count ${extraRowCount} vs literal ${SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1}` });
+const realLiteralCount = SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 + SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 - SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1;
+recordRed({ conjunctRefId: 'c_memberCountEqualsLiteral', twinName: 'definedExtraRow', verdictIsRed: extraRowCount !== realLiteralCount, detail: `count ${extraRowCount} vs literal ${realLiteralCount}` });
+
+// (e) — the retired row restored (with its definition): the vocabulary carries it again and the kit accepts it
+RETIRED_V1_EDGE_TYPE_NAME_LIST.forEach((oneName) => {
+	const restoredMutationList = [
+		{ modulePath: VOCABULARY_PATH, find: edgeTypeRowText('REFERENCES_OBJECT'), replace: `${edgeTypeRowText(oneName)}${edgeTypeRowText('REFERENCES_OBJECT')}` },
+		{ modulePath: DEFINITIONS_PATH, find: definitionOpeningText('REFERENCES_OBJECT'), replace: `\t\t${oneName}: 'The retired row, restored by the twin.',\n${definitionOpeningText('REFERENCES_OBJECT')}` },
+	];
+	const verdict = judgeRetired(vocabularyDouble(restoredMutationList), moduleDouble.loadWithMutations({ modulePath: KIT_PATH, mutationList: restoredMutationList }), oneName);
+	recordRed({ conjunctRefId: `e_retiredTypeAbsent ${oneName}`, twinName: `retiredRowRestored:${oneName}`, verdictIsRed: !verdict.pass, detail: verdict.detail });
+});
 
 // (d) — without the row, the name list lacks it and the seam refuses the edge by name
 const judgedSubjectRowText = "\tJUDGED_SUBJECT_STABLE_ID: 'judgedSubjectStableId',\n";
@@ -255,6 +285,6 @@ const seamVerdictWithoutRow = judgeSeamAcceptsJudgedSubject(moduleDouble.loadWit
 const seamRefusedByName = /edge property 'judgedSubjectStableId' is outside vocabulary\.MAPPING_PROPERTIES/.test(seamVerdictWithoutRow.detail);
 recordRed({ conjunctRefId: 'd_seamAcceptsJudgedSubject', twinName: 'judgedSubjectRowRemoved', verdictIsRed: !seamVerdictWithoutRow.pass && seamRefusedByName, detail: seamVerdictWithoutRow.detail });
 
-harness.equal('every twin was observed red (5 kit + 5 definition + 1 count + 2 mapping-property)', String(observedRedList.length), '13');
+harness.equal('every twin was observed red (4 kit + 4 definition + 1 count + 1 retired-row + 2 mapping-property)', String(observedRedList.length), '12');
 
 harness.report();

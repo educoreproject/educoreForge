@@ -6,7 +6,8 @@
 // in pure mode (skipEmbedding, no Docker, no network). Every conjunct is observed RED under its own twin
 // before the family counts as green (gateSuiteRunner).
 //
-//   A4-CODESETS   (a) Codesets 131, CodesetValues 4,055, HAS_VALUE 4,055, CONSTRAINED_BY 1,495, equal to
+//   A4-CODESETS   (a) Codesets 131, CodesetValues 4,055, HAS_VALUE 4,055, Field HAS_OPTION_SET 1,495 (CONSTRAINED_BY until
+//                     campaign P3 W-C-2), equal to
 //                     the separate count; every list-carrying Field is constrained by a Codeset holding
 //                     its cell's values in source order; a padded list value is refused by name
 //   A4-KINDS      (b) the edge types stay distinct: the exact per-type count set, each type between its
@@ -70,7 +71,8 @@ const REAL_SNAPSHOT_DIR = path.join(BUNDLE_DIR, 'assets', 'standardSourceData', 
 // to match a measurement.
 const RULED_CODESET_COUNT = 131;
 const RULED_CODESET_VALUE_COUNT = 4055;
-const RULED_CONSTRAINED_BY_COUNT = 1495;
+// ⟪campaign P3, W-C-2 / S3⟫ the Field -> Codeset edge is HAS_OPTION_SET (it was CONSTRAINED_BY); the count is the same
+const RULED_FIELD_OPTION_SET_COUNT = 1495;
 const RULED_REFERENCES_OBJECT_COUNT = 607;
 const RULED_REFERENCES_OBJECT_VIA_MAP_COUNT = 200;
 // A5's text edges, rebuilt from C1's question map and segment table alone (DEVLOG-A5.md): not A4's
@@ -90,7 +92,7 @@ const RULED_QUESTION_REF_ID_LIST_SHA256 = '7f4ed86ec57a07b1759c4c87e5b54ad1aac42
 // each edge type and the per-standard labels it joins
 const RULED_EDGE_ENDPOINT_LABELS_BY_TYPE = Object.freeze({
 	HAS_VALUE: 'Sif260928Codeset>Sif260928CodesetValue',
-	CONSTRAINED_BY: 'Sif260928Field>Sif260928Codeset',
+	HAS_OPTION_SET: 'Sif260928Field>Sif260928Codeset',
 	REFERENCES_OBJECT: 'Sif260928Field>Sif260928Object',
 });
 
@@ -192,6 +194,19 @@ const refusedOnFixture = ({ alterTextByFileName, refusalRe }) => (subject, callb
 
 const nodeListByLabel = (forged, perStandardLabel) => forged.nodes.filter((oneNode) => oneNode.labels[1] === perStandardLabel);
 const edgeListByType = (forged, edgeType) => forged.edges.filter((oneEdge) => oneEdge.type === edgeType);
+// the Field -> Codeset option-set edges (W-C-1 adds root -> Codeset edges of the same type, which this count excludes)
+const fieldOptionSetEdgeListOf = (forged) => edgeListByType(forged, 'HAS_OPTION_SET').filter((oneEdge) => oneEdge.fromRef.id.indexOf('sif260928:field/') === 0);
+// ⟪campaign P3, G18⟫ THE NAMING RULE, restated here independently of the bundle: the distinct <parent>/<field> element
+// names of the Fields carrying the cell, in first-appearance order, the first three then 'and N more'
+const expectedCodesetNameOf = (fieldXpathList) => {
+	const elementNameList = [];
+	fieldXpathList.forEach((oneXpath) => {
+		const segmentList = oneXpath.split('/').filter((oneSegment) => oneSegment.length > 0);
+		const elementName = `${segmentList[segmentList.length - 2]}/${segmentList[segmentList.length - 1]}`;
+		if (elementNameList.indexOf(elementName) === -1) elementNameList.push(elementName);
+	});
+	return elementNameList.length > 3 ? `${elementNameList.slice(0, 3).join(', ')} and ${elementNameList.length - 3} more` : elementNameList.join(', ');
+};
 const countBy = (itemList, groupNameOf) => itemList.reduce((soFar, oneItem) => ({ ...soFar, [groupNameOf(oneItem)]: (soFar[groupNameOf(oneItem)] || 0) + 1 }), {});
 const sortedEntriesText = (countByName) => JSON.stringify(Object.keys(countByName).sort().map((oneName) => [oneName, countByName[oneName]]));
 const firstOf = (itemList) => (itemList.length ? ` (first ${JSON.stringify(itemList[0])})` : '');
@@ -231,7 +246,7 @@ const UNCHANGED_GATE_ID = 'A4-UNCHANGED';
 const codesetsConjunctList = [
 	{
 		conjunctId: 'codesetCountsEqualSeparateCount',
-		title: 'Codesets 131 (every one nameless), CodesetValues 4,055, HAS_VALUE 4,055 and CONSTRAINED_BY 1,495, as the separate count found',
+		title: 'Codesets 131 (⟪P3, G18⟫ every one NAMED), CodesetValues 4,055, HAS_VALUE 4,055 and Field HAS_OPTION_SET 1,495 (⟪P3, W-C-2⟫ no CONSTRAINED_BY), as the separate count found',
 		twinNameList: ['codesetLookupKeyedByXpath', 'unquotedFormatTakenAsList'],
 		evaluate: overForged((forged) => {
 			const codesetNodeList = nodeListByLabel(forged, 'Sif260928Codeset');
@@ -240,6 +255,7 @@ const codesetsConjunctList = [
 				codeset: codesetNodeList.length,
 				codesetValue: nodeListByLabel(forged, 'Sif260928CodesetValue').length,
 				hasValue: edgeListByType(forged, 'HAS_VALUE').length,
+				fieldOptionSet: fieldOptionSetEdgeListOf(forged).length,
 				constrainedBy: edgeListByType(forged, 'CONSTRAINED_BY').length,
 			};
 			return {
@@ -247,8 +263,9 @@ const codesetsConjunctList = [
 					measured.codeset === RULED_CODESET_COUNT &&
 					measured.codesetValue === RULED_CODESET_VALUE_COUNT &&
 					measured.hasValue === RULED_CODESET_VALUE_COUNT &&
-					measured.constrainedBy === RULED_CONSTRAINED_BY_COUNT &&
-					namedCodesetCount === 0,
+					measured.fieldOptionSet === RULED_FIELD_OPTION_SET_COUNT &&
+					measured.constrainedBy === 0 &&
+					namedCodesetCount === RULED_CODESET_COUNT,
 				detail: `${JSON.stringify(measured)}; Codesets with a name ${namedCodesetCount}`,
 			};
 		}),
@@ -265,7 +282,7 @@ const codesetsConjunctList = [
 					.slice()
 					.sort((leftNode, rightNode) => leftNode.properties.valueOrdinal - rightNode.properties.valueOrdinal)
 					.map((valueNode) => valueNode.properties.name);
-			const constrainedLineList = edgeListByType(forged, 'CONSTRAINED_BY').map((oneEdge) => [nodeByStableId.get(oneEdge.fromRef.id).properties.xpath].concat(valueTextListOf(oneEdge.toRef.id)).join('\t'));
+			const constrainedLineList = fieldOptionSetEdgeListOf(forged).map((oneEdge) => [nodeByStableId.get(oneEdge.fromRef.id).properties.xpath].concat(valueTextListOf(oneEdge.toRef.id)).join('\t'));
 			const codesetWrongList = nodeListByLabel(forged, 'Sif260928Codeset')
 				.filter((codesetNode) => {
 					const valueNodeList = valueNodeListByCodesetStableId.get(codesetNode.stableId) || [];
@@ -284,14 +301,39 @@ const codesetsConjunctList = [
 		}),
 	},
 	{
+		conjunctId: 'codesetNamedFromItsFields',
+		title: "⟪campaign P3, G18⟫ every Codeset's name is the distinct <parent>/<field> names of the Fields that carry it, in Field order, the first three then 'and N more' — recomputed here from the HAS_OPTION_SET edges",
+		twinNameList: ['codesetNameDropped', 'codesetNameFromLeafOnly'],
+		evaluate: overForged((forged) => {
+			const nodeByStableId = new Map(forged.nodes.map((oneNode) => [oneNode.stableId, oneNode]));
+			const fieldXpathListByCodesetStableId = fieldOptionSetEdgeListOf(forged).reduce((soFar, oneEdge) => soFar.set(oneEdge.toRef.id, (soFar.get(oneEdge.toRef.id) || []).concat([nodeByStableId.get(oneEdge.fromRef.id).properties.xpath])), new Map());
+			const wrongList = nodeListByLabel(forged, 'Sif260928Codeset')
+				.filter((codesetNode) => codesetNode.properties.name !== expectedCodesetNameOf(fieldXpathListByCodesetStableId.get(codesetNode.stableId) || []))
+				.map((codesetNode) => `${codesetNode.stableId}: ${JSON.stringify(codesetNode.properties.name)} vs ${JSON.stringify(expectedCodesetNameOf(fieldXpathListByCodesetStableId.get(codesetNode.stableId) || []))}`);
+			return { pass: wrongList.length === 0 && fieldXpathListByCodesetStableId.size === RULED_CODESET_COUNT, detail: `${wrongList.length} misnamed${firstOf(wrongList)}` };
+		}),
+	},
+	{
 		conjunctId: 'paddedCodeListValueRefusedByName',
 		title: `a scratch snapshot whose ${NAMED_PADDED_CODE_LIST_CELL} cells read "Yes,  No" is REFUSED BY NAME by the loader, naming the row and the padded value`,
 		twinNameList: ['codeListGuardDisabled'],
 		evaluate: refusedOnFixture({ alterTextByFileName: { [SOURCE_FILE_NAME]: withCodeListValuePadded }, refusalRe: /sif260928TsvLoader REFUSED: line \d+ \(\/[^)]+\) has a code list with an empty, padded or repeated value: " No"/ }),
 	},
 ];
+registerMutationTwin({
+	gateId: CODESETS_GATE_ID,
+	conjunctId: 'codesetNamedFromItsFields',
+	twinName: 'codesetNameDropped',
+	mutation: codesetsMutation({ find: '			name: codesetNameOf(codesetFacts.fieldXpathList),\n', replace: '' }),
+});
+registerMutationTwin({
+	gateId: CODESETS_GATE_ID,
+	conjunctId: 'codesetNamedFromItsFields',
+	twinName: 'codesetNameFromLeafOnly',
+	mutation: codesetsMutation({ find: ".slice(-2).join('/');", replace: ".slice(-1).join('/');" }),
+});
 // the Codeset looked up by the Field's xpath instead of its cell: every lookup misses, each Field
-// re-mints its cell's entry, and only the last Field of each cell keeps its CONSTRAINED_BY
+// re-mints its cell's entry, and only the last Field of each cell keeps its HAS_OPTION_SET
 registerMutationTwin({
 	gateId: CODESETS_GATE_ID,
 	conjunctId: 'codesetCountsEqualSeparateCount',
@@ -317,8 +359,8 @@ registerMutationTwin({
 	conjunctId: 'everyListFieldConstrainedByItsOwnValues',
 	twinName: 'oneFieldConstrainedByTheWrongCodeset',
 	mutation: codesetsMutation({
-		find: '			kit.addEdge({ edgeType: EDGE_TYPES.CONSTRAINED_BY, fromStableId: fieldStableIdOfXpath(fieldXpath), toStableId: codesetStableId,',
-		replace: "			kit.addEdge({ edgeType: EDGE_TYPES.CONSTRAINED_BY, fromStableId: fieldStableIdOfXpath(fieldXpath), toStableId: fieldXpath === codesetFacts.fieldXpathList[0] && codesetFacts === codesetFactsList[1] ? `${STANDARD_STABLE_ID_PREFIX}${codesetFactsList[0].codesetPath}` : codesetStableId,",
+		find: '			kit.addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET, fromStableId: fieldStableIdOfXpath(fieldXpath), toStableId: codesetStableId,',
+		replace: "			kit.addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET, fromStableId: fieldStableIdOfXpath(fieldXpath), toStableId: fieldXpath === codesetFacts.fieldXpathList[0] && codesetFacts === codesetFactsList[1] ? `${STANDARD_STABLE_ID_PREFIX}${codesetFactsList[0].codesetPath}` : codesetStableId,",
 	}),
 });
 registerMutationTwin({
@@ -334,12 +376,12 @@ registerMutationTwin({
 const kindsConjunctList = [
 	{
 		conjunctId: 'edgeTypesDistinctBetweenTheirOwnLabels',
-		title: 'the edges are exactly HAS_FIELD 15,620, HAS_CHILD 21,017, HAS_INSTANCE 15,620, HAS_VALUE 4,055, CONSTRAINED_BY 1,495, REFERENCES_OBJECT 607 and (A5) EMBEDS_TEXT_OF 14,539, and every HAS_VALUE, CONSTRAINED_BY and REFERENCES_OBJECT edge joins its own two labels',
-		twinNameList: ['referencesFoldedIntoConstrainedBy'],
+		title: 'the edges are exactly HAS_FIELD 15,620, HAS_CHILD 21,017, HAS_INSTANCE 15,620, HAS_VALUE 4,055, HAS_OPTION_SET 1,495 (⟪P3, W-C-2⟫ was CONSTRAINED_BY), REFERENCES_OBJECT 607 and (A5) EMBEDS_TEXT_OF 14,539, and every HAS_VALUE, HAS_OPTION_SET and REFERENCES_OBJECT edge joins its own two labels',
+		twinNameList: ['referencesFoldedIntoOptionSet'],
 		evaluate: overForged((forged) => {
 			const labelByStableId = new Map(forged.nodes.map((oneNode) => [oneNode.stableId, oneNode.labels[1]]));
 			const edgeCountByType = countBy(forged.edges, (oneEdge) => oneEdge.type);
-			const ruledEdgeCountByType = { ...RULED_EARLIER_EDGE_COUNT_BY_TYPE, HAS_VALUE: RULED_CODESET_VALUE_COUNT, CONSTRAINED_BY: RULED_CONSTRAINED_BY_COUNT, REFERENCES_OBJECT: RULED_REFERENCES_OBJECT_COUNT, EMBEDS_TEXT_OF: RULED_EMBEDS_TEXT_OF_COUNT };
+			const ruledEdgeCountByType = { ...RULED_EARLIER_EDGE_COUNT_BY_TYPE, HAS_VALUE: RULED_CODESET_VALUE_COUNT, HAS_OPTION_SET: RULED_FIELD_OPTION_SET_COUNT, REFERENCES_OBJECT: RULED_REFERENCES_OBJECT_COUNT, EMBEDS_TEXT_OF: RULED_EMBEDS_TEXT_OF_COUNT };
 			const endpointWrongList = forged.edges
 				.filter((oneEdge) => RULED_EDGE_ENDPOINT_LABELS_BY_TYPE[oneEdge.type] !== undefined && `${labelByStableId.get(oneEdge.fromRef.id)}>${labelByStableId.get(oneEdge.toRef.id)}` !== RULED_EDGE_ENDPOINT_LABELS_BY_TYPE[oneEdge.type])
 				.map((oneEdge) => `${oneEdge.type} ${oneEdge.fromRef.id} -> ${oneEdge.toRef.id}`);
@@ -354,8 +396,8 @@ const kindsConjunctList = [
 registerMutationTwin({
 	gateId: KINDS_GATE_ID,
 	conjunctId: 'edgeTypesDistinctBetweenTheirOwnLabels',
-	twinName: 'referencesFoldedIntoConstrainedBy',
-	mutation: referencesMutation({ find: '			edgeType: EDGE_TYPES.REFERENCES_OBJECT,', replace: '			edgeType: EDGE_TYPES.CONSTRAINED_BY,' }),
+	twinName: 'referencesFoldedIntoOptionSet',
+	mutation: referencesMutation({ find: '			edgeType: EDGE_TYPES.REFERENCES_OBJECT,', replace: '			edgeType: EDGE_TYPES.HAS_OPTION_SET,' }),
 });
 
 // =====================================================================
@@ -438,7 +480,7 @@ const unchangedConjunctList = [
 	{
 		conjunctId: 'earlierCountsAndQuestionListUnchanged',
 		title: "the earlier nodes are still 1 root, 159 Objects, 6,586 Containers, 15,620 Fields and 5,018 Questions; HAS_FIELD, HAS_CHILD and HAS_INSTANCE are still 15,620, 21,017 and 15,620; the sorted questionRefId list still hashes to C1's",
-		twinNameList: ['constrainedByWrittenAsHasField'],
+		twinNameList: ['optionSetWrittenAsHasField'],
 		evaluate: overForged((forged) => {
 			const earlierCountByLabel = countBy(forged.nodes.filter((oneNode) => RULED_EARLIER_NODE_COUNT_BY_LABEL[oneNode.labels[1]] !== undefined), (oneNode) => oneNode.labels[1]);
 			const earlierCountByType = countBy(forged.edges.filter((oneEdge) => RULED_EARLIER_EDGE_COUNT_BY_TYPE[oneEdge.type] !== undefined), (oneEdge) => oneEdge.type);
@@ -457,8 +499,8 @@ const unchangedConjunctList = [
 registerMutationTwin({
 	gateId: UNCHANGED_GATE_ID,
 	conjunctId: 'earlierCountsAndQuestionListUnchanged',
-	twinName: 'constrainedByWrittenAsHasField',
-	mutation: codesetsMutation({ find: '			kit.addEdge({ edgeType: EDGE_TYPES.CONSTRAINED_BY,', replace: '			kit.addEdge({ edgeType: EDGE_TYPES.HAS_FIELD,' }),
+	twinName: 'optionSetWrittenAsHasField',
+	mutation: codesetsMutation({ find: '			kit.addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET,', replace: '			kit.addEdge({ edgeType: EDGE_TYPES.HAS_FIELD,' }),
 });
 
 const gateDeclarationList = [
@@ -468,7 +510,7 @@ const gateDeclarationList = [
 	{ gateId: UNCHANGED_GATE_ID, title: '(d) the earlier counts are unchanged', conjunctList: unchangedConjunctList },
 ];
 
-runGateFamily({ harness, familyName: 'sif260928 A4 codesets and references', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 8, expectedTwinCount: 11 }, () => {
+runGateFamily({ harness, familyName: 'sif260928 A4 codesets and references', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 9, expectedTwinCount: 13 }, () => {
 	scratchRootPathList.forEach((oneScratchRootPath) => fs.rmSync(oneScratchRootPath, { recursive: true, force: true }));
 	harness.report();
 });

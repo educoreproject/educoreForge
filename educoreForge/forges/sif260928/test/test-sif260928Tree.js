@@ -16,7 +16,7 @@
 //   A2-UNCHANGED  (e) the A1b and A1c counts are unchanged beside the new nodes and edges (restated in
 //                     A3: the node labels and edge types gain the Questions and HAS_INSTANCE, counted
 //                     by test-sif260928Questions.js; restated in A4: they gain the Codesets, their
-//                     values, HAS_VALUE, CONSTRAINED_BY and REFERENCES_OBJECT, counted by
+//                     values, HAS_VALUE, HAS_OPTION_SET (CONSTRAINED_BY until P3 W-C-2) and REFERENCES_OBJECT, counted by
 //                     test-sif260928Codesets.js)
 //   A2-DEPTH          SPEC §9 A25: the framework's depth = xpathDepth - 1 for every Field (and the
 //                     segment count - 1 for every Container)
@@ -80,9 +80,9 @@ const RULED_NODE_COUNT_BY_LABEL = Object.freeze({
 	Sif260928EmbedText: 7698,
 });
 const RULED_HAS_INSTANCE_COUNT = 15620;
-// A4, the same separate count: one HAS_VALUE per CodesetValue, one CONSTRAINED_BY per list-carrying
+// A4, the same separate count: one HAS_VALUE per CodesetValue, one Field HAS_OPTION_SET (was CONSTRAINED_BY) per list-carrying
 // Field, one REFERENCES_OBJECT per resolved RefId Field (SPEC §9 A24, A28)
-const RULED_A4_EDGE_COUNT_BY_TYPE = Object.freeze({ HAS_VALUE: 4055, CONSTRAINED_BY: 1495, REFERENCES_OBJECT: 607 });
+const RULED_A4_EDGE_COUNT_BY_TYPE = Object.freeze({ HAS_VALUE: 4055, HAS_OPTION_SET: 1495, REFERENCES_OBJECT: 607 });
 // A5: one EMBEDS_TEXT_OF per distinct (text, Question or Object) pair, rebuilt from C1's question map and
 // segment table alone (14,380 Question pairs and 159 Object names; DEVLOG-A5.md)
 const RULED_A5_EDGE_COUNT_BY_TYPE = Object.freeze({ EMBEDS_TEXT_OF: 14539 });
@@ -370,7 +370,7 @@ registerMutationTwin({
 const unchangedConjunctList = [
 	{
 		conjunctId: 'earlierCountsUnchanged',
-		title: 'the nodes are exactly 1 root, 159 Objects, 6,586 Containers, 15,620 Fields, 5,018 Questions, 131 Codesets, 4,055 CodesetValues and (A5) 7,698 text nodes; the edges are HAS_FIELD, HAS_CHILD, HAS_INSTANCE, HAS_VALUE, CONSTRAINED_BY, REFERENCES_OBJECT and (A5) EMBEDS_TEXT_OF only; each Object still carries fieldCount = its rows',
+		title: 'the nodes are exactly 1 root, 159 Objects, 6,586 Containers, 15,620 Fields, 5,018 Questions, 131 Codesets, 4,055 CodesetValues and (A5) 7,698 text nodes; the edges are HAS_FIELD, HAS_CHILD, HAS_INSTANCE, HAS_VALUE, HAS_OPTION_SET, REFERENCES_OBJECT and (A5) EMBEDS_TEXT_OF only; each Object still carries fieldCount = its rows',
 		twinNameList: ['oneRowNotMinted'],
 		evaluate: overForged((forged) => {
 			const countByLabel = countBy(forged.nodes, (oneNode) => oneNode.labels[1]);

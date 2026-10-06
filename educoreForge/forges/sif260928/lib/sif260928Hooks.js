@@ -7,7 +7,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // As of A4 the framework runs the whole pipeline in pure mode: verify the TSV and the RefId map
 // against SHA256SUMS, load and census the TSV, load the map, stamp the version, apply the version
 // guard, and mint the root; the walk then mints the Objects, Containers, Fields, Questions, Codesets
-// and CodesetValues and adds the HAS_FIELD, HAS_CHILD, HAS_INSTANCE, HAS_VALUE, CONSTRAINED_BY and
+// and CodesetValues and adds the HAS_FIELD, HAS_CHILD, HAS_INSTANCE, HAS_VALUE, HAS_OPTION_SET (Field to Codeset; CONSTRAINED_BY until P3 W-C-2) and
 // REFERENCES_OBJECT edges.
 //   sourceLoaderList  — TWO loaders, run in this order:
 //                       sifImplementationSpecificationTsv, the TSV loader (lib/sif260928TsvLoader.js;
@@ -24,7 +24,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   emitContractGraph — runs the walk (lib/sif260928Walk.js), which mints 159 Objects, 6,586
 //                       Containers, 15,620 Fields, 5,018 Questions, 131 Codesets and 4,055
 //                       CodesetValues through the kit and adds 15,620 HAS_FIELD, 21,017 HAS_CHILD,
-//                       15,620 HAS_INSTANCE, 4,055 HAS_VALUE, 1,495 CONSTRAINED_BY and 607
+//                       15,620 HAS_INSTANCE, 4,055 HAS_VALUE, 1,495 Field HAS_OPTION_SET and 607
 //                       REFERENCES_OBJECT edges, and returns the kit's collections.
 //
 // The forger hands the forge <snapshot>/ImplementationSpecification_031326.tsv (parserDescriptor.ini
