@@ -35,7 +35,7 @@ const contentionCensus = ({ cardListByCanonicalKey, tier } = {}) => {
 //   → { perTarget: {...}, perSubject: {...} }  — every member EQUAL-comparable, no band
 // labelledSubjectCount / inScopeSubjectCount (W-B-9, V1-C12; campaign P3 2026-10-06): the subjects the source carries and the
 // ones the declared scope kept. REQUIRED integers, no default: until this the only trace of a subject the scope left out
-// was one status line in the build log (SIF: 1 of 5,018), and a frozen block said nothing. perSubject gains
+// was one status line in the build log, and a frozen block said nothing. perSubject gains
 // labelledSubjectCount and outOfScopeSubjectCount (= labelled − in scope, refused by name if negative).
 const cardinalityCensus = ({
 	decisionRecordList,

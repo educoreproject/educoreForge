@@ -48,7 +48,7 @@ const registerPlugin = ({ pluginModule, pluginFilePath, bundleDirPath } = {}) =>
 	if (pluginModule.bridgeDeclaration.standardKey !== expectedStandardKey) {
 		return { error: refuse.byName({ moduleName, what: `plugin ${pluginFilePath} declares standardKey '${pluginModule.bridgeDeclaration.standardKey}' but sits under bundle '${expectedStandardKey}'`, where: 'standardKey MUST equal the bundle directory (BR-009)' }) };
 	}
-	const declarationDigest = bridgePluginContractLib.canonicalJsonText(pluginModule.bridgeDeclaration);
+	const declarationCanonicalText = bridgePluginContractLib.canonicalJsonText(pluginModule.bridgeDeclaration);
 	return {
 		entry: Object.freeze({
 			bridgeName: pluginModule.bridgeDeclaration.bridgeName,
@@ -58,7 +58,7 @@ const registerPlugin = ({ pluginModule, pluginFilePath, bundleDirPath } = {}) =>
 			bridgeDeclaration: pluginModule.bridgeDeclaration,
 			bridgeHooks: pluginModule.bridgeHooks,
 			channelResolutionByKey: validated.channelResolutionByKey,
-			declarationCanonicalText: declarationDigest,
+			declarationCanonicalText,
 		}),
 	};
 };

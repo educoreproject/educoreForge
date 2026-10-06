@@ -376,12 +376,18 @@ const branchCutText = fs.readFileSync(BRANCH_CUT_BLOCK_PATH, 'utf8');
 // lane P (2026-10-04) added mappingKind/mappingSource/mappingConfidence and renamed one tier AFTER this capture; the delta is
 // applied to the capture rather than re-capturing it (testSupport/capturedEdgeProvenanceDelta.js)
 const branchCutEdgeList = capturedEdgeListWithProvenanceDelta({ capturedEdgeList: JSON.parse(fs.readFileSync(BRANCH_CUT_EDGE_LIST_PATH, 'utf8')), specifiedBridgeName: null });
-const branchCutSssomText = fs.readFileSync(BRANCH_CUT_SSSOM_PATH, 'utf8');
+// W-B-11 (campaign P3): the captures take the generation delta (the declaration digest after the version), never a re-capture
+const capturedGenerationDeltaLib = require('./testSupport/capturedGenerationDelta');
+const toyPluginDeclarationFor = (bridgeName) => require(path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', `${bridgeName}.js`)).bridgeDeclaration;
+const branchCutSssomText = capturedGenerationDeltaLib.sssomWithMappingToolDigest({ capturedSssomText: fs.readFileSync(BRANCH_CUT_SSSOM_PATH, 'utf8'), bridgeDeclaration: toyPluginDeclarationFor('toyDerivedPlugin') });
 // W-B-9 (campaign P3): the capture takes the scope-census delta (the conflict pair's toyStandardPlugin run declares no scope)
 const branchCutConflictCounts = require('./testSupport/capturedCensusScopeDelta').capturedCountsWithScopeCensusDelta({ capturedCounts: JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_COUNTS_PATH, 'utf8')), capturedRunWasUnscoped: true });
 const branchCutConflictEdgeList = capturedEdgeListWithProvenanceDelta({ capturedEdgeList: JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_EDGE_LIST_PATH, 'utf8')), specifiedBridgeName: 'toyStandardPlugin' });
 const branchCutConflictSssomText = fs.readFileSync(BRANCH_CUT_CONFLICT_SSSOM_PATH, 'utf8');
-const branchCutConflictReview = JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_FORENSICS_PATH, 'utf8')).find((oneRecord) => oneRecord.record.kind === 'MappingReview');
+const branchCutConflictReview = (() => {
+	const capturedReview = JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_FORENSICS_PATH, 'utf8')).find((oneRecord) => oneRecord.record.kind === 'MappingReview');
+	return { ...capturedReview, generation: capturedGenerationDeltaLib.generationWithDeclarationDigest({ capturedGeneration: capturedReview.generation, bridgeDeclaration: toyPluginDeclarationFor('toyStandardPlugin') }) };
+})();
 const maskedTextOf = (frozenText) => {
 	const fingerprintMatchList = frozenText.match(FRAMEWORK_FINGERPRINT_TEXT_RE) || [];
 	return fingerprintMatchList.length === 1 ? { maskedText: frozenText.replace(FRAMEWORK_FINGERPRINT_TEXT_RE, '"frameworkFingerprint":"MASKED"') } : { error: `frameworkFingerprint occurs ${fingerprintMatchList.length} times in the frozen text (must be exactly once)` };

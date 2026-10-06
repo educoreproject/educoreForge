@@ -26,6 +26,29 @@ const contentAddress = require(path.join(__dirname, '..', 'content-address', 'co
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 
 const FRAMEWORK_GENERATION = 'bridgeFramework-v1';
+// GENERATION_GRAMMAR (W-B-11, V1-C16; campaign P3 2026-10-06): '<frameworkGeneration>:<bridgeName>@<pluginVersion>+
+// <declarationDigest12>:<rendererVersion>' followed by any window/debug marks ('-<mark>', appended by sourceWindow and
+// debugJudge). Every shipped plugin says pluginVersion '1.0.0' and nothing ever bumped it, so the generation — the
+// forensics file name, the cache generation column, the block header — carried no information about WHICH declaration
+// judged. The digest segment is derived from the declaration itself: a version bump is a human promise with no gate.
+const GENERATION_DECLARATION_DIGEST_LENGTH = 12;
+const GENERATION_PATTERN = /^([^:]+):([A-Za-z0-9]+)@([^+:]+)\+([0-9a-f]{12}):(.+)$/;
+const generationFor = ({ bridgeName, pluginVersion, declarationDigest, rendererVersion } = {}) => {
+	if (typeof declarationDigest !== 'string' || !/^[0-9a-f]{64}$/.test(declarationDigest)) {
+		throw refuse.byName({ moduleName, what: `generationFor needs the declaration's sha256 hex digest (got ${JSON.stringify(declarationDigest)})`, where: 'the generation names WHICH declaration judged (GENERATION_GRAMMAR, W-B-11)' });
+	}
+	return `${FRAMEWORK_GENERATION}:${bridgeName}@${pluginVersion}+${declarationDigest.slice(0, GENERATION_DECLARATION_DIGEST_LENGTH)}:${rendererVersion}`;
+};
+// parseGeneration — { frameworkGeneration, bridgeName, pluginVersion, declarationDigest12, rendererAndMarkText } | { error }.
+// The renderer version itself contains hyphens, so the marks stay inside rendererAndMarkText; their own readers
+// (sourceWindow, debugJudge) find them there.
+const parseGeneration = (generation) => {
+	const matched = typeof generation === 'string' ? GENERATION_PATTERN.exec(generation) : null;
+	if (matched === null) {
+		return { error: refuse.byName({ moduleName, what: `generation ${JSON.stringify(generation)} does not match GENERATION_GRAMMAR`, where: '<frameworkGeneration>:<bridgeName>@<pluginVersion>+<declarationDigest12>:<rendererVersion>[marks]' }) };
+	}
+	return { frameworkGeneration: matched[1], bridgeName: matched[2], pluginVersion: matched[3], declarationDigest12: matched[4], rendererAndMarkText: matched[5] };
+};
 const HEADER_KEY_ORDER = Object.freeze([
 	'frameworkGeneration',
 	'frameworkFingerprint',
@@ -244,6 +267,9 @@ const frameworkFingerprintFileList = () =>
 
 module.exports = {
 	FRAMEWORK_GENERATION,
+	GENERATION_PATTERN,
+	generationFor,
+	parseGeneration,
 	HEADER_KEY_ORDER,
 	OPTIONAL_HEADER_KEY_LIST,
 	REQUIRED_HEADER_KEY_LIST,

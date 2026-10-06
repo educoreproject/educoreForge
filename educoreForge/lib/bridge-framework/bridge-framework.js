@@ -375,7 +375,8 @@ const moduleFunction =
 			// the plugin's declared renderingAllowList.subject. A constant here would silently overrule a declared
 			// allow-list, which is the bias audit failing in the quiet direction (RULING §11.1/§11.4).
 			const subjectMaterialNameList = evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant].subjectMaterialNameListFor({ bridgeDeclaration });
-			const baseGeneration = `${decisionBlockLib.FRAMEWORK_GENERATION}:${bridgeDeclaration.bridgeName}@${bridgeDeclaration.pluginVersion}:${runRendererVersion}`;
+			// W-B-11: the generation names the declaration that judged (its digest), not only a pluginVersion nobody bumps
+			const baseGeneration = decisionBlockLib.generationFor({ bridgeName: bridgeDeclaration.bridgeName, pluginVersion: bridgeDeclaration.pluginVersion, declarationDigest, rendererVersion: runRendererVersion });
 			const generation = debugJudgeLib.generationWithDebugMark(sourceWindowLib.generationWithWindowMark(baseGeneration, windowMark), debugMark);
 			const runPrefix = `[bridge ${bridgeDeclaration.bridgeName} ${sourceToken}→${hubToken}]`;
 			const report = { refusalList: [], conflictCount: 0, conflictList: [], judgeSpend: { asked: 0, servedFromCache: 0, abstained: 0, rationaleReaskCount: 0, usd: null }, blindingDeclarationEcho: bridgeDeclaration.blindingDeclaration.slice(), consistencyReport: [], subjectNodeReport: null, labelTableDigest, discardedPredicateKeyCount: 0, note: '' };
@@ -654,7 +655,7 @@ const moduleFunction =
 									// simply not put in the object.
 									const setLevelSlots = {
 										...(bridgeDeclaration.mappingProvider === undefined ? {} : { mappingProvider: bridgeDeclaration.mappingProvider }),
-										...(bridgeDeclaration.mappingTool === undefined ? {} : { mappingTool: `${bridgeDeclaration.mappingTool.name} ${bridgeDeclaration.mappingTool.version}` }),
+										...(bridgeDeclaration.mappingTool === undefined ? {} : { mappingTool: `${bridgeDeclaration.mappingTool.name} ${bridgeDeclaration.mappingTool.version}+${declarationDigest.slice(0, 12)}` }),
 										subjectSource: sourceStandardName,
 										subjectSourceVersion: String(sourceVersion),
 										objectSource: block.header.hubName,
