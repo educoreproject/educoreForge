@@ -318,7 +318,12 @@ const POST_D1_BASE_TAG = 'postCampaignP0VocabularyIi-100626'; // re-anchored 202
 //   both), acceptance/expectedFingerprints.json 12 (the five PROXY re-pins, d84bd9a), test-gSeamUntouched.js 11 (its own re-anchor),
 //   test-gStandardMetadata.js 134 (new). No other framework module moved. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red
 //   observed on d39755c (DEVLOG-R). The TWELFTH anchor.
-const PHASE0_ANCHOR_TAG = 'postLeftoversRForgeFrameworkIii-100526'; // re-anchored by EMERALD_OCEAN, leftovers lane R — the TWELFTH anchor
+// campaign P0 RE-ANCHOR of (iii) (SILVER_ECHO, 2026-10-06; pre-authorised): postLeftoversRForgeFrameworkIii-100526 ->
+// postCampaignP0ForgeFrameworkIii-100626, tag cut ON this commit. CENSUS (git diff --stat ... -- lib/forge-framework/) at 7139d8c: ONE
+// file, lib/forge-framework/test/test-gSeamUntouched.js 11 — its own re-anchor to postCampaignP0GSeamUntouched-100626 (0d6ffd9).
+// lib/forge-framework SOURCE: UNTOUCHED. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed on the re-anchor commit
+// (DEVLOG-P0). The THIRTEENTH anchor.
+const PHASE0_ANCHOR_TAG = 'postCampaignP0ForgeFrameworkIii-100626'; // re-anchored by SILVER_ECHO, campaign P0 — the THIRTEENTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
