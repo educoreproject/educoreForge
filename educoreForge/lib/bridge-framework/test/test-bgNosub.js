@@ -147,7 +147,10 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // ═══ RE-ANCHOR (ii) SECOND, 2026-10-06 (CARDINAL_RIVER, campaign P2; pre-authorised) ═══ postCampaignP2VocabularyIi-100626 ->
 // postCampaignP2VocabularyIiB-100626, tag cut ON this commit. CENSUS at 462d922: ONE file, outside — graph-contract.js 2 (fleet finding:
 // StandardDefinition.standardUsageTips required: false, because the forge declaration contract allows null tips). List NOT widened.
-const POST_D1_BASE_TAG = 'postCampaignP2VocabularyIiB-100626'; // re-anchored 2026-10-06 (campaign P2, second) — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR (ii) THIRD, 2026-10-06 (CARDINAL_RIVER, campaign P2; pre-authorised) ═══ -> postCampaignP2VocabularyIiC-100626, tag ON
+// this commit. CENSUS at 6122536: ONE file, outside — graph-contract.js 4 (fleet finding: 'Sif' joins the producer-local label tokens,
+// the old SIF forge's family). List NOT widened.
+const POST_D1_BASE_TAG = 'postCampaignP2VocabularyIiC-100626'; // re-anchored 2026-10-06 (campaign P2, third) — base moved, allowed-path list NOT widened
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
