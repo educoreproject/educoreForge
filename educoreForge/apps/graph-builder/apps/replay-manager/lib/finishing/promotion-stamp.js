@@ -11,6 +11,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     after the build and before promotion.
 // The stamp writes ONLY those: the passport's graphName (keeping the scratch name beside it as scratchGraphName) and one
 // BuildAttestation row per supplied gate verdict, each carrying the path and sha256 of the evidence file it was read from.
+// ⟪campaign P2, W-A-9⟫ and the two VECTOR indexes, renamed to the promoted graph's name (graph-contract §10
+// vectorIndexNameFor): Neo4j has no index RENAME, so each index whose name is not the declared one is DROPPED and
+// re-CREATED under it at the dimensions it already had, then the passport's vectorIndexNameList is rewritten. A VECTOR
+// index on an undeclared (label, property) slot is refused by name — never silently kept, never silently dropped.
 // It writes no content node or edge, and PROVES it: the content census (nodes carrying _source; edges with no :GraphMeta
 // endpoint) is taken before and after, and any difference is refused by name.
 //
@@ -27,7 +31,7 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabulary, passportWriter } = {}) => {
-		const { NODE_LABELS, SELF_DOC, GRAPH_META } = vocabulary;
+		const { NODE_LABELS, SELF_DOC, GRAPH_META, vectorIndexSlotTable, vectorIndexNameFor } = vocabulary;
 		// the passport's singleton key is the passport writer's, read from it, never restated here
 		if (!passportWriter || typeof passportWriter.PASSPORT_KEY_PROPERTY !== 'string' || typeof passportWriter.PASSPORT_SINGLETON_VALUE !== 'string') {
 			throw new Error(`${moduleName} REFUSED: a constructed passportWriter is required (its PASSPORT_KEY_PROPERTY and PASSPORT_SINGLETON_VALUE find the passport)`);
@@ -65,6 +69,44 @@ const moduleFunction =
 				.concat(oneVerdict && /^[0-9a-f]{64}$/.test(String(oneVerdict.evidenceSha256)) ? [] : ['evidenceSha256 is not 64 hex']);
 			return faultList.length ? `${moduleName} REFUSED: ${where}: ${faultList.join('; ')} — a verdict is recorded only with the evidence it was read from` : '';
 		};
+
+		// THE VECTOR INDEX CENSUS and the rename plan. vectorIndexRenamePlanFor is PURE (rows in, statements out) so a gate can
+		// drive it without a graph: one row per VECTOR index → { keptNameList, dropCreateList, refusal }.
+		const VECTOR_INDEX_CENSUS_CYPHER = `SHOW INDEXES YIELD name, type, labelsOrTypes, properties, options WHERE type = 'VECTOR' RETURN name, labelsOrTypes, properties, options ORDER BY name`;
+		const vectorIndexRenamePlanFor = ({ indexRowList, promotedGraphName }) => {
+			const slotTable = vectorIndexSlotTable();
+			const plan = { keptNameList: [], dropCreateList: [], declaredNameList: [], refusal: '' };
+			indexRowList.forEach((oneRow) => {
+				if (plan.refusal) return;
+				const slotPropertyName = (oneRow.properties || [])[0];
+				const slot = slotTable[slotPropertyName];
+				if (!slot || (oneRow.labelsOrTypes || [])[0] !== slot.label) {
+					plan.refusal = `${moduleName} REFUSED: VECTOR index '${oneRow.name}' on :${(oneRow.labelsOrTypes || []).join(':')}(${(oneRow.properties || []).join(', ')}) is not a declared vector slot (graph-contract §10: ${Object.keys(slotTable).map((oneSlot) => `:${slotTable[oneSlot].label}(${oneSlot})`).join(', ')}) — it was created outside the build and is neither kept nor dropped silently`;
+					return;
+				}
+				const declaredName = vectorIndexNameFor({ graphName: promotedGraphName, slotPropertyName });
+				plan.declaredNameList.push(declaredName);
+				if (oneRow.name === declaredName) {
+					plan.keptNameList.push(declaredName);
+					return;
+				}
+				const dimensions = ((oneRow.options || {}).indexConfig || {})['vector.dimensions'];
+				const similarityFunction = ((oneRow.options || {}).indexConfig || {})['vector.similarity_function'];
+				if (!Number.isInteger(Number(dimensions)) || !similarityFunction) {
+					plan.refusal = `${moduleName} REFUSED: VECTOR index '${oneRow.name}' reports no vector.dimensions / vector.similarity_function in its options (${JSON.stringify(oneRow.options)}) — it cannot be re-created as it was`;
+					return;
+				}
+				plan.dropCreateList.push({
+					oldName: oneRow.name,
+					newName: declaredName,
+					dropCypher: `DROP INDEX \`${oneRow.name}\``,
+					createCypher: `CREATE VECTOR INDEX \`${declaredName}\` IF NOT EXISTS FOR (n:\`${slot.label}\`) ON (n.\`${slotPropertyName}\`) OPTIONS {indexConfig: {\`vector.dimensions\`: ${Number(dimensions)}, \`vector.similarity_function\`: ${cypherString(similarityFunction)}}}`,
+				});
+			});
+			plan.declaredNameList.sort();
+			return plan;
+		};
+		const plainOf = (oneValue) => (oneValue && typeof oneValue.toNumber === 'function' ? oneValue.toNumber() : Array.isArray(oneValue) ? oneValue.map(plainOf) : oneValue && typeof oneValue === 'object' ? Object.keys(oneValue).reduce((soFar, oneName) => ({ ...soFar, [oneName]: plainOf(oneValue[oneName]) }), {}) : oneValue);
 
 		const readCensus = (runCypher, censusLabel, callback) => {
 			runCypher({ cypher: CONTENT_CENSUS_CYPHER }, (err, result) => {
@@ -164,6 +206,48 @@ const moduleFunction =
 				});
 			});
 
+			// ⟪W-A-9⟫ the vector indexes, renamed to the promoted name; then the passport's list rewritten to match
+			taskList.push((args, next) => {
+				runCypher({ cypher: VECTOR_INDEX_CENSUS_CYPHER }, (err, result) => {
+					if (err) {
+						next(`${moduleName}: the vector index census failed: ${err}`);
+						return;
+					}
+					const indexRowList = ((result && result.records) || []).map((oneRecord) => ({ name: oneRecord.get('name'), labelsOrTypes: oneRecord.get('labelsOrTypes'), properties: oneRecord.get('properties'), options: plainOf(oneRecord.get('options')) }));
+					const plan = vectorIndexRenamePlanFor({ indexRowList, promotedGraphName });
+					if (plan.refusal) {
+						next(plan.refusal);
+						return;
+					}
+					next('', { ...args, vectorIndexPlan: plan });
+				});
+			});
+			taskList.push((args, next) => {
+				const statementList = args.vectorIndexPlan.dropCreateList.reduce((soFar, oneStep) => soFar.concat([oneStep.dropCypher, oneStep.createCypher]), []);
+				const statementTaskList = new taskListPlus();
+				statementList.concat(statementList.length ? ['CALL db.awaitIndexes(600)'] : []).forEach((oneStatement) => {
+					statementTaskList.push((statementArgs, statementNext) => {
+						runCypher({ cypher: oneStatement }, (err) => (err ? statementNext(`${moduleName}: the vector index rename failed at '${oneStatement.slice(0, 80)}': ${err}`) : statementNext('', statementArgs)));
+					});
+				});
+				pipeRunner(statementTaskList.getList(), {}, (err) => (err ? next(err) : next('', args)));
+			});
+			taskList.push((args, next) => {
+				const nameListText = args.vectorIndexPlan.declaredNameList.map(cypherString).join(', ');
+				const cypher = `
+					MATCH (p:\`${passportLabel}\` {\`${PASSPORT_KEY_PROPERTY}\`: ${cypherString(PASSPORT_SINGLETON_VALUE)}})
+					SET p.vectorIndexNameList = [${nameListText}]
+					RETURN p.vectorIndexNameList AS vectorIndexNameList`;
+				runCypher({ cypher }, (err, result) => {
+					const rows = (result && result.records) || [];
+					if (err || rows.length !== 1) {
+						next(`${moduleName}: rewriting the passport's vectorIndexNameList failed${err ? `: ${err}` : ' (no passport row)'}`);
+						return;
+					}
+					next('', { ...args, vectorIndexNameList: rows[0].get('vectorIndexNameList') });
+				});
+			});
+
 			taskList.push((args, next) => {
 				readCensus(runCypher, 'AFTER', (err, after) => {
 					if (err) {
@@ -191,16 +275,19 @@ const moduleFunction =
 					scratchGraphName: args.scratchGraphName,
 					manifestRefId: args.manifestRefId,
 					stampedGateList: args.stampedGateList,
+					vectorIndexNameList: args.vectorIndexNameList,
+					renamedVectorIndexList: args.vectorIndexPlan.dropCreateList.map((oneStep) => `${oneStep.oldName} -> ${oneStep.newName}`),
 					before: args.before,
 					after: args.after,
 					summary:
 						`promotion stamp: graphName '${args.graphName}' (scratch '${args.scratchGraphName}'); attested ${args.stampedGateList.join(', ')}; ` +
+						`vector indexes ${args.vectorIndexNameList.join(', ')} (${args.vectorIndexPlan.dropCreateList.length} renamed); ` +
 						`content unchanged: ${args.after.contentNodeCount} node(s), ${args.after.contentEdgeCount} edge(s) before and after`,
 				});
 			});
 		};
 
-		return { stampPromotion, STAMPABLE_GATE_LIST, STAMPABLE_VERDICT_LIST, CONTENT_CENSUS_CYPHER };
+		return { stampPromotion, STAMPABLE_GATE_LIST, STAMPABLE_VERDICT_LIST, CONTENT_CENSUS_CYPHER, VECTOR_INDEX_CENSUS_CYPHER, vectorIndexRenamePlanFor };
 	};
 
 // END OF moduleFunction() ============================================================

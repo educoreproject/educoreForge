@@ -8,8 +8,12 @@
 //   (b) a content change between the BEFORE and AFTER census is REFUSED by name
 //   (c) a verdict without its evidence sha256 is REFUSED by name before anything is written
 //   (d) a graph holding TWO passports is REFUSED by name (the singleton guard in the statement)
+//   (e) ⟪campaign P2, W-A-9⟫ the two scratch-named VECTOR indexes are dropped and re-created under the promoted name at the
+//       dimensions they had, db.awaitIndexes runs, and the passport's vectorIndexNameList is rewritten to the two new names
+//   (f) a VECTOR index on an undeclared slot (:UserContent(embedding)) is REFUSED by name, before any index is dropped
 // RED TWINS, each observed in memory: (a) the scratch name not kept; (b) the census comparison removed; (c) the evidence
-// check removed; (d) the passport singleton check removed.
+// check removed; (d) the passport singleton check removed; (e) the drop+create step never planned; (f) the label check
+// removed (the slot then matches by property name alone).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
@@ -41,7 +45,11 @@ const goodVerdictList = () => [
 const recordOf = (fieldValueByName) => ({ get: (fieldName) => fieldValueByName[fieldName] });
 
 // runCypherDouble — answers by statement kind; censusList is consumed in order (BEFORE, then AFTER)
-const runCypherDouble = ({ censusList, passportCount = 1 }) => {
+const SCRATCH_INDEX_ROW_LIST = [
+	{ name: 'DEV_gb_materialize_1_1_embedText_vector', labelsOrTypes: ['DmeEmbedText'], properties: ['textEmbedding'], options: { indexConfig: { 'vector.dimensions': 1024, 'vector.similarity_function': 'COSINE' } } },
+	{ name: 'DEV_gb_materialize_1_1_vector', labelsOrTypes: ['ForgedNode'], properties: ['embedding'], options: { indexConfig: { 'vector.dimensions': 1024, 'vector.similarity_function': 'COSINE' } } },
+];
+const runCypherDouble = ({ censusList, passportCount = 1, indexRowList = SCRATCH_INDEX_ROW_LIST }) => {
 	const statementList = [];
 	const remainingCensusList = censusList.slice();
 	const runCypher = ({ cypher }, callback) => {
@@ -65,13 +73,25 @@ const runCypherDouble = ({ censusList, passportCount = 1 }) => {
 			callback('', { records: [recordOf({ rowCount: 1 })] });
 			return;
 		}
+		if (/^SHOW INDEXES/.test(cypher)) {
+			callback('', { records: indexRowList.map(recordOf) });
+			return;
+		}
+		if (/^(DROP INDEX|CREATE VECTOR INDEX|CALL db\.awaitIndexes)/.test(cypher)) {
+			callback('', { records: [] });
+			return;
+		}
+		if (/SET p\.vectorIndexNameList = /.test(cypher)) {
+			callback('', { records: [recordOf({ vectorIndexNameList: JSON.parse(/= (\[[^\]]*\])/.exec(cypher)[1]) })] });
+			return;
+		}
 		callback(`unexpected statement: ${cypher.slice(0, 80)}`);
 	};
 	return { runCypher, statementList };
 };
 
-const runStamp = ({ mutationList, censusList, passportCount, gateVerdictList }, callback) => {
-	const cypherDouble = runCypherDouble({ censusList, passportCount });
+const runStamp = ({ mutationList, censusList, passportCount, gateVerdictList, indexRowList }, callback) => {
+	const cypherDouble = runCypherDouble({ censusList, passportCount, indexRowList });
 	stampFor(mutationList).stampPromotion({ runCypher: cypherDouble.runCypher, promotedGraphName: 'GOLD_EVAL_TEST_promoted', gateVerdictList }, (err, stamped) => callback({ err, stamped, statementList: cypherDouble.statementList }));
 };
 const SAME_CENSUS = { contentNodeCount: 100, contentEdgeCount: 200 };
@@ -91,6 +111,20 @@ const conjunctJudgeByRefId = {
 		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: verdictList }, ({ err, statementList }) =>
 			done({ pass: /REFUSED: gateVerdictList\[1\]: evidenceSha256 is not 64 hex/.test(String(err)) && statementList.length === 0, detail: String(err || 'stamped a verdict without evidence').slice(0, 160) }));
 	},
+	e_vectorIndexesRenamedToThePromotedName: (mutationList, done) =>
+		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: goodVerdictList() }, ({ err, stamped, statementList }) => {
+			const dropList = statementList.filter((oneStatement) => /^DROP INDEX/.test(oneStatement));
+			const createList = statementList.filter((oneStatement) => /^CREATE VECTOR INDEX/.test(oneStatement));
+			const promotedNameList = ['GOLD_EVAL_TEST_promoted_embedText_vector', 'GOLD_EVAL_TEST_promoted_vector'];
+			const pass = !err && dropList.length === 2 && createList.length === 2 &&
+				promotedNameList.every((oneName) => createList.some((oneStatement) => oneStatement.indexOf(`\`${oneName}\``) !== -1 && /`vector\.dimensions`: 1024/.test(oneStatement))) &&
+				statementList.some((oneStatement) => oneStatement === 'CALL db.awaitIndexes(600)') &&
+				JSON.stringify(stamped.vectorIndexNameList) === JSON.stringify(promotedNameList);
+			done({ pass, detail: err || `drop ${dropList.length}, create ${createList.length}, list ${JSON.stringify(stamped.vectorIndexNameList)}` });
+		}),
+	f_undeclaredVectorIndexRefused: (mutationList, done) =>
+		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: goodVerdictList(), indexRowList: SCRATCH_INDEX_ROW_LIST.concat([{ name: 'userContent_vector', labelsOrTypes: ['UserContent'], properties: ['embedding'], options: { indexConfig: { 'vector.dimensions': 1024, 'vector.similarity_function': 'COSINE' } } }]) }, ({ err, statementList }) =>
+			done({ pass: /REFUSED: VECTOR index 'userContent_vector' on :UserContent\(embedding\) is not a declared vector slot/.test(String(err)) && !statementList.some((oneStatement) => /^DROP INDEX/.test(oneStatement)), detail: String(err || 'an undeclared VECTOR index passed the stamp').slice(0, 200) })),
 	d_passportSingletonRequired: (mutationList, done) =>
 		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], passportCount: 2, gateVerdictList: goodVerdictList() }, ({ err }) =>
 			done({ pass: /REFUSED: the graph does not hold exactly one GraphProvenance passport/.test(String(err)), detail: String(err || 'stamped a graph holding two passports').slice(0, 160) })),
@@ -101,6 +135,8 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'b_contentChangeRefused', twinName: 'censusComparisonRemoved', find: '\t\t\t\t\tif (after.contentNodeCount !== args.before.contentNodeCount || after.contentEdgeCount !== args.before.contentEdgeCount) {', replace: '\t\t\t\t\tif (false) {' },
 	{ conjunctRefId: 'c_verdictWithoutEvidenceRefused', twinName: 'evidenceCheckRemoved', find: "\t\t\t\t.concat(oneVerdict && /^[0-9a-f]{64}$/.test(String(oneVerdict.evidenceSha256)) ? [] : ['evidenceSha256 is not 64 hex']);", replace: ';' },
 	{ conjunctRefId: 'd_passportSingletonRequired', twinName: 'passportSingletonUnguarded', find: '\t\t\t\t\tWHERE size(passportList) = 1', replace: '\t\t\t\t\tWHERE size(passportList) >= 1' },
+	{ conjunctRefId: 'e_vectorIndexesRenamedToThePromotedName', twinName: 'dropCreateNeverPlanned', find: '\t\t\t\tplan.dropCreateList.push({', replace: '\t\t\t\tvoid ({' },
+	{ conjunctRefId: 'f_undeclaredVectorIndexRefused', twinName: 'labelCheckRemoved', find: "if (!slot || (oneRow.labelsOrTypes || [])[0] !== slot.label) {", replace: 'if (!slot) {' },
 ];
 
 const refIdList = Object.keys(conjunctJudgeByRefId);

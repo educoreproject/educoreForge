@@ -45,7 +45,7 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const replayBlock = require('./replay-block')();
 const contentAddress = require('../content-address/content-address')();
 // ⟪R-ET-24⟫ the second vector index's label, property and name suffix have ONE home, the vocabulary.
-const { EMBED_TEXT_VECTOR, SKOS_EDGE_TYPES, MAPPING_KIND_LIST, LIST_VALUED_PROPERTY_NAME_LIST, INTEGER_VALUED_PROPERTY_NAME_LIST } = require('../vocabulary/vocabulary');
+const { EMBED_TEXT_VECTOR, SKOS_EDGE_TYPES, MAPPING_KIND_LIST, LIST_VALUED_PROPERTY_NAME_LIST, INTEGER_VALUED_PROPERTY_NAME_LIST, vectorIndexNameRefusal, vectorIndexNameFor } = require('../vocabulary/vocabulary');
 
 const BATCH_SIZE = 500;
 const NEO4J_USER = 'neo4j';
@@ -176,17 +176,11 @@ const labelClause = (labels) =>
 		.map((oneLabel) => `\`${oneLabel}\``)
 		.join(':');
 
-// stableId index name: per-graph, named off the graph (schemas.md §4). The resolution-key
-// index name is graph-neutral here because the engine is told only boltUri; we use a stable
-// constant for the reskey index and derive the vector index name from the header's standardKey
-// when available, falling back to a constant. The CONSUMERS contract names the vector index
-// <graphName>_vector; the engine accepts an optional graphName to honor that.
+// The resolution-key index is graph-neutral (a stable constant; the engine is told only boltUri). The two VECTOR
+// indexes are named by graph-contract §10 vectorIndexNameFor — <graphName>_vector on :ForgedNode(embedding) and
+// <graphName>_embedText_vector on the text slot — and a write that builds them REQUIRES a graphName (campaign P2,
+// W-A-9: the old 'replay' default named an index after no graph; the promotion stamp renames both after promotion).
 const resKeyIndexName = () => 'replay_reskey';
-const vectorIndexName = (graphName) =>
-	`${graphName ? graphName : 'replay'}_vector`;
-// ⟪R-ET-8, R-ET-24⟫ the text-node index is named off the graph exactly as the ordinary one is.
-const embedTextVectorIndexName = (graphName) =>
-	`${graphName ? graphName : 'replay'}${EMBED_TEXT_VECTOR.indexNameSuffix}`;
 
 // graphName-aware ownerStamp is the replayManager's concern; the engine writes data only.
 
@@ -1544,8 +1538,6 @@ const writeShapedGraph = (
 	callback,
 ) => {
 	const resKeyIndex = resKeyIndexName();
-	const vectorIndex = vectorIndexName(graphName);
-	const embedTextVectorIndex = embedTextVectorIndexName(graphName);
 	const taskList = new taskListPlus();
 
 	// --- SHAPE + ALL FOUR GUARDS, before anything is written. This is the load-bearing line of
@@ -1626,6 +1618,13 @@ const writeShapedGraph = (
 			next('', { ...args, indexesBuilt });
 			return;
 		}
+		const indexNameRefusal = vectorIndexNameRefusal({ graphName, slotPropertyName: 'embedding' });
+		if (indexNameRefusal) {
+			next(`phase3 vector index: ${indexNameRefusal} (writeShapedGraph was handed vectors and no graphName)`);
+			return;
+		}
+		const vectorIndex = vectorIndexNameFor({ graphName, slotPropertyName: 'embedding' });
+		const embedTextVectorIndex = vectorIndexNameFor({ graphName, slotPropertyName: EMBED_TEXT_VECTOR.propertyName });
 		const buildVectorIndex = () => {
 			const vectorQuery = `
 				CREATE VECTOR INDEX ${vectorIndex} IF NOT EXISTS

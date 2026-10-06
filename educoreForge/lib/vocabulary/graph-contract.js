@@ -189,6 +189,34 @@ const SELF_DOC_RETIRED_FIELD_NAME_BY_LABEL = Object.freeze({
 	StandardDefinition: Object.freeze({ source: 'sourceKey', displayName: 'standardName', mappingDisposition: 'mappingKindList + mappingSourceList', exactEdgeCount: 'exactMappedProperties', closeEdgeCount: 'closeMappedProperties', nodeCount: 'none', optionSetCount: 'none', description: 'none', subjectVersions: 'none', objectVersions: 'none' }),
 });
 
+// §10 VECTOR INDEX NAMING (W-A-9, V1-C25, G12). Each vector slot has one index, named off the graph it serves:
+// <graphName><suffix>. The table is read from vocabulary at CALL time (see the TRAP in the header): the ordinary slot is
+// :ForgedNode(embedding); the text slot is EMBED_TEXT_VECTOR's label, property and suffix, which keep their one home there.
+// There is no default graph name: an index named 'replay_vector' serves no graph anyone can find.
+const vectorIndexSlotTable = () => {
+	const { EMBED_TEXT_VECTOR, NODE_LABELS } = require('./vocabulary');
+	return Object.freeze({
+		embedding: Object.freeze({ label: NODE_LABELS.FORGED_NODE, indexNameSuffix: '_vector' }),
+		[EMBED_TEXT_VECTOR.propertyName]: Object.freeze({ label: EMBED_TEXT_VECTOR.label, indexNameSuffix: EMBED_TEXT_VECTOR.indexNameSuffix }),
+	});
+};
+// vectorIndexNameRefusal — '' when the pair names a declared slot of a named graph, else why not (callers that must
+// not throw — the write path, the promotion stamp — refuse with this text; vectorIndexNameFor throws it)
+const vectorIndexNameRefusal = ({ graphName, slotPropertyName } = {}) => {
+	if (typeof graphName !== 'string' || !graphName.trim()) {
+		return 'vectorIndexNameFor: graphName is REQUIRED — an index is named off the graph it serves';
+	}
+	const slotTable = vectorIndexSlotTable();
+	return slotTable[slotPropertyName] ? '' : `vectorIndexNameFor: '${slotPropertyName}' is not a declared vector slot (${Object.keys(slotTable).join(', ')})`;
+};
+const vectorIndexNameFor = ({ graphName, slotPropertyName } = {}) => {
+	const refusal = vectorIndexNameRefusal({ graphName, slotPropertyName });
+	if (refusal) {
+		throw new Error(refusal);
+	}
+	return `${graphName}${vectorIndexSlotTable()[slotPropertyName].indexNameSuffix}`;
+};
+
 // ---------------------------------------------------------------------
 // THE JSON DOCUMENT, ITS CANONICAL TEXT AND ITS SHA
 // ---------------------------------------------------------------------
@@ -215,6 +243,7 @@ const graphContractDocument = () => {
 		standardDefinitionFieldList: STANDARD_DEFINITION_FIELD_LIST,
 		usagePatternFieldList: USAGE_PATTERN_FIELD_LIST,
 		selfDocRetiredFieldNameByLabel: SELF_DOC_RETIRED_FIELD_NAME_BY_LABEL,
+		vectorIndexSlotTable: vectorIndexSlotTable(),
 	};
 };
 
@@ -254,6 +283,9 @@ module.exports = Object.freeze({
 	STANDARD_DEFINITION_FIELD_LIST,
 	USAGE_PATTERN_FIELD_LIST,
 	SELF_DOC_RETIRED_FIELD_NAME_BY_LABEL,
+	vectorIndexSlotTable,
+	vectorIndexNameRefusal,
+	vectorIndexNameFor,
 	graphContractDocument,
 	canonicalJsonText,
 	graphContractSha256,

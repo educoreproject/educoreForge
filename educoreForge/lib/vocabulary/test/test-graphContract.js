@@ -130,4 +130,37 @@ harness.match('  refusing by name and creating nothing', `${unpreparedRun.stdout
 harness.ok('  (the directory is still absent)', !fs.existsSync(path.join(scratchDir, 'nobodyMadeThis')));
 
 fs.rmSync(scratchDir, { recursive: true, force: true });
+// =====================================================================
+harness.section('SECTION 5 — §10 vector index naming (campaign P2, W-A-9)');
+// =====================================================================
+{
+	const { loadBuildJsDouble } = require('../../bridge-framework/test/testSupport/bridgeTwinFactories');
+	const CONTRACT_PATH = path.join(__dirname, '..', 'graph-contract.js');
+	const namingVerdictOf = (contractModule) => {
+		const refusalOf = (spec) => {
+			let thrownText = '';
+			try {
+				contractModule.vectorIndexNameFor(spec);
+			} catch (namingError) {
+				thrownText = namingError.message;
+			}
+			return thrownText;
+		};
+		const textSlotName = contractModule.vectorIndexNameRefusal({ graphName: 'G', slotPropertyName: 'textEmbedding' }) === '' ? contractModule.vectorIndexNameFor({ graphName: 'G', slotPropertyName: 'textEmbedding' }) : '(refused)';
+		const pass =
+			contractModule.vectorIndexNameFor({ graphName: 'G', slotPropertyName: 'embedding' }) === 'G_vector' &&
+			textSlotName === 'G_embedText_vector' &&
+			/graphName is REQUIRED/.test(refusalOf({ graphName: '', slotPropertyName: 'embedding' })) &&
+			/'searchText' is not a declared vector slot/.test(refusalOf({ graphName: 'G', slotPropertyName: 'searchText' }));
+		return { pass, detail: `text slot -> ${textSlotName}` };
+	};
+	const realVerdict = namingVerdictOf(graphContract);
+	harness.ok('vectorIndexNameFor names both declared slots off the graph and refuses an absent graphName and an undeclared slot', realVerdict.pass, realVerdict.detail);
+	const slotTable = graphContract.vectorIndexSlotTable();
+	harness.ok('the text slot is EMBED_TEXT_VECTOR (label, suffix) — one home, read not retyped', slotTable.textEmbedding.label === vocabulary.EMBED_TEXT_VECTOR.label && slotTable.textEmbedding.indexNameSuffix === vocabulary.EMBED_TEXT_VECTOR.indexNameSuffix, JSON.stringify(slotTable));
+	const twinVerdict = namingVerdictOf(loadBuildJsDouble({ buildJsPath: CONTRACT_PATH, mutationList: [{ find: '\t\t[EMBED_TEXT_VECTOR.propertyName]: Object.freeze(', replace: '\t\tremovedTextSlot: Object.freeze(' }] }));
+	harness.ok("observed RED with the text slot removed from the table (twin 'textSlotUndeclared')", !twinVerdict.pass, twinVerdict.detail);
+	harness.note(`RED-OBSERVED vectorIndexNaming twin='textSlotUndeclared' → ${twinVerdict.pass ? 'STILL PASSING' : 'FAIL'}: ${twinVerdict.detail}`);
+}
+
 harness.report();
