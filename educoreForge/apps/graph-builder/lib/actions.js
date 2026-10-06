@@ -183,6 +183,8 @@ const resolveSupportStoreFilePath = ({ explicitValue, configuredValue, actionNam
 //                      config key, so a suite naming a scratch --standardsDatabaseFilePath keeps all three in scratch
 //   disableWord        the flag value that turns the family off; parsed HERE, once, into { disabled: true } — the STRING
 //                      'false' used to reach the embedder, which disables only on the BOOLEAN, and cached into ./false
+//   isSupportStore     THE support store: its two channels are resolved by resolveSupportStoreFilePath (its refusal texts
+//                      are the 2026-08-04 ones every suite and runbook names), then the existence rule below applies
 //   explicitPathMustExist  whether an EXPLICIT flag path must already exist. A CONFIGURED path always must (the
 //                      configured support store was absent on 2026-10-06 and a flagless build would have minted a cold
 //                      store and re-embedded ~177k texts); an explicit path to a new standards database is an operator
@@ -190,7 +192,7 @@ const resolveSupportStoreFilePath = ({ explicitValue, configuredValue, actionNam
 //                      cold cache and is never what a build means unless it says --createStore=true.
 // Frozen vectors have no row: they ALWAYS live in the standards database file (build.js), stated here so nobody adds one.
 const STORE_FAMILY_RESOLUTION_TABLE = Object.freeze([
-	Object.freeze({ familyName: 'standardsDatabase', flagName: 'standardsDatabaseFilePath', configName: 'graphBuilderSupportFilePath', explicitPathMustExist: false }),
+	Object.freeze({ familyName: 'standardsDatabase', flagName: 'standardsDatabaseFilePath', configName: 'graphBuilderSupportFilePath', explicitPathMustExist: false, isSupportStore: true }),
 	Object.freeze({ familyName: 'decisionStore', flagName: 'decisionStoreFilePath', sameFileAsFamilyName: 'standardsDatabase', explicitPathMustExist: false }),
 	Object.freeze({ familyName: 'judgmentCache', flagName: 'judgmentCacheFilePath', sameFileAsFamilyName: 'standardsDatabase', disableWord: 'false', explicitPathMustExist: false }),
 	Object.freeze({ familyName: 'vectorCache', flagName: 'embeddingCacheFilePath', configName: 'vectorCacheFilePath', disableWord: 'false', explicitPathMustExist: true }),
@@ -215,8 +217,8 @@ const resolveStoreFamilyPath = ({ familyName, commandLineParameters, storesConfi
 		if (familyRow.disableWord !== undefined && typeof explicitValue === 'string' && explicitValue.trim() === familyRow.disableWord) {
 			return { disabled: true };
 		}
-		if (familyRow.configName === 'graphBuilderSupportFilePath') {
-			const supportResolution = resolveSupportStoreFilePath({ explicitValue, configuredValue: (storesConfig || {}).graphBuilderSupportFilePath, actionName });
+		if (familyRow.isSupportStore === true) {
+			const supportResolution = resolveSupportStoreFilePath({ explicitValue, configuredValue: (storesConfig || {})[familyRow.configName], actionName });
 			return { ...supportResolution, mustExist: supportResolution.resolvedFrom === 'config' || familyRow.explicitPathMustExist };
 		}
 		if (typeof explicitValue === 'string' && explicitValue.trim() !== '') {
