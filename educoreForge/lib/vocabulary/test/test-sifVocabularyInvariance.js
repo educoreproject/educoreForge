@@ -47,7 +47,7 @@ const PROBE_PATH = path.join(__dirname, 'testSupport', 'pureProxyFingerprintProb
 // proxyFingerprintByStandard; DEVLOG-G0 deliverable 2), measured at 97feee9. Never edited to match a
 // measurement.
 const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
-	ceds: 'b24ad4d6f51d176adfb766a94bb9c3ceeeab964cacca5f9dd52b688f900f6df1',
+	ceds: 'd167724b10cf391f5ab0225fed717e131023242bb2205ea2d8e16c0caeab15b6',
 	// edfi RE-PINNED 2026-10-02 (PRISM_LATTICE, goldJev lane F): G0's 814ce961570c… -> 04abc77b…. NOT edited to match a
 	// measurement: a RULED base move. TQ excluded the CEDS-authored crosswalk from every graph (2026-09-10, 2026-10-01), so the
 	// Ed-Fi forge no longer stamps its CEDS ids (3,045 nodes) and its root no longer names it; expectedFingerprints.json
@@ -62,9 +62,11 @@ const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
 	// move. Each forge declares standardFamily + releaseLabel and the framework stamps both on every root; with exactly those two root lines (and their REQUIRED_PROPERTIES rows) removed the probe measured all four EQUAL to the previous literals (evidence/P3/WC4-proxy-withoutTheTwoRootLines.json); expectedFingerprints.json carries the same move. ceds 2ca57656… -> 264e995d…, edfi 75695d22… -> 1aa1a1a9…, sif dcf20728… -> 6d808b95…, pesc260805 10fccef6… -> 4cc1c778….
 	// ALL FOUR RE-PINNED 2026-10-06 (CARDINAL_HORIZON, campaign P3 P3 W-C-16): NOT edited to match a measurement: a RULED base
 	// move. G14 b1 CEDS mappingInstruction includeInImplied false / impliedTargets [] (root mappingInstruction string); G14 c1 Ed-Fi root sourceUrl filled, E6 retired ceds 264e995d… -> b24ad4d6…, edfi 1aa1a1a9… -> eeeefa88…, sif 6d808b95… -> 6d808b95…, pesc260805 4cc1c778… -> 4cc1c778….
+	// ALL FOUR RE-PINNED 2026-10-06 (CARDINAL_HORIZON, campaign P3 W-C-17): NOT edited to match a measurement: a RULED base
+	// move. CEDS count facets (maxLength, minLength, decimalPlaces) typed INTEGER at the parser; pesc260805 integer-declared facets (minLength, maxLength, totalDigits) likewise. ceds b24ad4d6… -> d167724b…, edfi eeeefa88… -> eeeefa88…, sif 6d808b95… -> 6d808b95…, pesc260805 4cc1c778… -> cc1ab741….
 	edfi: 'eeeefa88f56b14bc2d07e86150ab83a704a44e8602260ddc2054838b9ad23ea7',
 	sif: '6d808b95326d4e251cc96d5803a33fc22beb8d4722bad532bf096a90cc42c04d',
-	pesc260805: '4cc1c778015f5cb539d5fbbeb66b2d64f3467aaa01a40d36ff80dfd5d7f78365',
+	pesc260805: 'cc1ab74134541c77b503f1483cfbe7def8344ace6571b4626af4d961caf6956e',
 });
 const STANDARD_TOKEN_LIST = Object.keys(G0_PROXY_FINGERPRINT_BY_STANDARD);
 

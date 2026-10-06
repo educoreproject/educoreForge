@@ -60,7 +60,9 @@ const syntheticTierFactory = require('./syntheticTier');
 const searchTextCompositionFactory = require('./searchTextComposition');
 
 const CORE_LIB = path.join(__dirname, '..', '..', '..', 'lib');
-const { NODE_LABELS, DME_ROLES, EDGE_TYPES } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
+const { NODE_LABELS, DME_ROLES, EDGE_TYPES, INTEGER_VALUED_PROPERTY_NAME_LIST } = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
+// ⟪campaign P3, W-C-17⟫ a facet whose name the graph contract declares a count is carried as an INTEGER (one type per name)
+const CANONICAL_INTEGER_TEXT_PATTERN = /^(0|[1-9][0-9]*)$/;
 
 const STANDARD_SOURCE = 'PESC260805';
 const ROOT_STABLE_ID = 'pesc260805:root';
@@ -441,7 +443,15 @@ const moduleFunction = ({ moduleName } = {}) => () => {
 					// totalDigits, fractionDigits) — G-E's fidelity lives in these properties.
 					const facetScalars = {};
 					Object.keys(oneDerivation.facets).forEach((oneFacetName) => {
-						facetScalars[oneFacetName] = oneDerivation.facets[oneFacetName];
+						const facetText = oneDerivation.facets[oneFacetName];
+						if (INTEGER_VALUED_PROPERTY_NAME_LIST.indexOf(oneFacetName) === -1) {
+							facetScalars[oneFacetName] = facetText;
+							return;
+						}
+						if (!CANONICAL_INTEGER_TEXT_PATTERN.test(facetText)) {
+							throw new Error(`forgePescContractGraph: facet '${oneFacetName}' = ${JSON.stringify(facetText)} on ${derivationStableId} is declared a count (graph-contract INTEGER_VALUED_PROPERTY_NAME_LIST) and must be a canonical non-negative integer`);
+						}
+						facetScalars[oneFacetName] = Number(facetText);
 					});
 					makeNode({
 						role: DME_ROLES.SUPPORT,

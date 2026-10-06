@@ -74,7 +74,9 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // role labels as nodeLabel members. (The generated HAS_<HUB>_<SLOT> members need a hub list and are not in this pure count.)
 // ⟪campaign P3, W-B-1..4, 2026-10-06 (CARDINAL_HORIZON)⟫ +29 more, unrelated to V1: the 26 mapping-edge properties
 // (matchEdgeProperty) and the 3 confidence bands (confidenceBand), the two SchemaView kinds CONTRACTS §9 deferred to P3.
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29;
+// ⟪campaign P3, W-C-17, 2026-10-06 (CARDINAL_HORIZON)⟫ +5 more, unrelated to V1: five integer-valued names (maxLength,
+// minLength, decimalPlaces, minCount, maxCount) joined graph-contract §2 once the CEDS parser typed them.
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5;
 
 // ---------------------------------------------------------------------
 // doubles

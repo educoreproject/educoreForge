@@ -491,7 +491,8 @@ const moduleFunction =
 				if (prop.textFormat) {
 					extraProperties.textFormat = prop.textFormat;
 				}
-				if (prop.maxLength) {
+				// an INTEGER since W-C-17: test presence, not truthiness (a maxLength of 0 is a fact, not an absence)
+				if (prop.maxLength !== undefined) {
 					extraProperties.maxLength = prop.maxLength;
 				}
 				if (prop.notation !== undefined) {

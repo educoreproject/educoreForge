@@ -17,6 +17,21 @@
 const fs = require('fs');
 const path = require('path');
 const xml2js = require('xml2js');
+const { CEDS_DECLARED_ANNOTATION_NAME_LIST, CEDS_INTEGER_ANNOTATION_NAME_LIST, CANONICAL_INTEGER_TEXT_PATTERN } = require('./cedsPropertyNameTable');
+
+// integerFacetValueOf — ⟪campaign P3, W-C-17⟫ a facet that means a count (cedsPropertyNameTable) is carried as an INTEGER,
+// one type per name across standards. The text must be canonical so String(value) reproduces the source in the round
+// trip; anything else is a parse fault refused by name, never a quiet string.
+const integerFacetValueOf = ({ localName, valueText, element, faults }) => {
+	if (!CANONICAL_INTEGER_TEXT_PATTERN.test(valueText)) {
+		(faults || []).push(
+			`NON-INTEGER FACET '${localName}' = ${JSON.stringify(valueText)} on <${getAttr(element, 'rdf:about')}>: ` +
+				`it is declared a count (cedsPropertyNameTable CEDS_INTEGER_ANNOTATION_NAME_LIST) and must be a canonical non-negative integer.`,
+		);
+		return valueText;
+	}
+	return Number(valueText);
+};
 
 const CEDS_URI_PREFIX = 'https://w3id.org/CEDStandards/terms/';
 const CONCEPT_SCHEME_URI = 'http://www.w3.org/2004/02/skos/core#ConceptScheme';
@@ -198,9 +213,22 @@ const extractGenericAnnotations = (element, faults) => {
 		}
 		seenLocalNames[localName] = oneKey;
 
+		// ⟪campaign P3, W-C-17⟫ DECLARED, NOT DISCOVERED: a predicate whose local name the table does not declare is
+		// refused by name. Adding it to CEDS_DECLARED_ANNOTATION_NAME_LIST is the deliberate act that lets it in.
+		if (CEDS_DECLARED_ANNOTATION_NAME_LIST.indexOf(localName) === -1) {
+			(faults || []).push(
+				`UNDECLARED PREDICATE '${oneKey}' (local name '${localName}') on <${getAttr(element, 'rdf:about')}>: ` +
+					`the CEDS node shape is declared in cedsPropertyNameTable.js; add the name there to carry it.`,
+			);
+			return;
+		}
+		const typedValues = CEDS_INTEGER_ANNOTATION_NAME_LIST.indexOf(localName) === -1
+			? values
+			: values.map((valueText) => integerFacetValueOf({ localName, valueText, element, faults }));
+
 		// Single values stay scalar, matching the replay engine's own PG-JSON convention of
 		// unwrapping singleton arrays. Multi-valued predicates stay arrays.
-		carried[localName] = values.length === 1 ? values[0] : values;
+		carried[localName] = typedValues.length === 1 ? typedValues[0] : typedValues;
 	});
 
 	return carried;
@@ -414,7 +442,7 @@ const extractProperty = (element, faults) => {
 		result.textFormat = textFormat;
 	}
 	if (maxLength) {
-		result.maxLength = maxLength;
+		result.maxLength = integerFacetValueOf({ localName: 'maxLength', valueText: maxLength, element, faults });
 	}
 	return result;
 };

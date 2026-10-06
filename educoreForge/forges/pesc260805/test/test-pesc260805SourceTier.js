@@ -306,12 +306,13 @@ taskList.push((args, next) => {
 		// RED first: assert 1.19.0's facts against the 1.19.1 node — the checker must fail there,
 		// proving it detects absence rather than passing vacuously.
 		const redWouldPass =
-			restriction1191.properties.totalDigits === '12' && restriction1191.properties.fractionDigits === '2';
+			restriction1191.properties.totalDigits === 12 && restriction1191.properties.fractionDigits === '2';
 		evidence(`RED (demonstrated): asserting totalDigits/fractionDigits on the 1.19.1 node fails as it must (totalDigits=${JSON.stringify(restriction1191.properties.totalDigits)}, fractionDigits=${JSON.stringify(restriction1191.properties.fractionDigits)})`);
 		check('G-E RED: the facet assertion demonstrably fails where facets are absent', !redWouldPass);
 
 		evidence(`GREEN: 1.19.0 carries totalDigits=${restriction1190.properties.totalDigits}, fractionDigits=${restriction1190.properties.fractionDigits}; 1.19.1 carries neither — the Phase 0 facet difference is VISIBLE in emitted nodes`);
-		check('G-E 1.19.0 carries totalDigits 12', restriction1190.properties.totalDigits === '12');
+		// ⟪campaign P3, W-C-17⟫ totalDigits is declared INTEGER (graph-contract §2), so the walk carries the number
+		check('G-E 1.19.0 carries totalDigits 12', restriction1190.properties.totalDigits === 12);
 		check('G-E 1.19.0 carries fractionDigits 2', restriction1190.properties.fractionDigits === '2');
 		check('G-E 1.19.1 facets ABSENT', restriction1191.properties.totalDigits === undefined && restriction1191.properties.fractionDigits === undefined);
 		check('G-E both share the written base', restriction1190.properties.baseAsWritten === 'core:SmallCurrencyType' && restriction1191.properties.baseAsWritten === 'core:SmallCurrencyType');

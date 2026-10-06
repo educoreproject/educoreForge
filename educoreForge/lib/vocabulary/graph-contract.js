@@ -61,13 +61,13 @@ const LIST_NAME_RULE_EXEMPTION_BY_NAME = Object.freeze({
 	standardsIncluded: 'a Cypher literal list on the passport, never through pgToStored',
 });
 
-// §2 INTEGER_VALUED_PROPERTY_NAME_LIST — counts written as Neo4j INTEGER (W-A-2, V1-C04). The CEDS STRING facets
-// maxLength / minLength / decimalPlaces join only when W-C-17 retypes them at the parser (neo4j.int would throw on "80").
+// §2 INTEGER_VALUED_PROPERTY_NAME_LIST — counts written as Neo4j INTEGER (W-A-2, V1-C04). The facets maxLength / minLength /
+// decimalPlaces (and CEDS's minCount / maxCount) joined in campaign P3 (W-C-17) once the CEDS parser typed them (Ed-Fi already carried numbers): ONE type per name.
 const INTEGER_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 	'byteCount', 'classCount', 'closeMappedProperties', 'codeCount', 'codePosition', 'contentEdgeCount', 'contentNodeCount',
-	'contextPathCount', 'depth', 'documentDepth', 'documentPosition', 'embeddingDims', 'emitTimeRowCount', 'exactMappedProperties',
+	'contextPathCount', 'decimalPlaces', 'depth', 'documentDepth', 'documentPosition', 'embeddingDims', 'emitTimeRowCount', 'exactMappedProperties',
 	'exemplarCount', 'explicitlyOmittedTotal', 'fieldCount', 'finishTimeRowCount', 'instanceCount', 'inventedTotal', 'lostTotal',
-	'meaningBearingEdgeCount', 'missingVectorTotal', 'optionValueCount', 'position', 'propertyCount', 'sequence', 'sequenceOrdinal', 'sequencePosition',
+	'maxCount', 'maxLength', 'meaningBearingEdgeCount', 'minCount', 'minLength', 'missingVectorTotal', 'optionValueCount', 'position', 'propertyCount', 'sequence', 'sequenceOrdinal', 'sequencePosition',
 	'siblingCount', 'sourceLineNumber', 'standardCount', 'subdomainPosition', 'totalDigits', 'unkindedMappingEdgeCount',
 	'valueCount', 'valueOrdinal', 'verifiedCount', 'xpathDepth',
 ]);
