@@ -69,7 +69,10 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // five is unaffected.
 // ⟪campaign P2, W-A-10, 2026-10-06 (CARDINAL_RIVER)⟫ +5 more, unrelated to V1: REQUIRED_PROPERTIES.NODE (one member) became
 // NODE_BY_ROLE_CLASS, projected one member per class (five), plus NODE_RECOMMENDED (one) — 1 removed, 6 added.
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5;
+// ⟪campaign P2, W-A-6, 2026-10-06 (CARDINAL_RIVER)⟫ +176 more, unrelated to V1: the graph contract projected (27 passport
+// fields, 18 attestation fields, 57 self-doc fields, 25 list-valued names, 39 integer-valued names = 166) and the 10 DME
+// role labels as nodeLabel members. (The generated HAS_<HUB>_<SLOT> members need a hub list and are not in this pure count.)
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176;
 
 // ---------------------------------------------------------------------
 // doubles

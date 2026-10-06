@@ -128,13 +128,16 @@ harness.ok('DEFINES is NOT in META_NODE_LABELS (it is an edge type, not a node l
 harness.ok('the new stableId prefixes are declared in the registry, not in the finisher', typeof vocabulary.SELF_DOC.USAGE_PATTERN_STABLE_ID_PREFIX === 'string' && typeof vocabulary.SELF_DOC.BUILD_ATTESTATION_STABLE_ID_PREFIX === 'string');
 
 // =====================================================================
-harness.section('(e) ORPHAN definitions are PERMITTED by ruling — asserted, not failed (RULING FJ-P2-1)');
+harness.section('(e) the hub edge types are GENERATED per live hub, never enumerated from a constant (G15, keeping FJ-P2-3)');
 // =====================================================================
 const CEDS_HUB_EDGE_NAMES = ['HAS_CEDS_DOMAIN', 'HAS_CEDS_PROPERTY', 'HAS_CEDS_RANGE', 'HAS_CEDS_VALUE', 'HAS_CEDS_QUALIFIER'];
 harness.ok('CEDS_HUB_EDGE_TYPES is GONE from the registry (Phase 2c, RULING FJ-P2-3)', vocabulary.CEDS_HUB_EDGE_TYPES === undefined);
+// ⟪campaign P2, ruling G15⟫ the view GENERATES HAS_<HUB>_<SLOT> for each hub the graph holds (buildMembers({ hubNameList }),
+// the hubs read by emit); with no hub list (this pure count) there is no constant to enumerate them from
+const membersWithCedsHub = schemaViewFinisher.buildMembers({ hubNameList: ['CEDS'] }).members;
 CEDS_HUB_EDGE_NAMES.forEach((oneType) => {
-	harness.ok(`${oneType} is NOT enumerated (its constant was deleted)`, !hasMember(KINDS.EDGE_TYPE, oneType));
-	harness.ok(`${oneType} KEEPS its definition anyway — it describes a live edge (RULING FJ-P2-1)`, typeof TERM_DEFINITIONS.edgeType[oneType] === 'string' && TERM_DEFINITIONS.edgeType[oneType].trim() !== '');
+	harness.ok(`${oneType} is NOT enumerated without a hub (its constant was deleted)`, !hasMember(KINDS.EDGE_TYPE, oneType));
+	harness.ok(`${oneType} IS generated for the CEDS hub, carrying its kept definition (RULING FJ-P2-1)`, membersWithCedsHub.some((oneMember) => oneMember.kind === KINDS.EDGE_TYPE && oneMember.value === oneType && oneMember.description === TERM_DEFINITIONS.edgeType[oneType]));
 });
 harness.ok('the generator that replaced the constant still produces the same five names', CEDS_HUB_EDGE_NAMES.every((oneType, onePosition) => vocabulary.hubEdgeType('CEDS', vocabulary.HUB_DECOMPOSITION_SLOTS[onePosition]) === oneType));
 
@@ -169,7 +172,8 @@ harness.equal('emit()\'s refusal IS the completeness refusal (one message, one o
 
 let liveEmitError = 'NOT CALLED';
 let liveEmitResult = null;
-schemaViewFinisher.emit({ readQuery: () => {} }, (err, result) => {
+// ⟪campaign P2, G15⟫ emit reads the graph's hubs (to generate HAS_<HUB>_<SLOT>); this double answers 'no hub'
+schemaViewFinisher.emit({ readQuery: ({ cypher }, readCallback) => readCallback('', { records: [] }) }, (err, result) => {
 	liveEmitError = err;
 	liveEmitResult = result;
 });

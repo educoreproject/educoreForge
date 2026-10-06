@@ -42,7 +42,15 @@ const LIST_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 	'objectNameList', 'objectNameSampleList',
 	// store-side, on RecipeBlock (W-C-7)
 	'requiresSchemaBlockRefIdList',
+	// SchemaView contract members (W-A-6): an attestation field's gates
+	'gateList',
 ]);
+// PRODUCER-LOCAL LABEL PATTERNS (§9, W-A-6; ruling G15): labels the schema view deliberately does not catalogue, because a
+// producer mints them per standard (Ceds*, Edfi*, Sif260928*, Pesc<Release>*), because they name every node of a base
+// block (StandardBase), or because they are bridge scaffold stripped at finish (BridgedRelation_*, kept here for the
+// relationship blocks). Every OTHER live label and relationship type must be a SchemaView member; the finish-time
+// coverage gate (schema-view-coverage-finisher) proves it. Sources, not RegExps: the contract is JSON.
+const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif260928|Pesc[A-Za-z0-9]+)[A-Z]', '^StandardBase$', '^BridgedRelation_']);
 // names that END in List / Keys but are JSON strings or literals by declaration: the name-rule test exempts exactly these
 const LIST_NAME_RULE_EXEMPTION_BY_NAME = Object.freeze({
 	importList: 'JSON string (pesc-release-forge walk.js)',
@@ -114,21 +122,24 @@ const MEANING_TIER_ROW_FIELD_LIST_BY_SHAPE = Object.freeze({
 // §4 ATTESTATION_FIELD_LIST — the :BuildAttestation contract (W-A-4; forgeCensus is W-C-21's channel-A gate). The verdict
 // words are vocabulary's BUILD_ATTESTATION_VERDICT_LIST, named here (see the TRAP above) and resolved into the JSON.
 const ATTESTATION_FIELD_LIST = Object.freeze([
-	{ name: 'stableId', type: 'string', channel: 'all' }, { name: 'gate', type: 'string', channel: 'all' },
-	{ name: 'verdict', type: 'string', channel: 'all', valueListName: 'BUILD_ATTESTATION_VERDICT_LIST' },
-	{ name: 'verdictSupplied', type: 'boolean', channel: 'all' }, { name: 'expected', type: 'boolean', channel: 'all' },
-	{ name: 'detail', type: 'string', channel: 'all' },
-	{ name: 'writtenOnChannel', type: 'string', channel: 'all', valueListName: 'ATTESTATION_CHANNEL_LIST' },
-	{ name: 'writtenOnChannelNote', type: 'string', channel: 'all' },
-	{ name: 'inventedTotal', type: 'integer', channel: 'channelA', gateList: ['fidelity', 'roundTrip'] },
-	{ name: 'roundTripClean', type: 'boolean', channel: 'channelA', gateList: ['roundTrip'] },
-	{ name: 'lostTotal', type: 'integer', channel: 'channelA', gateList: ['roundTrip'] },
-	{ name: 'explicitlyOmittedTotal', type: 'integer', channel: 'channelA', gateList: ['roundTrip'] },
-	{ name: 'standardCount', type: 'integer', channel: 'channelA', gateList: ['roundTrip'] },
-	{ name: 'exemplarCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'] },
-	{ name: 'verifiedCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'] },
-	{ name: 'missingVectorTotal', type: 'integer', channel: 'channelA', gateList: ['embeddingCoverage'] },
-	{ name: 'evidencePath', type: 'string', channel: 'promotionStamp' }, { name: 'evidenceSha256', type: 'string', channel: 'promotionStamp' },
+	{ name: 'stableId', type: 'string', channel: 'all', meaning: 'buildAttestation:<gate>: the row\'s address, derived from the gate name alone (no pid, no clock)' },
+	{ name: 'gate', type: 'string', channel: 'all', meaning: 'the gate whose verdict this row records; rows MERGE on it' },
+	{ name: 'verdict', type: 'string', channel: 'all', valueListName: 'BUILD_ATTESTATION_VERDICT_LIST', meaning: 'what the gate said: pass, fail, notRun or passWithAllowedLoss; notRun never means pass' },
+	{ name: 'verdictSupplied', type: 'boolean', channel: 'all', meaning: 'true when a producer supplied the verdict; false when the row is the expected-list default (notRun)' },
+	{ name: 'expected', type: 'boolean', channel: 'all', meaning: 'true when the gate is on its channel\'s expected list (ATTESTATION_GATE_LIST_BY_CHANNEL)' },
+	{ name: 'detail', type: 'string', channel: 'all', meaning: 'the gate\'s own words for its verdict, with the counts it measured' },
+	{ name: 'writtenOnChannel', type: 'string', channel: 'all', valueListName: 'ATTESTATION_CHANNEL_LIST', meaning: 'the token of the channel that wrote the row: channelA, channelB or promotionStamp' },
+	{ name: 'writtenOnChannelNote', type: 'string', channel: 'all', meaning: 'the channel\'s prose: why the row is written where it is' },
+	{ name: 'inventedTotal', type: 'integer', channel: 'channelA', gateList: ['fidelity', 'roundTrip'], meaning: 'statements the gate found in the graph that its source does not hold' },
+	{ name: 'roundTripClean', type: 'boolean', channel: 'channelA', gateList: ['roundTrip'], meaning: 'true when every standard that ran round-tripped clean, losing and inventing nothing' },
+	{ name: 'lostTotal', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'source statements the round trip could not find again, summed over the standards that ran' },
+	{ name: 'explicitlyOmittedTotal', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'source statements a forge declares it does not carry, summed over the standards that ran' },
+	{ name: 'standardCount', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'how many standards the round trip ran over' },
+	{ name: 'exemplarCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'], meaning: 'usage-pattern exemplars re-executed against the finished graph' },
+	{ name: 'verifiedCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'], meaning: 'exemplars that returned rows against the finished graph' },
+	{ name: 'missingVectorTotal', type: 'integer', channel: 'channelA', gateList: ['embeddingCoverage'], meaning: 'nodes, cards and texts lacking the vector their embed input requires, plus vectors with no embed input' },
+	{ name: 'evidencePath', type: 'string', channel: 'promotionStamp', meaning: 'the evidence file a promotion-stamp verdict was read from' },
+	{ name: 'evidenceSha256', type: 'string', channel: 'promotionStamp', meaning: 'sha256 of that evidence file' },
 ].map((oneRow) => Object.freeze(oneRow.gateList ? { ...oneRow, gateList: Object.freeze(oneRow.gateList) } : oneRow)));
 const ATTESTATION_CHANNEL_LIST = Object.freeze(['channelA', 'channelB', 'promotionStamp']);
 const ATTESTATION_LABEL_SET_BY_CHANNEL = Object.freeze({
@@ -147,41 +158,69 @@ const ATTESTATION_GATE_LIST_BY_CHANNEL = Object.freeze({
 // the rows later phases add (W-C-4, W-C-7, W-C-8, W-C-10, W-A-7) are required: false until they land. Counts the live
 // graph holds as FLOAT are declared integer: W-A-2 is what makes the graph agree.
 const MANIFEST_RECIPE_FIELD_LIST = Object.freeze([
-	{ name: 'manifestRefId', type: 'string', required: true }, { name: 'name', type: 'string', required: true },
-	{ name: 'description', type: 'string', required: true }, { name: 'recipeName', type: 'string', required: true },
-	{ name: 'recipeHash', type: 'string', required: true }, { name: 'recipeFileName', type: 'string', required: true },
-	{ name: 'basedOnManifestRefId', type: 'string', required: false }, { name: 'basedOnManifestRefIdBasis', type: 'string', required: false },
-	{ name: 'createdAt', type: 'string', required: true }, { name: 'isRootOfThisGraph', type: 'boolean', required: true },
-	{ name: 'previousManifestId', type: 'string', required: false },
+	{ name: 'manifestRefId', type: 'string', required: true, meaning: 'the content address of the manifest this graph was replayed from (64 hex)' },
+	{ name: 'name', type: 'string', required: true, meaning: 'the manifest\'s name in the store' },
+	{ name: 'description', type: 'string', required: true, meaning: 'the recipe\'s description, carried to the manifest' },
+	{ name: 'recipeName', type: 'string', required: true, meaning: 'the recipe that composed the manifest (its file basename)' },
+	{ name: 'recipeHash', type: 'string', required: true, meaning: 'sha256 of the recipe file the build read' },
+	{ name: 'recipeFileName', type: 'string', required: true, meaning: 'the recipe file\'s name' },
+	{ name: 'basedOnManifestRefId', type: 'string', required: false, meaning: 'the manifest the operator named as this build\'s parent; absent when none was named' },
+	{ name: 'basedOnManifestRefIdBasis', type: 'string', required: false, meaning: 'operatorNamed, or none named at build: why basedOnManifestRefId is or is not present' },
+	{ name: 'createdAt', type: 'string', required: true, meaning: 'when the manifest was saved to the store' },
+	{ name: 'isRootOfThisGraph', type: 'boolean', required: true, meaning: 'true on the recipe this graph was BUILT_FROM; false on an ancestor reached by BASED_ON' },
+	{ name: 'previousManifestId', type: 'string', required: false, meaning: 'honestly null: no store records the previous build' },
 ].map((oneRow) => Object.freeze(oneRow)));
 const RECIPE_BLOCK_FIELD_LIST = Object.freeze([
-	{ name: 'schemaBlockRefId', type: 'string', required: true }, { name: 'kind', type: 'string', required: true },
-	{ name: 'subject', type: 'string', required: true }, { name: 'version', type: 'string', required: false },
-	{ name: 'position', type: 'integer', required: true }, { name: 'purpose', type: 'string', required: true },
-	{ name: 'purposeSource', type: 'string', required: true }, { name: 'purposeTemplateSite', type: 'string', required: true },
-	{ name: 'producedByRecipeName', type: 'string', required: false }, { name: 'requiresSchemaBlockRefIdList', type: 'stringList', required: false },
-	{ name: 'pairA', type: 'string', required: false }, { name: 'pairAVersion', type: 'string', required: false },
-	{ name: 'pairB', type: 'string', required: false }, { name: 'pairBVersion', type: 'string', required: false },
+	{ name: 'schemaBlockRefId', type: 'string', required: true, meaning: 'the member block\'s content address (64 hex)' },
+	{ name: 'kind', type: 'string', required: true, meaning: 'the block kind: standardBase or relationship' },
+	{ name: 'subject', type: 'string', required: true, meaning: 'the block subject: <standardKey>@<version>_base or a relationship pair subject' },
+	{ name: 'version', type: 'string', required: false, meaning: 'the block\'s version column' },
+	{ name: 'position', type: 'integer', required: true, meaning: 'the member\'s position in the manifest' },
+	{ name: 'purpose', type: 'string', required: true, meaning: 'carried text saying why the block is in the recipe; not a warrant' },
+	{ name: 'purposeSource', type: 'string', required: true, meaning: 'where the purpose text came from (machine-generated by the builder on this store generation)' },
+	{ name: 'purposeTemplateSite', type: 'string', required: true, meaning: 'the template that generated the purpose text' },
+	{ name: 'producedByRecipeName', type: 'string', required: false, meaning: 'the recipe whose build added this block to this manifest' },
+	{ name: 'requiresSchemaBlockRefIdList', type: 'stringList', required: false, meaning: 'the base blocks a relationship block requires, sorted' },
+	{ name: 'pairA', type: 'string', required: false, meaning: 'a relationship block\'s first standard' },
+	{ name: 'pairAVersion', type: 'string', required: false, meaning: 'its version' },
+	{ name: 'pairB', type: 'string', required: false, meaning: 'a relationship block\'s second standard' },
+	{ name: 'pairBVersion', type: 'string', required: false, meaning: 'its version' },
 ].map((oneRow) => Object.freeze(oneRow)));
 const STANDARD_DEFINITION_FIELD_LIST = Object.freeze([
-	{ name: 'sourceKey', type: 'string', required: true }, { name: 'standardKey', type: 'string', required: true },
-	{ name: 'standardName', type: 'string', required: true }, { name: 'version', type: 'string', required: true },
-	{ name: 'versionSource', type: 'string', required: true }, { name: 'publishedVersion', type: 'string', required: true },
-	{ name: 'versionDisagreement', type: 'boolean', required: true }, { name: 'versionNote', type: 'string', required: false },
-	{ name: 'snapshotKey', type: 'string', required: true }, { name: 'sourceFormat', type: 'string', required: true },
-	{ name: 'sourceUrl', type: 'string', required: false }, { name: 'propertyCount', type: 'integer', required: true },
-	{ name: 'classCount', type: 'integer', required: true }, { name: 'optionValueCount', type: 'integer', required: true },
-	{ name: 'exactMappedProperties', type: 'integer', required: true }, { name: 'closeMappedProperties', type: 'integer', required: true },
-	{ name: 'mappingKindList', type: 'stringList', required: true }, { name: 'mappingSourceList', type: 'stringList', required: true },
-	{ name: 'mappingEdgeTypes', type: 'stringList', required: true }, { name: 'unkindedMappingEdgeCount', type: 'integer', required: false },
-	{ name: 'standardKind', type: 'string', required: true }, { name: 'standardUsageTips', type: 'string', required: true },
-	{ name: 'standardFamily', type: 'string', required: false }, { name: 'releaseLabel', type: 'string', required: false },
+	{ name: 'sourceKey', type: 'string', required: true, meaning: 'the standard\'s _source: THE filter vocabulary every standard filter takes' },
+	{ name: 'standardKey', type: 'string', required: true, meaning: 'the forge token, used in block subjects and labels' },
+	{ name: 'standardName', type: 'string', required: true, meaning: 'the standard\'s display name' },
+	{ name: 'version', type: 'string', required: true, meaning: 'the version the forge stamped, which entered the content address' },
+	{ name: 'versionSource', type: 'string', required: true, meaning: 'where the version came from' },
+	{ name: 'publishedVersion', type: 'string', required: true, meaning: 'the version the standard publishes' },
+	{ name: 'versionDisagreement', type: 'boolean', required: true, meaning: 'true when version and publishedVersion deliberately differ' },
+	{ name: 'versionNote', type: 'string', required: false, meaning: 'why they differ, when they do' },
+	{ name: 'snapshotKey', type: 'string', required: true, meaning: 'the source snapshot on disk the forge read' },
+	{ name: 'sourceFormat', type: 'string', required: true, meaning: 'the source\'s format (RDF, XSD, MetaEd model, …)' },
+	{ name: 'sourceUrl', type: 'string', required: false, meaning: 'where the source is published' },
+	{ name: 'propertyCount', type: 'integer', required: true, meaning: 'the standard\'s property-role nodes' },
+	{ name: 'classCount', type: 'integer', required: true, meaning: 'its class-role nodes' },
+	{ name: 'optionValueCount', type: 'integer', required: true, meaning: 'its option-value-role nodes' },
+	{ name: 'exactMappedProperties', type: 'integer', required: true, meaning: 'its properties carrying an EXACT_MATCH to the hub' },
+	{ name: 'closeMappedProperties', type: 'integer', required: true, meaning: 'its properties carrying a CLOSE_MATCH to the hub' },
+	{ name: 'mappingKindList', type: 'stringList', required: true, meaning: 'the distinct mappingKind values its match edges carry' },
+	{ name: 'mappingSourceList', type: 'stringList', required: true, meaning: 'the distinct mappingSource values its match edges carry' },
+	{ name: 'mappingEdgeTypes', type: 'stringList', required: true, meaning: 'the match edge types its edges use' },
+	{ name: 'unkindedMappingEdgeCount', type: 'integer', required: false, meaning: 'match edges carrying no mappingKind' },
+	{ name: 'standardKind', type: 'string', required: true, meaning: 'what kind of standard it is, as its forge declares' },
+	{ name: 'standardUsageTips', type: 'string', required: true, meaning: 'how to read the standard in this graph, as its forge declares' },
+	{ name: 'standardFamily', type: 'string', required: false, meaning: 'the family the standard belongs to (CEDS, EdFi, SIF, PESC)' },
+	{ name: 'releaseLabel', type: 'string', required: false, meaning: 'the release within the family, version-free' },
 ].map((oneRow) => Object.freeze(oneRow)));
 const USAGE_PATTERN_FIELD_LIST = Object.freeze([
-	{ name: 'patternName', type: 'string', required: true }, { name: 'question', type: 'string', required: true },
-	{ name: 'cypher', type: 'string', required: true }, { name: 'caveat', type: 'string', required: true },
-	{ name: 'entryLabel', type: 'string', required: true }, { name: 'emitTimeRowCount', type: 'integer', required: true },
-	{ name: 'finishTimeRowCount', type: 'integer', required: false }, { name: 'zeroRowMeaning', type: 'string', required: true },
+	{ name: 'patternName', type: 'string', required: true, meaning: 'the exemplar\'s name' },
+	{ name: 'question', type: 'string', required: true, meaning: 'the question a consumer actually has' },
+	{ name: 'cypher', type: 'string', required: true, meaning: 'the Cypher that answers it' },
+	{ name: 'caveat', type: 'string', required: true, meaning: 'what the answer must not be taken to mean' },
+	{ name: 'entryLabel', type: 'string', required: true, meaning: 'the label the Cypher enters from' },
+	{ name: 'emitTimeRowCount', type: 'integer', required: true, meaning: 'rows at emit time: provenance of the query-validity check, not proof' },
+	{ name: 'finishTimeRowCount', type: 'integer', required: false, meaning: 'rows against the finished graph: the count that carries weight' },
+	{ name: 'zeroRowMeaning', type: 'string', required: true, meaning: 'defect (zero rows fails the build) or finding (zero rows is a true answer)' },
 ].map((oneRow) => Object.freeze(oneRow)));
 // the self-doc names readers may still ask for, by label, each with its replacement (or 'none')
 const SELF_DOC_RETIRED_FIELD_NAME_BY_LABEL = Object.freeze({
@@ -261,6 +300,7 @@ const graphContractDocument = () => {
 		vectorIndexSlotTable: vectorIndexSlotTable(),
 		bridgePairLabelPrefix: BRIDGE_PAIR_LABEL_PREFIX,
 		bridgePairLabelPatternSource: BRIDGE_PAIR_LABEL_PATTERN_SOURCE,
+		producerLocalLabelPatternSourceList: PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST,
 	};
 };
 
@@ -306,6 +346,7 @@ module.exports = Object.freeze({
 	BRIDGE_PAIR_LABEL_PREFIX,
 	BRIDGE_PAIR_LABEL_PATTERN_SOURCE,
 	pairScopedLabelFor,
+	PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST,
 	graphContractDocument,
 	canonicalJsonText,
 	graphContractSha256,

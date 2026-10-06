@@ -95,8 +95,10 @@ const moduleFunction =
 					'MATCH (root:SchemaView {kind: \'schemaViewRoot\'})-[:HAS_SCHEMA_TERM]->(term:SchemaView) ' +
 					'RETURN term.kind AS kind, term.value AS term, term.description AS meaning ORDER BY kind, term',
 				caveat:
-					'This catalog is generated from the vocabulary registry at build time. CODE IS TRUTH; this ' +
-					'is its projection. A term absent here is absent from the registry, not merely undocumented.',
+					'This catalog is generated from the vocabulary registry and the graph contract at build time. CODE IS ' +
+					'TRUTH; this is its projection. Per-standard labels (Ceds*, Edfi*, Sif260928*, Pesc*), StandardBase and ' +
+					'BridgedRelation_* are producer-local and deliberately not catalogued; every other live label and edge type ' +
+					'IS here, and a finish-time gate (schemaViewCoverage) proves it.',
 				zeroRowMeaning: 'defect',
 			},
 			{

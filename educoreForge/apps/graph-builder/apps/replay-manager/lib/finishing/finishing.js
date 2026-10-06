@@ -77,6 +77,8 @@ const moduleFunction =
 		const graphMetaFinisher = require('./lib/graph-meta-finisher')({ vocabulary });
 		// ⟪campaign P2, W-A-10⟫ every content node carries its role class's required set, checked over the finished graph
 		const requiredPropertyFinisher = require('./lib/required-property-finisher')({ vocabulary });
+		// ⟪campaign P2, W-A-6⟫ every live label and relationship type is a schema-view member or a declared producer-local pattern
+		const schemaViewCoverageFinisher = require('./lib/schema-view-coverage-finisher')({ vocabulary });
 
 		// ----- THE ORDERED REGISTRY. Top-to-bottom IS run order. `mode` is DATA the walker dispatches on.
 		//   Phase 1 populates the first two rows; manifestRecipe, standardDefinition, buildAttestation,
@@ -147,6 +149,13 @@ const moduleFunction =
 			// (Channel B) and the verb re-runs graphMetaFinisher.verifyXor as its LAST act (gate (g)).
 			// ⟪campaign P2, W-A-10⟫ a GATE over content, as an applier that writes nothing: before graphMeta so a violation
 			// stops the verb before the graph is stamped finished
+			// ⟪campaign P2, W-A-6⟫ a GATE: after every emitter has written (all labels and types exist), before graphMeta
+			{
+				name: 'schemaViewCoverage',
+				mode: MODE_APPLY,
+				enabled: true,
+				finisher: schemaViewCoverageFinisher,
+			},
 			{
 				name: 'requiredProperty',
 				mode: MODE_APPLY,

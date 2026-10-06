@@ -975,6 +975,14 @@ const SCHEMA_VIEW = {
 		// slots of the hub tuple model — enumerated so the view documents the addressing model itself.
 		RANGE_SHAPE: 'rangeShape',
 		TUPLE_SLOT: 'tupleSlot',
+		// ⟪campaign P2, W-A-6 / V1-C20⟫ the graph contract projected into the graph: one member per declared field, each
+		// carrying the contract row's own meaning (graph-contract §3, §4, §5) and per declared list/integer name (§1, §2).
+		// matchEdgeProperty and confidenceBand (CONTRACTS §9) arrive with W-B's texts in P3.
+		PASSPORT_FIELD: 'passportField',
+		ATTESTATION_FIELD: 'attestationField',
+		SELF_DOC_FIELD: 'selfDocField',
+		LIST_VALUED_PROPERTY: 'listValuedProperty',
+		INTEGER_VALUED_PROPERTY: 'integerValuedProperty',
 	},
 };
 
