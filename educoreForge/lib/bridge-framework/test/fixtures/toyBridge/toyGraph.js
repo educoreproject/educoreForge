@@ -2,7 +2,8 @@
 
 // toyGraph.js — the toy dependency graph the Bridge Framework's gate suite runs over (SPEC-bridgeFramework-
 // v1.md §13 "the suite runs hermetically"): a tiny HUB DOUBLE (property-tier cards with real tuple fields, two
-// contended keys, one qualified card whose qualifierKeys arrives as a SCALAR string, one value-tier card) and a
+// contended keys, one qualified card — its qualifierKeys a ONE-element LIST since campaign P3, as replay stores it after W-A-1
+// (it was a scalar, the old loader's habit, which the read boundary re-widened and now refuses) — one value-tier card) and a
 // tiny forged TOY STANDARD (property nodes carrying the blinded anchor triple, one option-value node). Handed to
 // graphDouble.graphDoubleFrom({ nodeList, edgeList }). DATA — every gate reads it fresh (cloneJson inside the double).
 //
@@ -26,7 +27,7 @@ const card = ({ canonicalKey, domainId, qualifierKeys, name, referenceTier, prop
 		propertyKey: canonicalKey,
 		valueKey: '',
 		// the golden stores a one-element PG-JSON list as a SCALAR (replay-engine pgToStored) — the toy mirrors that
-		qualifierKeys: qualifierKeys === undefined ? '' : qualifierKeys,
+		qualifierKeys: qualifierKeys === undefined ? [] : qualifierKeys,
 		referenceTier: referenceTier === undefined ? 'property' : referenceTier,
 		hubName: HUB_NAME,
 		hubVersion: HUB_VERSION,
@@ -47,7 +48,7 @@ const HUB_CARD_LIST = Object.freeze([
 	card({ canonicalKey: 'P000002', domainId: 'C2', name: 'Birth Date (staff)' }),
 	card({ canonicalKey: 'P000003', domainId: 'C1', name: 'Ethnicity' }),
 	card({ canonicalKey: 'P000005', domainId: 'C1', name: 'Organization Name' }),
-	card({ canonicalKey: 'P000005', domainId: 'C1', qualifierKeys: 'OV0001', name: 'Organization Name (school)' }),
+	card({ canonicalKey: 'P000005', domainId: 'C1', qualifierKeys: ['OV0001'], name: 'Organization Name (school)' }),
 	card({ canonicalKey: 'P000006', domainId: 'C1', name: 'Course Title' }),
 	card({ canonicalKey: 'P000008', domainId: 'C3', name: 'Address' }),
 	card({ canonicalKey: 'P000010', domainId: 'C1', name: 'Course Credits' }),

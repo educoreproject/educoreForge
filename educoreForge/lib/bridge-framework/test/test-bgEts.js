@@ -206,7 +206,7 @@ const etsConjunctList = [
 	}),
 	pureConjunct({
 		conjunctId: 'r1a_scalarPropertyNameListRefusedByName',
-		title: 'a SCALAR propertyNameList is refused by name, on a subject text record and on a hub text record; the module never re-widens it (R-BR-1a: that is the reader\'s job)',
+		title: 'a SCALAR propertyNameList is refused by name, on a subject text record and on a hub text record; the module never re-widens it (R-BR-1a; since campaign P3 the reader refuses a scalar too)',
 		twinNameList: ['reWidenScalarInsideTheModule'],
 		judge: (scenario) => {
 			const subjectSideToy = toyLib.makeToyEmbedText();
@@ -528,13 +528,15 @@ const readerEtsConjunctList = [
 		},
 	},
 	{
-		conjunctId: 'm1_scalarReWidenedListUnchanged',
-		title: 'readEmbedTextVectors re-widens a SCALAR propertyNameList to a one-element list and returns a list unchanged; the records equal the hand-derived ones (R-BR-1a, BG-ETS m)',
-		twinNameList: ['returnScalarPropertyNameList'],
+		// ⟪campaign P3, W-A-1 bridge half (P2-deferred)⟫ was m1_scalarReWidenedListUnchanged: the reader re-widened a scalar
+		// propertyNameList (the old loader's habit). Replay keeps the list a list since W-A-1, so the fixture stores lists and
+		// the reader REFUSES a scalar by name.
+		conjunctId: 'm1_listReturnedAsStoredScalarRefused',
+		title: 'readEmbedTextVectors returns a stored LIST propertyNameList unchanged (records equal the hand-derived ones) and REFUSES a scalar one by name (R-BR-1a; W-A-1)',
+		twinNameList: ['scalarWidenedAgain'],
 		evaluate: (scenario, callback) => {
 			const graph = boltGraphLib.embedTextBoltGraph();
 			const storedList = graph.edgeList.filter((oneEdge) => oneEdge.type === EMBEDS_TEXT_OF && SOURCE_TEXT_STABLE_ID_LIST.indexOf(oneEdge.fromStableId) !== -1).map((oneEdge) => oneEdge.properties.propertyNameList);
-			const storedScalarCount = storedList.filter((oneValue) => typeof oneValue === 'string').length;
 			const storedListCount = storedList.filter(Array.isArray).length;
 			boltReaderOver(scenario, graph).forRetrieval().readEmbedTextVectors({ standardName: boltGraphLib.SOURCE_STANDARD_NAME }, (readError, recordList) => {
 				if (readError) {
@@ -542,26 +544,31 @@ const readerEtsConjunctList = [
 					return;
 				}
 				const equal = sameJson(recordList, boltGraphLib.EXPECTED_SOURCE_TEXT_RECORD_LIST);
-				callback('', { pass: storedScalarCount === 2 && storedListCount === 1 && equal, detail: `stored ${storedScalarCount} scalar / ${storedListCount} list; returned propertyNameList ${JSON.stringify(recordList.map((oneRecord) => oneRecord.propertyNameList))}; ${equal ? 'EQUAL the hand-derived records' : 'DIFFER from the hand-derived records'}` });
+				const scalarGraph = boltGraphLib.embedTextBoltGraph();
+				scalarGraph.edgeList.find((oneEdge) => oneEdge.type === EMBEDS_TEXT_OF && oneEdge.toStableId === 'toy:property/Course.Title').properties.propertyNameList = 'name';
+				boltReaderOver(scenario, scalarGraph).forRetrieval().readEmbedTextVectors({ standardName: boltGraphLib.SOURCE_STANDARD_NAME }, (scalarError) => {
+					const scalarRefused = /REFUSED/.test(String(scalarError)) && /carries propertyNameList "name", which is not a non-empty list of property names/.test(String(scalarError));
+					callback('', { pass: storedListCount === storedList.length && storedListCount > 0 && equal && scalarRefused, detail: `stored ${storedListCount} list(s) of ${storedList.length}; ${equal ? 'EQUAL the hand-derived records' : 'DIFFER from the hand-derived records'}; scalar ${scalarRefused ? 'REFUSED by name' : `NOT refused: ${String(scalarError).slice(0, 120)}`}` });
+				});
 			});
 		},
 	},
 	{
 		conjunctId: 'm2_nonNamePropertyNameListRefusedByName',
-		title: 'a propertyNameList that is neither a name nor a list of names (the number 7) is refused BY NAME, never wrapped',
+		title: 'a propertyNameList that is not a non-empty list of names (the number 7) is refused BY NAME, never wrapped',
 		twinNameList: ['acceptAnyPropertyNameList'],
 		evaluate: (scenario, callback) => {
 			const graph = boltGraphLib.embedTextBoltGraph();
 			graph.edgeList.find((oneEdge) => oneEdge.type === EMBEDS_TEXT_OF && oneEdge.toStableId === 'toy:property/Course.Title').properties.propertyNameList = 7;
 			boltReaderOver(scenario, graph).forRetrieval().readEmbedTextVectors({ standardName: boltGraphLib.SOURCE_STANDARD_NAME }, (readError, recordList) => {
-				const refusedByName = /REFUSED/.test(String(readError)) && /carries propertyNameList 7, which is neither a property name nor a non-empty list of names/.test(String(readError));
+				const refusedByName = /REFUSED/.test(String(readError)) && /carries propertyNameList 7, which is not a non-empty list of property names/.test(String(readError));
 				callback('', { pass: refusedByName, detail: readError ? String(readError).slice(0, 200) : `ACCEPTED: ${JSON.stringify((recordList || []).map((oneRecord) => oneRecord.propertyNameList))}` });
 			});
 		},
 	},
 ];
 
-const gateDeclarationList = [{ gateId: 'BG-ETS', title: 'the text-node lookup at the pure level (cap and floor, the vote unit, admission, rank, determinism, the scalar refusal) and at the bolt reader (exclusion by role, the re-widen)', conjunctList: etsConjunctList.concat(readerEtsConjunctList) }];
+const gateDeclarationList = [{ gateId: 'BG-ETS', title: 'the text-node lookup at the pure level (cap and floor, the vote unit, admission, rank, determinism, the scalar refusal) and at the bolt reader (exclusion by role, the list check)', conjunctList: etsConjunctList.concat(readerEtsConjunctList) }];
 
 // ---------------------------------------------------------------------
 // TWINS — each a production mutation of candidateRetrieval.js, compiled in memory (moduleDouble)
@@ -631,7 +638,7 @@ const readerExclusionFind = "const embedTextExclusionConditionFor = (variableNam
 	frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: oneConjunctId, twinName: 'readerIncludesEmbedText', fileName: READER_FILE, find: readerExclusionFind, replace: "const embedTextExclusionConditionFor = (variableName) => 'true';" }),
 );
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'd5_rolelessSourceNodeKept', twinName: 'exclusionDropsRolelessNode', fileName: READER_FILE, find: readerExclusionFind, replace: 'const embedTextExclusionConditionFor = (variableName) => `${variableName}.role <> $embedTextRole`;' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'm1_scalarReWidenedListUnchanged', twinName: 'returnScalarPropertyNameList', fileName: RULES_FILE, find: '\t\treturn { propertyNameList: [propertyNameList] };', replace: '\t\treturn { propertyNameList };' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'm1_listReturnedAsStoredScalarRefused', twinName: 'scalarWidenedAgain', fileName: RULES_FILE, find: '\tif (Array.isArray(propertyNameList) && propertyNameList.length > 0 && propertyNameList.every(isNonEmptyString)) {', replace: '\tif (isNonEmptyString(propertyNameList)) {\n\t\treturn { propertyNameList: [propertyNameList] };\n\t}\n\tif (Array.isArray(propertyNameList) && propertyNameList.length > 0 && propertyNameList.every(isNonEmptyString)) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-ETS', conjunctId: 'm2_nonNamePropertyNameListRefusedByName', twinName: 'acceptAnyPropertyNameList', fileName: RULES_FILE, find: '\treturn { error: refuse.byName({ moduleName, what: `text edge ${edgeLocator} carries propertyNameList', replace: '\treturn { propertyNameList: [].concat(propertyNameList) };\n\treturn { error: refuse.byName({ moduleName, what: `text edge ${edgeLocator} carries propertyNameList' });
 
 runGateFamily(

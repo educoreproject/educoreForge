@@ -17,8 +17,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //         the resolution; a missing
 //         endpoint; an object that is not a HubReference; a subject whose _source ≠ the pairing's source
 //       — stamps the PAIR-SCOPED applyLabel on BOTH endpoints (harvest matches (a:L)-[r]->(b:L)) and MERGEs the
-//         edge on (from, type, to); a one-element attestationChannelList is stored as a real list (the writer's own
-//         bolt session, not replay-engine's write path)
+//         edge on (from, type, to); a one-element attestationChannelList is stored as a real list here, and replay
+//         keeps it one too since campaign P2 (W-A-1, graph-contract LIST_VALUED_PROPERTY_NAME_LIST), so the bridge's
+//         read boundary takes lists as stored and refuses a scalar (campaign P3)
 //     close(cb)
 //
 // The dispensation (DOCTRINE.md): .then().catch()-to-callback at the LEAF, here only; the driver required LAZILY.

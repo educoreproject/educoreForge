@@ -170,8 +170,8 @@ const embedTextNode = ({ stableId, standardName, vector }) => ({
 	labels: ['ForgedNode', 'ToyEmbedText', DME_ROLES.EMBED_TEXT],
 	properties: { stableId, text: `toy text ${stableId}`, role: DME_ROLES.EMBED_TEXT, _source: standardName, [EMBED_TEXT_VECTOR.propertyName]: vector.slice(), embeddingModelVersion: TOY_EMBED_MODEL, embedSourceProperty: 'text', vectorPropertyName: EMBED_TEXT_VECTOR.propertyName },
 });
-// the loader stores a one-element propertyNameList as a SCALAR (R-BR-1a ii); the toy does the same
-const embedTextEdge = ({ textStableId, describedStableId }) => ({ fromStableId: textStableId, toStableId: describedStableId, type: EDGE_TYPES.EMBEDS_TEXT_OF, properties: { propertyNameList: 'description', provenanceTier: 'structural' } });
+// replay keeps a one-element propertyNameList a LIST since W-A-1 (campaign P2), and the read boundary refuses a scalar since P3
+const embedTextEdge = ({ textStableId, describedStableId }) => ({ fromStableId: textStableId, toStableId: describedStableId, type: EDGE_TYPES.EMBEDS_TEXT_OF, properties: { propertyNameList: ['description'], provenanceTier: 'structural' } });
 
 const embedTextGraph = () => {
 	const baseGraph = toyEmbedTextBoltGraphLib.embedTextBoltGraph();
@@ -801,7 +801,7 @@ const embedTextSearchConjunctList = [
 const doubleParityConjunctList = [
 	pureConjunct({
 		conjunctId: 'a_embedTextVectorsReadAsTheBoltReaderReadsThem',
-		title: "readEmbedTextVectors returns B3b's hand-derived source records for the source standard (scalar propertyNameList re-widened, sorted by text then described node) and the hub's one property text for the hub",
+		title: "readEmbedTextVectors returns B3b's hand-derived source records for the source standard (propertyNameList a list as stored, sorted by text then described node) and the hub's one property text for the hub",
 		twinNameList: ['doubleSkipsReWiden'],
 		judge: (scenario) => {
 			const retrievalView = doubleReaderOf(scenario, toyEmbedTextBoltGraphLib.embedTextBoltGraph()).forRetrieval();

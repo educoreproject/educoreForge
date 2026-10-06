@@ -92,10 +92,10 @@ const embedTextBoltGraph = () => {
 		textNode({ stableId: HUB_TEXT_ID.firstName, standardName: HUB_NAME, text: 'First Name', vector: [0, 0, 1, 0] }),
 	];
 	const textEdgeList = [
-		textEdge({ textStableId: SOURCE_TEXT_ID.givenName, describedStableId: 'toy:property/Student.FirstName', propertyNameList: 'description' }),
+		textEdge({ textStableId: SOURCE_TEXT_ID.givenName, describedStableId: 'toy:property/Student.FirstName', propertyNameList: ['description'] }),
 		textEdge({ textStableId: SOURCE_TEXT_ID.shared, describedStableId: 'toy:property/Student.BirthDate', propertyNameList: ['description', 'name'] }),
-		textEdge({ textStableId: SOURCE_TEXT_ID.shared, describedStableId: 'toy:property/Course.Title', propertyNameList: 'name' }),
-		textEdge({ textStableId: HUB_TEXT_ID.firstName, describedStableId: hubPropertyId('P000001'), propertyNameList: 'name' }),
+		textEdge({ textStableId: SOURCE_TEXT_ID.shared, describedStableId: 'toy:property/Course.Title', propertyNameList: ['name'] }),
+		textEdge({ textStableId: HUB_TEXT_ID.firstName, describedStableId: hubPropertyId('P000001'), propertyNameList: ['name'] }),
 	];
 	return { nodeList: cloneJson(graph.nodeList.concat(baseNodeList, textNodeList)), edgeList: cloneJson(graph.edgeList.concat(slotEdgeList, textEdgeList)) };
 };

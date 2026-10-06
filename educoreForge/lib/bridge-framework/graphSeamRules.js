@@ -18,8 +18,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                                                            readable, any OTHER blinded name REFUSED on read
 //   textSearchVocabularyFor()                                the text role, its edge type, its vector property and the
 //                                                            slot edge types, read from lib/vocabulary or refused (B3b)
-//   reWidenPropertyNameList / shapeEmbedTextVectorRowList    readEmbedTextVectors' closed record, scalar propertyNameList
-//                                                            re-widened, anything else refused (R-BR-1a)
+//   checkedPropertyNameList / shapeEmbedTextVectorRowList    readEmbedTextVectors' closed record, a propertyNameList that
+//                                                            is not a non-empty list refused (R-BR-1a; W-A-1)
 //   shapeCardBaseEdgeRowList                                 readCardBaseEdges' closed record, DOMAIN/PROPERTY required,
 //                                                            RANGE optional per card (CARD_BASE_SLOT_DISPOSITION, R-BR-13)
 //   closedView / closedReader / closedWriter                 Proxies asserting the CLOSED member sets (BG-CONTAIN)
@@ -173,26 +173,26 @@ const writerConstructionRefusal = ({ inGraph, applyLabel, sourceStandardName } =
 	return null;
 };
 
-// reWidenListSlots — a one-element PG-JSON array stored as a SCALAR is re-widened at the read boundary
-const reWidenListSlots = (properties) => {
-	const widened = { ...properties };
-	CARD_LIST_SLOT_LIST.forEach((oneSlot) => {
-		if (widened[oneSlot] === undefined || widened[oneSlot] === null) {
-			return;
-		}
-		if (!Array.isArray(widened[oneSlot])) {
-			widened[oneSlot] = widened[oneSlot] === '' ? [] : [widened[oneSlot]];
-		}
-	});
-	return widened;
+// listSlotRefusal — '' when every card list slot present is a LIST, else the reason, naming the slot. ⟪campaign P3, W-A-1
+// bridge half (P2-deferred)⟫ This was reWidenListSlots, which re-widened a one-element PG-JSON array the old replay stored as
+// a SCALAR. Since W-A-1 (campaign P2) replay keeps every declared list a list at any length (graph-contract
+// LIST_VALUED_PROPERTY_NAME_LIST names qualifierKeys and qualifierNames), so a scalar here is no longer the loader's habit:
+// it is a graph built before the contract, or a defect, and it is refused by name rather than silently repaired.
+const listSlotRefusal = (properties) => {
+	const scalarSlot = CARD_LIST_SLOT_LIST.find((oneSlot) => properties[oneSlot] !== undefined && properties[oneSlot] !== null && !Array.isArray(properties[oneSlot]));
+	return scalarSlot === undefined ? '' : `card list slot '${scalarSlot}' is ${JSON.stringify(properties[scalarSlot])}, not a list — replay keeps a declared list a list at any length (graph-contract LIST_VALUED_PROPERTY_NAME_LIST); a scalar is a graph built before that contract`;
 };
 
-// shapeHubCardList — cards flattened (properties + stableId), list slots re-widened, embedding present-or-refused
+// shapeHubCardList — cards flattened (properties + stableId), a scalar list slot refused, embedding present-or-refused
 const shapeHubCardList = ({ rawRecordList, referenceTier } = {}) => {
 	const cardList = [];
 	for (let recordIndex = 0; recordIndex < rawRecordList.length; recordIndex++) {
 		const oneRecord = rawRecordList[recordIndex];
-		const card = { ...reWidenListSlots(oneRecord.properties), stableId: oneRecord.stableId };
+		const slotRefusal = listSlotRefusal(oneRecord.properties);
+		if (slotRefusal) {
+			return { error: refuse.byName({ moduleName, what: `hub card ${JSON.stringify(oneRecord.stableId)}: ${slotRefusal}`, where: 'the read boundary takes lists as stored (W-A-1); it no longer re-widens' }) };
+		}
+		const card = { ...oneRecord.properties, stableId: oneRecord.stableId };
 		const missing = CARD_REQUIRED_PROPERTY_LIST.find((oneName) => card[oneName] === undefined || card[oneName] === null || card[oneName] === '');
 		if (missing !== undefined) {
 			return { error: refuse.byName({ moduleName, what: `hub card ${JSON.stringify(oneRecord.stableId)} lacks '${missing}'`, where: 'every HubReference card carries the tuple fields, stableId, hubName, hubVersion, name' }) };
@@ -374,21 +374,19 @@ const textSearchVocabularyFor = () => {
 	};
 };
 
-// reWidenPropertyNameList — the loader stores a ONE-element propertyNameList as a SCALAR string (R-BR-1a ii), so the
-// read boundary re-widens it, as reWidenListSlots does for card list slots. A list stays a list; anything else
-// (a number, an empty string, an empty list, a list holding a non-name) is refused by name.
-const reWidenPropertyNameList = ({ propertyNameList, edgeLocator }) => {
-	if (isNonEmptyString(propertyNameList)) {
-		return { propertyNameList: [propertyNameList] };
-	}
+// checkedPropertyNameList — a text edge's propertyNameList must be a non-empty LIST of names. ⟪campaign P3, W-A-1 bridge
+// half (P2-deferred)⟫ This was reWidenPropertyNameList, which accepted a one-element list stored as a SCALAR string (R-BR-1a
+// ii, the old loader's habit). Replay now keeps propertyNameList a list (graph-contract LIST_VALUED_PROPERTY_NAME_LIST), so
+// a scalar is refused by name with everything else that is not a non-empty list of names.
+const checkedPropertyNameList = ({ propertyNameList, edgeLocator }) => {
 	if (Array.isArray(propertyNameList) && propertyNameList.length > 0 && propertyNameList.every(isNonEmptyString)) {
 		return { propertyNameList: propertyNameList.slice() };
 	}
-	return { error: refuse.byName({ moduleName, what: `text edge ${edgeLocator} carries propertyNameList ${JSON.stringify(propertyNameList)}, which is neither a property name nor a non-empty list of names`, where: 'the forge writes the sorted names of the properties the text is; the loader may store one as a scalar, and nothing else (R-BR-1a)' }) };
+	return { error: refuse.byName({ moduleName, what: `text edge ${edgeLocator} carries propertyNameList ${JSON.stringify(propertyNameList)}, which is not a non-empty list of property names`, where: 'the forge writes the sorted names of the properties the text is, and replay keeps it a list at any length (R-BR-1a; graph-contract LIST_VALUED_PROPERTY_NAME_LIST, W-A-1)' }) };
 };
 
 // shapeEmbedTextVectorRowList — one record per text edge, built by NAMING its fields (so a property added to the
-// graph tomorrow cannot appear by omission), propertyNameList re-widened, sorted by (textStableId, sourceStableId).
+// graph tomorrow cannot appear by omission), propertyNameList checked, sorted by (textStableId, sourceStableId).
 // A text edge reaching a node of another standard is refused by name, never silently dropped.
 const shapeEmbedTextVectorRowList = ({ rowList, standardName }) => {
 	const recordList = [];
@@ -398,7 +396,7 @@ const shapeEmbedTextVectorRowList = ({ rowList, standardName }) => {
 		if (oneRow.sourceStandardName !== standardName) {
 			return { error: refuse.byName({ moduleName, what: `text edge ${edgeLocator} reaches a node whose _source is ${JSON.stringify(oneRow.sourceStandardName)}, not '${standardName}'`, where: 'a text node describes nodes of its own standard only (R-ET-1)' }) };
 		}
-		const widened = reWidenPropertyNameList({ propertyNameList: oneRow.propertyNameList, edgeLocator });
+		const widened = checkedPropertyNameList({ propertyNameList: oneRow.propertyNameList, edgeLocator });
 		if (widened.error) {
 			return { error: widened.error };
 		}
@@ -603,7 +601,8 @@ module.exports = {
 	PREDICATE_BY_EDGE_TYPE,
 	readerConstructionRefusal,
 	writerConstructionRefusal,
-	reWidenListSlots,
+	listSlotRefusal,
+	checkedPropertyNameList,
 	shapeHubCardList,
 	withoutEmbedding,
 	blindedRecordFor,
@@ -612,7 +611,7 @@ module.exports = {
 	allowListRefusal,
 	retrievalRecordFor,
 	textSearchVocabularyFor,
-	reWidenPropertyNameList,
+
 	shapeEmbedTextVectorRowList,
 	shapeCardBaseEdgeRowList,
 	closedRetrievalView,
