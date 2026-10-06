@@ -144,6 +144,85 @@ harness.match(
 );
 
 // =====================================================================
+harness.section('SECTION 1b — STORE_FAMILY_RESOLUTION_TABLE: four families, one resolver; a store is never created silently; the STRING false (W-C-11)');
+// =====================================================================
+// W-C-11 (V1-S56..S59, V1-C42, PLAN G13; 2026-10-06). The configured support store did not exist on disk, and
+// standardsDatabase.open would have minted it: a flagless build would have started a COLD store and re-embedded ~177k
+// texts at Voyage cost. And '--embeddingCacheFilePath=false' reached the embedder as the STRING 'false', which is not
+// the boolean the embedder disables on, so it cached into a file named 'false'.
+const { resolveStoreFamilyPath, STORE_FAMILY_RESOLUTION_TABLE } = actions;
+const parametersWith = (valueByName) => ({ values: Object.keys(valueByName || {}).reduce((soFar, oneName) => ({ ...soFar, [oneName]: [valueByName[oneName]] }), {}), switches: {}, fileList: [] });
+const existingSupportFilePath = path.join(scratchDir, 'existingSupport.sqlite');
+const existingCacheFilePath = path.join(scratchDir, 'existingVectorCache.sqlite3');
+fs.writeFileSync(existingSupportFilePath, '');
+fs.writeFileSync(existingCacheFilePath, '');
+const absentConfiguredFilePath = path.join(scratchDir, 'neverCreated', 'graphBuilderSupport.sqlite');
+const storesConfigExisting = { graphBuilderSupportFilePath: existingSupportFilePath, vectorCacheFilePath: existingCacheFilePath };
+
+harness.equal('the table names exactly the four families', JSON.stringify((STORE_FAMILY_RESOLUTION_TABLE || []).map((oneRow) => oneRow.familyName)), JSON.stringify(['standardsDatabase', 'decisionStore', 'judgmentCache', 'vectorCache']));
+
+// (i) a CONFIGURED path to a file that does not exist is refused by name, and nothing is created
+const absentConfigured = resolveStoreFamilyPath({ familyName: 'standardsDatabase', commandLineParameters: parametersWith({}), storesConfig: { graphBuilderSupportFilePath: absentConfiguredFilePath, vectorCacheFilePath: existingCacheFilePath }, actionName: '-build' });
+harness.ok('(i) RED — a configured support store that does not exist resolves NO path', absentConfigured.filePath === undefined, absentConfigured.filePath);
+harness.match('  refused by name, saying a build never creates a store silently and naming the one opt-in', absentConfigured.error || '', /standardsDatabase store '.*neverCreated\/graphBuilderSupport\.sqlite' does not exist\. A build never creates a store silently; pass --createStore=true/);
+harness.ok('  and NO file and no directory was created', !fs.existsSync(path.dirname(absentConfiguredFilePath)), path.dirname(absentConfiguredFilePath));
+const createStoreAdmits = resolveStoreFamilyPath({ familyName: 'standardsDatabase', commandLineParameters: parametersWith({ createStore: 'true' }), storesConfig: { graphBuilderSupportFilePath: absentConfiguredFilePath }, actionName: '-build' });
+harness.equal('  --createStore=true is the one run that may start it', createStoreAdmits.filePath, absentConfiguredFilePath);
+const createStoreMistyped = resolveStoreFamilyPath({ familyName: 'standardsDatabase', commandLineParameters: parametersWith({ createStore: 'yes' }), storesConfig: storesConfigExisting, actionName: '-build' });
+harness.match('  and --createStore=yes is refused by name, never read as true', createStoreMistyped.error || '', /--createStore must be 'true' when given/);
+
+// (ii) the STRING 'false' disables, here, once
+const vectorCacheDisabled = resolveStoreFamilyPath({ familyName: 'vectorCache', commandLineParameters: parametersWith({ embeddingCacheFilePath: 'false' }), storesConfig: storesConfigExisting, actionName: '-build' });
+harness.equal("(ii) '--embeddingCacheFilePath=false' resolves to { disabled: true } (the string, parsed once)", JSON.stringify(vectorCacheDisabled), JSON.stringify({ disabled: true }));
+harness.equal('  and its build-side value is the BOOLEAN false the embedder disables on', actions.embeddingCacheFilePathFor(vectorCacheDisabled), false);
+const judgmentCacheDisabled = resolveStoreFamilyPath({ familyName: 'judgmentCache', commandLineParameters: parametersWith({ judgmentCacheFilePath: 'false' }), storesConfig: storesConfigExisting, supportStoreFilePath: existingSupportFilePath, actionName: '-build' });
+harness.equal("  '--judgmentCacheFilePath=false' disables the judgment cache the same way", JSON.stringify(judgmentCacheDisabled), JSON.stringify({ disabled: true }));
+const decisionStoreFalse = resolveStoreFamilyPath({ familyName: 'decisionStore', commandLineParameters: parametersWith({ decisionStoreFilePath: 'false' }), storesConfig: storesConfigExisting, supportStoreFilePath: existingSupportFilePath, actionName: '-build' });
+harness.ok("  but the decision store declares no disable word, so 'false' there is a PATH, not a switch (no row says otherwise)", decisionStoreFalse.disabled === undefined, JSON.stringify(decisionStoreFalse));
+harness.ok("  and no file named 'false' appeared in the working directory", !fs.existsSync(path.join(process.cwd(), 'false')));
+
+// (iii) flagless: every family from the configuration
+const flaglessResolution = STORE_FAMILY_RESOLUTION_TABLE.map((oneRow) => resolveStoreFamilyPath({ familyName: oneRow.familyName, commandLineParameters: parametersWith({}), storesConfig: storesConfigExisting, supportStoreFilePath: existingSupportFilePath, actionName: '-build' }));
+harness.equal('(iii) a flagless build resolves all four families from the configuration', JSON.stringify(flaglessResolution.map((oneResolution) => oneResolution.filePath)), JSON.stringify([existingSupportFilePath, existingSupportFilePath, existingSupportFilePath, existingCacheFilePath]));
+const vectorCacheAbsentKey = resolveStoreFamilyPath({ familyName: 'vectorCache', commandLineParameters: parametersWith({}), storesConfig: { graphBuilderSupportFilePath: existingSupportFilePath }, actionName: '-build' });
+harness.match('  an absent [stores] vectorCacheFilePath with no flag is refused by name, never guessed', vectorCacheAbsentKey.error || '', /no vectorCache store path resolved, and there is NO DEFAULT\. Set \[stores\] vectorCacheFilePath/);
+const explicitNewSupport = resolveStoreFamilyPath({ familyName: 'standardsDatabase', commandLineParameters: parametersWith({ standardsDatabaseFilePath: path.join(scratchDir, 'explicitScratch.sqlite') }), storesConfig: storesConfigExisting, actionName: '-build' });
+harness.equal('  an EXPLICIT --standardsDatabaseFilePath may name a new file (the operator said so for this run; hermetic suites and acceptance runs rely on it)', explicitNewSupport.filePath, path.join(scratchDir, 'explicitScratch.sqlite'));
+const explicitNewCache = resolveStoreFamilyPath({ familyName: 'vectorCache', commandLineParameters: parametersWith({ embeddingCacheFilePath: path.join(scratchDir, 'typoCache.sqlite3') }), storesConfig: storesConfigExisting, actionName: '-build' });
+harness.match('  but an explicit vector cache that does not exist is refused (a new cache is a COLD cache) unless --createStore=true', explicitNewCache.error || '', /vectorCache store '.*typoCache\.sqlite3' does not exist/);
+
+// (iv) single file vs four files: the store families coexist in one file without moving a single address
+const singleFilePath = path.join(scratchDir, 'singleFamilyFile.sqlite3');
+const equivalenceBlockText = '{"kind":"header","blockType":"standardBase","standardKey":"CEDS"}\n{"kind":"node","stableId":"urn:equivalence"}\n';
+const saveBlockAndManifest = (databaseFilePath, done) => {
+	standardsDatabaseModule().open({ databaseFilePath }, (openErr, store) => {
+		if (openErr) { done(openErr); return; }
+		store.saveBlock({ text: equivalenceBlockText, kind: 'standardBase', subject: 'ceds@1_base' }, (blockErr, saved) => {
+			if (blockErr) { done(blockErr); return; }
+			store.saveManifest({ name: 'equivalence', members: [{ schemaBlockRefId: saved.refId, position: 0 }] }, (manifestErr, manifest) => done(manifestErr || '', { blockRefId: saved.refId, manifestRefId: manifest && manifest.refId }));
+		});
+	});
+};
+const openOtherFamilies = (databaseFilePath, done) => {
+	require('../../../lib/decision-store/decision-store')().open({ databaseFilePath }, (decisionErr) => {
+		if (decisionErr) { done(decisionErr); return; }
+		require('../../../lib/judgment-cache/judgment-cache')().open({ databaseFilePath }, (judgmentErr) => {
+			if (judgmentErr) { done(judgmentErr); return; }
+			require('../../../lib/embedding/vectorCache')().open({ databaseFilePath }, (cacheErr) => done(cacheErr || ''));
+		});
+	});
+};
+openOtherFamilies(singleFilePath, (singleOpenErr) => {
+	harness.accepts('(iv) all four families open in ONE file', singleOpenErr ? [singleOpenErr] : []);
+	saveBlockAndManifest(singleFilePath, (singleErr, singleAddress) => {
+		saveBlockAndManifest(path.join(scratchDir, 'splitStandardsOnly.sqlite3'), (splitErr, splitAddress) => {
+			harness.accepts('  and the same block + manifest save in a one-family file', singleErr || splitErr ? [singleErr, splitErr] : []);
+			harness.equal('  SPLIT vs SINGLE: identical block refId and manifest refId (V1-S59, untested until now)', JSON.stringify(singleAddress), JSON.stringify(splitAddress));
+		});
+	});
+});
+
+// =====================================================================
 harness.section('SECTION 2 — THE GENERATION GUARD: a foreign blocks table is REFUSED BY NAME');
 // =====================================================================
 // The collision, confirmed by reading both declarations: this module declares blocks(refId, kind, ...)

@@ -579,11 +579,22 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 		// reads as ABSENT, so the argv form cannot express "the operator named a blank" at all.
 		const noStore = runCli(['-replay']);
 		harness.equal('-replay with neither parameter exits 1', noStore.status, 1);
-		harness.match(
-			'  the store came from config, so the refusal moves on to --manifestRefId',
-			noStore.stderr,
-			/--manifestRefId=<refId> is REQUIRED and has no default/,
-		);
+		// W-C-11 (2026-10-06): a CONFIGURED store must exist; the file graphBuilder.ini names was ABSENT that day, so the
+		// stop this run reaches depends on the disk and the gate reads the disk instead of assuming it
+		const configuredAbsentSaid = (/standardsDatabase store '([^']+)' does not exist/.exec(noStore.stderr) || [])[1];
+		if (configuredAbsentSaid !== undefined) {
+			harness.ok(
+				'  the store came from config and does NOT exist, so -replay refuses it by name (W-C-11) and creates nothing',
+				/graphBuilderSupport\.sqlite$/.test(configuredAbsentSaid) && !fs.existsSync(configuredAbsentSaid),
+				configuredAbsentSaid,
+			);
+		} else {
+			harness.match(
+				'  the store came from config, so the refusal moves on to --manifestRefId',
+				noStore.stderr,
+				/--manifestRefId=<refId> is REQUIRED and has no default/,
+			);
+		}
 		harness.ok('  and writes nothing to stdout', noStore.stdout === '', noStore.stdout);
 
 		const blankStore = runCli(

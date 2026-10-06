@@ -172,11 +172,16 @@ OPTIONS
      --recipePath=<path>   The recipe file (a build/golden recipe). Required for -build and
                            -validate. May also be given as a positional (fileList).
      --standardsDatabaseFilePath=<path>
-                           Where the harvested schema blocks and the composed manifest are
-                           written (-build) and where a stored manifest and its member blocks are
-                           read (-replay). REQUIRED for both; there is NO default, deliberately --
-                           a build that does not say where it writes is one edit away from
-                           writing the canonical store, and a replay must say where it reads.
+                           Where the support store is: the harvested schema blocks and the composed
+                           manifest are written (-build) and a stored manifest and its member blocks
+                           are read (-replay). Resolved from this flag, else [stores]
+                           graphBuilderSupportFilePath in graphBuilder.ini; there is NO code default
+                           and silence on both is refused by name. A CONFIGURED path must already
+                           exist (a build never creates a store silently; --createStore=true is the
+                           one opt-in). An explicit path may name a new file for this run.
+     --createStore=true    The ONE run meant to start a store that does not exist yet: admits a
+                           configured support store or a vector cache that is not on disk. Any value
+                           other than 'true' is refused by name. Never needed for an existing store.
      --manifestRefId=<refId>
                            The stored manifest to reproduce. REQUIRED for -replay; there is NO
                            default -- there is nothing to open without it. A refId absent from the
@@ -193,9 +198,9 @@ OPTIONS
                            build re-verifies the block's input digests, versions and plugin declaration
                            against the run before replaying it. Which block a pair uses is NOT a recipe
                            choice (the retired cacheMode/pinBlockId keys are refused by the schema).
-                           OPTIONAL: it DEFAULTS to a sibling of --standardsDatabaseFilePath
-                           ('<name>.decisions<ext>' in the same directory). Pass it to point a build at
-                           a canonical decisions database.
+                           OPTIONAL; when omitted it is the support store file itself (the 2026-08-04
+                           single-file ruling; it was once a '<name>.decisions<ext>' sibling, no longer).
+                           Pass it to point a build at a canonical decisions database.
      --buildLogsDirPath=<dir>
                            The ROOT under which this build's RUN DIRECTORY (<recipeName>_<stamp>/,
                            holding the CEDS hub reports and the round-trip stage verdicts +
@@ -329,19 +334,16 @@ OPTIONS
                            evidence about this one.) Record the build mode beside any id you
                            publish. Full account: forges/pesc260805/bridgeData/
                            buildModeIdentityRecord.json
-     --embeddingCacheFilePath=<path>
+     --embeddingCacheFilePath=<path> | --embeddingCacheFilePath=false
                            Where the content-addressed VECTOR CACHE (textHash x model -> embedding)
-                           is read and written for this build. OPTIONAL. WHEN OMITTED it DEFAULTS TO
-                           THE OPENED standardsDatabase FILE ITSELF (--standardsDatabaseFilePath) —
-                           the single-file ruling of 2026-08-04: the vector cache lives IN the support
-                           store beside the blocks, so a FRESH standardsDatabase is a COLD cache and a
-                           from-scratch build PAYS VOYAGE for every text. It does NOT default to
-                           system/dataStores/vectorCache/. To share the warm canonical cache (the one
-                           every prior forge run has fed), NAME it:
-                           --embeddingCacheFilePath=system/dataStores/vectorCache/vectorCache.sqlite3.
-                           Name any other path to point the build at a DIFFERENT cache, e.g. a
-                           throwaway so a spend test keeps paying real credit instead of being served
-                           free from the warm cache.
+                           is read and written for this build. OPTIONAL. WHEN OMITTED it is [stores]
+                           vectorCacheFilePath in graphBuilder.ini: the ONE shared, warm cache every
+                           build and standard feeds (W-C-11, 2026-10-06; an absent key is refused by
+                           name). The file must EXIST, flag or config: a new cache is a COLD cache and
+                           a from-scratch build pays Voyage for every text, so a deliberate new cache
+                           (a throwaway for a spend test) also passes --createStore=true. 'false'
+                           disables the cache (parsed once, by the orchestrator, into the boolean the
+                           embedder obeys; it used to create a file named 'false').
      --pairKey=<pairKey>   Which standard pairing to measure, e.g. --pairKey=CEDS::CASE. REQUIRED
                            for -retrievalMetrics; there is NO default -- a measurement is always
                            ABOUT one pairing, and there is no meaningful aggregate across pairings

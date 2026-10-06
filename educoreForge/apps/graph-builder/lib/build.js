@@ -732,33 +732,16 @@ const resolveVectorize = (deps) => {
 	});
 };
 
-// resolveEmbeddingCacheFilePath — the vector-cache override ("unless we say otherwise" / test isolation).
-// The STANDING POLICY is the shared, content-addressed vector cache ON by default: a build that names
-// nothing passes no override and the forger constructs the embedder with its documented default (the one
-// dataStores cache). A caller REDIRECTS it by naming a path — the embedded end-to-end gate points at a
-// throwaway cache so it keeps spending real Voyage instead of being served free from the warm production
-// cache. Precedence: deps.embeddingCacheFilePath (test/orchestrator injection) wins; absent, the command
-// line --embeddingCacheFilePath is read; absent entirely, undefined (no override). No throw: it is a path
-// or nothing, threaded verbatim to the forger, which threads it to the embedder as cacheFilePath.
-// ⟪Round-Trip Perfection Phase 1, 2026-08-04⟫ THE SUPPORT STORE IS NOW THE CACHE'S HOME. Under TQ's
-// single-file ruling the vector cache lives in the same file as the blocks, so when nothing overrides
-// it this returns the OPENED standardsDatabase's own path rather than undefined — which used to let the
-// embedder fall through to its in-code dataStores default. That fall-through is exactly what the phase
-// removes: the path is now something an operator said, not something the embedder invented.
-// supportStoreFilePath comes from the opened store handle for the same by-construction reason the
-// vector-store resolver does.
+// resolveEmbeddingCacheFilePath — the vector cache this build's embedder reads and writes. W-C-11 (2026-10-06): the
+// ORCHESTRATOR resolves it (actions.js STORE_FAMILY_RESOLUTION_TABLE: --embeddingCacheFilePath, else [stores]
+// vectorCacheFilePath, the one shared cache; the file must exist unless --createStore=true) and hands it down as
+// deps.embeddingCacheFilePath: a path, or the BOOLEAN false that disables the cache. This function no longer reads the
+// command line: it used to pass '--embeddingCacheFilePath=false' through as the STRING 'false', which the embedder
+// (embedding-client.js, cachingEnabled) does not treat as off, so the cache was written to a file named 'false'.
+// A hermetic caller that hands no value keeps the single-file rule: the OPENED support store is the cache.
 const resolveEmbeddingCacheFilePath = (deps, { supportStoreFilePath } = {}) => {
 	if (deps.embeddingCacheFilePath !== undefined) {
 		return deps.embeddingCacheFilePath;
-	}
-	const commandLineParameters =
-		(process.global && process.global.commandLineParameters) || { values: {} };
-	// qtools parses every --flag=value into an ARRAY under values[name]; the first element is the
-	// value (the same `(values[name] || [])[0]` idiom actions.js reads recipePath/standardsDatabase by).
-	// Reading the array itself would hand the embedder a non-string path that vectorCache.open refuses.
-	const commandLineOverride = (commandLineParameters.values.embeddingCacheFilePath || [])[0];
-	if (commandLineOverride !== undefined) {
-		return commandLineOverride;
 	}
 	return supportStoreFilePath;
 };
@@ -1168,9 +1151,8 @@ const build = (recipe, deps, callback) => {
 	}
 	const vectorizeSpend = vectorizeResolution.value;
 
-	// the vector cache, resolved once and threaded to every standard's forge. Under the single-file
-	// ruling it defaults to the OPENED support store; deps or --embeddingCacheFilePath still redirect it
-	// (test isolation), and 'false' still turns it off inside the embedder.
+	// the vector cache, resolved once by the orchestrator (W-C-11) and threaded to every standard's forge: a path, or
+	// the boolean false; a hermetic caller handing nothing gets the OPENED support store (single-file rule).
 	const embeddingCacheFilePath = resolveEmbeddingCacheFilePath(deps, {
 		supportStoreFilePath: standardsDatabase.databaseFilePath,
 	});

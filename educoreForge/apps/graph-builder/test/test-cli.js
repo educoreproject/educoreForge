@@ -414,7 +414,7 @@ harness.ok(
 // an operator can tell which of the two channels answered.
 //
 // STAYING HERMETIC WHILE RESOLVING THE REAL CONFIG — the awkward part, and worth stating plainly.
-// The configured path IS the live 2.4GB production support store, and a hermetic suite must never open
+// The configured path NAMES the production support store (ABSENT on disk on 2026-10-06, W-C-11), and a hermetic suite must never open
 // it, let alone write to it. But the resolution must be observed through the real discovery path or the
 // gate proves nothing about the wiring.
 //
@@ -439,25 +439,35 @@ const buildFromConfig = runCli(
 	}),
 );
 harness.equal('GATE 1 — the config-resolving run stops in the intended gap', buildFromConfig.status, 1);
+// W-C-11 (2026-10-06): a CONFIGURED store must EXIST (a build never creates one silently; --createStore=true is the one
+// opt-in), and on 2026-10-06 the file graphBuilder.ini names was ABSENT. So which stop this run reaches depends on the
+// disk, and the gate reads the disk rather than assuming it: the configured path is taken from the run's own words and
+// the matching branch is asserted. Either way the resolution came from config and nothing was created or opened.
+const configuredPathSaid = (/support store at (\S+) \(resolved from config\)/.exec(buildFromConfig.stderr) || /standardsDatabase store '([^']+)' does not exist/.exec(buildFromConfig.stderr) || [])[1];
 harness.match(
-	'  with NO store flag, -build resolves the support store FROM CONFIG and says so',
-	buildFromConfig.stderr,
-	/graphBuilder: support store at \S+ \(resolved from config\)/,
+	'  with NO store flag, -build resolves the support store FROM CONFIG, and the resolved path is the one graphBuilder.ini names',
+	configuredPathSaid || '(no configured path in stderr)',
+	/graphBuilderSupport\.sqlite$/,
 );
-harness.match(
-	'  and it stopped on the BLANK judgment cache path, before the support store was ever opened',
-	buildFromConfig.stderr,
-	/--judgmentCacheFilePath was given but blank/,
-);
+if (configuredPathSaid && fs.existsSync(configuredPathSaid)) {
+	harness.match('  the configured store EXISTS, so the run says it resolved it from config', buildFromConfig.stderr, /graphBuilder: support store at \S+ \(resolved from config\)/);
+	harness.match(
+		'  and it stopped on the BLANK judgment cache path, before the support store was ever opened',
+		buildFromConfig.stderr,
+		/--judgmentCacheFilePath was given but blank/,
+	);
+} else {
+	harness.match(
+		'  the configured store does NOT exist, so the run REFUSES BY NAME rather than minting a cold store (W-C-11)',
+		buildFromConfig.stderr,
+		/standardsDatabase store '\S+graphBuilderSupport\.sqlite' does not exist\. A build never creates a store silently; pass --createStore=true on the one run meant to start it\./,
+	);
+	harness.ok('  and the file is STILL absent: nothing was created', !configuredPathSaid || !fs.existsSync(configuredPathSaid), configuredPathSaid);
+}
 harness.ok(
 	'  the retired "REQUIRED and has no default" refusal did NOT fire',
 	!/--standardsDatabaseFilePath=<path> is REQUIRED and has no default/.test(buildFromConfig.stderr),
 	buildFromConfig.stderr.split('\n').filter((oneLine) => /REQUIRED/.test(oneLine)).join(' | '),
-);
-harness.match(
-	'  the resolved path is the one graphBuilder.ini names',
-	buildFromConfig.stderr,
-	/support store at .*graphBuilderSupport\.sqlite/,
 );
 // ⟪P9⟫ WIRING: actions.build() also opens the judgment cache (decided = persisted) and threads it
 // into the pipeline — the db existing at the OVERRIDE path is the same proof the decisionStore

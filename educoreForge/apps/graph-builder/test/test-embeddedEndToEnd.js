@@ -93,6 +93,7 @@ const run = spawnSync(
 		`--recipePath=${recipePath}`,
 		`--standardsDatabaseFilePath=${standardsDatabaseFilePath}`,
 		`--embeddingCacheFilePath=${isolatedCacheFilePath}`,
+		'--createStore=true', // W-C-11: this gate STARTS a cold isolated cache on purpose, and a new cache must be asked for
 		`--buildLogsDirPath=${scratchBuildLogsDirPath}`,
 		'--vectorize=true',
 	],

@@ -174,41 +174,84 @@ const resolveSupportStoreFilePath = ({ explicitValue, configuredValue, actionNam
 	};
 };
 
-// decisionStorePathFrom — where a build reads/writes FROZEN decision blocks. An explicit
-// --decisionStoreFilePath WINS (the operator names a canonical decisions db); absent, it is DERIVED
-// beside the standardsDatabase (`<name>.decisions<ext>` in the same directory). Deriving is not a
-// silent default: it is anchored to the standardsDatabaseFilePath the caller ALREADY had to name
-// (§6's real safety concern is a fall-through to "anywhere", and a path pinned to an explicit path is
-// nowhere near that). Returns { decisionStoreFilePath } or { error } — refused BY NAME if neither the
-// override nor the required standardsDatabaseFilePath resolves.
-const decisionStorePathFrom = (standardsDatabaseFilePath, explicitPath) => {
-	if (typeof explicitPath === 'string' && explicitPath.trim() !== '') {
-		return { decisionStoreFilePath: explicitPath };
+// STORE_FAMILY_RESOLUTION_TABLE — W-C-11 (V1-S56..S59, V1-C42, PLAN G13; 2026-10-06). ONE resolver for the four store
+// families a build opens, so the precedence, the disable word and the existence rule are said once.
+//   flagName           the command-line override, which WINS (an operator or a hermetic suite naming a path)
+//   configName         the [stores] key read when no flag spoke; absent or blank is refused by name (no code default)
+//   sameFileAsFamilyName  the family lives in the file another family resolved to (TQ's single-file ruling, 2026-08-04):
+//                      the decision store and the judgment cache follow the RESOLVED support store, never the raw
+//                      config key, so a suite naming a scratch --standardsDatabaseFilePath keeps all three in scratch
+//   disableWord        the flag value that turns the family off; parsed HERE, once, into { disabled: true } — the STRING
+//                      'false' used to reach the embedder, which disables only on the BOOLEAN, and cached into ./false
+//   explicitPathMustExist  whether an EXPLICIT flag path must already exist. A CONFIGURED path always must (the
+//                      configured support store was absent on 2026-10-06 and a flagless build would have minted a cold
+//                      store and re-embedded ~177k texts); an explicit path to a new standards database is an operator
+//                      starting one for this run (hermetic suites and acceptance runs do), but a new VECTOR CACHE is a
+//                      cold cache and is never what a build means unless it says --createStore=true.
+// Frozen vectors have no row: they ALWAYS live in the standards database file (build.js), stated here so nobody adds one.
+const STORE_FAMILY_RESOLUTION_TABLE = Object.freeze([
+	Object.freeze({ familyName: 'standardsDatabase', flagName: 'standardsDatabaseFilePath', configName: 'graphBuilderSupportFilePath', explicitPathMustExist: false }),
+	Object.freeze({ familyName: 'decisionStore', flagName: 'decisionStoreFilePath', sameFileAsFamilyName: 'standardsDatabase', explicitPathMustExist: false }),
+	Object.freeze({ familyName: 'judgmentCache', flagName: 'judgmentCacheFilePath', sameFileAsFamilyName: 'standardsDatabase', disableWord: 'false', explicitPathMustExist: false }),
+	Object.freeze({ familyName: 'vectorCache', flagName: 'embeddingCacheFilePath', configName: 'vectorCacheFilePath', disableWord: 'false', explicitPathMustExist: true }),
+]);
+const CREATE_STORE_FLAG_NAME = 'createStore';
+
+// resolveStoreFamilyPath — { filePath, resolvedFrom } | { disabled: true } | { error }. Reads the filesystem (existence)
+// and nothing else; it never creates a file or a directory.
+const resolveStoreFamilyPath = ({ familyName, commandLineParameters, storesConfig, supportStoreFilePath, actionName }) => {
+	const familyRow = STORE_FAMILY_RESOLUTION_TABLE.find((oneRow) => oneRow.familyName === familyName);
+	if (!familyRow) {
+		return { error: `graphBuilder ${actionName}: '${familyName}' is not a store family in STORE_FAMILY_RESOLUTION_TABLE` };
 	}
-	if (typeof explicitPath === 'string') {
-		return {
-			error:
-				`graphBuilder -build: --decisionStoreFilePath was given but blank. It names where FROZEN ` +
-				`decision blocks are read (plain build) and written (--rebridge); a blank path is refused ` +
-				`rather than derived, so the operator's intent is never guessed at.`,
-		};
+	const createStoreText = firstValue(commandLineParameters, CREATE_STORE_FLAG_NAME);
+	if (createStoreText !== undefined && createStoreText !== 'true') {
+		return { error: `graphBuilder ${actionName}: --createStore must be 'true' when given (got '${createStoreText}'); it is the one way a run may start a store that does not exist yet, and it is not guessed at.` };
 	}
-	if (typeof standardsDatabaseFilePath !== 'string' || standardsDatabaseFilePath.trim() === '') {
-		return {
-			error:
-				`graphBuilder -build: the decision-store path is unresolvable — no --decisionStoreFilePath ` +
-				`override and no support store path to take it from. There is no default.`,
-		};
+	const createStoreRequested = createStoreText === 'true';
+	const explicitValue = firstValue(commandLineParameters, familyRow.flagName);
+
+	const candidate = (() => {
+		if (familyRow.disableWord !== undefined && typeof explicitValue === 'string' && explicitValue.trim() === familyRow.disableWord) {
+			return { disabled: true };
+		}
+		if (familyRow.configName === 'graphBuilderSupportFilePath') {
+			const supportResolution = resolveSupportStoreFilePath({ explicitValue, configuredValue: (storesConfig || {}).graphBuilderSupportFilePath, actionName });
+			return { ...supportResolution, mustExist: supportResolution.resolvedFrom === 'config' || familyRow.explicitPathMustExist };
+		}
+		if (typeof explicitValue === 'string' && explicitValue.trim() !== '') {
+			return { filePath: explicitValue, resolvedFrom: 'commandLine', mustExist: familyRow.explicitPathMustExist };
+		}
+		if (typeof explicitValue === 'string') {
+			return { error: `graphBuilder ${actionName}: --${familyRow.flagName} was given but blank. Pass a path${familyRow.disableWord === undefined ? '' : `, '${familyRow.disableWord}' to disable,`} or omit it; a blank is refused rather than guessed at.` };
+		}
+		if (familyRow.sameFileAsFamilyName !== undefined) {
+			if (typeof supportStoreFilePath !== 'string' || supportStoreFilePath.trim() === '') {
+				return { error: `graphBuilder ${actionName}: the ${familyName} lives in the ${familyRow.sameFileAsFamilyName} file, and no resolved ${familyRow.sameFileAsFamilyName} path was handed over. There is no default.` };
+			}
+			return { filePath: supportStoreFilePath, resolvedFrom: familyRow.sameFileAsFamilyName, mustExist: false };
+		}
+		const configuredValue = (storesConfig || {})[familyRow.configName];
+		if (typeof configuredValue === 'string' && configuredValue.trim() !== '') {
+			return { filePath: configuredValue, resolvedFrom: 'config', mustExist: true };
+		}
+		if (typeof configuredValue === 'string') {
+			return { error: `graphBuilder ${actionName}: [stores] ${familyRow.configName} is present in graphBuilder.ini but BLANK. Name a path or remove the key; it is not guessed at.` };
+		}
+		return { error: `graphBuilder ${actionName}: no ${familyName} store path resolved, and there is NO DEFAULT. Set [stores] ${familyRow.configName} in graphBuilder.ini, or pass --${familyRow.flagName}=<path>.` };
+	})();
+
+	if (candidate.error || candidate.disabled) {
+		return candidate.error ? { error: candidate.error } : { disabled: true };
 	}
-	// SINGLE FILE (TQ ruling, 2026-08-04). This used to DERIVE a sibling `<name>.decisions<ext>`
-	// beside the standards database, which was correct while the two were separate files. Under the
-	// single-store ruling the decision blocks live in the SAME file as everything else, so the
-	// answer is the support store path itself and no name is composed at all. The sibling derivation
-	// is not merely unnecessary now — keeping it would silently split the store back into two files
-	// and leave every frozen decision block somewhere the configured path does not describe.
-	// decisionBlocks does not collide with any other family's table (audit, 2026-08-04).
-	return { decisionStoreFilePath: standardsDatabaseFilePath };
+	if (candidate.mustExist && !createStoreRequested && !fs.existsSync(candidate.filePath)) {
+		return { error: `graphBuilder ${actionName}: ${familyName} store '${candidate.filePath}' does not exist. A build never creates a store silently; pass --createStore=true on the one run meant to start it.` };
+	}
+	return { filePath: candidate.filePath, resolvedFrom: candidate.resolvedFrom };
 };
+
+// embeddingCacheFilePathFor — the value build.js threads to the embedder: a path, or the BOOLEAN false that disables it.
+const embeddingCacheFilePathFor = (vectorCacheResolution) => (vectorCacheResolution.disabled ? false : vectorCacheResolution.filePath);
 
 // ---------------------------------------------------------------------
 // ENVIRONMENT DISCOVERY
@@ -414,11 +457,10 @@ const build = (callback) => {
 	// still winning as an override. The REFUSAL IS UNCHANGED: resolveSupportStoreFilePath has no
 	// `|| default` in it, so an absent config key and an absent flag together are refused by name
 	// rather than resolved to anywhere.
-	const supportStoreResolution = resolveSupportStoreFilePath({
-		explicitValue: firstValue(process.global.commandLineParameters, 'standardsDatabaseFilePath'),
-		configuredValue: process.global.getConfig('stores').graphBuilderSupportFilePath,
-		actionName: '-build',
-	});
+	// W-C-11: every store family through STORE_FAMILY_RESOLUTION_TABLE; a CONFIGURED store must exist (--createStore=true
+	// is the one opt-in), and each family's disable word is parsed once, there.
+	const storeResolutionArgs = { commandLineParameters: process.global.commandLineParameters, storesConfig: process.global.getConfig('stores'), actionName: '-build' };
+	const supportStoreResolution = resolveStoreFamilyPath({ ...storeResolutionArgs, familyName: 'standardsDatabase' });
 	if (supportStoreResolution.error) {
 		callback(supportStoreResolution.error);
 		return;
@@ -434,16 +476,13 @@ const build = (callback) => {
 	// receives it. A semantic bridge READS a pair's frozen decision block from it on a plain build and
 	// WRITES one on --rebridge; without it semanticBridge refuses BY NAME (never a silent zero-edge
 	// success). An authored-only build opens it and never touches it — harmless. Its path is the
-	// standardsDatabase's sibling unless --decisionStoreFilePath overrides it (decisionStorePathFrom).
-	const decisionStorePathResolution = decisionStorePathFrom(
-		standardsDatabaseFilePath,
-		firstValue(process.global.commandLineParameters, 'decisionStoreFilePath'),
-	);
+	// support store file itself unless --decisionStoreFilePath overrides it (STORE_FAMILY_RESOLUTION_TABLE).
+	const decisionStorePathResolution = resolveStoreFamilyPath({ ...storeResolutionArgs, familyName: 'decisionStore', supportStoreFilePath: standardsDatabaseFilePath });
 	if (decisionStorePathResolution.error) {
 		callback(decisionStorePathResolution.error);
 		return;
 	}
-	const decisionStoreFilePath = decisionStorePathResolution.decisionStoreFilePath;
+	const decisionStoreFilePath = decisionStorePathResolution.filePath;
 
 	// ⟪P9⟫ THE JUDGMENT CACHE AND THE FORENSIC MATCH LOG ARE OPENED HERE TOO — stateful shared
 	// resources, so the orchestrator owns them (polyArch2 §2) and the pipeline receives them. Both
@@ -456,14 +495,16 @@ const build = (callback) => {
 	// absent is the CONFIGURED support store — a path an operator named — not the in-code constant.
 	// '--judgmentCacheFilePath=false' still disables it and an explicit path still redirects it,
 	// because a judgment is real spent money and losing one is crazy (TQ ruling, 2026-07-30).
-	const judgmentCachePathResolution = resolvePersistencePath({
-		explicitValue: firstValue(process.global.commandLineParameters, 'judgmentCacheFilePath'),
-		defaultPath: standardsDatabaseFilePath,
-		parameterName: 'judgmentCacheFilePath',
-		prepareDir: path.dirname(standardsDatabaseFilePath),
-	});
+	const judgmentCachePathResolution = resolveStoreFamilyPath({ ...storeResolutionArgs, familyName: 'judgmentCache', supportStoreFilePath: standardsDatabaseFilePath });
 	if (judgmentCachePathResolution.error) {
 		callback(judgmentCachePathResolution.error);
+		return;
+	}
+	// the vector cache: [stores] vectorCacheFilePath (the ONE shared cache) unless --embeddingCacheFilePath names another
+	// or 'false' disables it; handed to build.js as a path or the BOOLEAN false (W-C-11)
+	const vectorCachePathResolution = resolveStoreFamilyPath({ ...storeResolutionArgs, familyName: 'vectorCache' });
+	if (vectorCachePathResolution.error) {
+		callback(vectorCachePathResolution.error);
 		return;
 	}
 	const matchForensicsPathResolution = resolvePersistencePath({
@@ -538,6 +579,7 @@ const build = (callback) => {
 							decisionStore,
 							judgmentCache,
 							matchForensics,
+							embeddingCacheFilePath: embeddingCacheFilePathFor(vectorCachePathResolution),
 							recipePath: read.recipePath,
 							recipeText: read.recipeText,
 						},
@@ -644,11 +686,7 @@ const replay = (callback) => {
 	// precedence rule: a replay that resolved its store differently from the build that wrote it is
 	// how a replay ends up reproducing the wrong graph. The refusal is likewise unchanged — an absent
 	// config key with no flag is refused by name, never resolved to a path.
-	const supportStoreResolution = resolveSupportStoreFilePath({
-		explicitValue: firstValue(process.global.commandLineParameters, 'standardsDatabaseFilePath'),
-		configuredValue: process.global.getConfig('stores').graphBuilderSupportFilePath,
-		actionName: '-replay',
-	});
+	const supportStoreResolution = resolveStoreFamilyPath({ familyName: 'standardsDatabase', commandLineParameters: process.global.commandLineParameters, storesConfig: process.global.getConfig('stores'), actionName: '-replay' }); // W-C-11: a configured store must exist
 	if (supportStoreResolution.error) {
 		callback(supportStoreResolution.error);
 		return;
@@ -1617,11 +1655,7 @@ const goldEvalCheckAction = (callback) => {
 		);
 		return;
 	}
-	const supportStoreResolution = resolveSupportStoreFilePath({
-		explicitValue: firstValue(process.global.commandLineParameters, 'standardsDatabaseFilePath'),
-		configuredValue: process.global.getConfig('stores').graphBuilderSupportFilePath,
-		actionName: '-goldEvalCheck',
-	});
+	const supportStoreResolution = resolveStoreFamilyPath({ familyName: 'standardsDatabase', commandLineParameters: process.global.commandLineParameters, storesConfig: process.global.getConfig('stores'), actionName: '-goldEvalCheck' }); // W-C-11: a configured store must exist
 	if (supportStoreResolution.error) {
 		callback(supportStoreResolution.error);
 		return;
@@ -1820,11 +1854,7 @@ const stampPromotionAction = (callback) => {
 const truncateStoreAction = (callback, injectedDeps = {}) => {
 	const { xLog } = process.global;
 
-	const supportStoreResolution = resolveSupportStoreFilePath({
-		explicitValue: firstValue(process.global.commandLineParameters, 'standardsDatabaseFilePath'),
-		configuredValue: process.global.getConfig('stores').graphBuilderSupportFilePath,
-		actionName: '-truncateStore',
-	});
+	const supportStoreResolution = resolveStoreFamilyPath({ familyName: 'standardsDatabase', commandLineParameters: process.global.commandLineParameters, storesConfig: process.global.getConfig('stores'), actionName: '-truncateStore' }); // W-C-11: a configured store must exist
 	if (supportStoreResolution.error) {
 		callback(supportStoreResolution.error);
 		return;
@@ -2065,6 +2095,9 @@ return {
 	// exported for the hermetic gates: the no-default refusal is the phase's headline claim, and a
 	// claim provable only by launching a whole build is a claim nobody re-checks.
 	resolveSupportStoreFilePath,
+	resolveStoreFamilyPath,
+	STORE_FAMILY_RESOLUTION_TABLE,
+	embeddingCacheFilePathFor,
 };
 };
 
