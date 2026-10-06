@@ -752,7 +752,21 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postLeftoversR529PescComposeA-100526. CENSUS (numstat from postLeftoversRPescComposeA-100526 over the six declared paths, 1 path, from ONE
 // commit, 3242811): apps/graph-builder/apps/bridge-maker/lib/jevJudgeClient.js 3/1 (the Jev client retries 529 'system_overloaded' like
 // 520-524; one 529 killed metaBuild1's SIF run). Same species as 2cfe657's re-anchor. Path list byte-identical; tag cut ON this commit.
-const P1_BASELINE_COMMIT = 'postLeftoversR529PescComposeA-100526'; // re-anchored by EMERALD_OCEAN on leftovers/R529; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-06 (SILVER_ECHO, campaign P0; pre-authorised, NOTES 5; LAST of the campaign's re-anchors): ->
+// postCampaignP0PescComposeA-100626. CENSUS (numstat from postLeftoversR529PescComposeA-100526 over the six declared paths) at c914543,
+// thirteen paths, all campaign P0:
+//   lib/bridge-framework SOURCE — THE frameworkFingerprint MOVES (a decision block frozen from now on carries the new one; every
+//   stored block keeps its id and still replays: the plain-build drift check does not compare the fingerprint):
+//     judgeComponent.js 23/3 (W-B-7: an alreadyPresent put whose stored answer differs is refused), bridgePluginContract.js 8/0
+//     (W-B-10: RUN_REPORT_RESULT_KEYS 15 + RUN_REPORT_OPTIONAL_RESULT_KEYS), bridge-framework.js 6/6 (W-B-10: the "stays at 13"
+//     comments rewritten; no code);
+//   interfaces.js 2/0 (W-B-10 mirror); build.js 9/27 (W-C-11);
+//   lib/vocabulary: graph-contract.js 260/0, tools/emitGraphContractJson.js 52/0, vocabulary.js 3/0, test/test-graphContract.js 133/0
+//     (the W-A declarations);
+//   bridge-framework tests: test-bgReplay.js 29/5 (W-B-7 conjunct g), testSupport/toyBridgeScenario.js 4/2, test-bgSubjectDiscriminator.js
+//     2/1 (13 -> 15), test-bgNosub.js 21/4 (BG-NOSUB (i) 13 -> 15 and the three BG re-anchors).
+// Path list byte-identical; tag cut ON this commit.
+const P1_BASELINE_COMMIT = 'postCampaignP0PescComposeA-100626'; // re-anchored by SILVER_ECHO, campaign P0; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
