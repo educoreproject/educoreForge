@@ -67,7 +67,9 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // REQUIRED_PROPERTIES.MAPPING_EDGE (a mapping edge carries mappingKind, not provenanceTier). The two V1 literals above stay as
 // measured; both readings now include this one row, so each is compared against its literal PLUS it. The rise of exactly
 // five is unaffected.
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1;
+// ⟪campaign P2, W-A-10, 2026-10-06 (CARDINAL_RIVER)⟫ +5 more, unrelated to V1: REQUIRED_PROPERTIES.NODE (one member) became
+// NODE_BY_ROLE_CLASS, projected one member per class (five), plus NODE_RECOMMENDED (one) — 1 removed, 6 added.
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5;
 
 // ---------------------------------------------------------------------
 // doubles
