@@ -743,7 +743,9 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // campaign P2 FOURTH RE-ANCHOR of seamDiffEmpty (CARDINAL_RIVER, 2026-10-06; pre-authorised): -> postCampaignP2SeamDiffEmptyD-100626,
 // tag ON this commit. CENSUS: lib/replay/replay-engine.js 6 and lib/replay/test/test-integerValuedProperties.js 9 — the fleet finding
 // b2d390d and its gate. Path list unchanged.
-const PHASE3_ANCHOR_TAG = 'postCampaignP2SeamDiffEmptyD-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 (fourth)
+// campaign P2 FIFTH RE-ANCHOR of seamDiffEmpty (CARDINAL_RIVER, 2026-10-06; pre-authorised): -> postCampaignP2SeamDiffEmptyE-100626, tag
+// ON this commit. CENSUS: ONE file, replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 19 (conjunct e, 6122536).
+const PHASE3_ANCHOR_TAG = 'postCampaignP2SeamDiffEmptyE-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 (fifth)
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
