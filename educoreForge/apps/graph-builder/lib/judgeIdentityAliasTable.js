@@ -62,6 +62,17 @@ const JUDGE_IDENTITY_ALIAS_ROW_LIST = Object.freeze([
 			'not assumed (read-only, 2026-09-08). The row exists because the value was PRODUCED for a period, ' +
 			'not because an artifact holding it has been found; a graph built in that window would carry it.',
 	}),
+	Object.freeze({
+		historicalModelIdentity: 'jev:jev-1.13.0:data:rel-04bab2bc4b28',
+		currentModelIdentity: 'jev:jev-1.13.0:data:cfg-cf8d41f82791',
+		retiredOn: '2026-10-06',
+		reasonText:
+			'campaign P3, W-B-6 (V1-C11): the Jev identity hashed only the relation wording (rel-<hash>), so moving a ' +
+			'category floor re-banded picks under an unchanged identity. It now hashes JEV_IDENTITY_CONFIG_KEY_LIST ' +
+			'(wire model, request form, both floors, the relation instruction and descriptions) as cfg-<hash>. The ' +
+			'current value is the one the SHIPPED jevJudge.ini yields (measured 2026-10-06); the 12,681 edges of ' +
+			'GOLD_EVAL_261005_jevAcceptance carry the historical spelling. One judge, one configuration, two spellings.',
+	}),
 ]);
 
 // ----- GUARDS ON THE DATA, at load, by name. Both are the shape a third row's author adds by accident,

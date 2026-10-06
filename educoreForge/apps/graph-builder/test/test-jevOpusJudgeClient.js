@@ -224,7 +224,7 @@ const caseList = [
 			harness.equal('the predicate Jev named is on the cascade verdict', verdict && verdict.predicate, 'closeMatch');
 			harness.equal('the real Jev leg asked two questions', jev.sentPayloadList.length, 2);
 			harness.equal('Opus was not called', anthropic.callCountHolder.count, 0);
-			harness.match("the cascade identity carries the Jev leg's relation wording hash", cascade.model, /^jevOpus:jev-1\.13\.0:data:rel-[0-9a-f]{12}@0\.7\+anthropic:claude-opus-5$/);
+			harness.match("the cascade identity carries the Jev leg's configuration identity hash (cfg-, W-B-6)", cascade.model, /^jevOpus:jev-1\.13\.0:data:cfg-[0-9a-f]{12}@0\.7\+anthropic:claude-opus-5$/);
 			done();
 		});
 	},

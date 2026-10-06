@@ -7,7 +7,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // (decisionBlock.js OPTIONAL_HEADER_KEY_LIST) and a verbatim judge.rationale in every judged record; a plugin that does
 // not declare it gets neither, and its block text is what it was.
 //
-//   judgeConfigHeaderFor({ judgeClient, predicateRule }) → { judgeTemperaturePolicy, judgeMaxTokens, judgeToolSchemaSha256 }
+//   judgeConfigHeaderFor({ judgeClient, predicateRule }) → { judgeTemperaturePolicy, judgeMaxTokens, judgeToolSchemaSha256
+//                                                           [, judgeCategoryFloorByCategory] }
 //
 // WHERE EACH VALUE COMES FROM.
 //   judgeTemperaturePolicy, judgeMaxTokens — the provider's own judgeConfig member ({ temperaturePolicy, maxTokens }).
@@ -18,6 +19,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //       therefore the same whichever provider is active, as the scan is. The one per-question part of the schema, the
 //       candidate-number enum, is replaced by TOOL_SCHEMA_CHOICE_ENUM_PLACEHOLDER, so the sha names the schema and not
 //       any one pool's size.
+//   judgeCategoryFloorByCategory — the provider's judgeConfig.categoryFloorByCategory (W-B-6, V1-C11; campaign P3): the
+//       confidence floors that turned a provider's NUMBER into the category the block records (Jev: { strong, moderate };
+//       weakButReal is the remainder). OMITTED when the provider declares none — a provider whose category is the model's
+//       own word (llmClient, Ollama, debug) derives nothing, and an omitted key keeps such a block's text what it was.
 //
 // PURE and synchronous.
 
@@ -30,6 +35,7 @@ const judgeConfigHeaderFor = ({ judgeClient, predicateRule }) => ({
 	judgeTemperaturePolicy: judgeClient.judgeConfig.temperaturePolicy,
 	judgeMaxTokens: judgeClient.judgeConfig.maxTokens,
 	judgeToolSchemaSha256: sha256Hex(promptIdentifierScanLib.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: TOOL_SCHEMA_CHOICE_ENUM_PLACEHOLDER.slice() })),
+	...(judgeClient.judgeConfig.categoryFloorByCategory === undefined ? {} : { judgeCategoryFloorByCategory: judgeClient.judgeConfig.categoryFloorByCategory }),
 });
 
 module.exports = {

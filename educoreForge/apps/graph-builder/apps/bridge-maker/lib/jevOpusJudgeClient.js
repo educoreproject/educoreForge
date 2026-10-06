@@ -70,7 +70,7 @@ const resolveConfigOrThrow = (configFilePath) => {
 };
 
 // identitySuffixFor — a provider's model identity without its own namespace, so the cascade's identity reads
-// jevOpus:jev-1.13.0:data:rel-<hash>@0.7+anthropic:claude-opus-5 rather than repeating 'jev:'.
+// jevOpus:jev-1.13.0:data:cfg-<hash>@0.7+anthropic:claude-opus-5 rather than repeating 'jev:'.
 const identitySuffixFor = (namespacedModel) => namespacedModel.slice(namespacedModel.indexOf(MODEL_NAMESPACE_SEPARATOR) + 1);
 
 const moduleFunction = (constructionOptions = {}) => {

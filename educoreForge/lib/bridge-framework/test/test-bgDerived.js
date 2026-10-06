@@ -614,7 +614,11 @@ const RETRIEVAL_TRACE_TERM_RE = /\bvotes?\b|ownVotes|pathList|embedTextStableId|
 const COSINE_TOP_K_HAND_DERIVED_POOL = Object.freeze(['toyhub:card/P000001.C1', 'toyhub:card/P000002.C1', 'toyhub:card/P000002.C2']);
 // measured 2026-09-15 by running THIS conjunct in a git-archive export of 1d100d2 whose graphDouble.js, bridge-framework.js,
 // candidateRetrieval.js, neighbourVote.js and evidenceRenderer.js were each byte-compared with 1d100d2 (B4 DEVLOG)
-const COSINE_TOP_K_POOL_DIGEST_AT_1D100D2 = 'e3a08792a43fca1a139a4bf6ff1bccd9994aa0a64aa6e1746c273dd45f1dfd81';
+// RE-PINNED 2026-10-06 (campaign P3, W-B-6): promptHash's preimage now also carries the two choice-question texts for a
+// variant that builds the split question, so every promptHash in the tuple moved while the subject, seats, rendered pool
+// and prompt bytes did not (evidence/P3/WB6-2-toyReferenceDiff.log: over the toy derived block, ONLY the 17
+// judge.promptHash values differ). Was e3a08792…f1dfd81 at 1d100d2; the constant keeps its name as the history it pins.
+const COSINE_TOP_K_POOL_DIGEST_AT_1D100D2 = '57a16a9ed4c30f900aa36ccf25a972b0f977a48406fad20231153cbe1f638422';
 
 const failureOfBoth = (firstOutcome, secondOutcome) => refusalTextOf(firstOutcome) || refusalTextOf(secondOutcome);
 

@@ -345,7 +345,7 @@ harness.ok('G6-k COMPANION: a well-formed STRING identity is NOT refused and IS 
 harness.section('SECTION 0C — JOB 6 (G6-g) the alias table is DATA with a dated reason per row; it RENAMES and never admits or excludes');
 const aliasTableLib = require(aliasTableModulePath);
 harness.ok('G6-g: the table exports a frozen ROW LIST, so the gates enumerate FROM the data', Array.isArray(aliasTableLib.JUDGE_IDENTITY_ALIAS_ROW_LIST) && Object.isFrozen(aliasTableLib.JUDGE_IDENTITY_ALIAS_ROW_LIST));
-harness.equal('G6-g: TWO rows — the pre-JOB-1 hyphen form and the JOB 1-to-3 colon form', (aliasTableLib.JUDGE_IDENTITY_ALIAS_ROW_LIST || []).length, 2);
+harness.equal('G6-g: THREE rows — the pre-JOB-1 hyphen form, the JOB 1-to-3 colon form, and the Jev rel- form W-B-6 retired (campaign P3, 2026-10-06)', (aliasTableLib.JUDGE_IDENTITY_ALIAS_ROW_LIST || []).length, 3);
 harness.ok(
 	'G6-g: EVERY row carries a machine-readable retiredOn date — a date a gate can read, not one buried in prose',
 	(aliasTableLib.JUDGE_IDENTITY_ALIAS_ROW_LIST || []).length > 0 && (aliasTableLib.JUDGE_IDENTITY_ALIAS_ROW_LIST || []).every((oneRow) => typeof oneRow.retiredOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(oneRow.retiredOn)),

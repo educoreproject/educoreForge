@@ -109,7 +109,9 @@ const relationBody = ({ choice, confidence, probabilities }) => ({
 	usage: { input_tokens: 40, output_tokens: 5 },
 });
 const RELATION_PROBABILITIES = { exactMatch: 0.1, closeMatch: 0.2, broadMatch: 0.6, narrowMatch: 0.1 };
-const MODEL_IDENTITY_RE = /^jev:jev-1\.13\.0:data:rel-[0-9a-f]{12}$/;
+// W-B-6 (campaign P3): the identity hashes every configured value that changes an answer or its category ('cfg-'), no
+// longer the relation wording alone ('rel-')
+const MODEL_IDENTITY_RE = /^jev:jev-1\.13\.0:data:cfg-[0-9a-f]{12}$/;
 
 const choiceQuestion = {
 	stateObject: { matchingInstructions: 'match by meaning', sourceElement: { name: 'EducationOrganizationId', description: 'An id.' } },
@@ -141,15 +143,35 @@ harness.section('THE PROVIDER SATISFIES JUDGE_PROVIDER_SHAPE');
 const { provider: dataProvider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.95, 2: 0.03, NONE: 0.02 } }) }]);
 harness.ok('no contract violation', judgeProviderViolation(dataProvider, { providerLabel: 'jev' }) === null, judgeProviderViolation(dataProvider, { providerLabel: 'jev' }));
 harness.equal('name is jev', dataProvider.name, 'jev');
-harness.match('model carries provider, wire model, request form AND the relation wording hash', dataProvider.model, MODEL_IDENTITY_RE);
+harness.match('model carries provider, wire model, request form AND the configuration identity hash', dataProvider.model, MODEL_IDENTITY_RE);
 harness.equal('describe() agrees with the provider', dataProvider.describe().model, dataProvider.model);
-harness.equal('judgeConfig says Jev takes no temperature and has no token budget', JSON.stringify(dataProvider.judgeConfig), '{"temperaturePolicy":"notOffered","maxTokens":null}');
+harness.equal('judgeConfig says Jev takes no temperature, has no token budget, and names the floors its bands came from', JSON.stringify(dataProvider.judgeConfig), '{"temperaturePolicy":"notOffered","maxTokens":null,"categoryFloorByCategory":{"strong":0.8,"moderate":0.5}}');
 const { provider: stringProvider } = providerFor({ requestForm: 'string' }, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.95, 2: 0.03, NONE: 0.02 } }) }]);
-harness.equal('the string form is a DIFFERENT identity, so the forms never share cached verdicts', stringProvider.model, dataProvider.model.replace(':data:', ':string:'));
+harness.ok('the string form is a DIFFERENT identity, so the forms never share cached verdicts (its form segment says string; the form is also hashed, W-B-6)', stringProvider.model !== dataProvider.model && /^jev:jev-1\.13\.0:string:cfg-[0-9a-f]{12}$/.test(stringProvider.model), `${stringProvider.model} vs ${dataProvider.model}`);
 const { provider: rewordedProvider } = providerFor({ broadMatchDescription: 'Broad match: reworded.' }, []);
 harness.ok('rewording ONE relation description moves the identity, so cached verdicts never answer a different question', rewordedProvider.model !== dataProvider.model && MODEL_IDENTITY_RE.test(rewordedProvider.model), `${rewordedProvider.model} vs ${dataProvider.model}`);
 const { provider: reinstructedProvider } = providerFor({ relationInstructionText: 'Reworded instruction?' }, []);
 harness.ok('rewording the relation instruction moves the identity', reinstructedProvider.model !== dataProvider.model, reinstructedProvider.model);
+
+// W-B-6 (V1-C11, campaign P3): the category floors re-band every pick, so they are in the identity; the cache must
+// never serve a verdict banded under another floor. Each conjunct has a twin: a module double whose key list drops the
+// value, observed to leave the identity unmoved.
+harness.section('W-B-6: THE IDENTITY COVERS THE CATEGORY FLOORS AND EVERY RELATION DESCRIPTION');
+const moduleDouble = require(path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
+const JEV_CLIENT_PATH = path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'jevJudgeClient.js');
+const KEY_LIST_FIND = "const JEV_IDENTITY_CONFIG_KEY_LIST = Object.freeze(['wireModel', 'requestForm', 'strongMinConfidence', 'moderateMinConfidence', 'relationInstructionText', 'relationDescriptionByPredicate']);";
+const identityPairFor = (clientLib, overrideByKey) => [clientLib({ configFilePath: iniFilePathFor({}) }).model, clientLib({ configFilePath: iniFilePathFor(overrideByKey) }).model];
+[
+	{ label: 'strongMinConfidence', overrideByKey: { strongMinConfidence: '0.85' }, twinReplace: KEY_LIST_FIND.replace("'strongMinConfidence', ", '') },
+	{ label: 'moderateMinConfidence', overrideByKey: { moderateMinConfidence: '0.45' }, twinReplace: KEY_LIST_FIND.replace("'moderateMinConfidence', ", '') },
+	{ label: 'exactMatchDescription', overrideByKey: { exactMatchDescription: 'Exact match: reworded.' }, twinReplace: KEY_LIST_FIND.replace(", 'relationDescriptionByPredicate'", '') },
+].forEach((oneCase) => {
+	const [baseModel, movedModel] = identityPairFor(jevJudgeClientLib, oneCase.overrideByKey);
+	harness.ok(`changing ONLY ${oneCase.label} moves the identity`, baseModel !== movedModel && MODEL_IDENTITY_RE.test(movedModel), `${baseModel} vs ${movedModel}`);
+	const twinLib = moduleDouble.loadWithMutations({ modulePath: JEV_CLIENT_PATH, mutationList: [{ modulePath: JEV_CLIENT_PATH, find: KEY_LIST_FIND, replace: oneCase.twinReplace }] });
+	const [twinBaseModel, twinMovedModel] = identityPairFor(twinLib, oneCase.overrideByKey);
+	harness.ok(`TWIN (${oneCase.label} dropped from JEV_IDENTITY_CONFIG_KEY_LIST) observed RED: the identity no longer moves`, twinBaseModel === twinMovedModel, `${twinBaseModel} vs ${twinMovedModel}`);
+});
 
 harness.section('CONFIGURATION IS REFUSED BY NAME');
 harness.match('an absent key is refused naming the key', constructionErrorFor({ wireModel: null }), /\[jevJudge\]\.wireModel is not configured/);

@@ -64,6 +64,11 @@ const ABSTAIN_TOKEN = 'NONE';
 const CHOICE_QUESTION_INSTRUCTION_TEXT = 'Which candidate element has the same meaning, in the same context, as the source element?';
 const CHOICE_QUESTION_ABSTAIN_TEXT = 'None of the candidate elements has the same meaning as the source element.';
 const MIN_IDENTIFYING_TOKEN_LENGTH = 4;
+// promptHashPreimageSegmentListFor — PROMPT_HASH_PREIMAGE_SEGMENT_LIST, in order: rendererVersion, systemPrompt,
+// userPrompt, then CHOICE_QUESTION_INSTRUCTION_TEXT and CHOICE_QUESTION_ABSTAIN_TEXT for a variant that builds the split
+// question (subjectData + candidateData). A text-only variant's hash is therefore exactly what it was.
+const promptHashPreimageSegmentListFor = ({ variantRow, systemPrompt, userPrompt }) =>
+	[variantRow.rendererVersion, systemPrompt, userPrompt].concat(variantRow.subjectData && variantRow.candidateData ? [CHOICE_QUESTION_INSTRUCTION_TEXT, CHOICE_QUESTION_ABSTAIN_TEXT] : []);
 
 const SYSTEM_PROMPT =
 	'You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. ' +
@@ -364,11 +369,11 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	// state / instructions / criteria (Jev) instead of one text prompt. Built from the SAME allow-listed objects
 	// the prompt lines were rendered from, so the two cannot disagree; text providers ignore it. Only a variant
 	// declaring subjectData and candidateData gets one.
-	// ⟪CACHE TRAP⟫ choiceQuestion is NOT part of promptHash, and the judgment cache keys on promptHash + model +
-	// rendererVersion. Its data is a function of the same inputs as the prompt, so that is sound for the data —
-	// but CHOICE_QUESTION_INSTRUCTION_TEXT and CHOICE_QUESTION_ABSTAIN_TEXT are not in any key. Changing either
-	// without changing the consuming provider's model identity would let cached verdicts answer a different
-	// question.
+	// THE promptHash PREIMAGE (W-B-6, V1-C11; campaign P3 2026-10-06) is PROMPT_HASH_PREIMAGE_SEGMENT_LIST below:
+	// rendererVersion, systemPrompt, userPrompt and, for a variant that builds choiceQuestion, the two choice-question
+	// texts. choiceQuestion's DATA is a function of the same inputs as the prompt; its two TEXTS were in no key until
+	// this (the old CACHE TRAP: rewording either let cached verdicts answer a different question). They are the
+	// renderer's, so they key the renderer's hash, not a provider's identity.
 	const choiceQuestion = variantRow.subjectData && variantRow.candidateData
 		? {
 			stateObject: { matchingInstructions: systemPrompt, sourceElement: variantRow.subjectData({ sourceElement, renderingAllowList }) },
@@ -395,7 +400,7 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	return {
 		systemPrompt,
 		userPrompt,
-		promptHash: sha256Hex(`${variantRow.rendererVersion}\n${systemPrompt}\n${userPrompt}`),
+		promptHash: sha256Hex(promptHashPreimageSegmentListFor({ variantRow, systemPrompt, userPrompt }).join('\n')),
 		renderedPoolStableIdList,
 		// ⟪RULING 14:55 (e)⟫ the rendered NAMES ride out beside the stableIds, exactly as the stableId list
 		// does, so the judge component can ask whether a rationale named its pick by NAME — which is what

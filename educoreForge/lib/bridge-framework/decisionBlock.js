@@ -49,6 +49,9 @@ const HEADER_KEY_ORDER = Object.freeze([
 	'judgeTemperaturePolicy',
 	'judgeMaxTokens',
 	'judgeToolSchemaSha256',
+	// the confidence floors a provider derived its categories from (W-B-6; judgeConfigRecord.js), present only when the
+	// provider derives categories from a number (Jev)
+	'judgeCategoryFloorByCategory',
 	// candidateRetrieval — K, the cosine floor and the embedding model, or null for a key-filtered pool. These
 	// are the parameters that DECIDE WHICH CANDIDATES THE JUDGE EVER SAW, so they belong inside the content
 	// address and inside the census-fixture key (RULING §11.3/§11.10): changing K must re-key the block, not
@@ -70,7 +73,7 @@ const HEADER_KEY_ORDER = Object.freeze([
 ]);
 // OPTIONAL_HEADER_KEY_LIST — header keys that are omitted when absent, never frozen as null, and never required on read.
 // A block frozen before they existed still parses and keeps its id (PLAN small phases §1.6 R1).
-const OPTIONAL_HEADER_KEY_LIST = Object.freeze(['judgeTemperaturePolicy', 'judgeMaxTokens', 'judgeToolSchemaSha256']);
+const OPTIONAL_HEADER_KEY_LIST = Object.freeze(['judgeTemperaturePolicy', 'judgeMaxTokens', 'judgeToolSchemaSha256', 'judgeCategoryFloorByCategory']);
 const REQUIRED_HEADER_KEY_LIST = Object.freeze(HEADER_KEY_ORDER.filter((oneName) => OPTIONAL_HEADER_KEY_LIST.indexOf(oneName) === -1));
 // instanceStableIdList: the instances a record's answer is written to (materialisationFanout.js; a partitioned unit's share,
 // judgmentPartition.js; phases B4p, B4a), absent from every record of a run that declares no fan-out. This sort is the

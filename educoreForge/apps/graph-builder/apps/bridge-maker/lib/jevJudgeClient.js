@@ -18,7 +18,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // ⟪requestForm⟫ data | string — TQ's comparison. data sends the source element and each candidate as JSON
 // objects; string sends the same fields as "name: value" lines. The form is part of this provider's MODEL
-// IDENTITY (jev:<wireModel>:<form>:rel-<hash>) because the judgment cache keys on identity: two forms must never serve
+// IDENTITY (jev:<wireModel>:<form>:cfg-<hash>) because the judgment cache keys on identity: two forms must never serve
 // each other's verdicts.
 //
 // ⟪THE RELATION IS A SECOND QUESTION⟫ (jevRelations R1, 2026-09-30) The predicate rule arrives with the question.
@@ -27,7 +27,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // no second call, and a pick is followed by a second Jev call — the source element and the chosen candidate as
 // state, the row's pick predicates as options, described by the ini's wording. SSSOM direction: subject is the
 // source element, object the chosen hub element, so broadMatch says the hub element is the broader one. The
-// wording is hashed into the model identity (jev:<wireModel>:<form>:rel-<hash>) because no cache key carries it.
+// wording is hashed into the model identity (jev:<wireModel>:<form>:cfg-<hash>) because no cache key carries it.
+//
+// ⟪THE IDENTITY COVERS EVERY CONFIGURED VALUE THAT CHANGES AN ANSWER OR ITS CATEGORY⟫ (W-B-6, V1-C11; campaign P3
+// 2026-10-06). Until then the identity hashed only the relation wording ('rel-<hash>'), so moving strongMinConfidence
+// re-banded every pick while the cache went on serving verdicts banded under the old floor. The identity is now
+// cfg-<12 hex> over JEV_IDENTITY_CONFIG_KEY_LIST, in declared order; the floors also ride in the frozen block header
+// (judgeConfig.categoryFloorByCategory → judgeCategoryFloorByCategory) so a block states the floors its bands came from.
+// The choice-question TEXTS are the renderer's and live in its promptHash preimage, not here (same-directory rule).
 //
 // ⟪CATEGORY AND RATIONALE ARE DERIVED, AND SAY SO⟫ Jev reports a confidence, not a category, so the category
 // comes from configured confidence floors. The rationale is written HERE from Jev's own numbers and names the
@@ -53,7 +60,10 @@ const QUESTION_ID = 'matchingCandidate';
 const RELATION_QUESTION_ID = 'relationToChosenCandidate';
 // Each relation option's description is read from the ini key <predicate><suffix>, e.g. exactMatchDescription.
 const RELATION_DESCRIPTION_CONFIG_SUFFIX = 'Description';
-const RELATION_WORDING_HASH_LENGTH = 12;
+const CONFIG_IDENTITY_HASH_LENGTH = 12;
+// JEV_IDENTITY_CONFIG_KEY_LIST — the configured values the identity hashes, in this order (an array of [name, value]
+// pairs, so the preimage is canonical without a sort). Adding a value that changes an answer means adding it here.
+const JEV_IDENTITY_CONFIG_KEY_LIST = Object.freeze(['wireModel', 'requestForm', 'strongMinConfidence', 'moderateMinConfidence', 'relationInstructionText', 'relationDescriptionByPredicate']);
 const ABSTAIN_OPTION_NAME = 'NONE';
 const ABSTAIN_CATEGORY_NAME = 'none';
 const REQUEST_FORM_NAME_LIST = Object.freeze(['data', 'string']);
@@ -181,14 +191,21 @@ const rationaleFor = ({ choiceQuestion, answer, model }) => {
 	);
 };
 
-// relationWordingHashFor — the relation question's wording, hashed for the model identity (the CACHE TRAP in
-// evidenceRenderer.js: no cache key carries this text, so the identity must).
-const relationWordingHashFor = ({ relationInstructionText, relationDescriptionByPredicate }) =>
+// configIdentityHashFor — JEV_IDENTITY_CONFIG_KEY_LIST's values, hashed for the model identity (no cache key carries
+// them, so the identity must). relationDescriptionByPredicate is read in PICK_PREDICATE_ENUM order for the same reason
+// the pairs are an array: the preimage must not depend on object member order.
+const configIdentityHashFor = (cfg) =>
 	crypto
 		.createHash('sha256')
-		.update(JSON.stringify({ relationInstructionText, relationDescriptionList: PICK_PREDICATE_ENUM.map((predicateName) => relationDescriptionByPredicate[predicateName]) }))
+		.update(
+			JSON.stringify(
+				JEV_IDENTITY_CONFIG_KEY_LIST.map((oneConfigName) =>
+					oneConfigName === 'relationDescriptionByPredicate' ? [oneConfigName, PICK_PREDICATE_ENUM.map((predicateName) => [predicateName, cfg.relationDescriptionByPredicate[predicateName]])] : [oneConfigName, cfg[oneConfigName]],
+				),
+			),
+		)
 		.digest('hex')
-		.slice(0, RELATION_WORDING_HASH_LENGTH);
+		.slice(0, CONFIG_IDENTITY_HASH_LENGTH);
 
 // buildRelationPayload — the second question: the source element and the ONE candidate Jev chose, and the four
 // relations as options. Both objects come from choiceQuestion and are shaped by the same requestForm.
@@ -241,8 +258,8 @@ const answerRefusal = ({ answer, choiceEnum, questionId }) => {
 const moduleFunction = (constructionOptions = {}) => {
 	const { configFilePath = defaultConfigFilePath, componentOverrides = {} } = constructionOptions;
 	const cfg = resolveConfigOrThrow(configFilePath);
-	const relationWordingHash = relationWordingHashFor(cfg);
-	const namespacedModel = `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${cfg.wireModel}${MODEL_NAMESPACE_SEPARATOR}${cfg.requestForm}${MODEL_NAMESPACE_SEPARATOR}rel-${relationWordingHash}`;
+	const configIdentityHash = configIdentityHashFor(cfg);
+	const namespacedModel = `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${cfg.wireModel}${MODEL_NAMESPACE_SEPARATOR}${cfg.requestForm}${MODEL_NAMESPACE_SEPARATOR}cfg-${configIdentityHash}`;
 
 	const realPostOnce = ({ payload }, postCallback) => {
 		const body = JSON.stringify(payload);
@@ -386,12 +403,15 @@ const moduleFunction = (constructionOptions = {}) => {
 		maxConcurrency: cfg.maxConcurrency,
 		// judgeConfig — what rerank sends besides the question. Jev's API takes no temperature and no token budget,
 		// so there is nothing to record beyond saying so; maxTokens null means no budget exists, not an unset one.
-		judgeConfig: Object.freeze({ temperaturePolicy: 'notOffered', maxTokens: null }),
+		// categoryFloorByCategory — the confidence floors the bands came from (W-B-6): Jev reports a number, the
+		// category is derived here, so a frozen block must say which floors derived it.
+		judgeConfig: Object.freeze({ temperaturePolicy: 'notOffered', maxTokens: null, categoryFloorByCategory: Object.freeze({ strong: cfg.strongMinConfidence, moderate: cfg.moderateMinConfidence }) }),
 		rerank,
 		describe,
 	};
 };
 
 moduleFunction.PROVIDER_NAME = PROVIDER_NAME;
+moduleFunction.JEV_IDENTITY_CONFIG_KEY_LIST = JEV_IDENTITY_CONFIG_KEY_LIST;
 
 module.exports = moduleFunction;
