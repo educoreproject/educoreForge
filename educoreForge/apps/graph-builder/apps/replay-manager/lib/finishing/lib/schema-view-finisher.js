@@ -70,6 +70,8 @@ const moduleFunction =
 			USAGE_PATTERN_FIELD_LIST,
 			LIST_VALUED_PROPERTY_NAME_LIST,
 			INTEGER_VALUED_PROPERTY_NAME_LIST,
+			MAPPING_PROPERTY_NAME_LIST,
+			CONFIDENCE_BAND_TABLE,
 		} = vocabulary;
 
 		const KINDS = SCHEMA_VIEW.KINDS;
@@ -189,6 +191,10 @@ const moduleFunction =
 			);
 			LIST_VALUED_PROPERTY_NAME_LIST.forEach((oneName) => add(KINDS.LIST_VALUED_PROPERTY, oneName, {}, 'Declared list-valued: a list at every length on every node or edge that carries it (graph-contract §1).'));
 			INTEGER_VALUED_PROPERTY_NAME_LIST.forEach((oneName) => add(KINDS.INTEGER_VALUED_PROPERTY, oneName, {}, 'Declared INTEGER: written with neo4j.int at replay (graph-contract §2).'));
+			// ⟪campaign P3, W-B-1..4⟫ the mapping-edge property set (each with its TERM_DEFINITIONS.matchEdgeProperty sentence) and
+			// the confidence bands (member value '<category>:<band>', TERM_DEFINITIONS.confidenceBand)
+			MAPPING_PROPERTY_NAME_LIST.forEach((oneName) => add(KINDS.MATCH_EDGE_PROPERTY, oneName));
+			Object.keys(CONFIDENCE_BAND_TABLE).forEach((oneCategory) => add(KINDS.CONFIDENCE_BAND, `${oneCategory}:${CONFIDENCE_BAND_TABLE[oneCategory]}`, { memberPropertyByName: { category: oneCategory, band: CONFIDENCE_BAND_TABLE[oneCategory] } }));
 
 			// DETERMINISTIC order — sorted by stableId. The fingerprint is order-independent, but a sorted
 			// emission keeps construction stable and auditable.

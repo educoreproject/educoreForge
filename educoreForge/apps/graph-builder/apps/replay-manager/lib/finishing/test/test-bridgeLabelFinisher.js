@@ -59,7 +59,9 @@ const toyLabelStoreWith = (countByLabel) => {
 	return { runCypher, remainingByLabel };
 };
 const GOLD_PAIR_LIST = ['edfi', 'sif260928', 'pesccollegetranscript1v8v0', 'peschighschooltranscript1v6v0', 'pesctestscorereport1v1v0', 'pesclearningrecord1v0v0', 'pescdocumentrequest1v0v0', 'pescdocumentresponse1v0v0', 'pescacademiceportfolio1v0v0'].map((sourceToken) => ({ sourceToken, hubToken: 'ceds' }));
-const PRODUCER_TEMPLATE_TEXT = 'const pairScopedLabel = `${applyLabel}_${sourceToken.toUpperCase()}_${hubToken.toUpperCase()}`;';
+// ⟪campaign P3, W-B-13 bridge half⟫ the producer now CALLS the declared composer; the restated template below is checked
+// against it (gold pairs), and the call is what the source must contain
+const PRODUCER_TEMPLATE_TEXT = 'const pairScopedLabel = vocabularyLib.pairScopedLabelFor({ sourceToken, hubToken });';
 
 const conjunctJudgeByRefId = {
 	a_everyPairLabelStripped: (mutationList, done) => {

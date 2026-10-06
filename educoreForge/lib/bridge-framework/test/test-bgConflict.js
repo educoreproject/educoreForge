@@ -9,7 +9,7 @@
 //   that edge NOT written), the FIRST plugin's edge STANDS, a conflict record in the report + a MappingReview trail,
 //   conflictCount in the report and ABSENT from both frozen censuses; (b) the C4 lossy-echo shape (one row, several ids —
 //   Course.Title) → judged, NOT conflict; (c) the BR-064(b) all-Yes combination (School.Code) → N specified, NOT conflict;
-//   (d) a conflict record carries mappingJustification MappingReview; (e) with ONE plugin the report line names the
+//   (d) a conflict record carries mappingMethod MappingReview; (e) with ONE plugin the report line names the
 //   detector as fixture-exercised.
 //   BG-VALUE (a) a value channel's rows are refused by name (never assertions) and a valueKey-bearing assertion is a
 //   valueTierRefused record; (b) COUNTED with raw form (refusedValueTierAssertionCount 3); (c) NO edge to a value-tier card
@@ -158,14 +158,14 @@ const conflictConjunctList = [
 	}),
 	bothConjunct({
 		conjunctId: 'd_conflictRecordCarriesMappingReview',
-		title: "a conflict record carries mappingJustification 'semapv:MappingReview' and disposition thisPluginMaterialisationRefused",
+		title: "a conflict record carries mappingMethod 'semapv:MappingReview' and disposition thisPluginMaterialisationRefused",
 		twinNameList: ['manualCurationOnConflict'],
 		judge: (outcome) => {
 			if (!outcome.second || outcome.second.runError) {
 				return { pass: false, detail: String(outcome.second ? outcome.second.runError : outcome.first.runError).slice(0, 220) };
 			}
 			const oneConflict = outcome.second.runReport.counts.conflictCount === 1 ? forensicsOf(outcome.second).find((oneRecord) => oneRecord.record.kind === 'MappingReview').record.conflictList[0] : undefined;
-			return { pass: oneConflict !== undefined && oneConflict.mappingJustification === 'semapv:MappingReview' && oneConflict.disposition === 'thisPluginMaterialisationRefused', detail: JSON.stringify(oneConflict) };
+			return { pass: oneConflict !== undefined && oneConflict.mappingMethod === 'semapv:MappingReview' && oneConflict.disposition === 'thisPluginMaterialisationRefused', detail: JSON.stringify(oneConflict) };
 		},
 	}),
 	runConjunct({
@@ -192,7 +192,7 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctI
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'f_siblingLookupSpansPairingAnyProducerKind', twinName: 'siblingsOnlyUnderOwnProducerKind', fileName: CONFLICT_FILE, find: '\tconst producerKindList = MAPPING_PRODUCER_KIND_LIST.slice().sort();', replace: '\tconst producerKindList = [producerKind];' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'b_lossyEchoIsJudgedNotConflict', twinName: 'echoRaisesConflict', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\treport.conflictCount = conflicts.conflictList.length;', replace: '\t\t\t\t\treport.conflictCount = conflicts.conflictList.length + block.decisionRecordList.filter((oneRecord) => oneRecord.lossyEcho === true).length;' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'c_allYesCombinationIsNSpecifiedNotConflict', twinName: 'combinationReadAsAlternatives', fileName: FRAMEWORK_FILE, find: '\t\t\t\t\t\tconst unionAll = nonValueTargetKeyList.length > 1 && (!allPredicate || anyLossyEcho);', replace: '\t\t\t\t\t\tconst unionAll = nonValueTargetKeyList.length > 1;' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'd_conflictRecordCarriesMappingReview', twinName: 'manualCurationOnConflict', fileName: CONFLICT_FILE, find: "\t\t\t\t\t\tmappingJustification: 'semapv:MappingReview',", replace: "\t\t\t\t\t\tmappingJustification: 'semapv:ManualMappingCuration'," });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'd_conflictRecordCarriesMappingReview', twinName: 'manualCurationOnConflict', fileName: CONFLICT_FILE, find: "\t\t\t\t\t\tmappingMethod: 'semapv:MappingReview',", replace: "\t\t\t\t\t\tmappingMethod: 'semapv:ManualMappingCuration'," });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-CONFLICT', conjunctId: 'e_onePluginReportNamesFixtureExercised', twinName: 'bareZeroConflicts', fileName: FRAMEWORK_FILE, find: "\t\t\t\t\t\tsay(`0 conflicts (one plugin on this pairing — detector exercised by fixture only; ${siblingPairKeyList.length} sibling key(s) looked up under other producerKinds, ${conflicts.siblingBlockCount} found)`);", replace: "\t\t\t\t\t\tsay('0 conflicts');" });
 
 // ---------------------------------------------------------------------
@@ -226,7 +226,7 @@ const valueConjunctList = [
 		twinNameList: ['seamAdmitsValueObject'],
 		judge: (scenario) => {
 			const rules = scenario.frameworkMutationList.some((oneMutation) => oneMutation.modulePath.endsWith(RULES_FILE)) ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, RULES_FILE), mutationList: scenario.frameworkMutationList }) : graphSeamRulesLib;
-			const edgeProperties = { predicate: 'exactMatch', mappingJustification: 'semapv:ManualMappingCuration', matchBasis: 'crosswalk', resolution: 'specified', mappingProvider: 'https://x', subjectMatchField: 'a:b', objectMatchField: 'c:d', subjectSource: 'Toy', subjectVersion: '1', objectSource: 'ToyHub', objectVersion: '1', predicateAssertedBy: 'labelTable', attestationChannelList: ['x:1'], decisionBlockHash: 'a'.repeat(64), mappingKind: 'authored', mappingSource: 'crosswalk-toyCrosswalkPlugin' };
+			const edgeProperties = { predicate: 'exactMatch', mappingMethod: 'semapv:ManualMappingCuration', matchBasis: 'crosswalk', resolution: 'specified', mappingProvider: 'https://x', subjectMatchField: 'a:b', objectMatchField: 'c:d', subjectSource: 'Toy', subjectVersion: '1', objectSource: 'ToyHub', objectVersion: '1', predicateAssertedBy: 'labelTable', attestationChannelList: ['x:1'], decisionBlockHash: 'a'.repeat(64), mappingKind: 'authored', mappingSource: 'crosswalk-toyCrosswalkPlugin' };
 			const refusal = rules.mappingEdgeRefusal({ subjectStableId: 's', objectStableId: 'o', edgeType: 'EXACT_MATCH', edgeProperties, sourceStandardName: 'Toy', subjectEndpoint: { labels: ['DmeProperty'], sourceStandardName: 'Toy' }, objectEndpoint: { labels: ['HubReference'], referenceTier: 'value' } });
 			return { pass: refusal !== null && /is a 'value'-tier card/.test(refusal.message), detail: refusal ? refusal.message.slice(0, 160) : 'the seam ADMITTED a value-card object' };
 		},

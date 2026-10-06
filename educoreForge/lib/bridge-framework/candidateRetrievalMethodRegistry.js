@@ -28,7 +28,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                              carries hubVectorIndex. retrievalContext = { retrievalView, evidenceView,
 //                              retrievalDeclaration, hubName, sourceStandardName, subjectLabel, subjectNodeList,
 //                              windowedNodeList }
-//   mappingJustificationFor({ retrievalState }) → the SSSOM justification a judged record carries (a vocabulary one)
+//   mappingMethodFor({ retrievalState }) → the SSSOM justification a judged record carries (a vocabulary one)
 //   poolForSubject({ retrievalState, retrievalDeclaration, subjectStableId, hubName })
 //                              SYNCHRONOUS and pure over the state → { seatStableIdList, recordTraceByFieldName } |
 //                              { error }: one subject's seats in RANK order (the framework re-sorts them by stableId
@@ -64,7 +64,7 @@ const compareStrings = (leftValue, rightValue) => (leftValue < rightValue ? -1 :
 // cannot drift apart.
 const SEMANTIC_SIMILARITY_JUSTIFICATION = 'semapv:SemanticSimilarityThresholdMatching';
 // the members CANDIDATE_RETRIEVAL_METHOD_ROW_SHAPE names (header above); registryViolation holds every row to exactly these
-const RETRIEVAL_METHOD_ROW_MEMBER_LIST = Object.freeze(['methodName', 'fieldNameList', 'recordTraceFieldNameList', 'settingsPairListFor', 'prepareRetrieval', 'mappingJustificationFor', 'poolForSubject']);
+const RETRIEVAL_METHOD_ROW_MEMBER_LIST = Object.freeze(['methodName', 'fieldNameList', 'recordTraceFieldNameList', 'settingsPairListFor', 'prepareRetrieval', 'mappingMethodFor', 'poolForSubject']);
 // the justification a retrieved mapping carries when neighbour votes helped order its pool: several signals were
 // composed (SPEC-bridgeRevision §7, R-SN-4). Checked against vocabulary.SSSOM_JUSTIFICATIONS at construction.
 const COMPOSITE_MATCHING_JUSTIFICATION = 'semapv:CompositeMatching';
@@ -167,12 +167,12 @@ const VOTES_ONLY_SCORING_ROW_NAME = 'votesOnly';
 const neighbourScoringRowNameOf = (neighbourVote) => (neighbourVote === null ? VOTES_ONLY_SCORING_ROW_NAME : neighbourVote.method);
 const NEIGHBOUR_SCORING_REGISTRY = Object.freeze({
 	[VOTES_ONLY_SCORING_ROW_NAME]: Object.freeze({
-		mappingJustification: SEMANTIC_SIMILARITY_JUSTIFICATION,
+		mappingMethod: SEMANTIC_SIMILARITY_JUSTIFICATION,
 		readReferenceEdgeList: (unusedReadArguments, callback) => callback('', []),
 		frozenTraceFor: (neighbourTrace) => (neighbourTrace === null ? { neighbourTrace: null } : { error: refuse.byName({ moduleName, what: 'a votes-only rank returned a neighbourTrace', where: 'neighbourVote: null ranks by votes alone and names no neighbour (SPEC-bridgeRevision §5, invariant 7)' }) }),
 	}),
 	'neighbourVote-v1': Object.freeze({
-		mappingJustification: COMPOSITE_MATCHING_JUSTIFICATION,
+		mappingMethod: COMPOSITE_MATCHING_JUSTIFICATION,
 		readReferenceEdgeList: ({ neighbourVote, evidenceView }, callback) => REFERENCE_EDGE_READ_BY_KIND[neighbourVote.referencedObject.kind]({ referencedObjectDeclaration: neighbourVote.referencedObject, evidenceView }, callback),
 		frozenTraceFor: frozenNeighbourTraceFor,
 	}),
@@ -247,7 +247,7 @@ const CANDIDATE_RETRIEVAL_METHOD_ROW_LIST = Object.freeze([
 				});
 			});
 		},
-		mappingJustificationFor: () => SEMANTIC_SIMILARITY_JUSTIFICATION,
+		mappingMethodFor: () => SEMANTIC_SIMILARITY_JUSTIFICATION,
 		poolForSubject: ({ retrievalState, retrievalDeclaration, subjectStableId }) => {
 			const { k, floor } = retrievalDeclaration;
 			const retrieved = candidateRetrievalLib.retrieveCandidatePool({ hubVectorIndex: retrievalState.hubVectorIndex, subjectStableId, subjectVector: retrievalState.subjectVectorByStableId[subjectStableId].embedding, k, floor });
@@ -362,7 +362,7 @@ const CANDIDATE_RETRIEVAL_METHOD_ROW_LIST = Object.freeze([
 				callback('', { hubVectorIndex: args.hubVectorIndex, searchMemo: args.searchMemo, cardSlotIndex: args.cardSlotIndex, textRecordListBySourceStableId: args.textRecordListBySourceStableId, neighbourInputBase: args.neighbourInputBase, scoringRow: scoringLookup.scoringRow });
 			});
 		},
-		mappingJustificationFor: ({ retrievalState }) => retrievalState.scoringRow.mappingJustification,
+		mappingMethodFor: ({ retrievalState }) => retrievalState.scoringRow.mappingMethod,
 		poolForSubject: ({ retrievalState, retrievalDeclaration, subjectStableId, hubName }) => {
 			const { searchMemo, cardSlotIndex, hubVectorIndex, textRecordListBySourceStableId, neighbourInputBase, scoringRow } = retrievalState;
 			// the subject's OWN text records; a subject the forge gave no text node has none, and votes with an empty list
@@ -472,7 +472,7 @@ const registryViolation = () => {
 	const memberKindFaultList = CANDIDATE_RETRIEVAL_METHOD_ROW_LIST.reduce((soFar, oneRow, rowIndex) => {
 		const rowLabel = isNonBlank(oneRow.methodName) ? `'${oneRow.methodName}'` : `[${rowIndex}]`;
 		const listFault = ['fieldNameList', 'recordTraceFieldNameList'].find((oneMemberName) => !Array.isArray(oneRow[oneMemberName]) || oneRow[oneMemberName].length === 0 || !oneRow[oneMemberName].every(isNonBlank));
-		const functionFault = ['settingsPairListFor', 'prepareRetrieval', 'mappingJustificationFor', 'poolForSubject'].find((oneMemberName) => typeof oneRow[oneMemberName] !== 'function');
+		const functionFault = ['settingsPairListFor', 'prepareRetrieval', 'mappingMethodFor', 'poolForSubject'].find((oneMemberName) => typeof oneRow[oneMemberName] !== 'function');
 		return soFar
 			.concat(isNonBlank(oneRow.methodName) ? [] : [`row ${rowLabel} methodName is not a non-empty string`])
 			.concat(listFault === undefined ? [] : [`row ${rowLabel} ${listFault} is not a non-empty list of names`])

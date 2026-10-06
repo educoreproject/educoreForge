@@ -46,7 +46,7 @@ const JUDGE_USAGE_FIELD_LIST = Object.freeze(['inputTokens', 'outputTokens']);
 const MATCH_FORENSICS_RECORD_FIELD_LIST = Object.freeze([
 	'promptHash', 'rendererVersion', 'judgeModel', 'decisionAlgorithm', 'systemPrompt', 'userPrompt', 'reaskUserPrompt',
 	'renderedPoolStableIdList', 'choice', 'chosenCardStableId', 'category', 'reportedCategoryOnAbstain', 'sourceElementIdeaList',
-	'candidateIdeaList', 'sortedCandidateList', 'ideaCoverage', 'rationale', 'confidence', 'cacheHit', 'attempts', 'usage',
+	'candidateIdeaList', 'sortedCandidateList', 'ideaCoverage', 'rationale', 'judgeSummary', 'confidence', 'cacheHit', 'attempts', 'usage',
 	'discardedPredicateKeyCount', 'reaskCount',
 ]);
 const MATCH_FORENSICS_REFUSED_ATTEMPT_FIELD_LIST = Object.freeze([

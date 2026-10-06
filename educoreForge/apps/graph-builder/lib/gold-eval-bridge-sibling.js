@@ -43,16 +43,16 @@ const { SCHEMA_BLOCK_KIND, MAPPING_PROPERTIES } = vocabularyLib;
 // show you. So nothing here consults judgeProviderRegistry, and that omission is the design.
 //
 // SCOPED TO resolution === 'judged', and the scope is load-bearing in both directions. A `specified` edge
-// correctly carries NO mappingTool (graphSeamRules' JUDGED_ONLY_PROPERTY_LIST), so a guard that read every
+// correctly carries NO judgeIdentity (graphSeamRules' JUDGED_ONLY_PROPERTY_LIST), so a guard that read every
 // edge would refuse every authored bridge in the project; and a guard keyed on "does this block have edges"
 // would demand a judge for a bridge that was never judged.
 const JUDGED_RESOLUTION = 'judged';
-// An ABSENT mappingToolVersion is reported AS ABSENT, in words. Never '', never null, never a substituted
+// An ABSENT rendererVersion is reported AS ABSENT, in words. Never '', never null, never a substituted
 // renderer version. [code fact, materialiser.js edgePropertiesFor] the current writer CANNOT produce the shape — it writes
 // the version through a template literal, so it is always a string — but absence is the shape a fabricator
 // needs, and a reader that quietly supplied a default here would print a version the edge does not carry
 // into a certificate that a promoter reads as measured.
-const ABSENT_MAPPING_TOOL_VERSION_TOKEN = '(mappingToolVersion ABSENT — the block records none)';
+const ABSENT_RENDERER_VERSION_TOKEN = '(rendererVersion ABSENT — the block records none)';
 
 const scalarPropertyOf = (edgeProperties, propertyName) => {
 	const rawValue = edgeProperties === null || edgeProperties === undefined ? undefined : edgeProperties[propertyName];
@@ -63,12 +63,12 @@ const scalarPropertyOf = (edgeProperties, propertyName) => {
 };
 
 // judgeEnumerationOf — the pure enumeration over one block's harvested edges.
-//   → { judgedEdgeCount, judgedEdgeMissingMappingToolCount, judgeIdentityPairList, missingToolOffenderList }
+//   → { judgedEdgeCount, judgedEdgeMissingJudgeIdentityCount, judgeIdentityPairList, missingIdentityOffenderList }
 // The pair list is DERIVED, ordered, and carries its own denominator per pair; nothing about it is declared
-// in advance. Ordering is by (mappingTool, mappingToolVersion) so a certificate diffs cleanly.
+// in advance. Ordering is by (judgeIdentity, rendererVersion) so a certificate diffs cleanly.
 const judgeEnumerationOf = (harvestedEdgeList) => {
 	const judgedEdgeList = harvestedEdgeList.filter((oneEdge) => scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.RESOLUTION) === JUDGED_RESOLUTION);
-	const missingToolOffenderList = judgedEdgeList.filter((oneEdge) => scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.MAPPING_TOOL) === undefined);
+	const missingIdentityOffenderList = judgedEdgeList.filter((oneEdge) => scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.JUDGE_IDENTITY) === undefined);
 	// ⟪JOB 6b, G6-k⟫ A NON-STRING identity is its OWN fault class, refused separately from an absent one.
 	// Before this it was enumerated with its native type, so judgeToolIdList held a number while --judgedBy
 	// values are strings: indexOf could never match and the operator was told to name a judge NO SPELLING
@@ -76,13 +76,13 @@ const judgeEnumerationOf = (harvestedEdgeList) => {
 	// facts for an operator ("no judge is recorded" vs "the judge recorded is not a name"), so they are
 	// counted and reported separately rather than folded into one number.
 	const malformedToolOffenderList = judgedEdgeList.filter((oneEdge) => {
-		const writtenValue = scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.MAPPING_TOOL);
+		const writtenValue = scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.JUDGE_IDENTITY);
 		return writtenValue !== undefined && typeof writtenValue !== 'string';
 	});
 	const judgedEdgeCountByPairRefId = {};
 	judgedEdgeList.forEach((oneEdge) => {
-		const writtenMappingTool = scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.MAPPING_TOOL);
-		if (writtenMappingTool === undefined || typeof writtenMappingTool !== 'string') {
+		const writtenJudgeIdentity = scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.JUDGE_IDENTITY);
+		if (writtenJudgeIdentity === undefined || typeof writtenJudgeIdentity !== 'string') {
 			return; // both offender lists refuse these BY NAME; neither is an identity anyone could type back
 		}
 		// THE ONE PLACE a written identity becomes an ENUMERATED one. A retired spelling resolves to its
@@ -90,20 +90,20 @@ const judgeEnumerationOf = (harvestedEdgeList) => {
 		// The table RENAMES and never admits or excludes: an identity it does not know passes through
 		// untouched and is enumerated under its own name, because an unknown judge is precisely what this
 		// gate exists to show the operator.
-		const mappingTool = judgeIdentityAliasTableLib.currentModelIdentityFor(writtenMappingTool);
-		const mappingToolVersionRaw = scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.MAPPING_TOOL_VERSION);
-		const mappingToolVersion = mappingToolVersionRaw === undefined ? ABSENT_MAPPING_TOOL_VERSION_TOKEN : `${mappingToolVersionRaw}`;
+		const judgeIdentity = judgeIdentityAliasTableLib.currentModelIdentityFor(writtenJudgeIdentity);
+		const rendererVersionRaw = scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.RENDERER_VERSION);
+		const rendererVersion = rendererVersionRaw === undefined ? ABSENT_RENDERER_VERSION_TOKEN : `${rendererVersionRaw}`;
 		// the UNIT SEPARATOR, not bare concatenation: ('ab','c') and ('a','bc') are DIFFERENT pairs and
 		// must not collapse into one row. materialiser.js edgeUniquenessRefusal keys its check with the same
 		// separator, for the same reason.
-		const pairRefId = `${mappingTool}\u001f${mappingToolVersion}`;
+		const pairRefId = `${judgeIdentity}\u001f${rendererVersion}`;
 		const existingPair = judgedEdgeCountByPairRefId[pairRefId];
-		judgedEdgeCountByPairRefId[pairRefId] = existingPair === undefined ? { mappingTool, mappingToolVersion, judgedEdgeCount: 1 } : { mappingTool, mappingToolVersion, judgedEdgeCount: existingPair.judgedEdgeCount + 1 };
+		judgedEdgeCountByPairRefId[pairRefId] = existingPair === undefined ? { judgeIdentity, rendererVersion, judgedEdgeCount: 1 } : { judgeIdentity, rendererVersion, judgedEdgeCount: existingPair.judgedEdgeCount + 1 };
 	});
 	const judgeIdentityPairList = Object.keys(judgedEdgeCountByPairRefId)
 		.sort()
 		.map((onePairRefId) => judgedEdgeCountByPairRefId[onePairRefId]);
-	return { judgedEdgeCount: judgedEdgeList.length, judgedEdgeMissingMappingToolCount: missingToolOffenderList.length, judgedEdgeMalformedMappingToolCount: malformedToolOffenderList.length, judgeIdentityPairList, missingToolOffenderList, malformedToolOffenderList };
+	return { judgedEdgeCount: judgedEdgeList.length, judgedEdgeMissingJudgeIdentityCount: missingIdentityOffenderList.length, judgedEdgeMalformedJudgeIdentityCount: malformedToolOffenderList.length, judgeIdentityPairList, missingIdentityOffenderList, malformedToolOffenderList };
 };
 
 // the harvest's PG-JSON edge record → the rule's edge shape ({ fromStableId, toStableId, type, properties }); a
@@ -116,7 +116,7 @@ const harvestedEdgeFrom = (oneEdge) => ({ fromStableId: refStableIdOf(oneEdge.fr
 // absent field and an empty one are the same value to a caller, and telling them apart is the whole subject
 // of the gates below. judgeEnumerationRefusalMessage is explicitly null — "looked, nothing to refuse" — the
 // same idiom refusalMessage already uses.
-const UNREADABLE_BLOCK_ENUMERATION = { judgedEdgeCount: 0, judgedEdgeMissingMappingToolCount: 0, judgedEdgeMalformedMappingToolCount: 0, judgeIdentityPairList: [], judgeEnumerationRefusalMessage: null };
+const UNREADABLE_BLOCK_ENUMERATION = { judgedEdgeCount: 0, judgedEdgeMissingJudgeIdentityCount: 0, judgedEdgeMalformedJudgeIdentityCount: 0, judgeIdentityPairList: [], judgeEnumerationRefusalMessage: null };
 
 // auditMappingBlockText — PURE: one relationship block's text → its edge audit
 const auditMappingBlockText = ({ blockText, subject } = {}) => {
@@ -151,29 +151,29 @@ const auditMappingBlockText = ({ blockText, subject } = {}) => {
 	// subjects is reported beside edgeCount only for a block that carries the property, so any other audit row is unchanged.
 	const judgedSubjectStableIdSet = new Set(harvestedEdgeList.map((oneEdge) => scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.JUDGED_SUBJECT_STABLE_ID)).filter((judgedSubjectStableId) => judgedSubjectStableId !== undefined));
 	const judgedSubjectCensus = judgedSubjectStableIdSet.size === 0 ? {} : { judgedSubjectCount: judgedSubjectStableIdSet.size };
-	// A judged edge with NO mappingTool is the READ-SIDE TWIN of the write-side rule
-	// (graphSeamRules.js writeMappingEdge, JUDGED_ONLY_PROPERTY_LIST: judged ⇒ mappingTool). The write side
+	// A judged edge with NO judgeIdentity is the READ-SIDE TWIN of the write-side rule
+	// (graphSeamRules.js writeMappingEdge, JUDGED_ONLY_PROPERTY_LIST: judged ⇒ judgeIdentity). The write side
 	// cannot be relied on to have run: a block can be hand-assembled, or written by a builder that predates
 	// the rule. Named offender, by stableId, in the codec's own idiom — never "[object Object]".
 	const blockLabelText = subject === undefined ? '(unnamed)' : subject;
-	const firstMissingToolOffender = enumeration.missingToolOffenderList[0];
+	const firstMissingToolOffender = enumeration.missingIdentityOffenderList[0];
 	const firstMalformedToolOffender = enumeration.malformedToolOffenderList[0];
 	const judgeEnumerationRefusalMessage =
 		firstMissingToolOffender !== undefined
-			? `${moduleName}: relationship block '${blockLabelText}' carries ${enumeration.judgedEdgeMissingMappingToolCount} JUDGED edge(s) with NO ${MAPPING_PROPERTIES.MAPPING_TOOL} (first: ${firstMissingToolOffender.fromStableId} -[${firstMissingToolOffender.type}]-> ${firstMissingToolOffender.toStableId}) — a judged edge that cannot say what judged it can never be named at promotion; this is the read-side twin of the write-side rule judged ⇒ ${MAPPING_PROPERTIES.MAPPING_TOOL}`
+			? `${moduleName}: relationship block '${blockLabelText}' carries ${enumeration.judgedEdgeMissingJudgeIdentityCount} JUDGED edge(s) with NO ${MAPPING_PROPERTIES.JUDGE_IDENTITY} (first: ${firstMissingToolOffender.fromStableId} -[${firstMissingToolOffender.type}]-> ${firstMissingToolOffender.toStableId}) — a judged edge that cannot say what judged it can never be named at promotion; this is the read-side twin of the write-side rule judged ⇒ ${MAPPING_PROPERTIES.JUDGE_IDENTITY}`
 			: firstMalformedToolOffender === undefined
 				? null
 				// ⟪G6-k⟫ quote WHAT WAS WRITTEN and its TYPE. A refusal that says only "malformed" leaves the
 				// operator hunting; the value and its type are what let them find the block that produced it.
-				: `${moduleName}: relationship block '${blockLabelText}' carries ${enumeration.judgedEdgeMalformedMappingToolCount} JUDGED edge(s) whose ${MAPPING_PROPERTIES.MAPPING_TOOL} is NOT A STRING (first: ${firstMalformedToolOffender.fromStableId} -[${firstMalformedToolOffender.type}]-> ${firstMalformedToolOffender.toStableId} carries ${JSON.stringify(scalarPropertyOf(firstMalformedToolOffender.properties, MAPPING_PROPERTIES.MAPPING_TOOL))}, a ${typeof scalarPropertyOf(firstMalformedToolOffender.properties, MAPPING_PROPERTIES.MAPPING_TOOL)}) — a judge identity that is not a name can never be typed back with --judgedBy, so it would refuse forever rather than refuse usefully`;
+				: `${moduleName}: relationship block '${blockLabelText}' carries ${enumeration.judgedEdgeMalformedJudgeIdentityCount} JUDGED edge(s) whose ${MAPPING_PROPERTIES.JUDGE_IDENTITY} is NOT A STRING (first: ${firstMalformedToolOffender.fromStableId} -[${firstMalformedToolOffender.type}]-> ${firstMalformedToolOffender.toStableId} carries ${JSON.stringify(scalarPropertyOf(firstMalformedToolOffender.properties, MAPPING_PROPERTIES.JUDGE_IDENTITY))}, a ${typeof scalarPropertyOf(firstMalformedToolOffender.properties, MAPPING_PROPERTIES.JUDGE_IDENTITY)}) — a judge identity that is not a name can never be typed back with --judgedBy, so it would refuse forever rather than refuse usefully`;
 	return {
 		subject,
 		edgeCount: harvestedEdgeList.length,
 		...judgedSubjectCensus,
 		invalidDebugEdgeCount,
 		judgedEdgeCount: enumeration.judgedEdgeCount,
-		judgedEdgeMissingMappingToolCount: enumeration.judgedEdgeMissingMappingToolCount,
-		judgedEdgeMalformedMappingToolCount: enumeration.judgedEdgeMalformedMappingToolCount,
+		judgedEdgeMissingJudgeIdentityCount: enumeration.judgedEdgeMissingJudgeIdentityCount,
+		judgedEdgeMalformedJudgeIdentityCount: enumeration.judgedEdgeMalformedJudgeIdentityCount,
 		judgeIdentityPairList: enumeration.judgeIdentityPairList,
 		judgeEnumerationRefusalMessage,
 		refusalMessage: refusal === null ? null : refusal.message,
@@ -216,14 +216,14 @@ const auditManifestMappingBlocks = ({ standardsDatabase, manifestRefId } = {}, c
 				const aggregatePairByRefId = {};
 				mappingBlockList.forEach((oneBlockRow) => {
 					oneBlockRow.judgeIdentityPairList.forEach((onePair) => {
-						const pairRefId = `${onePair.mappingTool}\u001f${onePair.mappingToolVersion}`;
+						const pairRefId = `${onePair.judgeIdentity}\u001f${onePair.rendererVersion}`;
 						const runningPair = aggregatePairByRefId[pairRefId];
-						aggregatePairByRefId[pairRefId] = runningPair === undefined ? { mappingTool: onePair.mappingTool, mappingToolVersion: onePair.mappingToolVersion, judgedEdgeCount: onePair.judgedEdgeCount } : { mappingTool: onePair.mappingTool, mappingToolVersion: onePair.mappingToolVersion, judgedEdgeCount: runningPair.judgedEdgeCount + onePair.judgedEdgeCount };
+						aggregatePairByRefId[pairRefId] = runningPair === undefined ? { judgeIdentity: onePair.judgeIdentity, rendererVersion: onePair.rendererVersion, judgedEdgeCount: onePair.judgedEdgeCount } : { judgeIdentity: onePair.judgeIdentity, rendererVersion: onePair.rendererVersion, judgedEdgeCount: runningPair.judgedEdgeCount + onePair.judgedEdgeCount };
 					});
 				});
 				const judgeIdentityPairList = Object.keys(aggregatePairByRefId).sort().map((onePairRefId) => aggregatePairByRefId[onePairRefId]);
 				const judgeToolIdSeen = {};
-				judgeIdentityPairList.forEach((onePair) => { judgeToolIdSeen[onePair.mappingTool] = true; });
+				judgeIdentityPairList.forEach((onePair) => { judgeToolIdSeen[onePair.judgeIdentity] = true; });
 				const judgeToolIdList = Object.keys(judgeToolIdSeen).sort();
 				const judgedEdgeTotal = mappingBlockList.reduce((soFar, oneBlockRow) => soFar + oneBlockRow.judgedEdgeCount, 0);
 				callback('', { manifestRefId, memberCount: memberList.length, mappingBlockList, refusalMessageList, judgeEnumerationRefusalMessageList, judgeIdentityPairList, judgeToolIdList, judgedEdgeTotal });
@@ -240,7 +240,7 @@ const auditManifestMappingBlocks = ({ standardsDatabase, manifestRefId } = {}, c
 					return;
 				}
 				const audit = auditMappingBlockText({ blockText: typeof blockRow.text === 'string' ? blockRow.text : `${blockRow.text}`, subject: oneMember.subject });
-				mappingBlockList.push({ subject: oneMember.subject, refId: oneMember.schemaBlockRefId, edgeCount: audit.edgeCount, ...(audit.judgedSubjectCount === undefined ? {} : { judgedSubjectCount: audit.judgedSubjectCount }), invalidDebugEdgeCount: audit.invalidDebugEdgeCount, judgedEdgeCount: audit.judgedEdgeCount, judgedEdgeMissingMappingToolCount: audit.judgedEdgeMissingMappingToolCount, judgedEdgeMalformedMappingToolCount: audit.judgedEdgeMalformedMappingToolCount, judgeIdentityPairList: audit.judgeIdentityPairList });
+				mappingBlockList.push({ subject: oneMember.subject, refId: oneMember.schemaBlockRefId, edgeCount: audit.edgeCount, ...(audit.judgedSubjectCount === undefined ? {} : { judgedSubjectCount: audit.judgedSubjectCount }), invalidDebugEdgeCount: audit.invalidDebugEdgeCount, judgedEdgeCount: audit.judgedEdgeCount, judgedEdgeMissingJudgeIdentityCount: audit.judgedEdgeMissingJudgeIdentityCount, judgedEdgeMalformedJudgeIdentityCount: audit.judgedEdgeMalformedJudgeIdentityCount, judgeIdentityPairList: audit.judgeIdentityPairList });
 				if (audit.refusalMessage !== null) {
 					refusalMessageList.push(audit.refusalMessage);
 				}
@@ -254,8 +254,8 @@ const auditManifestMappingBlocks = ({ standardsDatabase, manifestRefId } = {}, c
 	});
 };
 
-// ABSENT_MAPPING_TOOL_VERSION_TOKEN is EXPORTED so the gates and any future certificate reader assert against
+// ABSENT_RENDERER_VERSION_TOKEN is EXPORTED so the gates and any future certificate reader assert against
 // the module's own constant rather than retyping the string. A gate that retypes a token is a second
 // declaration of it, and two declarations of one value are two things that can drift — the subject of this
 // whole campaign, in miniature.
-module.exports = { auditMappingBlockText, auditManifestMappingBlocks, judgeEnumerationOf, ABSENT_MAPPING_TOOL_VERSION_TOKEN, moduleName };
+module.exports = { auditMappingBlockText, auditManifestMappingBlocks, judgeEnumerationOf, ABSENT_RENDERER_VERSION_TOKEN, moduleName };

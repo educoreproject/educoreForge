@@ -87,14 +87,16 @@ const moduleFunction = (constructionOptions = {}) => {
 				callback(`${moduleName}: the Jev judge refused, and a cascade does not escalate a failure: ${jevError}`);
 				return;
 			}
-			if (typeof jevVerdict.jevConfidence !== 'number') {
-				callback(`${moduleName}: the Jev verdict carries no jevConfidence, so the escalation cannot be decided.`);
+			// ⟪campaign P3, W-B-3⟫ Jev's pick confidence is read from its judgeSummary (it was jevConfidence before P3)
+			const jevPickConfidence = jevVerdict.judgeSummary && typeof jevVerdict.judgeSummary.judgePickConfidence === 'number' ? jevVerdict.judgeSummary.judgePickConfidence : null;
+			if (jevPickConfidence === null) {
+				callback(`${moduleName}: the Jev verdict carries no judgeSummary.judgePickConfidence, so the escalation cannot be decided.`);
 				return;
 			}
-			if (jevVerdict.jevConfidence >= cfg.escalateBelowConfidence) {
+			if (jevPickConfidence >= cfg.escalateBelowConfidence) {
 				callback('', {
 					...jevVerdict,
-					rationale: `${jevVerdict.rationale} [jevOpus: Jev answered at confidence ${jevVerdict.jevConfidence} (cut ${cfg.escalateBelowConfidence}); Opus not asked.]`,
+					rationale: `${jevVerdict.rationale} [jevOpus: Jev answered at confidence ${jevPickConfidence} (cut ${cfg.escalateBelowConfidence}); Opus not asked.]`,
 					model: namespacedModel,
 					answeredBy: jevProvider.name,
 				});
@@ -102,16 +104,18 @@ const moduleFunction = (constructionOptions = {}) => {
 			}
 			anthropicProvider.rerank(rerankOptions, (anthropicError, anthropicVerdict) => {
 				if (anthropicError) {
-					callback(`${moduleName}: escalated to ${anthropicProvider.model} after Jev's confidence ${jevVerdict.jevConfidence}, and it refused: ${anthropicError}`);
+					callback(`${moduleName}: escalated to ${anthropicProvider.model} after Jev's confidence ${jevPickConfidence}, and it refused: ${anthropicError}`);
 					return;
 				}
 				callback('', {
 					...anthropicVerdict,
-					rationale: `${anthropicVerdict.rationale} [jevOpus: escalated; Jev's confidence ${jevVerdict.jevConfidence} is below the cut ${cfg.escalateBelowConfidence}. Jev's view: ${jevVerdict.rationale}]`,
+					rationale: `${anthropicVerdict.rationale} [jevOpus: escalated; Jev's confidence ${jevPickConfidence} is below the cut ${cfg.escalateBelowConfidence}. Jev's view: ${jevVerdict.rationale}]`,
 					model: namespacedModel,
 					attempts: (jevVerdict.attempts || 0) + (anthropicVerdict.attempts || 0),
 					answeredBy: anthropicProvider.name,
-					jevConfidence: jevVerdict.jevConfidence,
+					// the answer is Opus's, so the summary is Opus's (it reports no numbers: null); Jev's view rides beside it
+					judgeSummary: anthropicVerdict.judgeSummary === undefined ? null : anthropicVerdict.judgeSummary,
+					jevConfidence: jevPickConfidence,
 					jevChoice: jevVerdict.choice,
 				});
 			});

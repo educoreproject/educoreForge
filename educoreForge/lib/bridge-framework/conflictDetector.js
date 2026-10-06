@@ -111,7 +111,7 @@ const detectSiblingConflicts = ({ decisionStore, siblingPairKeyList, thisBlock }
 						siblingObjectStableId: oneSiblingRecord.objectStableId,
 						siblingDecisionBlockHash: stored.decisionBlockHash,
 						disposition: 'thisPluginMaterialisationRefused',
-						mappingJustification: 'semapv:MappingReview',
+						mappingMethod: 'semapv:MappingReview',
 					});
 				}
 			});

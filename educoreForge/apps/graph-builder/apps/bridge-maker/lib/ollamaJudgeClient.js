@@ -651,6 +651,8 @@ const moduleFunction =
 							candidateIdeaList,
 							sortedCandidateList,
 							ideaCoverage,
+							// ⟪campaign P3, W-B-3⟫ a text model reports a category word, not numbers: no judge summary
+							judgeSummary: null,
 							// the server's own accounting, threaded up ADDITIVELY for the forensic match log. Never
 							// fabricated: an envelope without it yields null.
 							doneReason: parsedEnvelope && parsedEnvelope.done_reason !== undefined ? parsedEnvelope.done_reason : null,

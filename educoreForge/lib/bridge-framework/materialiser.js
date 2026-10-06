@@ -30,9 +30,9 @@ const { compareRecords, sha256Hex } = require('./decisionBlock');
 const { RENDERER_VERSION } = require('./evidenceRenderer');
 const { providerNameForJudgeModel, FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
-const { SKOS_EDGE_TYPES, MAPPING_PROPERTIES, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, composeMappingSource } = vocabularyLib;
+const { SKOS_EDGE_TYPES, MAPPING_PROPERTIES, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, composeMappingSource, JUDGE_SUMMARY_EDGE_PROPERTY_LIST, judgeSummaryRefusal } = vocabularyLib;
 
-const JUSTIFICATION_BY_RESOLUTION = Object.freeze({ specified: 'semapv:ManualMappingCuration', judged: 'semapv:CompositeMatching' });
+const METHOD_BY_RESOLUTION = Object.freeze({ specified: 'semapv:ManualMappingCuration', judged: 'semapv:CompositeMatching' });
 
 // pickedRecordList — the records that yield an edge, in the sorted order
 const pickedRecordList = (decisionRecordList) =>
@@ -125,7 +125,8 @@ const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash,
 		// CompositeMatching, which is the justification for "an algorithm chose among candidates" and says nothing
 		// about HOW the candidates were proposed. Byte-identical for both documentary producers, whose records
 		// carry exactly the table's values.
-		[MAPPING_PROPERTIES.MAPPING_JUSTIFICATION]: record.mappingJustification === undefined || record.mappingJustification === null ? JUSTIFICATION_BY_RESOLUTION[record.resolution] : record.mappingJustification,
+		// ⟪campaign P3, W-B-1⟫ mappingMethod (was mappingJustification, at edge AND record level): the value is a method
+		[MAPPING_PROPERTIES.MAPPING_METHOD]: record.mappingMethod === undefined || record.mappingMethod === null ? METHOD_BY_RESOLUTION[record.resolution] : record.mappingMethod,
 		[MAPPING_PROPERTIES.MATCH_BASIS]: block.header.matchBasis,
 		[MAPPING_PROPERTIES.RESOLUTION]: record.resolution,
 		[MAPPING_PROPERTIES.OBJECT_MATCH_FIELD]: objectMatchField,
@@ -159,11 +160,21 @@ const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash,
 		edgeProperties[MAPPING_PROPERTIES.JUDGED_SUBJECT_STABLE_ID] = record.subjectStableId;
 		edgeProperties[MAPPING_PROPERTIES.MATCH_ID] = sha256Hex(`${decisionBlockHash}\n${record.subjectStableId}\n${record.predicate}\n${record.objectStableId}\n${instanceStableId}`);
 	}
+	// ⟪campaign P3⟫ W-B-2: the duplicate `confidence` is no longer written (mappingConfidence is the one judged-edge
+	// confidence). W-B-1: judgeIdentity / rendererVersion. W-B-3 (G7): the judge's own numbers, all three or none, read
+	// from the frozen record's judgeSummary. W-B-4 (V1-C06): the judge's recorded text, when the record carries it.
 	if (record.resolution === 'judged') {
-		edgeProperties[MAPPING_PROPERTIES.CONFIDENCE] = record.confidence;
 		edgeProperties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE] = mappingConfidenceFor({ record });
-		edgeProperties[MAPPING_PROPERTIES.MAPPING_TOOL] = record.judge.judgeModel;
-		edgeProperties[MAPPING_PROPERTIES.MAPPING_TOOL_VERSION] = `${record.judge.rendererVersion === undefined ? RENDERER_VERSION : record.judge.rendererVersion}`;
+		edgeProperties[MAPPING_PROPERTIES.JUDGE_IDENTITY] = record.judge.judgeModel;
+		edgeProperties[MAPPING_PROPERTIES.RENDERER_VERSION] = `${record.judge.rendererVersion === undefined ? RENDERER_VERSION : record.judge.rendererVersion}`;
+		if (record.judge.judgeSummary !== undefined) {
+			JUDGE_SUMMARY_EDGE_PROPERTY_LIST.forEach((oneName) => {
+				edgeProperties[oneName] = record.judge.judgeSummary[oneName];
+			});
+		}
+		if (record.judge.rationale !== undefined) {
+			edgeProperties[MAPPING_PROPERTIES.MAPPING_RATIONALE] = record.judge.rationale;
+		}
 	}
 	return edgeProperties;
 };
@@ -210,6 +221,14 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 		callback(`${moduleName}: subject ${unsourcedPlanned.onePlanned.record.subjectStableId}: mappingSource: ${unsourcedPlanned.sourced.error}`);
 		return;
 	}
+	// W-B-3: a frozen judgeSummary is OMITTED when the judge reported none, never frozen null; one that is present must be
+	// the declared shape. A record breaking either is refused by name before any edge is written, never half-copied.
+	const malformedSummaryPlanned = orderedList.find((onePlanned) => onePlanned.record.judge !== undefined && Object.prototype.hasOwnProperty.call(onePlanned.record.judge, 'judgeSummary') && (onePlanned.record.judge.judgeSummary === null || judgeSummaryRefusal(onePlanned.record.judge.judgeSummary) !== ''));
+	if (malformedSummaryPlanned !== undefined) {
+		const summary = malformedSummaryPlanned.record.judge.judgeSummary;
+		callback(refuse.byName({ moduleName, what: `subject ${malformedSummaryPlanned.record.subjectStableId}: the frozen judge.judgeSummary is ${summary === null ? 'null' : judgeSummaryRefusal(summary)}`, where: 'a frozen record omits judgeSummary when the judge reported none, and carries the declared shape when it did (W-B-3)' }).message);
+		return;
+	}
 	const writtenEdgeList = [];
 	let edgeIndex = 0;
 	const nextEdge = () => {
@@ -237,4 +256,4 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 	nextEdge();
 };
 
-module.exports = { materialiseBlock, edgePropertiesFor, mappingSourceFor, MAPPING_SOURCE_BY_RESOLUTION, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, mappingConfidenceFor, JUSTIFICATION_BY_RESOLUTION, moduleName };
+module.exports = { materialiseBlock, edgePropertiesFor, mappingSourceFor, MAPPING_SOURCE_BY_RESOLUTION, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, mappingConfidenceFor, METHOD_BY_RESOLUTION, moduleName };

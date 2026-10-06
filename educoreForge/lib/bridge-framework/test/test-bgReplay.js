@@ -426,7 +426,7 @@ const judgeConjunctList = [
 	}),
 	runConjunct({
 		conjunctId: 'aPrime_putJudgmentPayloadExactlyFourKeys',
-		title: 'putJudgment receives EXACTLY { choice, category, rationale, chosenStableId }',
+		title: 'putJudgment receives EXACTLY { choice, category, rationale, chosenStableId, judgeSummary } (judgeSummary since campaign P3 W-B-3: a cache hit must freeze what the fresh judgment froze)',
 		twinNameList: ['payloadLacksChosenStableId'],
 		shape: (scenario) => {
 			useRealClientDouble(scenario, {});
@@ -437,7 +437,7 @@ const judgeConjunctList = [
 		},
 		judge: succeeded((runReport, outcome) => {
 			const keyListList = outcome.stores.judgmentCache.payloadKeyListList;
-			const bad = keyListList.filter((oneList) => JSON.stringify(oneList) !== JSON.stringify(['category', 'choice', 'chosenStableId', 'rationale']));
+			const bad = keyListList.filter((oneList) => JSON.stringify(oneList) !== JSON.stringify(['category', 'choice', 'chosenStableId', 'judgeSummary', 'rationale']));
 			return { pass: keyListList.length > 0 && bad.length === 0, detail: `${keyListList.length} puts; bad ${JSON.stringify(bad[0])}` };
 		}),
 	}),
@@ -685,7 +685,7 @@ const judgeConjunctList = [
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_outOfRangeChoiceRefused', twinName: 'clampOrdinal', fileName: JUDGE_FILE, find: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { error:", replace: "\tif (typeof choice !== 'string' || choiceEnum.indexOf(choice) === -1) {\n\t\treturn { chosenCardStableId: renderedPoolStableIdList[Math.min(renderedPoolStableIdList.length, Number(choice)) - 1] };\n\t\treturn { error:" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'a_pickMappedThroughRenderedOrder', twinName: 'mapThroughReversedList', fileName: JUDGE_FILE, find: '\tconst chosenCardStableId = renderedPoolStableIdList[ordinal - 1];', replace: '\tconst chosenCardStableId = renderedPoolStableIdList.slice().reverse()[ordinal - 1];' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'aPrime_putJudgmentPayloadExactlyFourKeys', twinName: 'payloadLacksChosenStableId', fileName: JUDGE_FILE, find: "\t\t\tconst putPayload = { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) };", replace: "\t\t\tconst putPayload = { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged), model: judgeClient.model };" }); // re-anchored 2026-10-06: W-B-7 names the payload putPayload
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'aPrime_putJudgmentPayloadExactlyFourKeys', twinName: 'payloadLacksChosenStableId', fileName: JUDGE_FILE, find: "\t\t\tconst putPayload = { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, judgeSummary: judged.judgeSummary, ...predicateByFieldNameOf(judged) };", replace: "\t\t\tconst putPayload = { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, judgeSummary: judged.judgeSummary, ...predicateByFieldNameOf(judged), model: judgeClient.model };" }); // re-anchored 2026-10-06: W-B-7 names the payload putPayload
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-JUDGE', conjunctId: 'b_abstentionNoEdgeCountedSeparately', twinName: 'abstainYieldsEdgeToFirstCandidate', leverKind: 'productionMutation', mutate: (scenario) => {
 	// an abstention that yields an edge to the first candidate (three coordinated faults in the judge component)
 	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_FILE), find: "\tif (choice === ABSTAIN_TOKEN) {\n\t\treturn { chosenCardStableId: null };\n\t}", replace: "\tif (choice === ABSTAIN_TOKEN) {\n\t\treturn { chosenCardStableId: renderedPoolStableIdList[0] };\n\t}" });

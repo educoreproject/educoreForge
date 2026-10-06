@@ -1203,7 +1203,7 @@ const quotedIdentityList = (identityList) => identityList.map((oneIdentity) => `
 // which blocks a given identity was found in — read from the per-block enumeration, so a refusal can point
 // at the block rather than only at the manifest
 const blockSubjectListForIdentity = (audit, oneIdentity) =>
-	audit.mappingBlockList.filter((oneBlockRow) => oneBlockRow.judgeIdentityPairList.some((onePair) => onePair.mappingTool === oneIdentity)).map((oneBlockRow) => oneBlockRow.subject);
+	audit.mappingBlockList.filter((oneBlockRow) => oneBlockRow.judgeIdentityPairList.some((onePair) => onePair.judgeIdentity === oneIdentity)).map((oneBlockRow) => oneBlockRow.subject);
 
 // ⟪JOB 6b, G6-l⟫ RETURNS BOTH the refusal AND the list it validated. It used to return only the refusal,
 // and the verdict then RE-READ process.global at emit time to report what the operator had named — TWO READS
@@ -1244,7 +1244,7 @@ const judgedByViolation = ({ commandLineParameters, audit, manifestRefId }) => {
 	if (namedIdentityList.length === 0) {
 		return refusalOf(
 			`graphBuilder -goldEvalCheck: REFUSED — manifest ${manifestRefId} was judged by ${presentIdentityList.length} judge(s) and ` +
-			`--${JUDGED_BY_VALUE_NAME} names none. Every mappingTool FOUND, enumerated from the manifest's own relationship blocks: ` +
+			`--${JUDGED_BY_VALUE_NAME} names none. Every judgeIdentity FOUND, enumerated from the manifest's own relationship blocks: ` +
 			`${quotedIdentityList(presentIdentityList)}. Promotion requires --${JUDGED_BY_VALUE_NAME}=<toolId>[,<toolId>...] — ONE flag, COMMA-SEPARATED, one id per judge present (a REPEATED --${JUDGED_BY_VALUE_NAME}= is NOT accumulated; the parser keeps the last value) — ` +
 			`nobody promotes a graph without having been shown what judged it and typing that back.`
 		);
@@ -1254,7 +1254,7 @@ const judgedByViolation = ({ commandLineParameters, audit, manifestRefId }) => {
 		const unnamedWithBlockList = unnamedIdentityList.map((oneIdentity) => `'${oneIdentity}' (block(s): ${blockSubjectListForIdentity(audit, oneIdentity).join(', ')})`).join('; ');
 		return refusalOf(
 			`graphBuilder -goldEvalCheck: REFUSED — ${unnamedIdentityList.length} judge(s) judged this manifest and --${JUDGED_BY_VALUE_NAME} ` +
-			`does not name them: ${unnamedWithBlockList}. Every mappingTool FOUND in manifest ${manifestRefId}, enumerated from its ` +
+			`does not name them: ${unnamedWithBlockList}. Every judgeIdentity FOUND in manifest ${manifestRefId}, enumerated from its ` +
 			`relationship blocks and never from a list of judges we expected: ${quotedIdentityList(presentIdentityList)}. Add ` +
 			`--${JUDGED_BY_VALUE_NAME}=<toolId> for each one you are promoting.`
 		);
@@ -1562,7 +1562,7 @@ const goldEvalCheckAction = (callback) => {
 			// passed, and the ordering is STRUCTURAL — the two refusals travel in SEPARATE channels off the
 			// audit, so this is not a question of which message happens to be first in a shared list.
 			//
-			// The missing-mappingTool refusal precedes the naming checks deliberately: a judged edge that
+			// The missing-judgeIdentity refusal precedes the naming checks deliberately: a judged edge that
 			// cannot say what judged it makes the question "did you name every judge" unanswerable, so
 			// refusing on the naming would report a second-order fault and hide the first-order one.
 			if (audit.judgeEnumerationRefusalMessageList.length) {

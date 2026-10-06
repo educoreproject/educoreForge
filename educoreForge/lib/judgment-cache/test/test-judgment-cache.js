@@ -136,6 +136,13 @@ judgmentCacheModule.open({ databaseFilePath }, (openErr, cache) => {
 			harness.match('RED: a missing judgment.chosenStableId refused (null is the abstain form)', err, /chosenStableId is required/);
 		});
 	})();
+	// W-B-3 (campaign P3): the judge's own numbers ride in the row; a summary of the wrong shape is refused by name
+	cache.putJudgment({ ...GOOD_KEY, judgment: { ...GOOD_JUDGMENT, judgeSummary: { judgePickConfidence: 0.9 } } }, (err) => {
+		harness.match('RED (W-B-3): a judgeSummary missing declared members is refused by name', err, /judgment\.judgeSummary carries \[judgePickConfidence\], not exactly JUDGE_SUMMARY_FIELD_LIST/);
+	});
+	cache.putJudgment({ ...GOOD_KEY, judgment: { ...GOOD_JUDGMENT, judgeSummary: { judgePickConfidence: 1.5, judgeTopProbability: 0.7, judgeRunnerUpMargin: 0.4, judgeProbabilityByChoice: { 1: 0.7, NONE: 0.3 }, judgeRelationConfidence: null, judgeRelationProbabilityByPredicate: null } } }, (err) => {
+		harness.match('RED (W-B-3): a judgePickConfidence outside [0, 1] is refused by name', err, /judgePickConfidence 1\.5 .* must be numbers in \[0, 1\]/);
+	});
 
 	// =====================================================================
 	harness.section('SECTION 4 — roundtrip, cross-key miss, first-write-wins idempotence');

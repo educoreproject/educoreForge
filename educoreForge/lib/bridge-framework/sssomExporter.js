@@ -33,9 +33,9 @@ const path = require('path');
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { plannedEdgeList } = require('./materialiser');
-const { JUSTIFICATION_BY_RESOLUTION } = require('./materialiser');
+const { METHOD_BY_RESOLUTION } = require('./materialiser');
 
-const { sssomJustificationRefusal } = vocabularyLib;
+const { sssomJustificationRefusal, SSSOM_COLUMN_BY_EDGE_PROPERTY, MAPPING_PROPERTIES, JUDGE_SUMMARY_EDGE_PROPERTY_LIST } = vocabularyLib;
 
 const BUILT_IN_PREFIX_LIST = Object.freeze(['skos', 'semapv', 'owl', 'rdfs', 'sssom']);
 // the NON-STANDARD slots / columns this exporter emits — every one DECLARED under extension_definitions (SSSOM non-standard
@@ -69,6 +69,17 @@ const COLUMN_LIST = Object.freeze([
 	'predicate_asserted_by',
 	'source_label',
 ]);
+// ⟪campaign P3, W-B-3 / W-B-4⟫ the judge's own numbers and its recorded text, as DECLARED extension columns, each present
+// only when some record of the block carries it (as judged_subject_id is present only under fan-out), so a block of a judge
+// that reports neither exports exactly what it did before. The column names are vocabulary.SSSOM_COLUMN_BY_EDGE_PROPERTY's.
+const JUDGE_SUMMARY_COLUMN_LIST = Object.freeze(JUDGE_SUMMARY_EDGE_PROPERTY_LIST.map((onePropertyName) => SSSOM_COLUMN_BY_EDGE_PROPERTY[onePropertyName]));
+const MAPPING_RATIONALE_COLUMN = SSSOM_COLUMN_BY_EDGE_PROPERTY[MAPPING_PROPERTIES.MAPPING_RATIONALE];
+const OPTIONAL_COLUMN_LIST = Object.freeze([JUDGED_SUBJECT_COLUMN, ...JUDGE_SUMMARY_COLUMN_LIST, MAPPING_RATIONALE_COLUMN]);
+// every column the vocabulary says an edge property is exported as must be one this exporter writes — checked at load
+const unwrittenSssomColumnList = Object.keys(SSSOM_COLUMN_BY_EDGE_PROPERTY).map((onePropertyName) => SSSOM_COLUMN_BY_EDGE_PROPERTY[onePropertyName]).filter((oneColumn) => COLUMN_LIST.indexOf(oneColumn) === -1 && OPTIONAL_COLUMN_LIST.indexOf(oneColumn) === -1);
+if (unwrittenSssomColumnList.length) {
+	throw new Error(`${moduleName} REFUSED AT LOAD: vocabulary.SSSOM_COLUMN_BY_EDGE_PROPERTY names column(s) this exporter never writes: ${unwrittenSssomColumnList.join(', ')}`);
+}
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
 // SSSOM_SET_SLOT_DISPOSITION_BY_PRODUCER_KIND — which set-level slots each producer carries, as data. Same
@@ -179,8 +190,11 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 	const judgedSubjectSet = new Set();
 	// one row per edge the materialiser writes: subject_id is the edge's from-node, which under fan-out is the instance
 	const isFannedOut = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.instanceStableIdList !== undefined);
-	const columnList = isFannedOut ? COLUMN_LIST.concat([JUDGED_SUBJECT_COLUMN]) : COLUMN_LIST;
-	const extensionSlotNameList = isFannedOut ? EXTENSION_SLOT_NAME_LIST.concat([JUDGED_SUBJECT_COLUMN]) : EXTENSION_SLOT_NAME_LIST;
+	const carriesJudgeSummary = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.judge !== undefined && oneRecord.judge.judgeSummary !== undefined);
+	const carriesRationale = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.judge !== undefined && oneRecord.judge.rationale !== undefined);
+	const conditionalColumnList = (isFannedOut ? [JUDGED_SUBJECT_COLUMN] : []).concat(carriesJudgeSummary ? JUDGE_SUMMARY_COLUMN_LIST : []).concat(carriesRationale ? [MAPPING_RATIONALE_COLUMN] : []);
+	const columnList = COLUMN_LIST.concat(conditionalColumnList);
+	const extensionSlotNameList = EXTENSION_SLOT_NAME_LIST.concat(conditionalColumnList);
 	const plannedList = plannedEdgeList(decisionBlock.decisionRecordList);
 	for (let edgeIndex = 0; edgeIndex < plannedList.length; edgeIndex++) {
 		const { record: oneRecord, fromStableId } = plannedList[edgeIndex];
@@ -192,7 +206,7 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 		// edge and the export "cannot drift into disagreeing about the same fact"; they drifted because only ONE
 		// of the two consulted the record. Documentary producers are unaffected: their records carry exactly the
 		// table's values, so the two expressions agree byte for byte there.
-		const justification = oneRecord.mappingJustification === undefined || oneRecord.mappingJustification === null ? JUSTIFICATION_BY_RESOLUTION[oneRecord.resolution] : oneRecord.mappingJustification;
+		const justification = oneRecord.mappingMethod === undefined || oneRecord.mappingMethod === null ? METHOD_BY_RESOLUTION[oneRecord.resolution] : oneRecord.mappingMethod;
 		const justificationRefusal = sssomJustificationRefusal(justification);
 		if (justificationRefusal) {
 			refuseWith(justificationRefusal, 'Profile §4.2');
@@ -230,6 +244,8 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 			predicate_asserted_by: oneRecord.predicateAssertedBy,
 			source_label: oneRecord.sourceLabel === null || oneRecord.sourceLabel === undefined ? '' : oneRecord.sourceLabel,
 			[JUDGED_SUBJECT_COLUMN]: oneRecord.subjectStableId,
+			...JUDGE_SUMMARY_EDGE_PROPERTY_LIST.reduce((soFar, onePropertyName) => ({ ...soFar, [SSSOM_COLUMN_BY_EDGE_PROPERTY[onePropertyName]]: oneRecord.judge !== undefined && oneRecord.judge.judgeSummary !== undefined ? oneRecord.judge.judgeSummary[onePropertyName] : '' }), {}),
+			[MAPPING_RATIONALE_COLUMN]: oneRecord.judge !== undefined && oneRecord.judge.rationale !== undefined ? oneRecord.judge.rationale : '',
 		});
 	}
 	// ⟪B2 DEFECT #3 found by sssom-py on the first REAL export — RULING SABLE_RIVER 2026-08-16 (B3, "sssomExporter validator

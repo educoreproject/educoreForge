@@ -49,6 +49,7 @@ const sqlString = require('sqlstring-sqlite');
 
 const TREE_LIB = path.join(__dirname, '..');
 const sqliteInstance = require(path.join(TREE_LIB, 'sqlite-instance', 'sqlite-instance'))({});
+const { judgeSummaryRefusal } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 
 // The option shape sqlite-instance needs for hand-written SQL: runStatement REFUSES a statement with
 // no <!tableName!> substitution tag unless noTableNameOk says the caller means it. (Same as
@@ -256,6 +257,15 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 		if (judgment.predicate !== undefined && (typeof judgment.predicate !== 'string' || judgment.predicate.trim() === '')) {
 			callback('judgmentCache.putJudgment: judgment.predicate, when present, must be a non-empty string');
 			return;
+		}
+		// W-B-3 (campaign P3): the judge's own numbers ride in the row, so a hit freezes what the fresh judgment froze. Optional
+		// (a row written before carries none); when present it is null or the declared shape (vocabulary.judgeSummaryRefusal).
+		if (judgment.judgeSummary !== undefined) {
+			const summaryRefusal = judgeSummaryRefusal(judgment.judgeSummary);
+			if (summaryRefusal) {
+				callback(`judgmentCache.putJudgment: judgment.${summaryRefusal}`);
+				return;
+			}
 		}
 		if (judgment.chosenStableId === undefined) {
 			callback(

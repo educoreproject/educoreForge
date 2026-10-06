@@ -14,6 +14,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                      of matchBasis + the bridge plugin's name, which an edge does not carry, so the caller names it
 //   mappingConfidence  judged edges only: confidence, or the provider's FIXED value (the debug judge: 0)
 //   provenanceTier     REMOVED: retired from mapping edges (TQ, 2026-10-04)
+// and then CAMPAIGN P3's change (2026-10-06; W-B-1 / W-B-2), again read from the vocabulary, never restated:
+//   every name in MAPPING_PROPERTY_REPLACEMENT_BY_RETIRED_NAME is RENAMED to its replacement (mappingJustification →
+//   mappingMethod, mappingTool → judgeIdentity, mappingToolVersion → rendererVersion) — except `confidence`, which is
+//   DROPPED: its replacement, mappingConfidence, is already on the edge (lane P wrote it), and it is that duplication
+//   W-B-2 removed. A captured edge carrying a replacement name ALREADY is refused by name (it is not a pre-P3 capture).
+//   The judge's numbers and text (W-B-3 / W-B-4) need no delta: a captured debug-judge edge carried neither, and so does
+//   today's.
 //
 //   capturedEdgeListWithProvenanceDelta({ capturedEdgeList, specifiedBridgeName }) → edge list | throws by name
 //   canonicalEdgeListText(edgeList, maskedPropertyNameList) → text with each edge's properties in sorted-name order, so the
@@ -23,7 +30,23 @@ const path = require('path');
 const vocabularyLib = require(path.join(__dirname, '..', '..', '..', 'vocabulary', 'vocabulary'));
 const { providerNameForJudgeModel, FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME } = require(path.join(__dirname, '..', '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
-const { MAPPING_PROPERTIES, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, composeMappingSource } = vocabularyLib;
+const { MAPPING_PROPERTIES, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, composeMappingSource, MAPPING_PROPERTY_REPLACEMENT_BY_RETIRED_NAME } = vocabularyLib;
+
+// campaignP3RenameDelta(properties) → properties with the retired names renamed (or, for the duplicate, dropped)
+const campaignP3RenameDelta = (properties) =>
+	Object.keys(properties).reduce((soFar, onePropertyName) => {
+		const replacementName = MAPPING_PROPERTY_REPLACEMENT_BY_RETIRED_NAME[onePropertyName];
+		if (replacementName === undefined) {
+			return { ...soFar, [onePropertyName]: properties[onePropertyName] };
+		}
+		if (onePropertyName === 'confidence') {
+			return soFar;
+		}
+		if (Object.prototype.hasOwnProperty.call(properties, replacementName)) {
+			throw new Error(`${moduleName} REFUSED: the captured edge carries both '${onePropertyName}' and its replacement '${replacementName}' — not a pre-P3 capture`);
+		}
+		return { ...soFar, [replacementName]: properties[onePropertyName] };
+	}, {});
 
 const MAPPING_SOURCE_DELTA_BY_RESOLUTION = Object.freeze({
 	judged: ({ capturedProperties }) => {
@@ -63,7 +86,7 @@ const capturedEdgeListWithProvenanceDelta = ({ capturedEdgeList, specifiedBridge
 			const fixedConfidence = FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME[owner.providerName];
 			properties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE] = fixedConfidence === undefined ? capturedProperties.confidence : fixedConfidence;
 		}
-		return { ...capturedEdge, properties };
+		return { ...capturedEdge, properties: campaignP3RenameDelta(properties) };
 	});
 
 const canonicalEdgeListText = (edgeList, maskedPropertyNameList) =>
@@ -76,4 +99,4 @@ const canonicalEdgeListText = (edgeList, maskedPropertyNameList) =>
 		})),
 	);
 
-module.exports = { capturedEdgeListWithProvenanceDelta, canonicalEdgeListText, moduleName };
+module.exports = { capturedEdgeListWithProvenanceDelta, campaignP3RenameDelta, canonicalEdgeListText, moduleName };

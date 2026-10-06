@@ -43,6 +43,24 @@ const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { ABSTAIN_TOKEN } = require('./evidenceRenderer');
 const { confidenceForCategory, ABSTAIN_CATEGORY, PICK_CATEGORY_LIST } = require('./confidenceBandTable');
 const { PREDICATE_FIELD_BY_PREDICATE_RULE } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'selectCandidateSchema'));
+const { judgeSummaryRefusal } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+
+// judgeSummaryOf — ⟪campaign P3, W-B-3 (V1-C08)⟫ the provider's own numbers, carried VERBATIM from its return to the cache
+// row, the forensic record and the frozen record. An ABSENT member is null (a provider that reports none); a present one
+// must pass vocabulary.judgeSummaryRefusal AND its probability map must name exactly the options this question offered —
+// a partial map is refused by name (it would let a reader take a missing option for a zero).
+// → { judgeSummary } | { error }
+const judgeSummaryOf = ({ clientReturn, question }) => {
+	const judgeSummary = clientReturn.judgeSummary === undefined ? null : clientReturn.judgeSummary;
+	const shapeRefusal = judgeSummaryRefusal(judgeSummary);
+	if (shapeRefusal) {
+		return { error: refuse.byName({ moduleName, what: `the judge client returned ${shapeRefusal}`, where: 'vocabulary.JUDGE_SUMMARY_FIELD_LIST (W-B-3)' }) };
+	}
+	if (judgeSummary !== null && JSON.stringify(Object.keys(judgeSummary.judgeProbabilityByChoice).sort()) !== JSON.stringify(question.choiceEnum.slice().sort())) {
+		return { error: refuse.byName({ moduleName, what: `the judge's probability map names [${Object.keys(judgeSummary.judgeProbabilityByChoice).sort().join(', ')}] but the question offered [${question.choiceEnum.slice().sort().join(', ')}]`, where: 'judgeProbabilityByChoice covers every offered option exactly; a partial map is refused (W-B-3)' }) };
+	}
+	return { judgeSummary };
+};
 
 // JUDGE_CONFIG_CACHE_MODEL_SEPARATOR — joins the judge's model to the digest of its configuration in the cache key
 // (phase B3b, 2026-09-28). The shipped providers' namespaced models use ':' and '@' and never '#', so a folded key does not collide
@@ -226,7 +244,11 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 		if (abstentionPredicateVerdict.error) {
 			return { error: abstentionPredicateVerdict.error };
 		}
-		return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, ideaCoverage: clientReturn.ideaCoverage, chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: categoryIsAbsent ? ABSENT_CATEGORY_MARK : clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, ...abstentionPredicateVerdict.predicateByFieldName, discardedPredicateKeyCount: abstentionPredicateVerdict.discardedPredicateKeyCount };
+		const abstentionSummary = judgeSummaryOf({ clientReturn, question });
+		if (abstentionSummary.error) {
+			return { error: abstentionSummary.error };
+		}
+		return { judgeSummary: abstentionSummary.judgeSummary, sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, ideaCoverage: clientReturn.ideaCoverage, chosenCardStableId: null, choice: clientReturn.choice, category: ABSTAIN_CATEGORY, reportedCategoryOnAbstain: categoryIsAbsent ? ABSENT_CATEGORY_MARK : clientReturn.category === ABSTAIN_CATEGORY ? null : clientReturn.category, rationale: clientReturn.rationale, confidence: null, ...abstentionPredicateVerdict.predicateByFieldName, discardedPredicateKeyCount: abstentionPredicateVerdict.discardedPredicateKeyCount };
 	}
 	// A PICK is unchanged: it asserts something about a candidate, so it carries both a category and a
 	// rationale or it is refused. Only the abstention arm was ever the defect.
@@ -251,7 +273,11 @@ const judgmentFromReturn = ({ clientReturn, question, isDebugClient }) => {
 	if (pickPredicateVerdict.error) {
 		return { error: pickPredicateVerdict.error };
 	}
-	return { sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, ideaCoverage: clientReturn.ideaCoverage, chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, ...pickPredicateVerdict.predicateByFieldName, discardedPredicateKeyCount: pickPredicateVerdict.discardedPredicateKeyCount };
+	const pickSummary = judgeSummaryOf({ clientReturn, question });
+	if (pickSummary.error) {
+		return { error: pickSummary.error };
+	}
+	return { judgeSummary: pickSummary.judgeSummary, sourceElementIdeaList: clientReturn.sourceElementIdeaList, candidateIdeaList: clientReturn.candidateIdeaList, sortedCandidateList: clientReturn.sortedCandidateList, ideaCoverage: clientReturn.ideaCoverage, chosenCardStableId: mapped.chosenCardStableId, choice: clientReturn.choice, category: clientReturn.category, rationale: clientReturn.rationale, confidence: band.confidence, ...pickPredicateVerdict.predicateByFieldName, discardedPredicateKeyCount: pickPredicateVerdict.discardedPredicateKeyCount };
 };
 
 // ⟪RULING 13:15⟫ REASK_INSTRUCTION_BY_FAULT — the bounded re-ask is now TWO faults, so the instruction is a
@@ -350,6 +376,8 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					// and extracted by llmClient/Ollama, was dropped here. Null where none was reported (Jev, debug, a cache hit).
 					ideaCoverage: judgment.ideaCoverage === undefined ? null : judgment.ideaCoverage,
 					rationale: judgment.rationale,
+					// W-B-3: the judge's own numbers, verbatim (null for a provider that reports none)
+					judgeSummary: judgment.judgeSummary,
 					confidence: judgment.confidence,
 					cacheHit,
 					attempts,
@@ -441,7 +469,8 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 				return;
 			}
 			// decided = persisted: putJudgment BEFORE delivery, exactly the payload the cache requires
-			const putPayload = { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) };
+			// W-B-3: judgeSummary rides in the cache row so a HIT freezes the same record text as the fresh judgment did
+			const putPayload = { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, judgeSummary: judged.judgeSummary, ...predicateByFieldNameOf(judged) };
 			judgmentCache.putJudgment(
 				{ ...cacheKey, generation, judgment: putPayload },
 				(putError, putReport) => {
@@ -493,7 +522,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 			callback(refuse.byName({ moduleName, what: `cache hit for promptHash ${question.promptHash} remembers chosenStableId ${JSON.stringify(remembered.chosenStableId)} at ordinal ${remembered.choice}, which is not the CURRENT rendered candidate`, where: 'a stale hit is refused, never served (SPEC §5.6 step 2)' }).message);
 			return;
 		}
-		const judged = judgmentFromReturn({ clientReturn: { choice: remembered.choice, category: remembered.category, rationale: remembered.rationale, ...predicateByFieldNameOf(remembered), model: judgeClient.model, attempts: 0 }, question, isDebugClient: false });
+		const judged = judgmentFromReturn({ clientReturn: { choice: remembered.choice, category: remembered.category, rationale: remembered.rationale, judgeSummary: remembered.judgeSummary === undefined ? null : remembered.judgeSummary, ...predicateByFieldNameOf(remembered), model: judgeClient.model, attempts: 0 }, question, isDebugClient: false });
 		if (judged.error) {
 			callback(judged.error.message);
 			return;

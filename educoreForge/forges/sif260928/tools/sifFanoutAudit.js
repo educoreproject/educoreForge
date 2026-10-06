@@ -90,7 +90,7 @@ taskList.push((args, next) => {
 	const driver = neo4j.driver(boltUrl, neo4j.auth.basic('neo4j', password), { encrypted: false });
 	const session = driver.session({ defaultAccessMode: neo4j.session.READ });
 	const hasInstanceCypher = `MATCH (q:ForgedNode)-[:HAS_INSTANCE]->(f:ForgedNode) WHERE q.stableId STARTS WITH $questionPrefix RETURN q.stableId AS questionStableId, f.stableId AS fieldStableId`;
-	const edgeCypher = `MATCH (f:ForgedNode)-[r]->(c:HubReference) WHERE type(r) IN $edgeTypeList AND r.judgedSubjectStableId IS NOT NULL RETURN f.stableId AS fieldStableId, c.stableId AS objectStableId, type(r) AS edgeType, r.predicate AS predicate, r.confidence AS confidence, r.judgedSubjectStableId AS judgedSubjectStableId, r.decisionBlockHash AS decisionBlockHash`;
+	const edgeCypher = `MATCH (f:ForgedNode)-[r]->(c:HubReference) WHERE type(r) IN $edgeTypeList AND r.judgedSubjectStableId IS NOT NULL RETURN f.stableId AS fieldStableId, c.stableId AS objectStableId, type(r) AS edgeType, r.predicate AS predicate, r.mappingConfidence AS confidence, r.judgedSubjectStableId AS judgedSubjectStableId, r.decisionBlockHash AS decisionBlockHash`;
 	const startMilliseconds = Date.now();
 	session
 		.run(hasInstanceCypher, { questionPrefix: QUESTION_PREFIX })

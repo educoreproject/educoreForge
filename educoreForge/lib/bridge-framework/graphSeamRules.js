@@ -35,7 +35,7 @@ const { TUPLE_LIST_FIELD_LIST, PRODUCER_KIND_BY_MATCH_BASIS } = require('./bridg
 
 const { JUDGE_PROVIDER_ROW_LIST, FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
-const { SKOS_EDGE_TYPES, SKOS_PREDICATES, MAPPING_PROPERTIES, MAPPING_PROPERTY_NAME_LIST, SSSOM_JUSTIFICATIONS, sssomJustificationRefusal, MAPPING_KIND_LIST, MAPPING_KIND_BY_RESOLUTION, MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_SEPARATOR, mappingSourceRefusal, mappingSourceFamilyOf, composeMappingSource } = vocabularyLib;
+const { SKOS_EDGE_TYPES, SKOS_PREDICATES, MAPPING_PROPERTIES, MAPPING_PROPERTY_NAME_LIST, MAPPING_PROPERTY_REPLACEMENT_BY_RETIRED_NAME, JUDGE_IDENTITY_PATTERN, JUDGE_SUMMARY_EDGE_PROPERTY_LIST, SSSOM_JUSTIFICATIONS, sssomJustificationRefusal, MAPPING_KIND_LIST, MAPPING_KIND_BY_RESOLUTION, MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_SEPARATOR, mappingSourceRefusal, mappingSourceFamilyOf, composeMappingSource } = vocabularyLib;
 // the names a 'bridge-<name>' mappingSource may carry: every registered judge provider, enabled or not (a frozen block can
 // hold a verdict from a provider since disabled); read from the registry, never restated
 const JUDGE_PROVIDER_NAME_LIST = Object.freeze(JUDGE_PROVIDER_ROW_LIST.map((oneRow) => oneRow.name));
@@ -44,8 +44,20 @@ const JUDGE_PROVIDER_NAME_LIST = Object.freeze(JUDGE_PROVIDER_ROW_LIST.map((oneR
 // RETIRED_MAPPING_PROPERTY_REASON_BY_NAME — a property a mapping edge once carried and must not carry now, with the reason
 // the refusal gives. provenanceTier: retired by lane P (2026-10-04; TQ, reversing ruling A1); structural and other
 // non-mapping edges keep it.
+// ⟪campaign P3, W-B-1 / W-B-2⟫ the four names the 2026-10-06 renames retired are DERIVED from
+// vocabulary.MAPPING_PROPERTY_REPLACEMENT_BY_RETIRED_NAME, each refused naming its replacement.
+const RETIRED_REASON_SENTENCE_BY_NAME = Object.freeze({
+	mappingJustification: 'the value is a SEMAPV METHOD term, never a reason',
+	mappingTool: "the edge carries the JUDGE'S IDENTITY; the plugin's declared mappingTool {name, version} reaches only the SSSOM set header",
+	mappingToolVersion: "the value is the evidence RENDERER's version",
+	confidence: 'it duplicated mappingConfidence on 12,681 of 12,681 edges; mappingConfidence is the one judged-edge confidence (a band of the judge\'s category, SchemaView confidenceBand)',
+});
 const RETIRED_MAPPING_PROPERTY_REASON_BY_NAME = Object.freeze({
 	provenanceTier: 'provenanceTier is RETIRED from mapping edges (2026-10-04): mappingKind carries the kind (inferred / authored), mappingSource who made it (bridge-debug for the debug judge), mappingConfidence how sure. A second field saying the same thing in other words is how the DME came to call judgments authored.',
+	...Object.keys(MAPPING_PROPERTY_REPLACEMENT_BY_RETIRED_NAME).reduce(
+		(soFar, oneRetiredName) => ({ ...soFar, [oneRetiredName]: `${oneRetiredName} is RETIRED from mapping edges (2026-10-06, campaign P3): ${RETIRED_REASON_SENTENCE_BY_NAME[oneRetiredName]}; the property is ${MAPPING_PROPERTY_REPLACEMENT_BY_RETIRED_NAME[oneRetiredName]}` }),
+		{},
+	),
 });
 const REGISTERED_SOURCE_NAME_LIST_BY_FAMILY = Object.freeze({ [MAPPING_SOURCE_FAMILY.BRIDGE]: JUDGE_PROVIDER_NAME_LIST });
 // the fixed mappingConfidence a whole mappingSource is held to ('bridge-debug' → 0), composed from the registry's row
@@ -76,10 +88,18 @@ const CARD_BASE_SLOT_DISPOSITION = Object.freeze({ DOMAIN: 'required', PROPERTY:
 const WRITER_MEMBER_LIST = Object.freeze(['writeMappingEdge', 'close']);
 const EDGE_TYPE_BY_PREDICATE = SKOS_EDGE_TYPES;
 const PREDICATE_BY_EDGE_TYPE = Object.freeze(Object.keys(SKOS_EDGE_TYPES).reduce((soFar, onePredicate) => ({ ...soFar, [SKOS_EDGE_TYPES[onePredicate]]: onePredicate }), {}));
-const JUDGED_ONLY_PROPERTY_LIST = Object.freeze([MAPPING_PROPERTIES.CONFIDENCE, MAPPING_PROPERTIES.MAPPING_TOOL, MAPPING_PROPERTIES.MAPPING_TOOL_VERSION, MAPPING_PROPERTIES.MAPPING_CONFIDENCE]);
+const JUDGED_ONLY_PROPERTY_LIST = Object.freeze([MAPPING_PROPERTIES.JUDGE_IDENTITY, MAPPING_PROPERTIES.RENDERER_VERSION, MAPPING_PROPERTIES.MAPPING_CONFIDENCE]);
+// judged-only and OPTIONAL: the judge's own numbers (all or none, G7) and its recorded text (V1-C06); forbidden on a specified edge
+const JUDGED_OPTIONAL_PROPERTY_LIST = Object.freeze(JUDGE_SUMMARY_EDGE_PROPERTY_LIST.concat([MAPPING_PROPERTIES.MAPPING_RATIONALE]));
+// the range each judge-summary number must lie in (vocabulary JUDGE_SUMMARY_FIELD_LIST comments)
+const JUDGE_SUMMARY_EDGE_RANGE_BY_NAME = Object.freeze({
+	[MAPPING_PROPERTIES.JUDGE_PICK_CONFIDENCE]: Object.freeze([0, 1]),
+	[MAPPING_PROPERTIES.JUDGE_TOP_PROBABILITY]: Object.freeze([0, 1]),
+	[MAPPING_PROPERTIES.JUDGE_RUNNER_UP_MARGIN]: Object.freeze([-1, 1]),
+});
 const EVERY_EDGE_REQUIRED_PROPERTY_LIST = Object.freeze([
 	MAPPING_PROPERTIES.PREDICATE,
-	MAPPING_PROPERTIES.MAPPING_JUSTIFICATION,
+	MAPPING_PROPERTIES.MAPPING_METHOD,
 	MAPPING_PROPERTIES.MATCH_BASIS,
 	MAPPING_PROPERTIES.RESOLUTION,
 	MAPPING_PROPERTIES.OBJECT_MATCH_FIELD,
@@ -479,25 +499,40 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 	if (EDGE_TYPE_BY_PREDICATE[edgeProperties.predicate] !== edgeType) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: predicate '${edgeProperties.predicate}' disagrees with edgeType '${edgeType}' (which is ${PREDICATE_BY_EDGE_TYPE[edgeType]})`, where: 'the predicate property EQUALS the edge type\'s relation (BG-THREE c)' });
 	}
-	const justificationRefusal = sssomJustificationRefusal(edgeProperties.mappingJustification);
+	const justificationRefusal = sssomJustificationRefusal(edgeProperties[MAPPING_PROPERTIES.MAPPING_METHOD]);
 	if (justificationRefusal) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: ${justificationRefusal}`, where: `the three: ${SSSOM_JUSTIFICATIONS.join(', ')}` });
 	}
 	if (edgeProperties.resolution === 'judged') {
 		const missingJudged = JUDGED_ONLY_PROPERTY_LIST.find((oneName) => edgeProperties[oneName] === undefined || edgeProperties[oneName] === null);
 		if (missingJudged !== undefined) {
-			return refuse.byName({ moduleName, what: `writeMappingEdge: a judged edge lacks '${missingJudged}'`, where: 'judged ⇒ confidence + mappingTool(+Version) + decisionBlockHash (§6)' });
+			return refuse.byName({ moduleName, what: `writeMappingEdge: a judged edge lacks '${missingJudged}'`, where: 'judged ⇒ mappingConfidence + judgeIdentity + rendererVersion + decisionBlockHash (§6)' });
 		}
-		if (typeof edgeProperties.confidence !== 'number' || !Number.isFinite(edgeProperties.confidence)) {
-			return refuse.byName({ moduleName, what: `writeMappingEdge: confidence ${JSON.stringify(edgeProperties.confidence)} is not a finite number`, where: 'the band table\'s discrete value' });
+		const mappingConfidence = edgeProperties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE];
+		if (typeof mappingConfidence !== 'number' || !Number.isFinite(mappingConfidence) || mappingConfidence < 0 || mappingConfidence > 1) {
+			return refuse.byName({ moduleName, what: `writeMappingEdge: mappingConfidence ${JSON.stringify(mappingConfidence)} is not a number from 0 to 1`, where: 'the judge\'s confidence, on every judged edge (lane P, 2026-10-04)' });
 		}
-		if (typeof edgeProperties.mappingConfidence !== 'number' || !Number.isFinite(edgeProperties.mappingConfidence) || edgeProperties.mappingConfidence < 0 || edgeProperties.mappingConfidence > 1) {
-			return refuse.byName({ moduleName, what: `writeMappingEdge: mappingConfidence ${JSON.stringify(edgeProperties.mappingConfidence)} is not a number from 0 to 1`, where: 'the judge\'s confidence, on every judged edge (lane P, 2026-10-04)' });
+		// W-B-1: the identity itself is held to the general grammar (the registry check below names the provider)
+		if (!JUDGE_IDENTITY_PATTERN.test(String(edgeProperties[MAPPING_PROPERTIES.JUDGE_IDENTITY]))) {
+			return refuse.byName({ moduleName, what: `writeMappingEdge: judgeIdentity ${JSON.stringify(edgeProperties[MAPPING_PROPERTIES.JUDGE_IDENTITY])} does not match JUDGE_IDENTITY_PATTERN`, where: '<providerName>:<providerTail> (vocabulary.JUDGE_IDENTITY_PATTERN, W-B-1)' });
+		}
+		// W-B-3 (G7): the judge's own numbers travel together, each finite and in its range
+		const summaryPresentList = JUDGE_SUMMARY_EDGE_PROPERTY_LIST.filter((oneName) => Object.prototype.hasOwnProperty.call(edgeProperties, oneName));
+		if (summaryPresentList.length !== 0 && summaryPresentList.length !== JUDGE_SUMMARY_EDGE_PROPERTY_LIST.length) {
+			return refuse.byName({ moduleName, what: `writeMappingEdge: a judged edge carries ${summaryPresentList.join(', ')} but not ${JUDGE_SUMMARY_EDGE_PROPERTY_LIST.filter((oneName) => summaryPresentList.indexOf(oneName) === -1).join(', ')}`, where: "the judge's numbers are carried together or not at all (JUDGE_SUMMARY_EDGE_PROPERTY_LIST, G7)" });
+		}
+		const outOfRangeName = summaryPresentList.find((oneName) => typeof edgeProperties[oneName] !== 'number' || !Number.isFinite(edgeProperties[oneName]) || edgeProperties[oneName] < JUDGE_SUMMARY_EDGE_RANGE_BY_NAME[oneName][0] || edgeProperties[oneName] > JUDGE_SUMMARY_EDGE_RANGE_BY_NAME[oneName][1]);
+		if (outOfRangeName !== undefined) {
+			return refuse.byName({ moduleName, what: `writeMappingEdge: ${outOfRangeName} ${JSON.stringify(edgeProperties[outOfRangeName])} is not a finite number in [${JUDGE_SUMMARY_EDGE_RANGE_BY_NAME[outOfRangeName].join(', ')}]`, where: 'JUDGE_SUMMARY_EDGE_RANGE_BY_NAME (W-B-3)' });
+		}
+		// W-B-4: the judge's text, when present, is a non-empty string
+		if (Object.prototype.hasOwnProperty.call(edgeProperties, MAPPING_PROPERTIES.MAPPING_RATIONALE) && !isNonEmptyString(edgeProperties[MAPPING_PROPERTIES.MAPPING_RATIONALE])) {
+			return refuse.byName({ moduleName, what: `writeMappingEdge: mappingRationale ${JSON.stringify(edgeProperties[MAPPING_PROPERTIES.MAPPING_RATIONALE])} is not a non-empty string`, where: "present iff the frozen record carries the judge's text (W-B-4)" });
 		}
 	} else if (edgeProperties.resolution === 'specified') {
-		const present = JUDGED_ONLY_PROPERTY_LIST.find((oneName) => Object.prototype.hasOwnProperty.call(edgeProperties, oneName));
+		const present = JUDGED_ONLY_PROPERTY_LIST.concat(JUDGED_OPTIONAL_PROPERTY_LIST).find((oneName) => Object.prototype.hasOwnProperty.call(edgeProperties, oneName));
 		if (present !== undefined) {
-			return refuse.byName({ moduleName, what: `writeMappingEdge: a specified edge carries '${present}' (${JSON.stringify(edgeProperties[present])})`, where: 'specified ⇒ NO confidence / tool — the key must be ABSENT, not null, not 1.0 (C1, BG-P5 b)' });
+			return refuse.byName({ moduleName, what: `writeMappingEdge: a specified edge carries '${present}' (${JSON.stringify(edgeProperties[present])})`, where: "specified ⇒ NO confidence, judge identity, judge numbers or judge text — the key must be ABSENT, not null, not 1.0 (C1, BG-P5 b)" });
 		}
 	} else {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: resolution '${edgeProperties.resolution}' is not specified | judged`, where: 'RESOLUTION_LIST' });
@@ -525,8 +560,8 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 	}
 	// a judge held to a FIXED confidence (the debug judge: 0) may not appear surer than that
 	const fixedConfidence = FIXED_MAPPING_CONFIDENCE_BY_MAPPING_SOURCE[edgeProperties.mappingSource];
-	if (fixedConfidence !== undefined && edgeProperties.mappingConfidence !== fixedConfidence) {
-		return refuse.byName({ moduleName, what: `writeMappingEdge: a '${edgeProperties.mappingSource}' edge carries mappingConfidence ${JSON.stringify(edgeProperties.mappingConfidence)}, not its fixed ${fixedConfidence}`, where: 'judgeProviderRegistry.FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME: the debug judge took candidate 1 unconditionally, so nothing informed its edges (TQ, 2026-10-04)' });
+	if (fixedConfidence !== undefined && edgeProperties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE] !== fixedConfidence) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: a '${edgeProperties.mappingSource}' edge carries mappingConfidence ${JSON.stringify(edgeProperties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE])}, not its fixed ${fixedConfidence}`, where: 'judgeProviderRegistry.FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME: the debug judge took candidate 1 unconditionally, so nothing informed its edges (TQ, 2026-10-04)' });
 	}
 	if (!Array.isArray(edgeProperties.attestationChannelList) || edgeProperties.attestationChannelList.length === 0) {
 		return refuse.byName({ moduleName, what: 'writeMappingEdge: attestationChannelList must be a non-empty list', where: 'attestation channels are DATA on the edge (BR-045)' });

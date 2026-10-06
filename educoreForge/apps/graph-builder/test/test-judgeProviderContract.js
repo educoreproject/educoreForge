@@ -671,7 +671,7 @@ overlapWitness({ concurrency: resolvedConcurrency(1) }, ({ spanList, overlapCoun
 		);
 
 		// =====================================================================
-		harness.section('G5-c (regression) — THE WRITE-SIDE RULE judged ⇒ mappingTool STILL FIRES');
+		harness.section('G5-c (regression) — THE WRITE-SIDE RULE judged ⇒ judgeIdentity (was mappingTool, renamed campaign P3 W-B-1) STILL FIRES');
 		// =====================================================================
 		// graphSeamRules.js:341. JOB 1 changed what mappingTool CONTAINS, so the rule that requires it to be
 		// there at all is re-proven rather than assumed still to work.
@@ -684,34 +684,34 @@ overlapWitness({ concurrency: resolvedConcurrency(1) }, ({ spanList, overlapCoun
 			subjectEndpoint: { id: 'a' },
 			objectEndpoint: { id: 'b' },
 			edgeProperties: {
-				predicate: 'closeMatch', mappingJustification: 'semapv:SemanticSimilarityThresholdMatching',
+				predicate: 'closeMatch', mappingMethod: 'semapv:SemanticSimilarityThresholdMatching',
 				matchBasis: 'derived', resolution: 'judged', objectMatchField: 'name',
 				subjectSource: 'toy', subjectVersion: '1', objectSource: 'toyhub', objectVersion: '1',
 				predicateAssertedBy: 'judge', attestationChannelList: ['x'], decisionBlockHash: 'abc',
 				// lane P (2026-10-04): a mapping edge carries no provenanceTier; the debug judge's edge is marked by
 				// mappingSource 'bridge-debug' and mappingConfidence 0
-				mappingKind: 'inferred', mappingSource: 'bridge-debug', mappingConfidence: 0, confidence: 0.8,
-				mappingTool: debugProvider.model, mappingToolVersion: '1',
+				mappingKind: 'inferred', mappingSource: 'bridge-debug', mappingConfidence: 0,
+				judgeIdentity: debugProvider.model, rendererVersion: '1',
 			},
 		});
 		const strippedEdge = judgedEdgeUnderTest();
-		delete strippedEdge.edgeProperties.mappingTool;
+		delete strippedEdge.edgeProperties.judgeIdentity;
 		harness.match(
-			'a JUDGED edge with mappingTool stripped is REFUSED BY NAME at the write seam',
+			'a JUDGED edge with judgeIdentity stripped is REFUSED BY NAME at the write seam',
 			(graphSeamRulesLib.mappingEdgeRefusal(strippedEdge) || {}).message,
-			/writeMappingEdge: a judged edge lacks 'mappingTool'/,
+			/writeMappingEdge: a judged edge lacks 'judgeIdentity'/,
 		);
 		// NEGATIVE CONTROL — the same edge WITH mappingTool gets past this rule and fails a LATER one (the
 		// hub-endpoint check, which this hermetic fixture cannot satisfy). That is what proves the refusal
 		// above is the mappingTool rule firing and not a generic rejection of the fixture.
 		harness.ok(
-			'…and the SAME edge WITH mappingTool gets past that rule (it fails a later, different check)',
+			'…and the SAME edge WITH judgeIdentity gets past that rule (it fails a later, different check)',
 			!/a judged edge lacks/.test(String((graphSeamRulesLib.mappingEdgeRefusal(judgedEdgeUnderTest()) || {}).message)),
 			String((graphSeamRulesLib.mappingEdgeRefusal(judgedEdgeUnderTest()) || {}).message),
 		);
 		harness.match(
-			'…the namespaced identity is what a judged edge now carries as mappingTool',
-			judgedEdgeUnderTest().edgeProperties.mappingTool,
+			'…the namespaced identity is what a judged edge now carries as judgeIdentity',
+			judgedEdgeUnderTest().edgeProperties.judgeIdentity,
 			/^debug:/,
 		);
 

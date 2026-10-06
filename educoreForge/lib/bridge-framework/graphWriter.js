@@ -9,9 +9,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   graphWriterFactory({ inGraph, applyLabel, sourceStandardName }) → writer
 //     writeMappingEdge({ subjectStableId, objectStableId, edgeType, edgeProperties }, cb(err, { edgeWritten: true }))
 //       — the §6 refusals (mappingEdgeRefusal): edgeType ∉ SKOS_EDGE_TYPES; predicate ≠ type; a property outside
-//         the CLOSED MAPPING_PROPERTIES set (NEW enforcement); judged without confidence / hash; specified with
-//         confidence; justification outside the three; a provenanceTier at all (retired from mapping edges, lane P
-//         2026-10-04); mappingKind / mappingSource / mappingConfidence outside their vocabularies or disagreeing with
+//         the CLOSED MAPPING_PROPERTIES set (NEW enforcement); a RETIRED name (provenanceTier, and since campaign P3
+//         mappingJustification / mappingTool / mappingToolVersion / confidence, each refused naming its replacement);
+//         judged without mappingConfidence / judgeIdentity / rendererVersion / hash, or with the judge's numbers
+//         incomplete; specified with any judged-only property; mappingMethod outside SSSOM_JUSTIFICATIONS;
+//         mappingKind / mappingSource / mappingConfidence outside their vocabularies or disagreeing with
 //         the resolution; a missing
 //         endpoint; an object that is not a HubReference; a subject whose _source ≠ the pairing's source
 //       — stamps the PAIR-SCOPED applyLabel on BOTH endpoints (harvest matches (a:L)-[r]->(b:L)) and MERGEs the

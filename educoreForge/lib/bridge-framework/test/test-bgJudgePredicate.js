@@ -311,7 +311,7 @@ const cacheConjunctList = [
 	}),
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGEPRED', conjunctId: 'b_categoryTableRowMissUnderJudgeSlot', twinName: 'judgeSlotGivenDerivedRendererVersion', fileName: RENDERER_FILE, find: JUDGE_SLOT_VERSION_FIND, replace: JUDGE_SLOT_GIVEN_DERIVED_VERSION });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGEPRED', conjunctId: 'b_judgeSlotRowServedWithItsPredicate', twinName: 'cachePayloadDropsPredicate', fileName: JUDGE_FILE, find: 'chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) };', replace: 'chosenStableId: judged.chosenCardStableId };' }); // re-anchored 2026-10-06 (campaign P0): W-B-7 names the payload putPayload
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGEPRED', conjunctId: 'b_judgeSlotRowServedWithItsPredicate', twinName: 'cachePayloadDropsPredicate', fileName: JUDGE_FILE, find: 'chosenStableId: judged.chosenCardStableId, judgeSummary: judged.judgeSummary, ...predicateByFieldNameOf(judged) };', replace: 'chosenStableId: judged.chosenCardStableId, judgeSummary: judged.judgeSummary };' }); // re-anchored 2026-10-06 (campaign P0): W-B-7 names the payload putPayload; (campaign P3) W-B-3 adds judgeSummary
 
 // ---------------------------------------------------------------------
 // (c) categoryTable-v1: BF1's discard-and-count, unchanged

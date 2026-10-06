@@ -383,6 +383,8 @@ const moduleFunction =
 				// usage is null, NOT zero: no tokens were consumed because no request was made, and a
 				// literal 0 would read in the forensics as "a call that happened to cost nothing".
 				usage: null,
+				// ⟪campaign P3, W-B-3⟫ the debug judge reports no numbers: no judge summary (its block text is unchanged)
+				judgeSummary: null,
 				stopReason: null,
 				retryReasons: [],
 				decisionAlgorithm: DEBUG_MARK,

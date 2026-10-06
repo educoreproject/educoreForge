@@ -238,7 +238,7 @@ const debugConjunctList = [
 			if (both.length !== 2 || both.some((oneOutcome) => oneOutcome.runError)) {
 				return { pass: false, detail: both.map((oneOutcome) => String(oneOutcome.runError || 'ok').slice(0, 100)).join('; ') };
 			}
-			const bad = both.reduce((soFar, oneOutcome) => soFar.concat(edgesOf(oneOutcome).filter((oneEdge) => (oneEdge.properties.resolution === 'judged' ? oneEdge.properties.mappingSource !== DEBUG_MAPPING_SOURCE || oneEdge.properties.mappingConfidence !== 0 || oneEdge.properties.mappingTool !== DEBUG_MODEL_ID : oneEdge.properties.mappingKind !== 'authored'))), []);
+			const bad = both.reduce((soFar, oneOutcome) => soFar.concat(edgesOf(oneOutcome).filter((oneEdge) => (oneEdge.properties.resolution === 'judged' ? oneEdge.properties.mappingSource !== DEBUG_MAPPING_SOURCE || oneEdge.properties.mappingConfidence !== 0 || oneEdge.properties.judgeIdentity !== DEBUG_MODEL_ID : oneEdge.properties.mappingKind !== 'authored'))), []);
 			const specifiedSeen = both.some((oneOutcome) => edgesOf(oneOutcome).some((oneEdge) => oneEdge.properties.resolution === 'specified'));
 			return { pass: bad.length === 0 && specifiedSeen, detail: `${bad.length} bad edge(s); specified edges seen ${specifiedSeen}` };
 		},

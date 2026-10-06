@@ -420,7 +420,7 @@ OPTIONS
                   so no manifest member can exist for it. The refusal is the enforcement; the
                   artifact is the evidence that the check RAN.
                   THE JUDGE ENUMERATION AND --judgedBy (JOB 6). The verdict ENUMERATES the distinct
-                  (mappingTool, mappingToolVersion) pairs over edges whose resolution is 'judged',
+                  (judgeIdentity, rendererVersion) pairs over edges whose resolution is 'judged',
                   per relationship block and in aggregate, and prints them. Promotion then requires
                   --judgedBy=<toolId>[,<toolId>...] — a COMMA-SEPARATED list naming each judge
                   present. ⚠ DO NOT REPEAT THE FLAG: a repeated --judgedBy= does NOT accumulate, the
@@ -437,10 +437,10 @@ OPTIONS
                   enumerated from the blocks themselves and NEVER from the judge provider registry:
                   a population read from a registry of what you EXPECT to find cannot detect the
                   judge nobody declared, which is the one a promotion gate exists to surface.
-                  REFUSES BY NAME on: a JUDGED edge carrying no mappingTool (the read-side twin of
-                  the write-side rule judged => mappingTool, since a hand-assembled or pre-rule block
+                  REFUSES BY NAME on: a JUDGED edge carrying no judgeIdentity (the read-side twin of
+                  the write-side rule judged => judgeIdentity, since a hand-assembled or pre-rule block
                   cannot be assumed to have met the writer); a judge PRESENT but not named, listing
-                  every mappingTool FOUND and the block it judged; a judge NAMED but not present (a
+                  every judgeIdentity FOUND and the block it judged; a judge NAMED but not present (a
                   stale promotion command is a defect, not a harmless surplus); and a --judgedBy
                   value that is empty or not a string, which is refused rather than dropped because a
                   dropped value lets a command appear to name a judge it does not name.

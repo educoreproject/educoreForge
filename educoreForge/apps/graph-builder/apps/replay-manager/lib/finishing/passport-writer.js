@@ -196,8 +196,8 @@ const moduleFunction =
 		//   through MAPPING_PROPERTIES). collect(DISTINCT) drops nulls; sorted in JS.
 		const JUDGE_CENSUS_CYPHER = `
 			MATCH ()-[r]->() WHERE r.\`${MAPPING_PROPERTIES.MAPPING_KIND}\` IS NOT NULL
-			RETURN collect(DISTINCT r.\`${MAPPING_PROPERTIES.MAPPING_TOOL}\`) AS judgeIdentityList,
-			       collect(DISTINCT r.\`${MAPPING_PROPERTIES.MAPPING_TOOL_VERSION}\`) AS rendererVersionList`;
+			RETURN collect(DISTINCT r.\`${MAPPING_PROPERTIES.JUDGE_IDENTITY}\`) AS judgeIdentityList,
+			       collect(DISTINCT r.\`${MAPPING_PROPERTIES.RENDERER_VERSION}\`) AS rendererVersionList`;
 		//   RECIPE: copied from THIS manifest's ManifestRecipe (the builtFrom target), so the passport answers "which recipe" alone
 		const recipeIdentityCypherFor = (manifestRefId) => `
 			MATCH (r:\`${SELF_DOC.NODE_LABELS.MANIFEST_RECIPE}\` {stableId: ${cypherString(`${SELF_DOC.MANIFEST_RECIPE_STABLE_ID_PREFIX}${manifestRefId}`)}})

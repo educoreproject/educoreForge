@@ -307,7 +307,7 @@ const RUN_REPORT_RESULT_KEYS = Object.freeze([
 // never null (Phase 7 rule). W-B-10, 2026-10-06.
 const RUN_REPORT_OPTIONAL_RESULT_KEYS = Object.freeze(['subjectDiscriminator']);
 // the walk assertion's forbidden keys — a plugin cannot set what the framework derives (BR-022)
-const WALK_ASSERTION_FORBIDDEN_KEY_LIST = Object.freeze(['resolution', 'confidence', 'matchBasis', 'mappingJustification', 'objectStableId', 'stableId', 'cardStableId']);
+const WALK_ASSERTION_FORBIDDEN_KEY_LIST = Object.freeze(['resolution', 'confidence', 'matchBasis', 'mappingMethod', 'objectStableId', 'stableId', 'cardStableId']);
 const WALK_ASSERTION_KEY_LIST = Object.freeze([
 	'channelKey',
 	'subjectIdentity',

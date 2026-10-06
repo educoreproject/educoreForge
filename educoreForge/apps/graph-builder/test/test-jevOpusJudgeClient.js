@@ -96,7 +96,8 @@ const jevVerdictAt = (jevConfidence, choice = '1') => ({
 	rationale: `Jev chose "Has Organization Identifier" with confidence ${jevConfidence}.`,
 	model: 'jev:jev-1.13.0:data',
 	attempts: 1,
-	jevConfidence,
+	// W-B-3 (campaign P3): Jev's numbers ride in judgeSummary; the cascade reads judgePickConfidence
+	judgeSummary: jevConfidence === undefined ? null : { judgePickConfidence: jevConfidence, judgeTopProbability: 0.8, judgeRunnerUpMargin: 0.6, judgeProbabilityByChoice: { 1: 0.8, 2: 0.2, NONE: 0 }, judgeRelationConfidence: null, judgeRelationProbabilityByPredicate: null },
 });
 
 const cascadeFor = ({ escalateBelowConfidence = 0.7, jev, anthropic }) =>
@@ -125,8 +126,8 @@ const realJevWithTransport = (responseBodyList) => {
 	};
 	return { sentPayloadList, provider: jevJudgeClientLib({ configFilePath: jevIniFilePath, componentOverrides: { postOnce } }) };
 };
-const pickBody = (confidence) => ({ answers: { matchingCandidate: { type: 'choice', choice: '1', confidence, probabilities: { 1: confidence, 2: 0.05, NONE: 0.05 } } }, usage: { input_tokens: 100 } });
-const relationBody = (predicate) => ({ answers: { relationToChosenCandidate: { type: 'choice', choice: predicate, confidence: 0.6, probabilities: { exactMatch: 0.1, closeMatch: 0.6, broadMatch: 0.2, narrowMatch: 0.1 } } }, usage: { input_tokens: 40 } });
+const pickBody = (confidence) => ({ answers: { matchingCandidate: { type: 'choice', choice: '1', confidence, probabilities: { 1: confidence, 2: 0.05, NONE: 0.05 } } }, usage: { input_tokens: 100, output_tokens: 10 } });
+const relationBody = (predicate) => ({ answers: { relationToChosenCandidate: { type: 'choice', choice: predicate, confidence: 0.6, probabilities: { exactMatch: 0.1, closeMatch: 0.6, broadMatch: 0.2, narrowMatch: 0.1 } } }, usage: { input_tokens: 40, output_tokens: 5 } });
 const cascadeChoiceQuestion = {
 	stateObject: { matchingInstructions: 'match by meaning', sourceElement: { name: 'EducationOrganizationId' } },
 	instructionText: 'Which candidate?',
@@ -204,11 +205,11 @@ const caseList = [
 		});
 	},
 	(done) => {
-		const jev = jevDouble({ verdict: { ...jevVerdictAt(0.9), jevConfidence: undefined } });
+		const jev = jevDouble({ verdict: { ...jevVerdictAt(0.9), judgeSummary: null } });
 		const anthropic = anthropicDouble();
 		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'] }, (rerankError) => {
 			harness.section('A JEV VERDICT WITHOUT A CONFIDENCE IS REFUSED');
-			harness.match('refused by name', rerankError, /carries no jevConfidence/);
+			harness.match('refused by name', rerankError, /carries no judgeSummary\.judgePickConfidence/);
 			done();
 		});
 	},

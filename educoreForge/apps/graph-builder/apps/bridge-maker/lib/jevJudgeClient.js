@@ -241,6 +241,18 @@ const usageSumOf = (firstUsage, secondUsage) => {
 	);
 };
 
+// judgeSummaryFor — the pick's numbers in the declared summary shape. The margin is the chosen option's probability minus
+// the largest probability over every OTHER option (NONE included), so a negative margin is possible and means another
+// option outscored the pick. The relation members are null here; a pick under judgeSlot-v1 fills them after its second call.
+const judgeSummaryFor = ({ answer, choice }) => ({
+	judgePickConfidence: answer.confidence,
+	judgeTopProbability: answer.probabilities[choice],
+	judgeRunnerUpMargin: answer.probabilities[choice] - Math.max(...Object.keys(answer.probabilities).filter((optionName) => optionName !== choice).map((optionName) => answer.probabilities[optionName])),
+	judgeProbabilityByChoice: { ...answer.probabilities },
+	judgeRelationConfidence: null,
+	judgeRelationProbabilityByPredicate: null,
+});
+
 // answerRefusal — Jev's answer checked against what was asked. A refusal names what is wrong.
 const answerRefusal = ({ answer, choiceEnum, questionId }) => {
 	if (!answer || answer.type !== 'choice') {
@@ -251,6 +263,15 @@ const answerRefusal = ({ answer, choiceEnum, questionId }) => {
 	}
 	if (typeof answer.confidence !== 'number' || !answer.probabilities || typeof answer.probabilities[answer.choice] !== 'number') {
 		return `Jev's answer for '${answer.choice}' carries no confidence or probability`;
+	}
+	// W-B-3: the probability map must name EXACTLY the offered options (a partial map would let a reader take a missing
+	// option for a zero; a stray option is one Jev was never offered) — confirmed absent before P3, added here
+	const probabilityOptionList = Object.keys(answer.probabilities).sort();
+	if (JSON.stringify(probabilityOptionList) !== JSON.stringify(choiceEnum.map((oneOption) => `${oneOption}`).sort())) {
+		return `Jev's probabilities for '${questionId}' name [${probabilityOptionList.join(', ')}], not exactly the offered options [${choiceEnum.join(', ')}]`;
+	}
+	if (probabilityOptionList.some((oneOption) => typeof answer.probabilities[oneOption] !== 'number' || !Number.isFinite(answer.probabilities[oneOption]))) {
+		return `Jev's probabilities for '${questionId}' carry a value that is not a finite number`;
 	}
 	return null;
 };
@@ -369,10 +390,11 @@ const moduleFunction = (constructionOptions = {}) => {
 				model: namespacedModel,
 				attempts: pickResult.attempts,
 				usage: pickResult.usage,
-				// ADDITIVE EVIDENCE, like usage: Jev's own numbers, read by the jevOpus cascade to decide
-				// whether to escalate. judgeComponent does not read them.
-				jevConfidence: answer.confidence,
-				jevProbabilities: answer.probabilities,
+				// ⟪campaign P3, W-B-3 (V1-C08, G7)⟫ Jev's OWN numbers in the declared shape (vocabulary JUDGE_SUMMARY_FIELD_LIST),
+				// carried verbatim by judgeComponent to the cache, the forensic record, the frozen record and the edge. The jevOpus
+				// cascade reads judgePickConfidence to decide whether to escalate. (Before P3 these were jevConfidence /
+				// jevProbabilities, which judgeComponent dropped: the numbers reached nothing.)
+				judgeSummary: judgeSummaryFor({ answer, choice }),
 			};
 			if (predicateField === null) {
 				callback('', pickVerdict);
@@ -394,8 +416,7 @@ const moduleFunction = (constructionOptions = {}) => {
 					rationale: `${pickVerdict.rationale}${relationRationaleFor({ relationAnswer: relationResult.answer })}`,
 					attempts: pickResult.attempts + relationResult.attempts,
 					usage: usageSumOf(pickResult.usage, relationResult.usage),
-					jevRelationConfidence: relationResult.answer.confidence,
-					jevRelationProbabilities: relationResult.answer.probabilities,
+					judgeSummary: { ...pickVerdict.judgeSummary, judgeRelationConfidence: relationResult.answer.confidence, judgeRelationProbabilityByPredicate: { ...relationResult.answer.probabilities } },
 				});
 			});
 		});

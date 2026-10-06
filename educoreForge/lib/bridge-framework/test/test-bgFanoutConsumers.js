@@ -99,7 +99,8 @@ const pushMutation = (scenario, modulePath, find, replace) => {
 // BG-FANOUT-CONSUMERS (a) SSSOM: one row per edge
 // ---------------------------------------------------------------------
 const PLANNED_LIST_FIND = '\tconst plannedList = plannedEdgeList(decisionBlock.decisionRecordList);';
-const EXTENSION_LIST_FIND = 'const extensionSlotNameList = isFannedOut ? EXTENSION_SLOT_NAME_LIST.concat([JUDGED_SUBJECT_COLUMN]) : EXTENSION_SLOT_NAME_LIST;';
+// re-anchored campaign P3: the conditional columns (fan-out, and W-B-3/W-B-4's judge columns) are one list now
+const EXTENSION_LIST_FIND = 'const extensionSlotNameList = EXTENSION_SLOT_NAME_LIST.concat(conditionalColumnList);';
 const sssomConjunctList = [
 	runConjunct({
 		conjunctId: 'a1_sssomRowsEqualEdges',
@@ -386,7 +387,9 @@ const branchCutConflictEdgeList = capturedEdgeListWithProvenanceDelta({ captured
 const branchCutConflictSssomText = fs.readFileSync(BRANCH_CUT_CONFLICT_SSSOM_PATH, 'utf8');
 const branchCutConflictReview = (() => {
 	const capturedReview = JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_FORENSICS_PATH, 'utf8')).find((oneRecord) => oneRecord.record.kind === 'MappingReview');
-	return { ...capturedReview, generation: capturedGenerationDeltaLib.generationWithDeclarationDigest({ capturedGeneration: capturedReview.generation, bridgeDeclaration: toyPluginDeclarationFor('toyStandardPlugin') }) };
+	// W-B-1: the conflict record's own mappingJustification is mappingMethod now (the same declared rename as an edge's)
+	const conflictList = capturedReview.record.conflictList.map((oneConflict) => require('./testSupport/capturedEdgeProvenanceDelta').campaignP3RenameDelta(oneConflict));
+	return { ...capturedReview, record: { ...capturedReview.record, conflictList }, generation: capturedGenerationDeltaLib.generationWithDeclarationDigest({ capturedGeneration: capturedReview.generation, bridgeDeclaration: toyPluginDeclarationFor('toyStandardPlugin') }) };
 })();
 const maskedTextOf = (frozenText) => {
 	const fingerprintMatchList = frozenText.match(FRAMEWORK_FINGERPRINT_TEXT_RE) || [];

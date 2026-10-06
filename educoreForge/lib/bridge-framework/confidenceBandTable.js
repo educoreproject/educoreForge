@@ -11,11 +11,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 const { SELECT_CATEGORY_ENUM } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'evidenceContracts'));
 
-const CONFIDENCE_BAND_TABLE = Object.freeze({
-	strong: 0.9,
-	moderate: 0.7,
-	weakButReal: 0.5,
-});
+// ⟪campaign P3, W-B-3⟫ the table moved to vocabulary (one home, projected as SchemaView kind confidenceBand); this module
+// re-exports it and keeps the load-time agreement with the judge's picking categories below.
+const { CONFIDENCE_BAND_TABLE } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const ABSTAIN_CATEGORY = 'none';
 const PICK_CATEGORY_LIST = Object.freeze(SELECT_CATEGORY_ENUM.filter((oneCategory) => oneCategory !== ABSTAIN_CATEGORY));
 

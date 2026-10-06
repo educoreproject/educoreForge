@@ -48,7 +48,7 @@ const B2_ADDED_NAME_LIST = [
 	'matchBasis',
 	'resolution',
 	'mappingProvider',
-	'mappingToolVersion',
+	'rendererVersion', // was mappingToolVersion (renamed campaign P3, W-B-1)
 	'subjectMatchField',
 	'objectMatchField',
 	'sourceLabel',
@@ -58,18 +58,20 @@ const B2_ADDED_NAME_LIST = [
 ];
 const PRE_EXISTING_NAME_LIST = [
 	'predicate',
-	'confidence',
-	'mappingJustification',
+	'mappingMethod', // was mappingJustification (renamed campaign P3, W-B-1)
 	'subjectSource',
 	'subjectVersion',
 	'objectSource',
 	'objectVersion',
-	'mappingTool',
+	'judgeIdentity', // was mappingTool (renamed campaign P3, W-B-1)
 	'matchId',
 ];
 // the one name lane P RETIRED from mapping edges (TQ, 2026-10-04): it must be ABSENT from the closed set, so the write seam
 // refuses it. Pre-existing until then; listed so its absence is asserted, not merely unmentioned.
-const RETIRED_NAME_LIST = ['provenanceTier'];
+// ⟪campaign P3, 2026-10-06⟫ and the four the renames and W-B-2 retired: each must be ABSENT too (the seam names their replacements)
+const RETIRED_NAME_LIST = ['provenanceTier', 'mappingJustification', 'mappingTool', 'mappingToolVersion', 'confidence'];
+// the four names campaign P3 ADDED: the judge's own numbers (W-B-3, G7) and its recorded text (W-B-4, V1-C06)
+const P3_ADDED_NAME_LIST = ['judgePickConfidence', 'judgeTopProbability', 'judgeRunnerUpMargin', 'mappingRationale'];
 // the one name the SIF replacement's phase V1 ADDED (review #1): the question a fanned-out mapping edge was
 // judged as, written on every instance edge by the materialiser (plan phase B4b)
 const V1_ADDED_NAME_LIST = ['judgedSubjectStableId'];
@@ -80,13 +82,13 @@ const PROVENANCE_ADDED_NAME_LIST = ['mappingConfidence', 'mappingKind', 'mapping
 const conjunctJudgeByRefId = {
 	'a_everyEdgePropertyNameIsARow': (subject) => {
 		const valueList = Object.keys(subject.MAPPING_PROPERTIES).map((oneMember) => subject.MAPPING_PROPERTIES[oneMember]);
-		const missing = B2_ADDED_NAME_LIST.concat(PRE_EXISTING_NAME_LIST, V1_ADDED_NAME_LIST, PROVENANCE_ADDED_NAME_LIST).filter((oneName) => valueList.indexOf(oneName) === -1);
+		const missing = B2_ADDED_NAME_LIST.concat(PRE_EXISTING_NAME_LIST, V1_ADDED_NAME_LIST, PROVENANCE_ADDED_NAME_LIST, P3_ADDED_NAME_LIST).filter((oneName) => valueList.indexOf(oneName) === -1);
 		const retiredPresent = RETIRED_NAME_LIST.filter((oneName) => valueList.indexOf(oneName) !== -1);
-		return { pass: missing.length === 0 && retiredPresent.length === 0 && valueList.length === 23, detail: missing.length || retiredPresent.length ? `missing: ${missing.join(', ')}; retired yet present: ${retiredPresent.join(', ')}` : `count ${valueList.length}` };
+		return { pass: missing.length === 0 && retiredPresent.length === 0 && valueList.length === 26, detail: missing.length || retiredPresent.length ? `missing: ${missing.join(', ')}; retired yet present: ${retiredPresent.join(', ')}` : `count ${valueList.length}` };
 	},
 	'b_nameListEqualsRegistryValues': (subject) => {
 		const valueList = Object.keys(subject.MAPPING_PROPERTIES).map((oneMember) => subject.MAPPING_PROPERTIES[oneMember]);
-		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 23;
+		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 26;
 		return { pass: equal, detail: `list ${JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST)}` };
 	},
 	// ⟪lane P, 2026-10-04⟫ replaces c_producerDerivedTiersOnly: the tier tables it pinned are retired with provenanceTier's

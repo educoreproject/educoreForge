@@ -236,7 +236,7 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-MATFANOUT', conjunct
 // BG-MATFANOUT (c) the materialiser reads the block only: no instance edge, no reader view, in its source
 // ---------------------------------------------------------------------
 const GRAPH_READ_PATTERN_LIST = Object.freeze([/HAS_INSTANCE/, /readEdgesAmongSource/, /readNodesByStableId/, /readSourceNodes/, /readSubjectNodes/, /\bfor(Evidence|Walk|Retrieval)\b/, /materialisationFanout/]);
-const JUSTIFICATION_LINE = "const JUSTIFICATION_BY_RESOLUTION = Object.freeze({ specified: 'semapv:ManualMappingCuration', judged: 'semapv:CompositeMatching' });";
+const JUSTIFICATION_LINE = "const METHOD_BY_RESOLUTION = Object.freeze({ specified: 'semapv:ManualMappingCuration', judged: 'semapv:CompositeMatching' });";
 const scanConjunctList = [
 	pureConjunct({
 		conjunctId: 'c_materialiserSourceReadsNoInstanceEdge',

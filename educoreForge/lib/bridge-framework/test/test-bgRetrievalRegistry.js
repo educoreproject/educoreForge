@@ -163,7 +163,7 @@ const registryConjunctList = [
 		conjunctId: 'c1_rowMissingAMemberRefusedAtConstruction',
 		title: 'a row missing a declared member is refused at framework construction, before any run',
 		shape: plantInRegistry({ find: COSINE_TOP_K_TRACE_DECLARATION, replace: '' }),
-		regex: /CANDIDATE_RETRIEVAL_METHOD_ROW_LIST\[0\] carries \{ fieldNameList, mappingJustificationFor, methodName, poolForSubject, prepareRetrieval, settingsPairListFor \}/,
+		regex: /CANDIDATE_RETRIEVAL_METHOD_ROW_LIST\[0\] carries \{ fieldNameList, mappingMethodFor, methodName, poolForSubject, prepareRetrieval, settingsPairListFor \}/,
 		twinName: 'memberSetCheckRemoved',
 		fileName: REGISTRY_FILE,
 		find: '\tif (malformedRowIndex !== -1) {',

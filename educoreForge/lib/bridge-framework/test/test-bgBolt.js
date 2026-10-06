@@ -111,7 +111,7 @@ const validEdge = () => ({
 	edgeType: 'EXACT_MATCH',
 	edgeProperties: {
 		[vocabularyLib.MAPPING_PROPERTIES.PREDICATE]: 'exactMatch',
-		[vocabularyLib.MAPPING_PROPERTIES.MAPPING_JUSTIFICATION]: 'semapv:ManualMappingCuration',
+		[vocabularyLib.MAPPING_PROPERTIES.MAPPING_METHOD]: 'semapv:ManualMappingCuration',
 		[vocabularyLib.MAPPING_PROPERTIES.MATCH_BASIS]: 'crosswalk',
 		[vocabularyLib.MAPPING_PROPERTIES.RESOLUTION]: 'specified',
 		[vocabularyLib.MAPPING_PROPERTIES.MAPPING_PROVIDER]: 'https://toy.example/crosswalk',

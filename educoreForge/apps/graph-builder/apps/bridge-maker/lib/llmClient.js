@@ -730,6 +730,8 @@ const moduleFunction =
 						candidateIdeaList,
 						sortedCandidateList,
 						ideaCoverage,
+						// ⟪campaign P3, W-B-3⟫ a text model reports a category word, not numbers: no judge summary
+						judgeSummary: null,
 						usage,
 						stopReason: parsed && parsed.stop_reason !== undefined ? parsed.stop_reason : null,
 						retryReasons,

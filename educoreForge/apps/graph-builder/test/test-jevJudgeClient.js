@@ -327,8 +327,16 @@ const caseList = [
 			harness.match('the rationale carries the relation and its confidence beside the pick', verdict && verdict.rationale, /chose "Has Organization Identifier".*Relation: broadMatch with probability 0\.6 and confidence 0\.55\. Next: closeMatch \(0\.2\)/);
 			harness.equal('attempts count both calls', verdict && verdict.attempts, 2);
 			harness.equal('usage sums both calls, in the forensic contract\'s camelCase shape (W-B-8)', JSON.stringify(verdict && verdict.usage), JSON.stringify({ inputTokens: 140, outputTokens: 15 }));
-			harness.equal('jevConfidence stays the PICK confidence (the cascade escalates on it)', verdict && verdict.jevConfidence, 0.9);
-			harness.equal('jevRelationConfidence is carried as evidence', verdict && verdict.jevRelationConfidence, 0.55);
+			// W-B-3 (campaign P3, V1-C08): Jev's own numbers ride in judgeSummary, in the declared shape
+			const summary = (verdict && verdict.judgeSummary) || {};
+			harness.equal('judgeSummary.judgePickConfidence is the PICK confidence (the cascade escalates on it)', summary.judgePickConfidence, 0.9);
+			harness.equal('judgeSummary.judgeTopProbability is probabilities[choice]', summary.judgeTopProbability, 0.9);
+			harness.ok('judgeSummary.judgeRunnerUpMargin is the pick probability minus the best OTHER option (0.9 - 0.05)', Math.abs(summary.judgeRunnerUpMargin - 0.85) < 1e-12, summary.judgeRunnerUpMargin);
+			harness.equal('judgeSummary.judgeProbabilityByChoice is every offered option, verbatim', JSON.stringify(summary.judgeProbabilityByChoice), JSON.stringify({ 1: 0.9, 2: 0.05, NONE: 0.05 }));
+			harness.equal('judgeSummary.judgeRelationConfidence is the RELATION confidence', summary.judgeRelationConfidence, 0.55);
+			harness.equal('judgeSummary.judgeRelationProbabilityByPredicate is the relation map, verbatim', JSON.stringify(summary.judgeRelationProbabilityByPredicate), JSON.stringify(RELATION_PROBABILITIES));
+			harness.equal('the summary passes vocabulary.judgeSummaryRefusal', require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary')).judgeSummaryRefusal(summary), '');
+			harness.equal('no jevConfidence / jevProbabilities keys remain on the verdict (retired by W-B-3)', ['jevConfidence', 'jevProbabilities', 'jevRelationConfidence', 'jevRelationProbabilities'].filter((oneName) => verdict && Object.prototype.hasOwnProperty.call(verdict, oneName)).join(','), '');
 			done();
 		});
 	},
@@ -379,6 +387,16 @@ const caseList = [
 			harness.match('refused naming the status', rerankError, /relation question failed: .*HTTP 400 after 1 attempt/);
 			harness.equal('no verdict', verdict, undefined);
 			harness.equal('two calls', transport.sentPayloadList.length, 2);
+			done();
+		});
+	},
+	// W-B-3 (campaign P3): a probability map that does not name exactly the offered options is refused by name
+	(done) => {
+		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, NONE: 0.1 } }) }]);
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+			harness.section('W-B-3: A PARTIAL PROBABILITY MAP IS REFUSED BY NAME');
+			harness.match('refused naming the options', rerankError, /probabilities for 'matchingCandidate' name \[1, NONE\], not exactly the offered options \[1, 2, NONE\]/);
+			harness.equal('no verdict', verdict, undefined);
 			done();
 		});
 	},

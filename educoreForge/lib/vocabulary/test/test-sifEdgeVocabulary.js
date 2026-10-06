@@ -72,7 +72,9 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // ⟪campaign P2, W-A-6, 2026-10-06 (CARDINAL_RIVER)⟫ +176 more, unrelated to V1: the graph contract projected (27 passport
 // fields, 18 attestation fields, 57 self-doc fields, 25 list-valued names, 39 integer-valued names = 166) and the 10 DME
 // role labels as nodeLabel members. (The generated HAS_<HUB>_<SLOT> members need a hub list and are not in this pure count.)
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176;
+// ⟪campaign P3, W-B-1..4, 2026-10-06 (CARDINAL_HORIZON)⟫ +29 more, unrelated to V1: the 26 mapping-edge properties
+// (matchEdgeProperty) and the 3 confidence bands (confidenceBand), the two SchemaView kinds CONTRACTS §9 deferred to P3.
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29;
 
 // ---------------------------------------------------------------------
 // doubles
@@ -138,7 +140,7 @@ const fanOutEdgeRequest = () => ({
 	objectEndpoint: { labels: ['HubReference'], referenceTier: 'property' },
 	edgeProperties: {
 		predicate: 'closeMatch',
-		mappingJustification: 'semapv:SemanticSimilarityThresholdMatching',
+		mappingMethod: 'semapv:SemanticSimilarityThresholdMatching',
 		matchBasis: 'derived',
 		resolution: 'judged',
 		objectMatchField: 'EDUcoreHub:canonicalKey',
@@ -149,12 +151,11 @@ const fanOutEdgeRequest = () => ({
 		predicateAssertedBy: 'judge',
 		attestationChannelList: ['derived:1'],
 		decisionBlockHash: 'c'.repeat(64),
-		confidence: 0.8,
 		mappingConfidence: 0.8,
 		mappingKind: 'inferred',
 		mappingSource: 'bridge-jev',
-		mappingTool: 'toyJudge',
-		mappingToolVersion: 'v12',
+		judgeIdentity: 'jev:toyJudge',
+		rendererVersion: 'v12',
 		matchId: 'd'.repeat(64),
 		judgedSubjectStableId: 'sif260928:question-toy',
 	},

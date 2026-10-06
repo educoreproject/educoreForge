@@ -138,7 +138,7 @@ harness.match('a block that does not deserialise is refused by name', sibling.au
 // ---------------------------------------------------------------------
 // SECTION 0B — JOB 6: THE JUDGE ENUMERATION, the pure half (G6-a, G6-e, G6-i)
 // ---------------------------------------------------------------------
-// ⟪JOB 6, VELVET_PRISM 2026-09-08⟫ The enumeration reads the distinct (mappingTool, mappingToolVersion) pairs
+// ⟪JOB 6, VELVET_PRISM 2026-09-08⟫ The enumeration reads the distinct (judgeIdentity, rendererVersion) pairs
 // over edges whose resolution is 'judged', per block. The population rule is the conservation audit's own:
 // ENUMERATE FROM THE MANIFEST, never from a registry of what you expect to find. Nothing here consults the
 // judge provider registry, and that is deliberate — a gate that asked the registry what judges exist could
@@ -153,13 +153,13 @@ harness.match('a block that does not deserialise is refused by name', sibling.au
 // pre-existing rule before the enumeration ever ran — measured: -goldEvalCheck against the real five-bridge
 // manifest REFUSES at that gate with all five blocks named, so no artifact in this project today can exercise
 // these gates. These fixtures model the post-JOB-7 world, which is the world this gate exists for.
-const judgedEdgeLineFor = ({ fromStableId, toStableId, mappingTool, mappingToolVersion }) => {
+const judgedEdgeLineFor = ({ fromStableId, toStableId, judgeIdentity, rendererVersion }) => {
 	const edgeProperties = { mappingKind: ['inferred'], mappingSource: [REAL_JUDGE_SOURCE], mappingConfidence: [0.9], matchBasis: ['derived'], resolution: ['judged'], predicate: ['closeMatch'], confidence: [0.9], decisionBlockHash: ['0'.repeat(64)] };
 	// ABSENT means ABSENT, never null and never an empty list — the write seam's own rule, and the shape G6-e
-	// and G6-i exist to meet. A fixture that wrote `mappingTool: [undefined]` would be testing a DIFFERENT
+	// and G6-i exist to meet. A fixture that wrote `judgeIdentity: [undefined]` would be testing a DIFFERENT
 	// fault (a present-but-wrong value) and would leave the fabricating-a-default path unobserved.
-	if (mappingTool !== undefined) { edgeProperties.mappingTool = [mappingTool]; }
-	if (mappingToolVersion !== undefined) { edgeProperties.mappingToolVersion = [mappingToolVersion]; }
+	if (judgeIdentity !== undefined) { edgeProperties.judgeIdentity = [judgeIdentity]; }
+	if (rendererVersion !== undefined) { edgeProperties.rendererVersion = [rendererVersion]; }
 	return { type: 'CLOSE_MATCH', fromRef: { source: SOURCE_NAME, id: fromStableId }, toRef: { source: HUB_NAME, id: toStableId }, properties: edgeProperties };
 };
 // a relationship block whose edges are described as DATA, one row per edge — so a gate that needs a new edge
@@ -169,7 +169,7 @@ const judgedBlockTextFor = ({ edgeSpecList }) => {
 	const edges = edgeSpecList.map((oneSpec, oneIndex) =>
 		oneSpec.resolutionIsSpecified
 			? edgeLineFor({ fromStableId: `toy:property/A.${['one', 'two', 'three'][oneIndex]}`, toStableId: `urn:toyhub:P00000${oneIndex + 1}`, mappingSource: AUTHORED_SOURCE })
-			: judgedEdgeLineFor({ fromStableId: `toy:property/A.${['one', 'two', 'three'][oneIndex]}`, toStableId: `urn:toyhub:P00000${oneIndex + 1}`, mappingTool: oneSpec.mappingTool, mappingToolVersion: oneSpec.mappingToolVersion }),
+			: judgedEdgeLineFor({ fromStableId: `toy:property/A.${['one', 'two', 'three'][oneIndex]}`, toStableId: `urn:toyhub:P00000${oneIndex + 1}`, judgeIdentity: oneSpec.judgeIdentity, rendererVersion: oneSpec.rendererVersion }),
 	);
 	return replayBlockLib.serializeBlock({ header: RELATIONSHIP_HEADER, nodes, edges });
 };
@@ -178,13 +178,13 @@ const ANTHROPIC_IDENTITY = 'anthropic:claude-opus-4-8';
 const OLLAMA_IDENTITY = 'ollama:qwen2.5:32b@9f13ba1299af';
 const RENDERER_IDENTITY = 'bridgeEvidenceRenderer-derived-v1';
 
-harness.section('SECTION 0B — JOB 6 (G6-a) the enumeration reads the distinct (mappingTool, mappingToolVersion) pairs over JUDGED edges only');
+harness.section('SECTION 0B — JOB 6 (G6-a) the enumeration reads the distinct (judgeIdentity, rendererVersion) pairs over JUDGED edges only');
 // TWO judges, one of them twice, plus a SPECIFIED edge that must not appear in the enumeration at all —
 // the specified edge is the load-bearing part: it is the read-side proof that the enumeration scopes to
 // resolution==='judged' rather than to "every edge in a relationship block".
 const TWO_JUDGE_TEXT = judgedBlockTextFor({ edgeSpecList: [
-	{ mappingTool: ANTHROPIC_IDENTITY, mappingToolVersion: RENDERER_IDENTITY },
-	{ mappingTool: OLLAMA_IDENTITY, mappingToolVersion: RENDERER_IDENTITY },
+	{ judgeIdentity: ANTHROPIC_IDENTITY, rendererVersion: RENDERER_IDENTITY },
+	{ judgeIdentity: OLLAMA_IDENTITY, rendererVersion: RENDERER_IDENTITY },
 	{ resolutionIsSpecified: true },
 ] });
 const twoJudgeAudit = sibling.auditMappingBlockText({ blockText: TWO_JUDGE_TEXT, subject: 'toy_rel_toyhub_twoJudges' });
@@ -193,10 +193,10 @@ harness.equal('G6-a: TWO of them are judged (the specified edge is not counted)'
 harness.equal('G6-a: TWO distinct identity pairs enumerated', (twoJudgeAudit.judgeIdentityPairList || []).length, 2);
 harness.ok(
 	'G6-a: the pairs are the two judges, each with its version and its own judged-edge count',
-	JSON.stringify((twoJudgeAudit.judgeIdentityPairList || []).slice().sort((a, b) => (a.mappingTool < b.mappingTool ? -1 : 1))) ===
+	JSON.stringify((twoJudgeAudit.judgeIdentityPairList || []).slice().sort((a, b) => (a.judgeIdentity < b.judgeIdentity ? -1 : 1))) ===
 		JSON.stringify([
-			{ mappingTool: ANTHROPIC_IDENTITY, mappingToolVersion: RENDERER_IDENTITY, judgedEdgeCount: 1 },
-			{ mappingTool: OLLAMA_IDENTITY, mappingToolVersion: RENDERER_IDENTITY, judgedEdgeCount: 1 },
+			{ judgeIdentity: ANTHROPIC_IDENTITY, rendererVersion: RENDERER_IDENTITY, judgedEdgeCount: 1 },
+			{ judgeIdentity: OLLAMA_IDENTITY, rendererVersion: RENDERER_IDENTITY, judgedEdgeCount: 1 },
 		]),
 	JSON.stringify(twoJudgeAudit.judgeIdentityPairList),
 );
@@ -219,7 +219,7 @@ harness.ok('G6-f (pure): …the enumeration is PRESENT on the result (an absent 
 harness.ok('G6-f (pure): …and it is EMPTY — the gate looked and found none, which is not the same as not looking', Array.isArray(authoredOnlyAudit.judgeIdentityPairList) && authoredOnlyAudit.judgeIdentityPairList.length === 0, JSON.stringify(authoredOnlyAudit.judgeIdentityPairList));
 
 // ⟪MA5 REPAIR — VELVET_PRISM 2026-09-08⟫ A SECOND judged fixture whose judges are DIFFERENT ones. My
-// mutation MA5 replaced the refusal's "every mappingTool found" list with a HAND LIST that happened to equal
+// mutation MA5 replaced the refusal's "every judgeIdentity found" list with a HAND LIST that happened to equal
 // the derivation, and the suite stayed GREEN — COBALT_ANCHOR's M14 and RUBY_ANCHOR's M9 for the third time in
 // this campaign: equality can only ever prove agreement, never derivation. One manifest cannot discriminate
 // it. TWO manifests with DISJOINT judge sets can: no single hand list can name both sets and name neither
@@ -227,20 +227,20 @@ harness.ok('G6-f (pure): …and it is EMPTY — the gate looked and found none, 
 const OTHER_ANTHROPIC_IDENTITY = 'anthropic:claude-sonnet-5';
 const OTHER_OLLAMA_IDENTITY = 'ollama:llama3.3:70b@aabbccdd1122';
 const OTHER_JUDGE_TEXT = judgedBlockTextFor({ edgeSpecList: [
-	{ mappingTool: OTHER_ANTHROPIC_IDENTITY, mappingToolVersion: RENDERER_IDENTITY },
-	{ mappingTool: OTHER_OLLAMA_IDENTITY, mappingToolVersion: RENDERER_IDENTITY },
+	{ judgeIdentity: OTHER_ANTHROPIC_IDENTITY, rendererVersion: RENDERER_IDENTITY },
+	{ judgeIdentity: OTHER_OLLAMA_IDENTITY, rendererVersion: RENDERER_IDENTITY },
 ] });
 
-harness.section('SECTION 0B — JOB 6 (G6-e) a JUDGED edge with NO mappingTool is refused BY NAME — the read-side twin of graphSeamRules writeMappingEdge');
-const MISSING_TOOL_TEXT = judgedBlockTextFor({ edgeSpecList: [{ mappingTool: ANTHROPIC_IDENTITY, mappingToolVersion: RENDERER_IDENTITY }, { mappingToolVersion: RENDERER_IDENTITY }] });
+harness.section('SECTION 0B — JOB 6 (G6-e) a JUDGED edge with NO judgeIdentity is refused BY NAME — the read-side twin of graphSeamRules writeMappingEdge');
+const MISSING_TOOL_TEXT = judgedBlockTextFor({ edgeSpecList: [{ judgeIdentity: ANTHROPIC_IDENTITY, rendererVersion: RENDERER_IDENTITY }, { rendererVersion: RENDERER_IDENTITY }] });
 const missingToolAudit = sibling.auditMappingBlockText({ blockText: MISSING_TOOL_TEXT, subject: 'toy_rel_toyhub_missingTool' });
 harness.equal('G6-e: the block has 2 judged edges', missingToolAudit.judgedEdgeCount, 2);
-harness.equal('G6-e: ONE of them carries no mappingTool', missingToolAudit.judgedEdgeMissingMappingToolCount, 1);
+harness.equal('G6-e: ONE of them carries no judgeIdentity', missingToolAudit.judgedEdgeMissingJudgeIdentityCount, 1);
 harness.match('G6-e: refused BY NAME, naming the block', missingToolAudit.judgeEnumerationRefusalMessage || '', /toy_rel_toyhub_missingTool/);
 harness.match('G6-e: …and naming the offending edge by stableId, never [object Object]', missingToolAudit.judgeEnumerationRefusalMessage || '', /toy:property\/A\.two -\[CLOSE_MATCH\]-> urn:toyhub:P000002/);
-harness.match('G6-e: …and saying WHAT is missing rather than that something is wrong', missingToolAudit.judgeEnumerationRefusalMessage || '', /mappingTool/);
+harness.match('G6-e: …and saying WHAT is missing rather than that something is wrong', missingToolAudit.judgeEnumerationRefusalMessage || '', /judgeIdentity/);
 // THE COMPANION CASE, and it is a separate fact from the refusal: the refusal must fire ONLY when it should.
-// A guard too broad would refuse the authored-only block, which carries no mappingTool on any edge BECAUSE
+// A guard too broad would refuse the authored-only block, which carries no judgeIdentity on any edge BECAUSE
 // none of them is judged. This is the assertion that catches a guard that forgot to scope to 'judged'.
 // ⟪THE SAME VACUITY, SAME REPAIR⟫ `!result.judgeEnumerationRefusalMessage` is TRUE when the module never
 // sets the field, so both of these passed green against a module with no enumeration. The field must be
@@ -248,32 +248,32 @@ harness.match('G6-e: …and saying WHAT is missing rather than that something is
 // (auditMappingBlockText already returns `refusalMessage: null` rather than omitting it). Asserting the
 // null distinguishes a considered no from an absent thought.
 harness.ok('G6-e COMPANION: an AUTHORED-ONLY block carries the refusal field, EXPLICITLY null — not absent', authoredOnlyAudit.judgeEnumerationRefusalMessage === null, `got ${typeof authoredOnlyAudit.judgeEnumerationRefusalMessage}: ${authoredOnlyAudit.judgeEnumerationRefusalMessage}`);
-harness.ok('G6-e COMPANION: …so it is NOT refused, though not one of its edges carries a mappingTool — the guard scoped to judged', authoredOnlyAudit.judgeEnumerationRefusalMessage === null, authoredOnlyAudit.judgeEnumerationRefusalMessage);
+harness.ok('G6-e COMPANION: …so it is NOT refused, though not one of its edges carries a judgeIdentity — the guard scoped to judged', authoredOnlyAudit.judgeEnumerationRefusalMessage === null, authoredOnlyAudit.judgeEnumerationRefusalMessage);
 harness.ok('G6-e COMPANION: and a well-formed judged block is not refused either', twoJudgeAudit.judgeEnumerationRefusalMessage === null, `got ${typeof twoJudgeAudit.judgeEnumerationRefusalMessage}: ${twoJudgeAudit.judgeEnumerationRefusalMessage}`);
 
-harness.section('SECTION 0B — JOB 6 (G6-i) mappingToolVersion ABSENT is enumerated as an EXPLICIT TOKEN, never substituted and never empty');
+harness.section('SECTION 0B — JOB 6 (G6-i) rendererVersion ABSENT is enumerated as an EXPLICIT TOKEN, never substituted and never empty');
 // [code fact, read from materialiser.js edgePropertiesFor] The CURRENT WRITER CANNOT PRODUCE THIS SHAPE: it writes
-// mappingToolVersion for every judged edge through a template literal
+// rendererVersion for every judged edge through a template literal
 // (`${record.judge.rendererVersion === undefined ? RENDERER_VERSION : record.judge.rendererVersion}`), so the
 // value is always a string. The shape is reachable only from a legacy or hand-assembled block. It is gated
 // anyway, because absence is not a weaker form of wrongness — it is the form a fabricator needs, and a reader
 // that quietly supplied RENDERER_VERSION here would invent a version the edge does not carry and print it in
 // a certificate as though it had been measured.
-const ABSENT_VERSION_TEXT = judgedBlockTextFor({ edgeSpecList: [{ mappingTool: ANTHROPIC_IDENTITY }] });
+const ABSENT_VERSION_TEXT = judgedBlockTextFor({ edgeSpecList: [{ judgeIdentity: ANTHROPIC_IDENTITY }] });
 const absentVersionAudit = sibling.auditMappingBlockText({ blockText: ABSENT_VERSION_TEXT, subject: 'toy_rel_toyhub_absentVersion' });
 harness.equal('G6-i: the judged edge is still enumerated — an absent VERSION is not an absent JUDGE', absentVersionAudit.judgedEdgeCount, 1);
 // the token is asserted to EXIST and to be a usable string BEFORE anything is compared against it —
 // ⟪VACUITY CAUGHT⟫ the equality below read `undefined === undefined` and passed green against a module
 // exporting no such constant. Order matters: the observation must precede the comparison, or the
 // comparison observes nothing. (RUBY_ANCHOR's ordering rule, applied to an equality rather than a mutation.)
-harness.ok('G6-i: the module EXPORTS an explicit absent-version token…', typeof sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN === 'string' && sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN.trim() !== '', `got ${typeof sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN}: ${sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN}`);
-harness.ok('G6-i: …which says ABSENT in words, so a certificate reader cannot mistake it for a version', typeof sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN === 'string' && /absent/i.test(sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN), sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN);
-harness.ok('G6-i: …and is NOT the renderer version the writer would have substituted', typeof sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN === 'string' && sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN !== RENDERER_IDENTITY && sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN !== 'bridgeEvidenceRenderer-v1', sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN);
+harness.ok('G6-i: the module EXPORTS an explicit absent-version token…', typeof sibling.ABSENT_RENDERER_VERSION_TOKEN === 'string' && sibling.ABSENT_RENDERER_VERSION_TOKEN.trim() !== '', `got ${typeof sibling.ABSENT_RENDERER_VERSION_TOKEN}: ${sibling.ABSENT_RENDERER_VERSION_TOKEN}`);
+harness.ok('G6-i: …which says ABSENT in words, so a certificate reader cannot mistake it for a version', typeof sibling.ABSENT_RENDERER_VERSION_TOKEN === 'string' && /absent/i.test(sibling.ABSENT_RENDERER_VERSION_TOKEN), sibling.ABSENT_RENDERER_VERSION_TOKEN);
+harness.ok('G6-i: …and is NOT the renderer version the writer would have substituted', typeof sibling.ABSENT_RENDERER_VERSION_TOKEN === 'string' && sibling.ABSENT_RENDERER_VERSION_TOKEN !== RENDERER_IDENTITY && sibling.ABSENT_RENDERER_VERSION_TOKEN !== 'bridgeEvidenceRenderer-v1', sibling.ABSENT_RENDERER_VERSION_TOKEN);
 harness.ok('G6-i: the enumeration is PRESENT and holds exactly one pair', Array.isArray(absentVersionAudit.judgeIdentityPairList) && absentVersionAudit.judgeIdentityPairList.length === 1, JSON.stringify(absentVersionAudit.judgeIdentityPairList));
-harness.ok('G6-i: the tool is named as written', Array.isArray(absentVersionAudit.judgeIdentityPairList) && absentVersionAudit.judgeIdentityPairList.length === 1 && absentVersionAudit.judgeIdentityPairList[0].mappingTool === ANTHROPIC_IDENTITY, JSON.stringify(absentVersionAudit.judgeIdentityPairList));
+harness.ok('G6-i: the tool is named as written', Array.isArray(absentVersionAudit.judgeIdentityPairList) && absentVersionAudit.judgeIdentityPairList.length === 1 && absentVersionAudit.judgeIdentityPairList[0].judgeIdentity === ANTHROPIC_IDENTITY, JSON.stringify(absentVersionAudit.judgeIdentityPairList));
 harness.ok(
 	'G6-i: the version reads as the EXPLICIT ABSENT token — never empty, never null, never a substituted RENDERER_VERSION',
-	Array.isArray(absentVersionAudit.judgeIdentityPairList) && absentVersionAudit.judgeIdentityPairList.length === 1 && typeof sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN === 'string' && absentVersionAudit.judgeIdentityPairList[0].mappingToolVersion === sibling.ABSENT_MAPPING_TOOL_VERSION_TOKEN,
+	Array.isArray(absentVersionAudit.judgeIdentityPairList) && absentVersionAudit.judgeIdentityPairList.length === 1 && typeof sibling.ABSENT_RENDERER_VERSION_TOKEN === 'string' && absentVersionAudit.judgeIdentityPairList[0].rendererVersion === sibling.ABSENT_RENDERER_VERSION_TOKEN,
 	JSON.stringify(absentVersionAudit.judgeIdentityPairList),
 );
 harness.ok('G6-i: an absent version is NOT a refusal — an unnamed VERSION is not an unnamed JUDGE (field present, explicitly null)', absentVersionAudit.judgeEnumerationRefusalMessage === null, `got ${typeof absentVersionAudit.judgeEnumerationRefusalMessage}: ${absentVersionAudit.judgeEnumerationRefusalMessage}`);
@@ -298,9 +298,9 @@ const HYPHEN_DEBUG_IDENTITY = 'debugJudge-first-v1-INVALID_DEBUG';
 const COLON_DEBUG_IDENTITY = 'debugJudge:first-v1-INVALID_DEBUG';
 const CURRENT_DEBUG_IDENTITY = 'debug:first';
 
-harness.section('SECTION 0D — JOB 6b (G6-k) a JUDGED edge whose mappingTool is a NON-STRING is REFUSED BY NAME, never enumerated as an unnameable judge');
+harness.section('SECTION 0D — JOB 6b (G6-k) a JUDGED edge whose judgeIdentity is a NON-STRING is REFUSED BY NAME, never enumerated as an unnameable judge');
 // ⟪JOB 6b, VELVET_PRISM 2026-09-08 — my own stand-down finding, ruled by DAWN_TOWER as G6-k⟫
-// I gated the ABSENT mappingToolVersion (G6-i) and left the WRONG-TYPE mappingTool ungated: an
+// I gated the ABSENT rendererVersion (G6-i) and left the WRONG-TYPE judgeIdentity ungated: an
 // inconsistency inside my own diff that I did not see until I fed the enumeration a number.
 //
 // WHY IT MATTERS AND WHY "IT REFUSES ANYWAY" IS NOT GOOD ENOUGH. A non-string identity was enumerated
@@ -311,28 +311,28 @@ harness.section('SECTION 0D — JOB 6b (G6-k) a JUDGED edge whose mappingTool is
 // [code fact, materialiser.js edgePropertiesFor] unreachable from the current writer, which writes a string; reachable
 // from a hand-assembled or foreign block — exactly the class G6-i already gates.
 const NON_STRING_TOOL_SPEC_LIST = [
-	{ label: 'a NUMBER', rawMappingTool: 123 },
-	{ label: 'a BOOLEAN', rawMappingTool: true },
+	{ label: 'a NUMBER', rawJudgeIdentity: 123 },
+	{ label: 'a BOOLEAN', rawJudgeIdentity: true },
 ];
 NON_STRING_TOOL_SPEC_LIST.forEach((oneSpec) => {
 	const nonStringEdgeList = [{
 		fromStableId: 'toy:property/A.one', toStableId: 'urn:toyhub:P000001', type: 'CLOSE_MATCH',
-		properties: { resolution: ['judged'], mappingTool: [oneSpec.rawMappingTool], mappingToolVersion: [RENDERER_IDENTITY] },
+		properties: { resolution: ['judged'], judgeIdentity: [oneSpec.rawJudgeIdentity], rendererVersion: [RENDERER_IDENTITY] },
 	}];
 	const nonStringEnumeration = sibling.judgeEnumerationOf(nonStringEdgeList);
-	harness.equal(`G6-k: mappingTool is ${oneSpec.label} — the edge is still counted as judged`, nonStringEnumeration.judgedEdgeCount, 1);
+	harness.equal(`G6-k: judgeIdentity is ${oneSpec.label} — the edge is still counted as judged`, nonStringEnumeration.judgedEdgeCount, 1);
 	harness.ok(
-		`G6-k: mappingTool is ${oneSpec.label} — it is NOT enumerated as a judge (an identity nobody can type is not an identity)`,
+		`G6-k: judgeIdentity is ${oneSpec.label} — it is NOT enumerated as a judge (an identity nobody can type is not an identity)`,
 		Array.isArray(nonStringEnumeration.judgeIdentityPairList) && nonStringEnumeration.judgeIdentityPairList.length === 0,
 		JSON.stringify(nonStringEnumeration.judgeIdentityPairList),
 	);
-	harness.equal(`G6-k: mappingTool is ${oneSpec.label} — it is counted as an OFFENDER`, nonStringEnumeration.judgedEdgeMalformedMappingToolCount, 1);
+	harness.equal(`G6-k: judgeIdentity is ${oneSpec.label} — it is counted as an OFFENDER`, nonStringEnumeration.judgedEdgeMalformedJudgeIdentityCount, 1);
 });
 // through the BLOCK path, so the refusal text is the one an operator actually sees
 const NON_STRING_TOOL_TEXT = replayBlockLib.serializeBlock({
 	header: RELATIONSHIP_HEADER,
 	nodes: [nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.one' }), nodeLineFor({ source: HUB_NAME, stableId: 'urn:toyhub:P000001' })],
-	edges: [{ type: 'CLOSE_MATCH', fromRef: { source: SOURCE_NAME, id: 'toy:property/A.one' }, toRef: { source: HUB_NAME, id: 'urn:toyhub:P000001' }, properties: { mappingKind: ['inferred'], mappingSource: [REAL_JUDGE_SOURCE], mappingConfidence: [0.9], matchBasis: ['derived'], resolution: ['judged'], predicate: ['closeMatch'], confidence: [0.9], decisionBlockHash: ['0'.repeat(64)], mappingTool: [123], mappingToolVersion: [RENDERER_IDENTITY] } }],
+	edges: [{ type: 'CLOSE_MATCH', fromRef: { source: SOURCE_NAME, id: 'toy:property/A.one' }, toRef: { source: HUB_NAME, id: 'urn:toyhub:P000001' }, properties: { mappingKind: ['inferred'], mappingSource: [REAL_JUDGE_SOURCE], mappingConfidence: [0.9], matchBasis: ['derived'], resolution: ['judged'], predicate: ['closeMatch'], confidence: [0.9], decisionBlockHash: ['0'.repeat(64)], judgeIdentity: [123], rendererVersion: [RENDERER_IDENTITY] } }],
 });
 const nonStringAudit = sibling.auditMappingBlockText({ blockText: NON_STRING_TOOL_TEXT, subject: 'toy_rel_toyhub_nonStringTool' });
 harness.match('G6-k: REFUSED BY NAME, naming the block', nonStringAudit.judgeEnumerationRefusalMessage || '', /toy_rel_toyhub_nonStringTool/);
@@ -376,15 +376,15 @@ harness.ok('G6-g: the module contains NO regex — the rule is DATA, and a regex
 harness.section('SECTION 0C — JOB 6 (G6-g) THE TWIN, on an INVENTED MIXTURE: remove EITHER row and the enumeration reports one judge too many, BY NAME');
 // the mixture no real artifact has — all three spellings of ONE rule in one block
 const MIXED_SPELLING_TEXT = judgedBlockTextFor({ edgeSpecList: [
-	{ mappingTool: HYPHEN_DEBUG_IDENTITY, mappingToolVersion: RENDERER_IDENTITY },
-	{ mappingTool: COLON_DEBUG_IDENTITY, mappingToolVersion: RENDERER_IDENTITY },
-	{ mappingTool: CURRENT_DEBUG_IDENTITY, mappingToolVersion: RENDERER_IDENTITY },
+	{ judgeIdentity: HYPHEN_DEBUG_IDENTITY, rendererVersion: RENDERER_IDENTITY },
+	{ judgeIdentity: COLON_DEBUG_IDENTITY, rendererVersion: RENDERER_IDENTITY },
+	{ judgeIdentity: CURRENT_DEBUG_IDENTITY, rendererVersion: RENDERER_IDENTITY },
 ] });
 const mixedAudit = sibling.auditMappingBlockText({ blockText: MIXED_SPELLING_TEXT, subject: 'toy_rel_toyhub_mixedSpellings' });
 harness.equal('G6-g: the INVENTED mixture holds three judged edges…', mixedAudit.judgedEdgeCount, 3);
 harness.ok(
 	'G6-g: …and with BOTH alias rows present they enumerate as ONE judge, the current identity',
-	Array.isArray(mixedAudit.judgeIdentityPairList) && mixedAudit.judgeIdentityPairList.length === 1 && mixedAudit.judgeIdentityPairList[0].mappingTool === CURRENT_DEBUG_IDENTITY && mixedAudit.judgeIdentityPairList[0].judgedEdgeCount === 3,
+	Array.isArray(mixedAudit.judgeIdentityPairList) && mixedAudit.judgeIdentityPairList.length === 1 && mixedAudit.judgeIdentityPairList[0].judgeIdentity === CURRENT_DEBUG_IDENTITY && mixedAudit.judgeIdentityPairList[0].judgedEdgeCount === 3,
 	JSON.stringify(mixedAudit.judgeIdentityPairList),
 );
 // remove EITHER row, one at a time, through a module double of the TABLE — the production data mutated,
@@ -400,14 +400,14 @@ const withoutHyphenRow = enumerationWithAliasRowRemoved(HYPHEN_DEBUG_IDENTITY);
 harness.equal('G6-g RED-OBSERVED: remove the HYPHEN row → TWO judges where there is one rule', (withoutHyphenRow.judgeIdentityPairList || []).length, 2);
 harness.ok(
 	'G6-g RED-OBSERVED: …and the extra judge is named — the hyphen spelling, unresolved',
-	(withoutHyphenRow.judgeIdentityPairList || []).some((onePair) => onePair.mappingTool === HYPHEN_DEBUG_IDENTITY),
+	(withoutHyphenRow.judgeIdentityPairList || []).some((onePair) => onePair.judgeIdentity === HYPHEN_DEBUG_IDENTITY),
 	JSON.stringify(withoutHyphenRow.judgeIdentityPairList),
 );
 const withoutColonRow = enumerationWithAliasRowRemoved(COLON_DEBUG_IDENTITY);
 harness.equal('G6-g RED-OBSERVED: remove the COLON row → TWO judges', (withoutColonRow.judgeIdentityPairList || []).length, 2);
 harness.ok(
 	'G6-g RED-OBSERVED: …and THAT extra judge is named too — the colon spelling, unresolved',
-	(withoutColonRow.judgeIdentityPairList || []).some((onePair) => onePair.mappingTool === COLON_DEBUG_IDENTITY),
+	(withoutColonRow.judgeIdentityPairList || []).some((onePair) => onePair.judgeIdentity === COLON_DEBUG_IDENTITY),
 	JSON.stringify(withoutColonRow.judgeIdentityPairList),
 );
 
@@ -518,7 +518,7 @@ const driveGoldEvalCheck = ({ actionsFactory, values }, callback) => {
 const judgeNamingGates = ({ standardsDatabase, driveGoldEvalCheck, realActions, bridgedRunDirPath, mintConservationArtifacts, databaseFilePath, twoJudgeManifestRefId, missingToolManifestRefId, otherJudgeManifestRefId, cleanManifestRefId, debugManifestRefId, finish }) => {
 	harness.section('SECTION 5 — JOB 6 (G6-b/c/d/e/f) the VERB: promotion must NAME every judge the manifest carries');
 	harness.ok('    the two-judge manifest gets REAL-SHAPED conservation artifacts', !mintConservationArtifacts({ standardsDatabase, manifestRefId: twoJudgeManifestRefId, runDirPath: bridgedRunDirPath }));
-	harness.ok('    …and so does the missing-mappingTool manifest', !mintConservationArtifacts({ standardsDatabase, manifestRefId: missingToolManifestRefId, runDirPath: bridgedRunDirPath }));
+	harness.ok('    …and so does the missing-judgeIdentity manifest', !mintConservationArtifacts({ standardsDatabase, manifestRefId: missingToolManifestRefId, runDirPath: bridgedRunDirPath }));
 	const valuesFor = (manifestRefId, judgedByList) => {
 		const values = { buildLogDirPath: [bridgedRunDirPath], manifestRefId: [manifestRefId], standardsDatabaseFilePath: [databaseFilePath] };
 		if (judgedByList !== undefined) { values.judgedBy = judgedByList; }
@@ -541,7 +541,7 @@ const judgeNamingGates = ({ standardsDatabase, driveGoldEvalCheck, realActions, 
 			harness.ok('G6-c: a judge PRESENT but not named → REFUSED', !!unnamedError, 'expected a refusal');
 			harness.match('G6-c: …naming the unnamed tool id', unnamedError || '', /ollama:qwen2\.5:32b@9f13ba1299af/);
 			harness.match('G6-c: …and naming the BLOCK it judged', unnamedError || '', /toy@1_0_rel_toyhub@1_0_twoJudges_close/);
-			harness.match('G6-c: …and LISTING every mappingTool FOUND, built from the enumeration and never a hand list', unnamedError || '', /anthropic:claude-opus-4-8/);
+			harness.match('G6-c: …and LISTING every judgeIdentity FOUND, built from the enumeration and never a hand list', unnamedError || '', /anthropic:claude-opus-4-8/);
 			harness.match('G6-c: …and telling the operator what to type', unnamedError || '', /--judgedBy/);
 
 			driveGoldEvalCheck({ actionsFactory: realActions, values: valuesFor(twoJudgeManifestRefId, [ANTHROPIC_IDENTITY, OLLAMA_IDENTITY, 'anthropic:claude-opus-4-1-RETIRED']) }, (absentError) => {
@@ -567,9 +567,9 @@ const judgeNamingGates = ({ standardsDatabase, driveGoldEvalCheck, realActions, 
 						harness.ok('G6-b: …and NOT by the unnamed-judge refusal, which has no grounds here — every present judge IS named', !/does not name them/.test(blankError || ''), blankError);
 
 						driveGoldEvalCheck({ actionsFactory: realActions, values: valuesFor(missingToolManifestRefId, [ANTHROPIC_IDENTITY]) }, (missingToolVerbError) => {
-							harness.ok('G6-e (verb): a JUDGED edge with NO mappingTool → REFUSED', !!missingToolVerbError, 'expected a refusal');
+							harness.ok('G6-e (verb): a JUDGED edge with NO judgeIdentity → REFUSED', !!missingToolVerbError, 'expected a refusal');
 							harness.match('G6-e (verb): …by name, naming the block', missingToolVerbError || '', /toy@1_0_rel_toyhub@1_0_missingTool_close/);
-							harness.match('G6-e (verb): …and naming the missing property', missingToolVerbError || '', /mappingTool/);
+							harness.match('G6-e (verb): …and naming the missing property', missingToolVerbError || '', /judgeIdentity/);
 
 							driveGoldEvalCheck({ actionsFactory: realActions, values: valuesFor(cleanManifestRefId, undefined) }, (authoredError, authoredVerdict) => {
 								harness.ok('G6-f (verb): an AUTHORED-ONLY manifest PASSES with NO --judgedBy — the population rule holds', !authoredError && authoredVerdict && authoredVerdict.exitCode === 0, authoredError);
@@ -580,7 +580,7 @@ const judgeNamingGates = ({ standardsDatabase, driveGoldEvalCheck, realActions, 
 								harness.ok('G6-f (verb): …and the enumeration is REPORTED as empty rather than omitted', !!authoredPayload.judgeEnumeration && Array.isArray(authoredPayload.judgeEnumeration.judgeToolIdList) && authoredPayload.judgeEnumeration.judgeToolIdList.length === 0, JSON.stringify(authoredPayload.judgeEnumeration));
 
 								// ⟪MA5 REPAIR — VELVET_PRISM 2026-09-08⟫ THE SECOND VACUOUS GATE MY MUTATIONS FOUND.
-								// G6-c asserted the refusal "lists every mappingTool found, built FROM the
+								// G6-c asserted the refusal "lists every judgeIdentity found, built FROM the
 								// enumeration and never a hand list" — but replacing that list with a HAND LIST
 								// that happened to equal today's derivation left the suite GREEN. Equality
 								// proves agreement, never derivation (COBALT_ANCHOR M14, RUBY_ANCHOR M9).
@@ -853,7 +853,7 @@ const runGates = ({ standardsDatabase, cleanManifestRefId, debugManifestRefId, f
 											harness.equal('G6-f (manifest): …carrying 2 edges…', authoredManifestAudit && authoredManifestAudit.mappingBlockList[0].edgeCount, 2);
 											harness.equal('G6-f (manifest): …ZERO of them judged…', authoredManifestAudit && authoredManifestAudit.judgedEdgeTotal, 0);
 											harness.ok('G6-f (manifest): …so judgeToolIdList is PRESENT and EMPTY — the gate looked and found none', Array.isArray(authoredManifestAudit && authoredManifestAudit.judgeToolIdList) && authoredManifestAudit.judgeToolIdList.length === 0, JSON.stringify(authoredManifestAudit && authoredManifestAudit.judgeToolIdList));
-											harness.ok('G6-f (manifest): …and NOTHING is refused, though no edge carries a mappingTool', Array.isArray(authoredManifestAudit && authoredManifestAudit.judgeEnumerationRefusalMessageList) && authoredManifestAudit.judgeEnumerationRefusalMessageList.length === 0, JSON.stringify(authoredManifestAudit && authoredManifestAudit.judgeEnumerationRefusalMessageList));
+											harness.ok('G6-f (manifest): …and NOTHING is refused, though no edge carries a judgeIdentity', Array.isArray(authoredManifestAudit && authoredManifestAudit.judgeEnumerationRefusalMessageList) && authoredManifestAudit.judgeEnumerationRefusalMessageList.length === 0, JSON.stringify(authoredManifestAudit && authoredManifestAudit.judgeEnumerationRefusalMessageList));
 											sibling.auditManifestMappingBlocks({ standardsDatabase, manifestRefId: forgeOnlyManifestRefId }, (forgeOnlyAuditError, forgeOnlyManifestAudit) => {
 												// THE SEPARATE, WEAKER FACT, asserted separately and labelled so — a forge-only manifest
 												// proves only that the gate does not fire when it looked at NOTHING. G6-f above is the
@@ -901,11 +901,11 @@ standardsDatabaseModule().open({ databaseFilePath }, (openError, standardsDataba
 							saveRelationship({ text: TWO_JUDGE_TEXT, subject: 'toy@1_0_rel_toyhub@1_0_twoJudges_close' }, (twoJudgeSaveError, twoJudgeSaved) => {
 								harness.ok('the TWO-JUDGE relationship block saves', !twoJudgeSaveError, twoJudgeSaveError);
 								saveRelationship({ text: MISSING_TOOL_TEXT, subject: 'toy@1_0_rel_toyhub@1_0_missingTool_close' }, (missingToolSaveError, missingToolSaved) => {
-									harness.ok('the MISSING-mappingTool relationship block saves (the store does not police it — the sibling does)', !missingToolSaveError, missingToolSaveError);
+									harness.ok('the MISSING-judgeIdentity relationship block saves (the store does not police it — the sibling does)', !missingToolSaveError, missingToolSaveError);
 									standardsDatabase.saveManifest({ name: 'twoJudges', description: 'two judges plus one specified edge', recipeName: 'fixture', recipeHash: 'j', recipeFileName: 'j', basedOnManifestRefId: null, members: [memberFor(baseSaved, 0), memberFor(twoJudgeSaved, 1)] }, (twoJudgeManifestError, twoJudgeManifest) => {
 										harness.ok('the TWO-JUDGE manifest saves', !twoJudgeManifestError, twoJudgeManifestError);
-										standardsDatabase.saveManifest({ name: 'missingTool', description: 'a judged edge carrying no mappingTool', recipeName: 'fixture', recipeHash: 'm', recipeFileName: 'm', basedOnManifestRefId: null, members: [memberFor(baseSaved, 0), memberFor(missingToolSaved, 1)] }, (missingToolManifestError, missingToolManifest) => {
-											harness.ok('the MISSING-mappingTool manifest saves', !missingToolManifestError, missingToolManifestError);
+										standardsDatabase.saveManifest({ name: 'missingTool', description: 'a judged edge carrying no judgeIdentity', recipeName: 'fixture', recipeHash: 'm', recipeFileName: 'm', basedOnManifestRefId: null, members: [memberFor(baseSaved, 0), memberFor(missingToolSaved, 1)] }, (missingToolManifestError, missingToolManifest) => {
+											harness.ok('the MISSING-judgeIdentity manifest saves', !missingToolManifestError, missingToolManifestError);
 											saveRelationship({ text: OTHER_JUDGE_TEXT, subject: 'toy@1_0_rel_toyhub@1_0_otherJudges_close' }, (otherJudgeSaveError, otherJudgeSaved) => {
 												harness.ok('the OTHER-JUDGES relationship block saves (a DISJOINT judge set, for the MA5 repair)', !otherJudgeSaveError, otherJudgeSaveError);
 												standardsDatabase.saveManifest({ name: 'otherJudges', description: 'two DIFFERENT judges', recipeName: 'fixture', recipeHash: 'o', recipeFileName: 'o', basedOnManifestRefId: null, members: [memberFor(baseSaved, 0), memberFor(otherJudgeSaved, 1)] }, (otherJudgeManifestError, otherJudgeManifest) => {

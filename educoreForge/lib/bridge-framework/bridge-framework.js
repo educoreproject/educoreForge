@@ -334,7 +334,14 @@ const moduleFunction =
 			// identity of this run
 			const sourceToken = spec.source;
 			const hubToken = spec.hub;
-			const pairScopedLabel = `${applyLabel}_${sourceToken.toUpperCase()}_${hubToken.toUpperCase()}`;
+			// ⟪campaign P3, W-B-13 bridge half (P2-deferred)⟫ the pair-scoped label comes from its declared grammar
+			// (graph-contract pairScopedLabelFor; the finish strips it by the same pattern). The prefix the build passes must BE the
+			// declared one: a second spelling would mint labels the strip finisher's pattern does not match.
+			if (applyLabel !== vocabularyLib.BRIDGE_PAIR_LABEL_PREFIX) {
+				refuseRun(`run: applyLabel '${applyLabel}' is not the declared bridge pair label prefix '${vocabularyLib.BRIDGE_PAIR_LABEL_PREFIX}'`, 'graph-contract BRIDGE_PAIR_LABEL_PREFIX (W-B-13)');
+				return;
+			}
+			const pairScopedLabel = vocabularyLib.pairScopedLabelFor({ sourceToken, hubToken });
 			const pairKeyPrefix = `${hubToken}@${hubVersion}::${sourceToken}@${sourceVersion}`;
 			const pairKey = `${pairKeyPrefix}::${bridgeDeclaration.bridgeName}::${bridgeDeclaration.producerKind}`;
 			const mode = spec.rebridge ? MODE_REJUDGE : MODE_MATERIALISE;
@@ -828,7 +835,7 @@ const moduleFunction =
 							}
 							const forbidden = WALK_ASSERTION_FORBIDDEN_KEY_LIST.find((oneName) => Object.prototype.hasOwnProperty.call(oneAssertion, oneName));
 							if (forbidden !== undefined) {
-								next(refuse.byName({ moduleName, what: `assertion ${assertionIndex} (${JSON.stringify(oneAssertion.sourceLocator)}) carries '${forbidden}'`, where: 'a plugin never sets resolution / confidence / matchBasis / mappingJustification / objectStableId / a card stableId (BR-022)' }).message);
+								next(refuse.byName({ moduleName, what: `assertion ${assertionIndex} (${JSON.stringify(oneAssertion.sourceLocator)}) carries '${forbidden}'`, where: 'a plugin never sets resolution / confidence / matchBasis / mappingMethod / objectStableId / a card stableId (BR-022)' }).message);
 								return;
 							}
 							const unknownKey = Object.keys(oneAssertion).find((oneName) => WALK_ASSERTION_KEY_LIST.indexOf(oneName) === -1 && oneName !== 'consistencyCheckValueByColumn');
@@ -1307,7 +1314,7 @@ const moduleFunction =
 									return;
 								}
 								const oneRow = groupAssertionList.slice().sort((leftAssertion, rightAssertion) => compareStrings(locatorTextFor(leftAssertion), locatorTextFor(rightAssertion)))[0].labelRow;
-								decisionRecordList.push({ ...baseRecord, resolution: 'specified', objectStableId: filteredCardList[0].stableId, predicate: oneRow.predicate, predicateAssertedBy: oneRow.predicateAssertedBy, sourceLabel: oneRow.sourceLabel, mappingJustification: 'semapv:ManualMappingCuration' });
+								decisionRecordList.push({ ...baseRecord, resolution: 'specified', objectStableId: filteredCardList[0].stableId, predicate: oneRow.predicate, predicateAssertedBy: oneRow.predicateAssertedBy, sourceLabel: oneRow.sourceLabel, mappingMethod: 'semapv:ManualMappingCuration' });
 								return;
 							}
 							// judged: the pool is the filtered pool, or the KEY pool on a source-side mismatch (BR-062)
@@ -1317,7 +1324,7 @@ const moduleFunction =
 								baseRecord: {
 									...baseRecord,
 									resolution: 'judged',
-									mappingJustification: 'semapv:CompositeMatching',
+									mappingMethod: 'semapv:CompositeMatching',
 									sourceSideMismatch: classified.reason === 'sourceSideMismatch' ? { mismatchByField, survivingCandidateCount: keyPoolCardList.length } : null,
 								},
 								pool,
@@ -1343,7 +1350,7 @@ const moduleFunction =
 						const retrievalDeclaration = bridgeDeclaration.candidateRetrieval;
 						const { retrievalMethodRow, retrievalState } = args;
 						const attestationChannelList = [`retrieval:${bridgeDeclaration.subjectSource.label}`];
-						const mappingJustification = retrievalMethodRow.mappingJustificationFor({ retrievalState });
+						const mappingMethod = retrievalMethodRow.mappingMethodFor({ retrievalState });
 						const decisionRecordList = [];
 						const judgedTaskList = [];
 						let buildFault = null;
@@ -1399,7 +1406,7 @@ const moduleFunction =
 								return;
 							}
 							judgedTaskList.push({
-								baseRecord: { ...baseRecord, resolution: 'judged', mappingJustification, sourceSideMismatch: null },
+								baseRecord: { ...baseRecord, resolution: 'judged', mappingMethod, sourceSideMismatch: null },
 								pool: poolCardList,
 								seatReason: 'retrieval',
 								seatReasonByStableId: {},
@@ -1606,6 +1613,11 @@ const moduleFunction =
 								// the judge's rationale word for word, picks and abstentions alike, when the plugin opts in
 								if (recordsJudgeConfig) {
 									judgeRecord.rationale = judged.rationale;
+								}
+								// ⟪campaign P3, W-B-3 (V1-C08, G7)⟫ the judge's own numbers, verbatim, when its provider reports any
+								// (Jev); omitted when null, so a text judge's block text is what it was
+								if (judged.judgeSummary !== null && judged.judgeSummary !== undefined) {
+									judgeRecord.judgeSummary = judged.judgeSummary;
 								}
 								// the relation the judge itself named, on a pick under a rule with a predicate slot (phase B3b,
 								// 2026-09-28). An abstention names none, and under categoryTable-v1 the answer carries no predicate at all.

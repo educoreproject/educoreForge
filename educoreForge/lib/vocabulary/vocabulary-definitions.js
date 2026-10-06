@@ -197,6 +197,43 @@ const TERM_DEFINITIONS = {
 		VALUE: 'The value slot of a hub address — the enumerated option value (value tier only).',
 		QUALIFIER: 'An optional qualifier slot refining a hub address.',
 	},
+	// ⟪campaign P3, W-B-1..4 (TQ A3, G7, V1-C06), 2026-10-06⟫ one sentence per mapping-edge property (vocabulary
+	// MAPPING_PROPERTIES), projected into the SchemaView as kind matchEdgeProperty. A reader learns from these what each value
+	// IS; the names were renamed so that the name already says it (mappingMethod is a method, not a reason).
+	matchEdgeProperty: {
+		predicate: 'The SKOS relation the edge asserts (exactMatch, closeMatch, broadMatch, narrowMatch); it equals the edge type.',
+		mappingMethod: 'The SEMAPV method by which the candidate was proposed and chosen (SSSOM mapping_justification). A method, not a reason: the judge\'s text, when recorded, is mappingRationale.',
+		subjectSource: 'The source standard of the edge\'s start node (its _source).',
+		subjectVersion: 'The source standard\'s version.',
+		objectSource: 'The hub the edge points into (its hubName).',
+		objectVersion: 'The hub\'s version.',
+		judgeIdentity: 'Judged edges: the judge\'s model identity, <providerName>:<providerTail> (SSSOM mapping_tool); the provider is also named by mappingSource.',
+		matchId: 'A forensic id for the (block, subject, predicate, object) tuple, plus the instance under fan-out; never exported.',
+		matchBasis: 'How the producer reached its candidates: standard, crosswalk or derived.',
+		resolution: 'specified (a document named the card) or judged (an algorithm chose among candidates).',
+		mappingProvider: 'Authored edges only: who asserted the mapping (a URL). Absent on an inferred edge: nobody asserted it.',
+		rendererVersion: 'Judged edges: the evidence-renderer version that wrote the prompt the judge answered (SSSOM mapping_tool_version).',
+		subjectMatchField: 'Authored edges only: the source field the authored document matched on.',
+		objectMatchField: 'The hub card field(s) the match was made on (the tuple fields, or hub:semantic for a derived match).',
+		sourceLabel: 'The source document\'s own label for the row (crosswalk producers), verbatim.',
+		predicateAssertedBy: 'Who named the relation: source, labelTable, channelAssertion or the judge.',
+		attestationChannelList: 'The source channels that asserted the mapping (a list at every length).',
+		decisionBlockHash: 'The content address of the frozen decision block the edge was materialised from: the record behind every edge.',
+		judgedSubjectStableId: 'Under fan-out: the declaration that was judged, when the edge leaves one of its instances.',
+		mappingConfidence: 'Judged edges: a BAND of the judge\'s category (confidenceBand: 0.9 strong, 0.7 moderate, 0.5 weakButReal; 0 for the debug judge), never the judge\'s own number; that is judgePickConfidence.',
+		mappingKind: 'What kind of claim the edge is: inferred (an algorithm chose) or authored (a document named the card).',
+		mappingSource: 'Who made the claim: bridge-<judge provider> for an inferred edge, <document family>-<plugin> for an authored one.',
+		judgePickConfidence: 'Judged edges whose judge reports numbers (Jev): the judge\'s own confidence in its pick, verbatim. Present with judgeTopProbability and judgeRunnerUpMargin, or none of them.',
+		judgeTopProbability: 'Judged edges whose judge reports numbers (Jev): the probability the judge gave the option it chose.',
+		judgeRunnerUpMargin: 'Judged edges whose judge reports numbers (Jev): judgeTopProbability minus the largest probability over the other options offered (NONE included).',
+		mappingRationale: 'Judged edges of a plugin that records the judge\'s configuration: the judge\'s text for this pick, verbatim from the frozen record. For a judge that reports probabilities and not reasons (Jev) it is a sentence its client composed from the numbers, and says so. Evidence of the judgment, not an explanation of the mapping.',
+	},
+	// the confidence bands (vocabulary CONFIDENCE_BAND_TABLE), member value '<category>:<band>'
+	confidenceBand: {
+		'strong:0.9': 'mappingConfidence 0.9: the judge reported the category strong. A band of the category, not the judge\'s number (that is judgePickConfidence, when the judge reports one); the floors that derived the category are in the block header (judgeCategoryFloorByCategory).',
+		'moderate:0.7': 'mappingConfidence 0.7: the judge reported the category moderate. A band, not the judge\'s number.',
+		'weakButReal:0.5': 'mappingConfidence 0.5: the judge reported the category weakButReal. A band, not the judge\'s number.',
+	},
 };
 
 module.exports = { TERM_DEFINITIONS };

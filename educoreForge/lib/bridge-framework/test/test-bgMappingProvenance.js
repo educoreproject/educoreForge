@@ -8,7 +8,7 @@
 //   (a) every edge carries mappingKind EQUAL to MAPPING_KIND_BY_RESOLUTION[resolution] and a mappingSource whose family
 //       belongs to that kind
 //   (b) a judged edge (real-client double) names its judge: mappingSource === 'bridge-' + the registered provider that minted
-//       its mappingTool, and mappingConfidence EQUALS confidence
+//       its judgeIdentity, mappingConfidence is in [0, 1] and no retired 'confidence' key is written (W-B-2)
 //   (c) a specified edge names its document: mappingSource === '<crosswalk|standard>-' + the block's bridgeName, and carries
 //       NO mappingConfidence key
 //   (d) a derived block judged by a real client: every edge 'inferred', and NO edge carries provenanceTier (retired from
@@ -136,13 +136,14 @@ const specifiedEdgesOf = (outcome) => edgesOf(outcome).filter((oneEdge) => oneEd
 const provConjunctList = [
 	runConjunct({ conjunctId: 'a_kindAndSourceOnEveryEdge', title: 'every edge carries a mappingKind its resolution permits, a mappingSource whose family permits that kind, and no provenanceTier', twinNameList: ['stripMappingKindPastSeam'], judge: succeeded((runReport, outcome) =>
 		verdictOver({ edgeList: edgesOf(outcome), faultListFor: sourceFaultList, emptyDetail: 'no edge was written, so nothing was checked' })) }),
-	runConjunct({ conjunctId: 'b_judgedEdgeNamesRegisteredJudge', title: "a judged edge's mappingSource is 'bridge-' + the REGISTERED provider that minted its mappingTool, and its mappingConfidence EQUALS its confidence", twinNameList: ['literalJudgeName'], shape: realClientShape, judge: succeeded((runReport, outcome) =>
+	runConjunct({ conjunctId: 'b_judgedEdgeNamesRegisteredJudge', title: "a judged edge's mappingSource is 'bridge-' + the REGISTERED provider that minted its judgeIdentity, its mappingConfidence is a number in [0, 1], and it carries NO 'confidence' key (retired, W-B-2)", twinNameList: ['literalJudgeName'], shape: realClientShape, judge: succeeded((runReport, outcome) =>
 		verdictOver({ edgeList: judgedEdgesOf(outcome), emptyDetail: 'no judged edge was written', faultListFor: (oneEdge) => {
-			const owner = judgeProviderRegistryLib.providerNameForJudgeModel(oneEdge.properties.mappingTool);
+			const owner = judgeProviderRegistryLib.providerNameForJudgeModel(oneEdge.properties.judgeIdentity);
 			const expectedSource = owner.error ? `(no registered provider: ${owner.error})` : composeMappingSource({ family: MAPPING_SOURCE_FAMILY.BRIDGE, sourceName: owner.providerName });
 			return []
 				.concat(oneEdge.properties.mappingSource === expectedSource ? [] : [`mappingSource '${oneEdge.properties.mappingSource}', expected '${expectedSource}'`])
-				.concat(oneEdge.properties.mappingConfidence === oneEdge.properties.confidence ? [] : [`mappingConfidence ${oneEdge.properties.mappingConfidence} ≠ confidence ${oneEdge.properties.confidence}`]);
+				.concat(typeof oneEdge.properties.mappingConfidence === 'number' && oneEdge.properties.mappingConfidence >= 0 && oneEdge.properties.mappingConfidence <= 1 ? [] : [`mappingConfidence ${oneEdge.properties.mappingConfidence} is not a number in [0, 1]`])
+				.concat(Object.prototype.hasOwnProperty.call(oneEdge.properties, 'confidence') ? [`carries the retired 'confidence' (${oneEdge.properties.confidence})`] : []);
 		} })) }),
 	runConjunct({ conjunctId: 'c_specifiedEdgeNamesDocument', title: "a specified edge's mappingSource is '<family by matchBasis>-' + the block's bridgeName, and it carries NO mappingConfidence key", twinNameList: ['mappingConfidenceOnSpecifiedPastSeam'], judge: succeeded((runReport, outcome) => {
 		const block = blockOf(outcome);
@@ -176,10 +177,10 @@ const provConjunctList = [
 		twinName: 'judgeRegistryUnchecked', fileName: SEAM_RULES_FILE, find: '\tif (registeredSourceNameList !== undefined && registeredSourceNameList.indexOf(sourceName) === -1) {', replace: '\tif (false) {' }),
 	refusalCase({ registry: twinRegistry, gateId: 'BG-PROV', conjunctId: 'j_judgedWithoutMappingConfidenceRefused', title: 'a judged edge without mappingConfidence is REFUSED at the write seam by name',
 		shape: seamWrapShape((edgeProperties) => { if (edgeProperties.resolution === 'judged') { delete edgeProperties.mappingConfidence; } return edgeProperties; }), regex: /a judged edge lacks 'mappingConfidence'/,
-		twinName: 'mappingConfidenceNotJudgedOnly', fileName: SEAM_RULES_FILE, find: ', MAPPING_PROPERTIES.MAPPING_TOOL_VERSION, MAPPING_PROPERTIES.MAPPING_CONFIDENCE]);', replace: ', MAPPING_PROPERTIES.MAPPING_TOOL_VERSION]);' }),
+		twinName: 'mappingConfidenceNotJudgedOnly', fileName: SEAM_RULES_FILE, find: ', MAPPING_PROPERTIES.RENDERER_VERSION, MAPPING_PROPERTIES.MAPPING_CONFIDENCE]);', replace: ', MAPPING_PROPERTIES.RENDERER_VERSION]);' }),
 	refusalCase({ registry: twinRegistry, gateId: 'BG-PROV', conjunctId: 'k_specifiedCarryingMappingConfidenceRefused', title: 'a specified edge carrying mappingConfidence (1.0) is REFUSED at the write seam by name — a document asserts, it is not sure',
 		shape: seamWrapShape((edgeProperties) => (edgeProperties.resolution === 'specified' ? { ...edgeProperties, mappingConfidence: 1.0 } : edgeProperties)), regex: /a specified edge carries 'mappingConfidence'/,
-		twinName: 'mappingConfidenceAllowedOnSpecified', fileName: SEAM_RULES_FILE, find: ', MAPPING_PROPERTIES.MAPPING_TOOL_VERSION, MAPPING_PROPERTIES.MAPPING_CONFIDENCE]);', replace: ', MAPPING_PROPERTIES.MAPPING_TOOL_VERSION]);' }),
+		twinName: 'mappingConfidenceAllowedOnSpecified', fileName: SEAM_RULES_FILE, find: ', MAPPING_PROPERTIES.RENDERER_VERSION, MAPPING_PROPERTIES.MAPPING_CONFIDENCE]);', replace: ', MAPPING_PROPERTIES.RENDERER_VERSION]);' }),
 
 	// ---- the materialiser ----
 	refusalCase({ registry: twinRegistry, gateId: 'BG-PROV', conjunctId: 'l_unregisteredJudgeModelRefusedBeforeWrite', title: 'a judged record whose judge model NO registered provider minted is REFUSED by the materialiser, by name, before any edge is written',
@@ -206,7 +207,7 @@ const provConjunctList = [
 	refusalCase({ registry: twinRegistry, gateId: 'BG-PROV', conjunctId: 'o_debugEdgeConfidenceHeldToZero', title: "a 'bridge-debug' edge carrying mappingConfidence 0.9 is REFUSED at the write seam by name: the debug judge may not look sure",
 		shape: (scenario) => { const wrap = seamWrapShape((edgeProperties) => (edgeProperties.mappingSource === DEBUG_MAPPING_SOURCE ? { ...edgeProperties, mappingConfidence: 0.9 } : edgeProperties)); wrap(scenario); scenario.judgeClientOverride = null; },
 		regex: /a 'bridge-debug' edge carries mappingConfidence 0\.9, not its fixed 0/,
-		twinName: 'fixedConfidenceUnchecked', fileName: SEAM_RULES_FILE, find: '\tif (fixedConfidence !== undefined && edgeProperties.mappingConfidence !== fixedConfidence) {', replace: '\tif (false) {' }),
+		twinName: 'fixedConfidenceUnchecked', fileName: SEAM_RULES_FILE, find: '\tif (fixedConfidence !== undefined && edgeProperties[MAPPING_PROPERTIES.MAPPING_CONFIDENCE] !== fixedConfidence) {', replace: '\tif (false) {' }),
 	pureConjunct({ conjunctId: 'p_certificationRefusesSourcelessEdge', title: 'the certification check REFUSES, by name, a harvested mapping edge with NO mappingSource (it cannot be told from a debug edge)', twinNameList: ['sourcelessEdgeCertified'], judge: (scenario) => {
 		const certificationMutationList = scenario.frameworkMutationList.filter((oneMutation) => oneMutation.modulePath.endsWith(CERTIFICATION_FILE));
 		const certificationCheckLib = certificationMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CERTIFICATION_FILE), mutationList: certificationMutationList }) : require('../certificationCheck');

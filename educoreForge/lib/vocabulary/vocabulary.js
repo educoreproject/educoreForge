@@ -479,8 +479,8 @@ const sssomJustificationRefusal = (oneJustification) => {
 
 // SSSOM metadata property NAMES carried on a mapping edge (and on a reified MappingAssertion). camelCase
 // per the project's property-naming convention; a future SSSOM exporter maps these to the SSSOM canonical
-// snake_case field names (mapping_justification, subject_source, …). The mappingJustification VALUE is a
-// semapv CURIE (SSSOM_JUSTIFICATIONS). NOTE: there is deliberately NO mappingDate — a runtime timestamp
+// snake_case field names (mapping_justification, subject_source, …). The mappingMethod VALUE is a semapv CURIE
+// (SSSOM_JUSTIFICATIONS; SSSOM slot mapping_justification). NOTE: there is deliberately NO mappingDate — a runtime timestamp
 // would break deterministic replay; a fixed provenance date, if ever required, is supplied as data, never
 // minted at produce time. Added with the bridge phases (Phase 4 authored track is the first consumer).
 //
@@ -500,15 +500,20 @@ const sssomJustificationRefusal = (oneJustification) => {
 //                     It carries NO mapping semantics — those are matchBasis × resolution × predicate (C6)
 //                     — and is NEVER exported to SSSOM. ⟪RETIRED from mapping edges by lane P, 2026-10-04: the
 //                     history above is kept; see the row.⟫
+// ⟪campaign P3, 2026-10-06: W-B-1 / W-B-2 / W-B-3 / W-B-4 (TQ A3, G7, V1-C06)⟫ three rows RENAMED so each name says what
+// its value IS (mappingJustification → mappingMethod: a SEMAPV method, not a reason; mappingTool → judgeIdentity;
+// mappingToolVersion → rendererVersion), the duplicate `confidence` RETIRED (it equalled mappingConfidence on 12,681 of
+// 12,681 edges), and four judged-only rows ADDED: the judge's own numbers (judgePickConfidence, judgeTopProbability,
+// judgeRunnerUpMargin — present together iff the frozen record carries a judgeSummary) and mappingRationale (present iff
+// the frozen record carries the judge's text). The retired names are MAPPING_PROPERTY_REPLACEMENT_BY_RETIRED_NAME below.
 const MAPPING_PROPERTIES = {
 	PREDICATE: 'predicate',
-	CONFIDENCE: 'confidence',
-	MAPPING_JUSTIFICATION: 'mappingJustification',
+	MAPPING_METHOD: 'mappingMethod', // the SEMAPV method CURIE by which the candidate was proposed and chosen; SSSOM column mapping_justification
 	SUBJECT_SOURCE: 'subjectSource',
 	SUBJECT_VERSION: 'subjectVersion',
 	OBJECT_SOURCE: 'objectSource',
 	OBJECT_VERSION: 'objectVersion',
-	MAPPING_TOOL: 'mappingTool',
+	JUDGE_IDENTITY: 'judgeIdentity', // the judge's model identity (JUDGE_IDENTITY_PATTERN); SSSOM column mapping_tool
 	MATCH_ID: 'matchId', // INTERNAL — never exported (C6)
 	// PROVENANCE_TIER — RETIRED FROM MAPPING EDGES ENTIRELY (lane P, 2026-10-04; TQ, relayed by VIOLET_VALLEY, reversing
 	// ruling A1): "TQ's three fields ARE the provenance; a separate tier would say the same thing twice in other words."
@@ -519,7 +524,7 @@ const MAPPING_PROPERTIES = {
 	MATCH_BASIS: 'matchBasis',
 	RESOLUTION: 'resolution',
 	MAPPING_PROVIDER: 'mappingProvider',
-	MAPPING_TOOL_VERSION: 'mappingToolVersion',
+	RENDERER_VERSION: 'rendererVersion', // the evidence renderer that wrote the prompt; SSSOM column mapping_tool_version
 	SUBJECT_MATCH_FIELD: 'subjectMatchField',
 	OBJECT_MATCH_FIELD: 'objectMatchField',
 	SOURCE_LABEL: 'sourceLabel',
@@ -537,7 +542,99 @@ const MAPPING_PROPERTIES = {
 	MAPPING_CONFIDENCE: 'mappingConfidence', // judged edges only: the judge's confidence (today the band value)
 	MAPPING_KIND: 'mappingKind', // every edge: MAPPING_KIND_LIST
 	MAPPING_SOURCE: 'mappingSource', // every edge: '<family>-<name>', MAPPING_SOURCE_FAMILY_LIST
+	// ⟪W-B-3 / G7⟫ the judge's OWN numbers, copied from the frozen record's judge.judgeSummary (judged edges only, all three
+	// or none: a provider that reports no number — anthropic, ollama, debug — gives none)
+	JUDGE_PICK_CONFIDENCE: 'judgePickConfidence',
+	JUDGE_TOP_PROBABILITY: 'judgeTopProbability',
+	JUDGE_RUNNER_UP_MARGIN: 'judgeRunnerUpMargin',
+	// ⟪W-B-4 / V1-C06⟫ the judge's recorded text for this pick, verbatim from the frozen record (judged edges only, present iff
+	// the plugin opted in with blockRecordsJudgeConfig). Jev's is a sentence its client composed from the numbers and says so.
+	MAPPING_RATIONALE: 'mappingRationale',
 };
+// RETIRED edge property names → the name that replaced each. graphSeamRules refuses a retired name BY ITS REPLACEMENT, and
+// the DME contract gate (graphContract.json retiredMatchEdgePropertyNameList) refuses a Cypher read of one.
+const MAPPING_PROPERTY_REPLACEMENT_BY_RETIRED_NAME = Object.freeze({
+	mappingJustification: MAPPING_PROPERTIES.MAPPING_METHOD,
+	mappingTool: MAPPING_PROPERTIES.JUDGE_IDENTITY,
+	mappingToolVersion: MAPPING_PROPERTIES.RENDERER_VERSION,
+	confidence: MAPPING_PROPERTIES.MAPPING_CONFIDENCE,
+});
+// JUDGE_IDENTITY_PATTERN — '<providerName>:<providerTail>'. providerName is a judgeProviderRegistry row (its
+// providerNameForJudgeModel is the resolver: a prefix test, never a split, because a wire model may itself contain ':').
+// Tails today: jev '<wireModel>:<requestForm>:cfg-<12hex>'; anthropic and ollama '<wireModel>'; debug '<rule>'.
+const JUDGE_IDENTITY_PATTERN = /^[a-z][A-Za-z0-9]*:[^\s]+$/;
+// JUDGE_SUMMARY_FIELD_LIST — the judge's OWN numbers when its provider reports any, carried VERBATIM: the provider's
+// return → the judgment → the cache row → the forensic record → the frozen record's judge.judgeSummary. Never derived,
+// never banded (the band is mappingConfidence). null for a provider that reports none. A partial probability map is refused.
+const JUDGE_SUMMARY_FIELD_LIST = Object.freeze([
+	'judgePickConfidence', // number [0,1]: the provider's confidence in its pick (Jev: answer.confidence)
+	'judgeTopProbability', // number [0,1]: the probability of the option chosen (Jev: probabilities[choice]; NONE included)
+	'judgeRunnerUpMargin', // number [-1,1]: judgeTopProbability minus the largest probability over the OTHER options
+	'judgeProbabilityByChoice', // object: every offered option ('1'..'N', 'NONE') → probability
+	'judgeRelationConfidence', // number | null: the relation question's confidence (a pick under judgeSlot-v1 only)
+	'judgeRelationProbabilityByPredicate', // object | null: exactMatch / closeMatch / broadMatch / narrowMatch → probability
+]);
+// judgeSummaryRefusal(candidate) → '' | the reason, by name. null is lawful (a provider that reports no number). An object
+// must carry EXACTLY JUDGE_SUMMARY_FIELD_LIST, each number finite and in its range, each map non-empty with finite
+// probabilities, and the two relation members null together or present together. Whether the probability map covers the
+// options actually OFFERED is the judgment component's check (only it holds the question). One function, read by the
+// judgment component, the judgment cache and the gates, so the three cannot disagree about what a summary is.
+const isUnitNumber = (candidate) => typeof candidate === 'number' && Number.isFinite(candidate) && candidate >= 0 && candidate <= 1;
+const isProbabilityMap = (candidate) =>
+	candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate) && Object.keys(candidate).length > 0 && Object.keys(candidate).every((oneName) => isUnitNumber(candidate[oneName]));
+const judgeSummaryRefusal = (candidate) => {
+	if (candidate === null) {
+		return '';
+	}
+	if (candidate === undefined || typeof candidate !== 'object' || Array.isArray(candidate)) {
+		return `judgeSummary ${JSON.stringify(candidate)} is neither null nor an object`;
+	}
+	const keyList = Object.keys(candidate).sort();
+	if (JSON.stringify(keyList) !== JSON.stringify(JUDGE_SUMMARY_FIELD_LIST.slice().sort())) {
+		return `judgeSummary carries [${keyList.join(', ')}], not exactly JUDGE_SUMMARY_FIELD_LIST [${JUDGE_SUMMARY_FIELD_LIST.join(', ')}]`;
+	}
+	if (!isUnitNumber(candidate.judgePickConfidence) || !isUnitNumber(candidate.judgeTopProbability)) {
+		return `judgeSummary judgePickConfidence ${JSON.stringify(candidate.judgePickConfidence)} / judgeTopProbability ${JSON.stringify(candidate.judgeTopProbability)} must be numbers in [0, 1]`;
+	}
+	if (typeof candidate.judgeRunnerUpMargin !== 'number' || !Number.isFinite(candidate.judgeRunnerUpMargin) || candidate.judgeRunnerUpMargin < -1 || candidate.judgeRunnerUpMargin > 1) {
+		return `judgeSummary judgeRunnerUpMargin ${JSON.stringify(candidate.judgeRunnerUpMargin)} must be a number in [-1, 1]`;
+	}
+	if (!isProbabilityMap(candidate.judgeProbabilityByChoice)) {
+		return `judgeSummary judgeProbabilityByChoice ${JSON.stringify(candidate.judgeProbabilityByChoice)} must be a non-empty map of probabilities in [0, 1]`;
+	}
+	const relationMemberNullCount = [candidate.judgeRelationConfidence, candidate.judgeRelationProbabilityByPredicate].filter((oneValue) => oneValue === null).length;
+	if (relationMemberNullCount === 1) {
+		return 'judgeSummary judgeRelationConfidence and judgeRelationProbabilityByPredicate are null together or present together';
+	}
+	if (relationMemberNullCount === 0 && (!isUnitNumber(candidate.judgeRelationConfidence) || !isProbabilityMap(candidate.judgeRelationProbabilityByPredicate))) {
+		return `judgeSummary relation members ${JSON.stringify(candidate.judgeRelationConfidence)} / ${JSON.stringify(candidate.judgeRelationProbabilityByPredicate)} must be a number in [0, 1] and a non-empty probability map`;
+	}
+	return '';
+};
+// the summary members an edge carries (G7: "carry Jev's confidence and probabilities"), each under its own edge name
+const JUDGE_SUMMARY_EDGE_PROPERTY_LIST = Object.freeze([MAPPING_PROPERTIES.JUDGE_PICK_CONFIDENCE, MAPPING_PROPERTIES.JUDGE_TOP_PROBABILITY, MAPPING_PROPERTIES.JUDGE_RUNNER_UP_MARGIN]);
+// SSSOM_COLUMN_BY_EDGE_PROPERTY — the SSSOM standard (and declared extension) column each edge property is exported as.
+// The exporter reads FROZEN RECORDS, never edges; this records the correspondence once, and sssomExporter asserts every
+// column named here is one it writes.
+const SSSOM_COLUMN_BY_EDGE_PROPERTY = Object.freeze({
+	[MAPPING_PROPERTIES.MAPPING_METHOD]: 'mapping_justification',
+	[MAPPING_PROPERTIES.JUDGE_IDENTITY]: 'mapping_tool',
+	[MAPPING_PROPERTIES.RENDERER_VERSION]: 'mapping_tool_version',
+	[MAPPING_PROPERTIES.MAPPING_CONFIDENCE]: 'confidence',
+	[MAPPING_PROPERTIES.PREDICATE_ASSERTED_BY]: 'predicate_asserted_by',
+	[MAPPING_PROPERTIES.SOURCE_LABEL]: 'source_label',
+	[MAPPING_PROPERTIES.SUBJECT_MATCH_FIELD]: 'subject_match_field',
+	[MAPPING_PROPERTIES.OBJECT_MATCH_FIELD]: 'object_match_field',
+	[MAPPING_PROPERTIES.JUDGE_TOP_PROBABILITY]: 'judge_top_probability',
+	[MAPPING_PROPERTIES.JUDGE_RUNNER_UP_MARGIN]: 'judge_runner_up_margin',
+	[MAPPING_PROPERTIES.JUDGE_PICK_CONFIDENCE]: 'judge_pick_confidence',
+	[MAPPING_PROPERTIES.MAPPING_RATIONALE]: 'mapping_rationale',
+});
+// CONFIDENCE_BAND_TABLE — the judge's discrete CATEGORY → the discrete mappingConfidence a judged edge carries (moved here
+// from lib/bridge-framework/confidenceBandTable.js, which re-exports it, W-B-3). A BAND of the judge's category, never the
+// judge's number; projected into the SchemaView as kind confidenceBand. Which confidence floors derived a category is
+// stated per block (header judgeCategoryFloorByCategory), not here.
+const CONFIDENCE_BAND_TABLE = Object.freeze({ strong: 0.9, moderate: 0.7, weakButReal: 0.5 });
 // MAPPING_KIND — what kind of claim a mapping edge is, keyed by the record's RESOLUTION (DATA, no branch). A JUDGED edge
 // is inferred: an algorithm chose the card, whoever proposed the candidates. A SPECIFIED edge is authored: a document named
 // the card. 'authored' is in the vocabulary although the live graph has none, because the framework still writes authored
@@ -856,12 +953,15 @@ const SCHEMA_VIEW = {
 		TUPLE_SLOT: 'tupleSlot',
 		// ⟪campaign P2, W-A-6 / V1-C20⟫ the graph contract projected into the graph: one member per declared field, each
 		// carrying the contract row's own meaning (graph-contract §3, §4, §5) and per declared list/integer name (§1, §2).
-		// matchEdgeProperty and confidenceBand (CONTRACTS §9) arrive with W-B's texts in P3.
+		// matchEdgeProperty and confidenceBand (CONTRACTS §9) are the last two kinds (campaign P3).
 		PASSPORT_FIELD: 'passportField',
 		ATTESTATION_FIELD: 'attestationField',
 		SELF_DOC_FIELD: 'selfDocField',
 		LIST_VALUED_PROPERTY: 'listValuedProperty',
 		INTEGER_VALUED_PROPERTY: 'integerValuedProperty',
+		// ⟪campaign P3, W-B-1..4⟫ the mapping-edge property set and the confidence bands, with their definitions
+		MATCH_EDGE_PROPERTY: 'matchEdgeProperty',
+		CONFIDENCE_BAND: 'confidenceBand',
 	},
 };
 
@@ -988,6 +1088,13 @@ const vocabulary = {
 	sssomJustificationRefusal,
 	MAPPING_PROPERTIES,
 	MAPPING_PROPERTY_NAME_LIST,
+	MAPPING_PROPERTY_REPLACEMENT_BY_RETIRED_NAME,
+	JUDGE_IDENTITY_PATTERN,
+	JUDGE_SUMMARY_FIELD_LIST,
+	judgeSummaryRefusal,
+	JUDGE_SUMMARY_EDGE_PROPERTY_LIST,
+	SSSOM_COLUMN_BY_EDGE_PROPERTY,
+	CONFIDENCE_BAND_TABLE,
 	MAPPING_PRODUCER_KIND_LIST,
 	STANDARD_KIND,
 	STANDARD_KIND_LIST,

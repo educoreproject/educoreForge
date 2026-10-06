@@ -164,7 +164,7 @@ regConjunctList.push(
 );
 scenarioTwin({ registry: twinRegistry, gateId: 'BG-REG', conjunctId: 'a_resolvesThroughTheOneRegistry', twinName: 'registryBypassedByAdHocResolution', leverKind: 'productionMutation', mutate: adHocResolutionMutation });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-REG', conjunctId: 'f_runReturnsEveryResultKeyAndOneBlock', twinName: 'dropProducerFromReport', fileName: FRAMEWORK_FILE, find: "\t\t\t\tproducer: bridgeDeclaration.producerKind, // ALWAYS explicit (RULING A1)", replace: '\t\t\t\tproducer: undefined,' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-REG', conjunctId: 'f_bareFamilyLabelNeverStamped', twinName: 'stampBareFamilyLabel', fileName: FRAMEWORK_FILE, find: "\t\t\tconst pairScopedLabel = `${applyLabel}_${sourceToken.toUpperCase()}_${hubToken.toUpperCase()}`;", replace: '\t\t\tconst pairScopedLabel = applyLabel;' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-REG', conjunctId: 'f_bareFamilyLabelNeverStamped', twinName: 'stampBareFamilyLabel', fileName: FRAMEWORK_FILE, find: '\t\t\tconst pairScopedLabel = vocabularyLib.pairScopedLabelFor({ sourceToken, hubToken });', replace: '\t\t\tconst pairScopedLabel = applyLabel;' }); // re-anchored campaign P3: the label comes from its declared grammar (W-B-13 bridge half)
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-REG', conjunctId: 'g_twoPluginsDistinctKeysUnderOneLabel', twinName: 'dropProducerKindFromPairKey', fileName: FRAMEWORK_FILE, find: '\t\t\tconst pairKey = `${pairKeyPrefix}::${bridgeDeclaration.bridgeName}::${bridgeDeclaration.producerKind}`;', replace: '\t\t\tconst pairKey = `${pairKeyPrefix}::${bridgeDeclaration.producerKind}`;' });
 
 // BG-PAIRKEY
