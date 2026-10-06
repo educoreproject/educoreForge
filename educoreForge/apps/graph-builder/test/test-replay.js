@@ -449,6 +449,14 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 					JSON.stringify(spy.calls.create),
 				);
 				harness.equal('exactly one init (restore) ran', spy.calls.init.length, 1);
+				// campaign P2, R1 finding: a -replay forges nothing, so the fidelity row it hands finish must say replay — the
+				// real gate's skip text ("CEDS is not among this build's standards ([])") was false on a graph that holds CEDS
+				const replayFidelityRow = (((spy.calls.finish[0] || {}).gateResults) || []).find((oneRow) => oneRow && oneRow.gate === 'fidelity') || {};
+				harness.ok(
+					"  the fidelity row a replay hands finish says replay, never that CEDS is absent",
+					replayFidelityRow.verdict === 'notRun' && /^replay: /.test(replayFidelityRow.detail || '') && !/is not among this build's standards/.test(replayFidelityRow.detail || ''),
+					JSON.stringify(replayFidelityRow),
+				);
 
 				// THE RESTORE PAYLOAD IS THE MANIFEST'S MEMBERSHIP — resolved blocks, in count and identity.
 				const restored = (spy.calls.init[0] && spy.calls.init[0].schemaBlocks) || [];

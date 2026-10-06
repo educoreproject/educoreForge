@@ -394,6 +394,13 @@ const eachSeries = (items, iterator, done) => {
 // BuildAttestation row { gate: 'fidelity', verdict, detail, inventedTotal } — notRun when CEDS is not in the graph (skipped),
 // pass on a genuine pass, passWithAllowedLoss when the loss it found was allowed under --allowFidelityLoss. Until then it
 // called back with nothing, the three were indistinguishable, and the row read notRun on every build.
+// runReplayFidelityGate — the fidelity runner a -replay hands materialize (campaign P2, R1 finding). A replay forges nothing:
+// its blocks were gated when they were forged, and R-1 here has no fresh forge to round-trip. Until this existed the replay
+// handed the REAL gate an empty token list and the row read "CEDS is not among this build's standards ([])" on a graph
+// that holds CEDS. The row now says what happened.
+const REPLAY_FIDELITY_DETAIL = 'replay: no forge ran in this materialize, so R-1 has no freshly forged CEDS to round-trip; the stored blocks were gated when they were forged';
+const runReplayFidelityGate = (runnerArguments, callback) => callback('', { gate: 'fidelity', verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN, detail: REPLAY_FIDELITY_DETAIL });
+
 const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParameters }, callback) => {
 	// THE DECISION LIVES IN ITS OWN MODULE so its failure branch can be negated in
 	// milliseconds instead of a five-minute forge. See
@@ -2549,10 +2556,10 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 					resolvedSchemaBlocks,
 					manifestId,
 					memberCount,
-					// ⟪R-P2-1⟫ same seam as build(): injected runner or the real gate. (This path
-					// passes no standardTokens, so the real gate no-ops here exactly as before —
-					// the seam changes nothing about -replay's behavior.)
-					fidelityGateRunner: deps.cedsFidelityGateRunner || runCedsFidelityGate,
+					// ⟪R-P2-1⟫ same seam as build(): an injected runner, else the REPLAY runner — a replay forges
+					// nothing, so its row says replay (campaign P2, R1 finding; it used to hand the real gate no
+					// tokens and record that CEDS was absent from a graph that holds it)
+					fidelityGateRunner: deps.cedsFidelityGateRunner || runReplayFidelityGate,
 					embeddingCoverageGateRunner: deps.embeddingCoverageGateRunner || embeddingCoverageGateLib.runEmbeddingCoverageGate,
 					forgeCensusGateRunner: deps.forgeCensusGateRunner || forgeCensusGateLib.runForgeCensusGate,
 					// a -replay forged nothing: no forge counts to compare
@@ -2639,6 +2646,7 @@ module.exports.refuseHublessReuseUnderDeriveHub = refuseHublessReuseUnderDeriveH
 // ⟪lane R, 2026-10-05⟫ the fidelity row's producer and its wiring, exported as statics so the three states (skipped,
 // pass, passWithAllowedLoss) are gated through the real materialize tail with hermetic doubles (test-fidelityAttestation)
 module.exports.runCedsFidelityGate = runCedsFidelityGate;
+module.exports.runReplayFidelityGate = runReplayFidelityGate;
 module.exports.materializeSchemaBlocks = materializeSchemaBlocks;
 // ⟪campaign P2, W-A-3⟫ the decision blocks' framework fingerprints for the passport, gated directly (test-frameworkFingerprintList)
 module.exports.frameworkFingerprintListFor = frameworkFingerprintListFor;

@@ -13,10 +13,12 @@
 //   (e) the runner's row REACHES the graph: materialize hands it to finish, and the finisher records it as supplied
 //   (f) a runner that succeeds WITHOUT a row is REFUSED by name (the row would otherwise be a guess)
 //   (g) the finisher REFUSES a verdict outside vocabulary.BUILD_ATTESTATION_VERDICT_LIST by name
+//   (h) the REPLAY runner (campaign P2, R1 finding) reports notRun saying replay, a row the tail accepts — never the real
+//       gate's 'CEDS is not among this build's standards' on a graph that holds CEDS (test-replay proves -replay uses it)
 // RED TWINS, each observed in memory, by message: (a) the runner's skip calls back with nothing (the pre-lane-R code);
 // (b) every pass reported as allowed loss; (c) every pass reported as plain pass (the derived pass FINDING 5-A forbade);
 // (d) the allowance rule (allowance > 0) instead of the loss rule; (e) the tail dropping the fidelity row; (f) the
-// tail's refusal removed; (g) the finisher's vocabulary check removed.
+// tail's refusal removed; (g) the finisher's vocabulary check removed; (h) the replay runner given the real gate's skip text.
 //
 // Run: node apps/graph-builder/test/test-fidelityAttestation.js [-verbose]
 
@@ -140,6 +142,14 @@ const conjunctJudgeByRefId = {
 			done({ pass, detail: emitError || 'recorded a verdict outside the vocabulary' });
 		});
 	},
+	h_replayRunnerSaysReplay: ({ buildJsMutationList }, done) => {
+		const buildLib = buildLibFor(buildJsMutationList);
+		buildLib.runReplayFidelityGate({ xLog: silentXLog, graphName: 'G', commandLineParameters: {} }, (gateError, attestation) => {
+			const fault = buildLib.fidelityAttestationFaultFor(attestation);
+			const pass = !gateError && !fault && attestation.verdict === BUILD_ATTESTATION_VERDICT.NOT_RUN && /^replay: /.test(attestation.detail || '') && !/is not among this build's standards/.test(attestation.detail || '');
+			done({ pass, detail: gateError || fault || `reported ${JSON.stringify(attestation)}` });
+		});
+	},
 };
 
 const TWIN_LIST = [
@@ -150,6 +160,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'e_runnerRowReachesTheGraph', twinName: 'tailDropsFidelityRow', target: 'buildJs', find: 'gateResults: [fidelityAttestation, roundTripRow, embeddingCoverageRow, forgeCensusRow],', replace: 'gateResults: [roundTripRow, embeddingCoverageRow, forgeCensusRow],' },
 	{ conjunctRefId: 'f_silentRunnerRefused', twinName: 'tailRefusalRemoved', target: 'buildJs', find: '\t\t\t\t\tif (fidelityAttestationFault) {', replace: '\t\t\t\t\tif (false) {' },
 	{ conjunctRefId: 'g_unknownVerdictRefusedByFinisher', twinName: 'finisherVocabularyCheckRemoved', target: 'finisher', find: '\t\t\tif (unknownVerdictList.length) {', replace: '\t\t\tif (false) {' },
+	{ conjunctRefId: 'h_replayRunnerSaysReplay', twinName: 'replayRunnerClaimsCedsAbsent', target: 'buildJs', find: "detail: REPLAY_FIDELITY_DETAIL });", replace: "detail: 'skipped: CEDS is not among this build\\'s standards ([])' });" },
 ];
 const TARGET_PATH_BY_NAME = { buildJs: BUILD_JS_PATH, judgment: JUDGMENT_PATH, finisher: FINISHER_PATH };
 const mutationListsFor = (oneTwin) => {

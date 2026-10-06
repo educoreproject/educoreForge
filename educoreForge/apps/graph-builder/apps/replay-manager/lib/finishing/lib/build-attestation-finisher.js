@@ -79,6 +79,8 @@ const moduleFunction =
 		const EXPECTED_GATE_LIST = ATTESTATION_GATE_LIST_BY_CHANNEL[CHANNEL_NAME];
 		const CHANNEL_LABEL_LIST = ATTESTATION_LABEL_SET_BY_CHANNEL[CHANNEL_NAME];
 		const CHANNEL_NOTE = 'A — written by the build-attestation finisher at finish, from the verdicts the build handed it; a gate it expected and was not handed reads notRun with verdictSupplied false';
+		// §4 declares detail on every row: an expected gate nobody supplied says so in words, never a null (R1, campaign P2)
+		const UNSUPPLIED_DETAIL = 'no producer supplied a verdict for this gate in this materialize: this row is the expected-list default (notRun), not a measurement';
 		// the channel-A detail fields (inventedTotal, the roundTrip totals, …), each copied only for the gates it names
 		const CHANNEL_A_DETAIL_FIELD_LIST = ATTESTATION_FIELD_LIST.filter((oneRow) => oneRow.channel === CHANNEL_NAME);
 
@@ -145,7 +147,7 @@ const moduleFunction =
 						gate: oneGateName,
 						// A MISSING ENTRY READS AS notRun, NEVER AS PASS.
 						verdict: supplied ? supplied.verdict : VERDICT_NOT_RUN,
-						detail: supplied && supplied.detail !== undefined ? supplied.detail : null,
+						detail: supplied && supplied.detail !== undefined ? supplied.detail : UNSUPPLIED_DETAIL,
 						...detailFieldByName,
 						// Whether this row came from a supplied verdict or from the expected-list default.
 						// A consumer can then tell "the producer said notRun" from "the producer said nothing".
