@@ -323,7 +323,15 @@ const POST_D1_BASE_TAG = 'postCampaignP0VocabularyIi-100626'; // re-anchored 202
 // file, lib/forge-framework/test/test-gSeamUntouched.js 11 — its own re-anchor to postCampaignP0GSeamUntouched-100626 (0d6ffd9).
 // lib/forge-framework SOURCE: UNTOUCHED. THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed on the re-anchor commit
 // (DEVLOG-P0). The THIRTEENTH anchor.
-const PHASE0_ANCHOR_TAG = 'postCampaignP0ForgeFrameworkIii-100626'; // re-anchored by SILVER_ECHO, campaign P0 — the THIRTEENTH anchor
+// campaign P2 RE-ANCHOR of (iii) (CARDINAL_RIVER, 2026-10-06; pre-authorised, VIOLET_VALLEY 17:42Z standing rule):
+// postCampaignP0ForgeFrameworkIii-100626 -> postCampaignP2ForgeFrameworkIii-100626, tag cut ON this commit. CENSUS (git diff --stat
+// ... -- lib/forge-framework/) at 589f59c: FIVE files, THREE OF THEM FRAMEWORK SOURCE, each a ruled campaign P2 entry:
+//   contractGraphKit.js 12 (W-C-15: the kit refuses a precedingProperties collision by name), forge-framework.js 10 (W-A-10: the
+//   integrity pass reads REQUIRED_PROPERTIES.NODE_BY_ROLE_CLASS), roundTripHarness/verdictAssembler.js 25 (W-C-14: the normative
+//   verdict field list and its shape check), and two tests: test-gKit.js 17 (the W-C-15 conjunct; G-KIT twin re-anchored for W-A-10)
+//   and test-gSeamUntouched.js 17 (its own re-anchor, 589f59c). THE PATH IS UNCHANGED, NO EXCLUSION IS ADDED. Fresh red observed on
+//   the re-anchor commit (DEVLOG-P2). The FOURTEENTH anchor.
+const PHASE0_ANCHOR_TAG = 'postCampaignP2ForgeFrameworkIii-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 — the FOURTEENTH anchor
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
