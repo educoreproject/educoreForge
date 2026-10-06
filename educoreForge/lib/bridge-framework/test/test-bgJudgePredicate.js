@@ -307,7 +307,7 @@ const cacheConjunctList = [
 	}),
 ];
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGEPRED', conjunctId: 'b_categoryTableRowMissUnderJudgeSlot', twinName: 'judgeSlotGivenDerivedRendererVersion', fileName: RENDERER_FILE, find: JUDGE_SLOT_VERSION_FIND, replace: JUDGE_SLOT_GIVEN_DERIVED_VERSION });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGEPRED', conjunctId: 'b_judgeSlotRowServedWithItsPredicate', twinName: 'cachePayloadDropsPredicate', fileName: JUDGE_FILE, find: 'chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) } },', replace: 'chosenStableId: judged.chosenCardStableId } },' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGEPRED', conjunctId: 'b_judgeSlotRowServedWithItsPredicate', twinName: 'cachePayloadDropsPredicate', fileName: JUDGE_FILE, find: 'chosenStableId: judged.chosenCardStableId, ...predicateByFieldNameOf(judged) };', replace: 'chosenStableId: judged.chosenCardStableId };' }); // re-anchored 2026-10-06 (campaign P0): W-B-7 names the payload putPayload
 
 // ---------------------------------------------------------------------
 // (c) categoryTable-v1: BF1's discard-and-count, unchanged
