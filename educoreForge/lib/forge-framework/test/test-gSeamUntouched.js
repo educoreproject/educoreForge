@@ -143,7 +143,16 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 //                                                                   finish and refuses a silent runner; two statics exported
 // forger.js, shape-forged-graph.js, replay-engine.js, replay-block.js, replayManager.js and round-trip-stage.js: UNTOUCHED. THE SEAM
 // FILE LIST IS UNCHANGED, no exclusion added; the fresh red was observed at d84bd9a (DEVLOG-R). (iii) moves next, on its own commit.
-const PRE_MIGRATION_REF = 'postLeftoversRGSeamUntouched-100526'; // re-anchored by EMERALD_OCEAN, leftovers lane R; the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-06 (SILVER_ECHO; campaign P0, pre-authorised by WORKORDER-P0-securityFoundations-100626 / NOTES 5) ═══
+// postLeftoversRGSeamUntouched-100526 -> postCampaignP0GSeamUntouched-100626, the tag cut ON this re-anchor commit. CENSUS, MEASURED
+// WITH THIS GATE'S OWN COMMAND (git diff --stat postLeftoversRGSeamUntouched-100526 -- <the 7 seam files>) at 9d90652: exactly ONE of
+// the seven, campaign P0 5b59b19 (W-C-11, store families):
+//   apps/graph-builder/lib/build.js                          | 36  resolveEmbeddingCacheFilePath no longer reads the command line:
+//                                                                   the orchestrator (actions.js STORE_FAMILY_RESOLUTION_TABLE)
+//                                                                   hands down a path or the BOOLEAN false
+// forger.js, shape-forged-graph.js, replay-engine.js, replay-block.js, replayManager.js and round-trip-stage.js: UNTOUCHED. THE SEAM
+// FILE LIST IS UNCHANGED, no exclusion added; the fresh red is observed at the re-anchor commit (DEVLOG-P0).
+const PRE_MIGRATION_REF = 'postCampaignP0GSeamUntouched-100626'; // re-anchored by SILVER_ECHO, campaign P0; the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
