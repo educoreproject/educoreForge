@@ -12,7 +12,6 @@
 // pure data module — no DI, no Neo4j, no async. It is frozen to prevent accidental mutation.
 //
 // Provenance of values (code fact, read this session):
-//   - OWNER_TOKENS / ROLE_TYPES ........ edf-replay/lib/graph-builder.js (typeForRole/ownerForRole)
 //   - NODE_LABELS ...................... replay-engine.js / graph-builder.js (:ForgedNode, :GraphProvenance)
 //   - DME_ROLES ........................ forge-ceds.js makeNode + search-text/build-search-text.js
 //   - EDGE_TYPES ....................... forge-ceds.js addEdge + the other producers (recon)
@@ -26,14 +25,6 @@
 //
 // @concept: [[VocabularyRegistry]]
 // @concept: [[SchemaAsCode]]
-
-// =====================================================================
-// OWNER + ROLE TOKENS (graph-builder.js)
-// =====================================================================
-// owner LABEL/property token stamped post-replay; ':' prefix is intrinsic (stripped to a bare label
-// by graph-builder.ownerLabel). role/type token drives instance type + default owner.
-const OWNER_TOKENS = { GOLDEN: ':golden', USER: ':user' };
-const ROLE_TYPES = { BRONZE: 'bronze', GOLDEN: 'golden', USER: 'user' };
 
 // =====================================================================
 // NODE LABELS — universal structural labels (NOT per-standard labels, which stay producer-local)
@@ -54,9 +45,9 @@ const DME_ROLES = {
 	// A CEDS change-history record. ⟪TQ ruling, 2026-08-02⟫ change history becomes NODES,
 	// not a JSON blob: a blob round-trips perfectly and answers nothing, and the point of
 	// holding this in a graph is to ask "what changed in 14.0.0.0" and "which elements we
-	// mapped against have moved since". Carries no embedding, so it never enters the single
-	// golden_vector index and stays invisible to the DME's semantic search -- the same
-	// treatment HubReference already gets.
+	// mapped against have moved since". Carries no embedding, so it never enters the <graphName>_vector index on
+	// :ForgedNode(embedding) and stays invisible to the DME's semantic search. (HubReference cards DO carry an
+	// embedding and ARE in that index — corrected in campaign P2, W-A-12.)
 	EDIT_HISTORY_ENTRY: 'DmeEditHistoryEntry',
 	// An owl:Restriction block -- a CLASS's constraint that a named property takes all its
 	// values from a named target. 18 in CEDS. Anonymous in the source, so identity is derived
@@ -193,7 +184,6 @@ const SCHEMA_BLOCK_KINDS = [
 	SCHEMA_BLOCK_KIND.HUB,
 	SCHEMA_BLOCK_KIND.RELATIONSHIP,
 ];
-const isSchemaBlockKind = (oneKind) => SCHEMA_BLOCK_KINDS.indexOf(oneKind) !== -1;
 
 // =====================================================================
 // SUBJECT-REF-ID ROLE MARKER ↔ KIND (implementationPlan_hubPort_072326 §1, TQ 2026-07-23).
@@ -373,110 +363,6 @@ const kindImpliedBySubject = (subject) =>
 		? undefined
 		: SCHEMA_BLOCK_KINDS.filter((oneKind) => subjectAgreesWithKind(subject, oneKind))[0];
 
-// =====================================================================
-// PAIR / VERSION-KEY VOCABULARY (Phase C, spec §4/§5). MAPPING_BLOCK_TYPES is THE one
-// authoritative list of block TYPES that carry per-pair mapping content and therefore
-// MUST enter the store with a complete version key (spec §4.2/§4.4, invariant 11.8).
-// Three consumers by design — forge-store.saveBlock validation, the re-key transformer
-// census, and the connect-report rollup — one list, zero divergence: a silently-missed
-// block type is structurally impossible. 'pairGroup' is deliberately NOT in this list
-// (it is a selection artifact, not mapping content) but shares the version-key
-// completeness rule at the saveBlock choke point.
-// =====================================================================
-const MAPPING_BLOCK_TYPES = ['mapping', 'inferredDecision'];
-const isMappingBlockType = (oneType) => MAPPING_BLOCK_TYPES.indexOf(oneType) !== -1;
-
-const PAIR_GROUP_BLOCK_TYPE = 'pairGroup';
-
-// =====================================================================
-// STRUCTURAL BRIDGE (forgeArchitectureRefactor SPECIFICATION v2 S1 — Option B,
-// TQ-ruled 2026-07-16). A NEW store type for pair-scoped, version-keyed STRUCTURAL
-// cross-standard edges (the CTDL-family locator edges are the pilot). This ruling
-// SUPERSEDES the prior "structural edges do not belong in mapping machinery" comment
-// (edfCtdlUriBridge.js:25-29): structural bridges ARE pair-scoped + version-keyed +
-// composable exactly like mapping content — via THIS type, never by overloading
-// 'mapping' (mapping-only consumers such as the connect-report rollup keep reading
-// MAPPING_BLOCK_TYPES unchanged). Legacy keyless 'bridge' blocks (the consolidated
-// relationships block, the retired family bridge) are deliberately NOT enforced —
-// they must remain loadable as historical artifacts (S1.5).
-//
-// Three predicates, one list each, N consumers (the MAPPING_BLOCK_TYPES doctrine):
-//   isVersionKeyedBlockType — the saveBlock CHOKE set (S1.1): content types that are
-//       REJECTED without a complete pairA/pairAVersion/pairB/pairBVersion header.
-//   isPairGroupMemberType   — pairGroup MEMBERSHIP (S1.2) + combine group-swap:
-//       mapping ∪ structuralBridge. inferredDecision stays excluded (audit records,
-//       not relationship content — the standing supervisor rider).
-//   isRekeyableBlockType    — edf-rekey's type gates (S1.3a, R2-5): mapping types ∪
-//       structuralBridge. pairGroup is not rekeyable (a selection artifact).
-// =====================================================================
-const STRUCTURAL_BRIDGE_BLOCK_TYPE = 'structuralBridge';
-
-const VERSION_KEYED_BLOCK_TYPES = [
-	...MAPPING_BLOCK_TYPES,
-	PAIR_GROUP_BLOCK_TYPE,
-	STRUCTURAL_BRIDGE_BLOCK_TYPE,
-];
-const isVersionKeyedBlockType = (oneType) =>
-	VERSION_KEYED_BLOCK_TYPES.indexOf(oneType) !== -1;
-
-const PAIR_GROUP_MEMBER_TYPES = ['mapping', STRUCTURAL_BRIDGE_BLOCK_TYPE];
-const isPairGroupMemberType = (oneType) =>
-	PAIR_GROUP_MEMBER_TYPES.indexOf(oneType) !== -1;
-
-const REKEYABLE_BLOCK_TYPES = [...MAPPING_BLOCK_TYPES, STRUCTURAL_BRIDGE_BLOCK_TYPE];
-const isRekeyableBlockType = (oneType) =>
-	REKEYABLE_BLOCK_TYPES.indexOf(oneType) !== -1;
-
-// canonical machine forms (supervisor-ruled 2026-07-10): pair subject 'CEDS::SIF'
-// (hub first, exact discovery standardName casing); versionKey '(aVersion,bVersion)'
-// — bare snapshot keys, no h/s prefixes (those belong to DISPLAY generation, §5.3);
-// symbolic reference 'CEDS::SIF@(01,01)'.
-const PAIR_SUBJECT_SEPARATOR = '::';
-const pairSubjectText = (pairA, pairB) =>
-	`${pairA}${PAIR_SUBJECT_SEPARATOR}${pairB}`;
-const versionKeyText = (aVersion, bVersion) => `(${aVersion},${bVersion})`;
-const symbolicPairReference = ({ pairA, pairB, aVersion, bVersion }) =>
-	`${pairSubjectText(pairA, pairB)}@${versionKeyText(aVersion, bVersion)}`;
-
-// the four header fields whose joint presence IS version-key completeness (§4.2)
-const VERSION_KEY_HEADER_FIELDS = ['pairA', 'pairAVersion', 'pairB', 'pairBVersion'];
-
-// composePairGroupText — the D4 canonical two-line PG-JSONL pairGroup text. Deterministic:
-// fixed header field order, members sorted ascending (sorted members = deterministic content
-// address). Homed HERE (Phase D) so every group-creating verb — forgeManager -mintPairGroup,
-// manifestEditor -defineGroup — composes byte-identical text from one function (the
-// MAPPING_BLOCK_TYPES one-list-N-consumers doctrine applied to the group's canonical form).
-// The pairGroup block never enters the replay path, so it does not use replay-block's serializer.
-const composePairGroupText = ({
-	pairA,
-	pairAVersion,
-	pairB,
-	pairBVersion,
-	publishedVersionA,
-	publishedVersionB,
-	displayName,
-	members,
-	versionKey,
-}) => {
-	const headerLine = JSON.stringify({
-		kind: 'header',
-		blockType: PAIR_GROUP_BLOCK_TYPE,
-		serializerVersion: '1',
-		pairA,
-		pairAVersion,
-		pairB,
-		pairBVersion,
-		publishedVersionA,
-		publishedVersionB,
-		displayName,
-	});
-	const contentLine = JSON.stringify({
-		kind: 'pairGroupContent',
-		members: [...members].sort(),
-		versionKey,
-	});
-	return `${headerLine}\n${contentLine}\n`;
-};
 
 // =====================================================================
 // PROVENANCE TIERS — THE canonical four-value set (replay-block.js). Order is significant and
@@ -526,7 +412,6 @@ const SKOS_PREDICATES = [
 	'narrowMatch',
 	'relatedMatch',
 ];
-const isValidSkosPredicate = (oneP) => SKOS_PREDICATES.indexOf(oneP) !== -1;
 
 // SKOS-relation Neo4j EDGE TYPES — the DEFAULT mapping form (WHITEPAPER §5 table / §6.1: a mapping is a
 // typed edge from the source element to its HubReference, the SKOS relation as the edge label). One per
@@ -540,7 +425,6 @@ const SKOS_EDGE_TYPES = {
 	narrowMatch: 'NARROW_MATCH',
 	relatedMatch: 'RELATED_MATCH',
 };
-const skosEdgeType = (onePredicate) => SKOS_EDGE_TYPES[onePredicate];
 
 // =====================================================================
 // SSSOM JUSTIFICATIONS — the closed mapping_justification enum. AUTHORITY: the EDUcore Bridge Profile,
@@ -813,7 +697,6 @@ const EQUIVALENCE_NODE_LABELS = {
 // referenceTier enum (§8: 3-slot 'property' | 4-slot 'value').
 const REFERENCE_TIERS = ['property', 'value'];
 const REFERENCE_TIER = { PROPERTY: 'property', VALUE: 'value' };
-const isValidReferenceTier = (oneTier) => REFERENCE_TIERS.indexOf(oneTier) !== -1;
 
 // CANONICAL-ADDRESS component property NAMES — PROMOTED from forge-ceds local literals (HANDOFF (d)).
 // Phase 2 stamps these on the CEDS hub structural nodes; Phase 3 reads + extends them. These are the
@@ -840,7 +723,7 @@ const HUB_REFERENCE_PROPERTIES = {
 	RANGE_DATATYPE: 'rangeDatatype',
 	QUALIFIER_KEYS: 'qualifierKeys',
 	ADDRESS_SIGNATURE: 'addressSignature',
-	LABEL: 'label',
+	// ⟪campaign P2, W-A-12⟫ LABEL removed: 'label' is absent on all 94,602 live cards and nothing wrote it
 	ANCHOR_URI: 'anchorUri',
 	EMBEDDING: 'embedding',
 };
@@ -933,10 +816,6 @@ const SEQUENCE_PROPERTIES = {
 	ORDER_SEMANTICS: 'orderSemantics',
 };
 const SEQUENCE_ORDER_SEMANTICS_VALUES = ['normative', 'document'];
-const SEQUENCE_ORDER_SEMANTICS = {
-	NORMATIVE: 'normative',
-	DOCUMENT: 'document',
-};
 const isValidSequenceOrderSemantics = (oneValue) => SEQUENCE_ORDER_SEMANTICS_VALUES.indexOf(oneValue) !== -1;
 
 // =====================================================================
@@ -1069,8 +948,6 @@ const GRAPH_META = {
 const { TERM_DEFINITIONS } = require('./vocabulary-definitions');
 
 const vocabulary = {
-	OWNER_TOKENS,
-	ROLE_TYPES,
 	NODE_LABELS,
 	DME_ROLES,
 	EDGE_TYPES,
@@ -1081,7 +958,6 @@ const vocabulary = {
 	// schema block taxonomy (targetArchitectureDesign §2 — LOCKED)
 	SCHEMA_BLOCK_KIND,
 	SCHEMA_BLOCK_KINDS,
-	isSchemaBlockKind,
 	// subject role marker ↔ kind (implementationPlan_hubPort_072326 §1)
 	SCHEMA_BLOCK_KIND_SUFFIX,
 	suffixMarkerForKind,
@@ -1089,7 +965,6 @@ const vocabulary = {
 	kindImpliedBySubject,
 	// relationship producer suffix ↔ (pair × producer) block name (implementationPlan_bridge_072426 §7)
 	RELATIONSHIP_PRODUCER_SUFFIX,
-	RELATIONSHIP_PRODUCER_SUFFIXES,
 	suffixForRelationshipProducer,
 	// the OPT-IN subject discriminator (Phase 7) — ONE authored pattern, shared by the composer, both
 	// parsers here and the bridge declaration contract's kind-checker, so every reader agrees by construction
@@ -1100,32 +975,14 @@ const vocabulary = {
 	relationshipSubject,
 	relationshipProducerFromSubject,
 	// pair / version-key vocabulary (Phase C)
-	MAPPING_BLOCK_TYPES,
-	isMappingBlockType,
-	PAIR_GROUP_BLOCK_TYPE,
 	// structural-bridge vocabulary (forgeArchitectureRefactor S1)
-	STRUCTURAL_BRIDGE_BLOCK_TYPE,
-	VERSION_KEYED_BLOCK_TYPES,
-	isVersionKeyedBlockType,
-	PAIR_GROUP_MEMBER_TYPES,
-	isPairGroupMemberType,
-	REKEYABLE_BLOCK_TYPES,
-	isRekeyableBlockType,
-	PAIR_SUBJECT_SEPARATOR,
-	pairSubjectText,
-	versionKeyText,
-	symbolicPairReference,
-	VERSION_KEY_HEADER_FIELDS,
-	composePairGroupText,
 	PROVENANCE_TIERS,
 	PROVENANCE_TIER,
 	isValidProvenanceTier,
 	EDGE_TYPE_RE,
 	isValidEdgeType,
 	SKOS_PREDICATES,
-	isValidSkosPredicate,
 	SKOS_EDGE_TYPES,
-	skosEdgeType,
 	SSSOM_JUSTIFICATIONS,
 	SSSOM_JUSTIFICATIONS_BANNED,
 	sssomJustificationRefusal,
@@ -1141,10 +998,8 @@ const vocabulary = {
 	MAPPING_KIND_BY_RESOLUTION,
 	MAPPING_SOURCE_SEPARATOR,
 	MAPPING_SOURCE_FAMILY,
-	MAPPING_SOURCE_FAMILY_LIST,
 	MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY,
 	MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS,
-	MAPPING_SOURCE_NAME_PATTERN,
 	mappingSourceRefusal,
 	mappingSourceFamilyOf,
 	composeMappingSource,
@@ -1154,7 +1009,6 @@ const vocabulary = {
 	EQUIVALENCE_NODE_LABELS,
 	REFERENCE_TIERS,
 	REFERENCE_TIER,
-	isValidReferenceTier,
 	CANONICAL_ADDRESS_PROPERTIES,
 	HUB_REFERENCE_PROPERTIES,
 	HUB_DEFINITION_PROPERTIES,
@@ -1168,7 +1022,6 @@ const vocabulary = {
 	// sequence property names (design-authority upgrade, 2026-07-30 — lib/sequence-contract)
 	SEQUENCE_PROPERTIES,
 	SEQUENCE_ORDER_SEMANTICS_VALUES,
-	SEQUENCE_ORDER_SEMANTICS,
 	isValidSequenceOrderSemantics,
 	// schema-view vocabulary (Phase 7)
 	SCHEMA_VIEW,

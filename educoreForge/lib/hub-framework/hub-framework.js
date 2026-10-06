@@ -686,7 +686,7 @@ const moduleFunction =
 				) {
 					return; // refusal already recorded; no degraded card
 				}
-				cardProperties.anchorUri = valueNode ? valueUri : propertyUri;
+				cardProperties[HR.ANCHOR_URI] = valueNode ? valueUri : propertyUri; // ⟪campaign P2, W-A-12⟫ the registry's name, same bytes
 				cardProperties.domainUri = domainUri;
 				cardProperties.propertyUri = propertyUri;
 				if (rangeUri !== undefined) {
