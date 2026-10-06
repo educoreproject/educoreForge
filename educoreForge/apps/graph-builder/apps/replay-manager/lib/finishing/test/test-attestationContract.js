@@ -13,10 +13,12 @@
 //   (c) build.js roundTripRowFor: ten clean standards -> pass with the summed totals; one standard roundTripClean false
 //       -> fail naming that standard
 //   (d) Channel B (usagePatternVerification) MERGEs on (:BuildAttestation {gate}) with writtenOnChannel 'channelB'
+//   (f) a standard the stage says RAN but whose row carries no integer totals fails the roundTrip row, naming it (self-audit:
+//       the totals were read with '|| 0', so an unmeasured standard summed as clean)
 //   (e) an expected gate nobody supplied still carries a detail (§4 declares detail on every channel): the row says it is the
 //       expected-list default, not a measurement (R1 finding: goldEvalCheck's default row had no detail)
 // RED TWINS (in memory): detailFieldsNotCopied (finisher) -> (a); channelTokenDropped (finisher) -> (b);
-// failBranchRemoved (build.js) -> (c); channelBLabelLess (passport-writer) -> (d); unsuppliedDetailNull (finisher) -> (e).
+// failBranchRemoved (build.js) -> (c); channelBLabelLess (passport-writer) -> (d); unsuppliedDetailNull (finisher) -> (e); unmeasuredRowsReadAsZero (build.js) -> (f).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -90,6 +92,12 @@ const conjunctJudgeByRefId = {
 			const detaillessList = nodeList.filter((oneNode) => typeof oneNode.properties.detail !== 'string' || oneNode.properties.detail.trim() === '').map((oneNode) => oneNode.properties.gate);
 			done({ pass: !err && nodeList.length > 0 && detaillessList.length === 0, detail: err || (detaillessList.length ? `no detail on ${detaillessList.join(', ')}` : `every default row says: ${nodeList[0].properties.detail}`) });
 		}),
+	f_unmeasuredRanRowFails: (mutationList, done) => {
+		const { roundTripRowFor } = doubleOrReal(BUILD_JS_PATH, mutationList);
+		const unmeasured = roundTripRowFor(stageReportWith([cleanRow('ceds', 0), { token: 'edfi', ran: true, roundTripClean: true }]));
+		const pass = unmeasured.verdict === 'fail' && /UNMEASURED[^;]*edfi/.test(unmeasured.detail) && unmeasured.roundTripClean === false;
+		done({ pass, detail: `${unmeasured.verdict} — ${unmeasured.detail.slice(0, 160)}` });
+	},
 };
 const TWIN_LIST = [
 	{ conjunctRefId: 'a_declaredRoundTripFieldsCopied', modulePath: FINISHER_PATH, twinName: 'detailFieldsNotCopied', find: '.filter((oneRow) => oneRow.gateList.indexOf(oneGateName) !== -1)', replace: '.filter(() => false)' },
@@ -97,6 +105,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'c_roundTripFailIsReachable', modulePath: BUILD_JS_PATH, twinName: 'failBranchRemoved', find: 'verdict: ranRowList.length > 0 && failedTokenList.length === 0 ? vocabulary.BUILD_ATTESTATION_VERDICT.PASS : vocabulary.BUILD_ATTESTATION_VERDICT.FAIL,', replace: 'verdict: vocabulary.BUILD_ATTESTATION_VERDICT.PASS,' },
 	{ conjunctRefId: 'd_channelBMergesOnGate', modulePath: WRITER_PATH, twinName: 'channelBLabelLess', find: '					MERGE (a:\\`${attestationLabel}\\` {gate: ${cypherString(VERIFICATION_GATE_NAME)}})\n					ON CREATE SET', replace: '					MERGE (a {stableId: ${cypherString(stableId)}})\n					ON CREATE SET' },
 	{ conjunctRefId: 'e_unsuppliedRowCarriesDetail', modulePath: FINISHER_PATH, twinName: 'unsuppliedDetailNull', find: 'detail: supplied && supplied.detail !== undefined ? supplied.detail : UNSUPPLIED_DETAIL,', replace: 'detail: supplied && supplied.detail !== undefined ? supplied.detail : null,' },
+	{ conjunctRefId: 'f_unmeasuredRanRowFails', modulePath: BUILD_JS_PATH, twinName: 'unmeasuredRowsReadAsZero', find: "oneRow.roundTripClean !== true || unmeasuredTokenList.indexOf(oneRow.token) !== -1 ||", replace: 'oneRow.roundTripClean !== true ||' },
 ];
 
 const refIdList = Object.keys(conjunctJudgeByRefId);

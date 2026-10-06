@@ -558,6 +558,7 @@ const frameworkFingerprintListFor = ({ decisionStore, pairKeyList }, callback) =
 // explicitlyOmittedTotal, standardCount) summed over the standards that ran, and the verdict is DERIVED from them: pass
 // only when every ran standard is clean and nothing was lost or invented — so 'fail' is reachable, and names the
 // standards that failed. Before P2 a stage that ran read 'pass' whatever its rows said.
+const ROUND_TRIP_TOTAL_FIELD_LIST = Object.freeze(['lostTotal', 'inventedTotal', 'explicitlyOmittedTotal']);
 const roundTripRowFor = (roundTripStageReport) => {
 	if (roundTripStageReport && roundTripStageReport.stageRan === false) {
 		return { gate: 'roundTrip', verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN, detail: `${roundTripStageReport.disposition || 'the runner reported no disposition'}` };
@@ -572,8 +573,11 @@ const roundTripRowFor = (roundTripStageReport) => {
 		};
 	}
 	const ranRowList = roundTripStageReport.standards.filter((oneRow) => oneRow.ran === true);
-	const totalOf = (fieldName) => ranRowList.reduce((runningTotal, oneRow) => runningTotal + Number(oneRow[fieldName] || 0), 0);
-	const failedTokenList = ranRowList.filter((oneRow) => oneRow.roundTripClean !== true || Number(oneRow.lostTotal || 0) > 0 || Number(oneRow.inventedTotal || 0) > 0).map((oneRow) => oneRow.token);
+	// a standard that RAN must report its totals: one that did not is UNMEASURED and fails the row by name (campaign P2
+	// self-audit — the totals were read with '|| 0', so an unmeasured standard summed as clean)
+	const unmeasuredTokenList = ranRowList.filter((oneRow) => ROUND_TRIP_TOTAL_FIELD_LIST.some((fieldName) => !Number.isInteger(oneRow[fieldName]))).map((oneRow) => oneRow.token);
+	const totalOf = (fieldName) => ranRowList.filter((oneRow) => Number.isInteger(oneRow[fieldName])).reduce((runningTotal, oneRow) => runningTotal + oneRow[fieldName], 0);
+	const failedTokenList = ranRowList.filter((oneRow) => oneRow.roundTripClean !== true || unmeasuredTokenList.indexOf(oneRow.token) !== -1 || oneRow.lostTotal > 0 || oneRow.inventedTotal > 0).map((oneRow) => oneRow.token);
 	const lostTotal = totalOf('lostTotal');
 	const inventedTotal = totalOf('inventedTotal');
 	const explicitlyOmittedTotal = totalOf('explicitlyOmittedTotal');
@@ -583,7 +587,8 @@ const roundTripRowFor = (roundTripStageReport) => {
 		verdict: ranRowList.length > 0 && failedTokenList.length === 0 ? vocabulary.BUILD_ATTESTATION_VERDICT.PASS : vocabulary.BUILD_ATTESTATION_VERDICT.FAIL,
 		detail:
 			`${ranRowList.length} standard(s) ran: clean ${cleanCount}/${ranRowList.length}, lost ${lostTotal}, invented ${inventedTotal}, ` +
-			`explicitly omitted ${explicitlyOmittedTotal} (${ranRowList.map((oneRow) => `${oneRow.token} ${Number(oneRow.explicitlyOmittedTotal || 0)}`).join(', ')})` +
+			`explicitly omitted ${explicitlyOmittedTotal} (${ranRowList.map((oneRow) => `${oneRow.token} ${Number.isInteger(oneRow.explicitlyOmittedTotal) ? oneRow.explicitlyOmittedTotal : 'unmeasured'}`).join(', ')})` +
+			`${unmeasuredTokenList.length ? `; UNMEASURED (ran, reported no totals): ${unmeasuredTokenList.join(', ')}` : ''}` +
 			`${failedTokenList.length ? `; FAILED: ${failedTokenList.join(', ')}` : ''}${ranRowList.length === 0 ? '; no standard ran, so nothing was certified' : ''}; summary ${roundTripStageReport.summaryFilePath}`,
 		roundTripClean: ranRowList.length > 0 && failedTokenList.length === 0,
 		inventedTotal,
