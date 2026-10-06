@@ -85,7 +85,14 @@ const moduleFunction =
 	// it, and never consulted for a decision. manifestEditor is handed resolved subjects and schema
 	// blocks; a component that read the recipe to decide something would be a second resolver, free
 	// to disagree with the first.
-	const init = ({ name, description, recipe, recipeText, recipeFileName }) => {
+	// ⟪campaign P2, W-C-8 / V1-C39⟫ basedOnManifestRefId: OPTIONAL — the manifest the OPERATOR names as this build's parent
+	// (-build --basedOnManifestRefId). Absent means none was named; present must be a 64-hex manifest address (blank or
+	// malformed is refused here), and save() refuses a parent that is not in this store ("a parent that is not in this
+	// store is not a parent"; the foreign key would refuse it too, W-C-9).
+	const init = ({ name, description, recipe, recipeText, recipeFileName, basedOnManifestRefId }) => {
+		if (basedOnManifestRefId !== undefined && !/^[0-9a-f]{64}$/.test(`${basedOnManifestRefId}`)) {
+			throw new Error(`manifestEditor.init '${name}': basedOnManifestRefId ${JSON.stringify(basedOnManifestRefId)} is not a 64-hex manifest address — name the parent manifest exactly, or name none`);
+		}
 		if (!standardsDatabase || typeof standardsDatabase.saveBlock !== 'function') {
 			throw new Error(
 				`manifestEditor.init '${name}': a standardsDatabase is REQUIRED at construction ` +
@@ -120,6 +127,7 @@ const moduleFunction =
 			// which recipe FILE composed this manifest — a plain filename, not a key. Optional, same
 			// discipline as the hash: absent when the caller does not have it.
 			recipeFileName: recipeFileName || '',
+			basedOnManifestRefId,
 			standardsDatabase,
 			members: [],
 			storedRefId: '',
@@ -199,7 +207,7 @@ const moduleFunction =
 // callback nest above, where a const would sit in the temporal dead zone. The resulting
 // ReferenceError is swallowed by sqlite-instance's SQL error handling and RETRIED, so a one-line
 // hoisting mistake presents as dozens of unrelated assertion failures.
-function makeManifest({ name, description, recipeName, recipeHash, recipeFileName, standardsDatabase, members, storedRefId }) {
+function makeManifest({ name, description, recipeName, recipeHash, recipeFileName, basedOnManifestRefId, standardsDatabase, members, storedRefId }) {
 	// how this manifest names itself in a refusal: a stored one by its address, a composed one by
 	// its name, because a composed manifest's address changes with every add.
 	const selfName = () => (storedRefId ? `manifest ${storedRefId}` : `manifest '${name}'`);
@@ -398,8 +406,27 @@ function makeManifest({ name, description, recipeName, recipeHash, recipeFileNam
 			);
 			return;
 		}
+		// ⟪W-C-8⟫ a named parent must be IN this store before the child is written
+		const parentCheck = (checked) => {
+			if (basedOnManifestRefId === undefined) {
+				checked('');
+				return;
+			}
+			standardsDatabase.getManifest({ refId: basedOnManifestRefId }, (parentError, parentManifest) => {
+				if (parentError || !parentManifest) {
+					checked(`manifestEditor.save ${selfName()}: basedOnManifestRefId ${basedOnManifestRefId} is not a manifest in this store${parentError ? ` (${parentError})` : ''} — a parent that is not in this store is not a parent`);
+					return;
+				}
+				checked('');
+			});
+		};
+		parentCheck((parentRefusal) => {
+		if (parentRefusal) {
+			callback(parentRefusal);
+			return;
+		}
 		standardsDatabase.saveManifest(
-			{ name, description, recipeName, recipeHash, recipeFileName, members },
+			{ name, description, recipeName, recipeHash, recipeFileName, members, ...(basedOnManifestRefId !== undefined ? { basedOnManifestRefId } : {}) },
 			(err, saveReport) => {
 			if (err) {
 				callback(`manifestEditor.save ${selfName()}: ${err}`);
@@ -412,6 +439,7 @@ function makeManifest({ name, description, recipeName, recipeHash, recipeFileNam
 			});
 			},
 		);
+		});
 	};
 
 	return {
@@ -423,6 +451,7 @@ function makeManifest({ name, description, recipeName, recipeHash, recipeFileNam
 		recipeName: () => recipeName,
 		recipeHash: () => recipeHash || '',
 		recipeFileName: () => recipeFileName || '',
+		basedOnManifestRefId: () => basedOnManifestRefId,
 	};
 }
 

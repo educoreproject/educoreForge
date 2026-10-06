@@ -369,6 +369,19 @@ const scanAvailableForges = ({ forgesDir } = {}) => {
 const firstValue = (commandLineParameters, name) =>
 	(commandLineParameters.values[name] || [])[0];
 
+// resolveBasedOnManifestRefId — ⟪campaign P2, W-C-8⟫ the optional -build --basedOnManifestRefId: absent -> {} (no parent
+// named, recorded as such); present -> a non-blank value, else refused by name (a blank flag is not "no parent").
+const resolveBasedOnManifestRefId = (commandLineParameters) => {
+	if (!Object.prototype.hasOwnProperty.call(commandLineParameters.values || {}, 'basedOnManifestRefId')) {
+		return {};
+	}
+	const namedValue = firstValue(commandLineParameters, 'basedOnManifestRefId');
+	if (typeof namedValue !== 'string' || !namedValue.trim()) {
+		return { error: `graphBuilder -build: --basedOnManifestRefId was given without a manifest address — name the parent manifest (64 hex) or omit the flag` };
+	}
+	return { basedOnManifestRefId: namedValue.trim() };
+};
+
 const recipePathFrom = (commandLineParameters) =>
 	firstValue(commandLineParameters, 'recipePath') || (commandLineParameters.fileList || [])[0];
 
@@ -421,6 +434,12 @@ const build = (callback) => {
 	}
 	if (read.loadError) {
 		callback(`graphBuilder -build: recipe REJECTED -- ${read.loadError}`);
+		return;
+	}
+
+	const basedOnManifestRefIdResolution = resolveBasedOnManifestRefId(process.global.commandLineParameters);
+	if (basedOnManifestRefIdResolution.error) {
+		callback(basedOnManifestRefIdResolution.error);
 		return;
 	}
 
@@ -584,6 +603,8 @@ const build = (callback) => {
 							embeddingCacheFilePath: embeddingCacheFilePathFor(vectorCachePathResolution),
 							recipePath: read.recipePath,
 							recipeText: read.recipeText,
+							// ⟪campaign P2, W-C-8⟫ optional lineage: the manifest this build was composed FROM, when the operator names one
+							...(basedOnManifestRefIdResolution.basedOnManifestRefId !== undefined ? { basedOnManifestRefId: basedOnManifestRefIdResolution.basedOnManifestRefId } : {}),
 						},
 						(buildError, result) => {
 							if (buildError) {

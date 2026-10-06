@@ -240,6 +240,8 @@ const moduleFunction =
 							recipeHash: oneRow.recipeHash || null,
 							recipeFileName: oneRow.recipeFileName || null,
 							basedOnManifestRefId: oneRow.basedOnManifestRefId || null,
+							// ⟪campaign P2, W-C-8⟫ why the lineage field is or is not present: a null is never read as "root"
+							basedOnManifestRefIdBasis: oneRow.basedOnManifestRefId ? 'operatorNamed' : 'none named at build',
 							createdAt: oneRow.createdAt || null,
 							isRootOfThisGraph: !!isRoot,
 							// previousManifestId is HONESTLY NULL — no graphs table exists in this store

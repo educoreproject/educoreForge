@@ -182,6 +182,11 @@ OPTIONS
      --createStore=true    The ONE run meant to start a store that does not exist yet: admits a
                            configured support store or a vector cache that is not on disk. Any value
                            other than 'true' is refused by name. Never needed for an existing store.
+     --basedOnManifestRefId=<refId>
+                           OPTIONAL for -build: the stored manifest this build was composed FROM,
+                           recorded as the new manifest's parent (lineage). It must already be in
+                           the support store; a blank value is refused by name. Omitted, the
+                           manifest records that no parent was named.
      --manifestRefId=<refId>
                            The stored manifest to reproduce. REQUIRED for -replay; there is NO
                            default -- there is nothing to open without it. A refId absent from the

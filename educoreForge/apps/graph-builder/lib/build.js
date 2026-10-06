@@ -1435,6 +1435,8 @@ const build = (recipe, deps, callback) => {
 			// read the file); a caller that has neither records nothing rather than inventing precision.
 			recipeText: deps.recipeText,
 			recipeFileName: deps.recipePath ? path.basename(deps.recipePath) : '',
+			// ⟪campaign P2, W-C-8⟫ the parent manifest the operator named (-build --basedOnManifestRefId); absent = none named
+			...(deps.basedOnManifestRefId !== undefined ? { basedOnManifestRefId: deps.basedOnManifestRefId } : {}),
 		});
 
 		const standards = Array.isArray(recipe.standards) ? recipe.standards : [];
