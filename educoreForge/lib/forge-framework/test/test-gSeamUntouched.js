@@ -167,7 +167,11 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 //   apps/graph-builder/apps/forger/forger.js                 |   3  W-C-21 forgeStats
 // shape-forged-graph.js and replay-block.js: UNTOUCHED. THE SEAM FILE LIST IS UNCHANGED, no exclusion added; the fresh red is
 // observed at the re-anchor commit by this gate's own twin (DEVLOG-P2).
-const PRE_MIGRATION_REF = 'postCampaignP2GSeamUntouched-100626'; // re-anchored by CARDINAL_RIVER, campaign P2; the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-06 (CARDINAL_RIVER; campaign P2, second; pre-authorised) ═══ postCampaignP2GSeamUntouched-100626 ->
+// postCampaignP2GSeamUntouchedB-100626, tag cut ON this commit. CENSUS (git diff --stat postCampaignP2GSeamUntouched-100626 -- <the 7
+// seam files>) at fdc4167: exactly ONE, apps/graph-builder/lib/build.js 11 — the P2 self-audit fix (roundTripRowFor refuses an
+// unmeasured ran standard instead of reading its totals as 0). Seam file list unchanged; fresh red observed (DEVLOG-P2).
+const PRE_MIGRATION_REF = 'postCampaignP2GSeamUntouchedB-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 (second); the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
