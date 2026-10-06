@@ -1143,6 +1143,9 @@ const vocabulary = {
 	SELF_DOC,
 	GRAPH_META,
 	TERM_DEFINITIONS,
+	// the graph contract (CONTRACTS-declared-100626 §0-§5; campaign P0, 2026-10-06): declared in its own pure-data file,
+	// re-exported here so there is still one import surface. graph-contract.js must never require this file at its top.
+	...require('./graph-contract'),
 };
 
 // freeze deeply-enough to prevent accidental mutation of the single source of truth.
