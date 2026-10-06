@@ -451,7 +451,9 @@ function makeManifest({ name, description, recipeName, recipeHash, recipeFileNam
 		recipeName: () => recipeName,
 		recipeHash: () => recipeHash || '',
 		recipeFileName: () => recipeFileName || '',
-		basedOnManifestRefId: () => basedOnManifestRefId,
+		// basedOnManifestRefId has NO accessor here, deliberately (campaign P2 fleet finding): nothing reads it off the handle
+		// (save carries it to the store), and MANIFEST_HANDLE_SHAPE is frozen by BG-SEAM-UNTOUCHED (i) against
+		// preBridgeFramework-081626, so an accessor would be an undeclared extra that interfaces.js may not declare.
 	};
 }
 
