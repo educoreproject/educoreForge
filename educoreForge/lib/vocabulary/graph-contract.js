@@ -271,6 +271,28 @@ const pairScopedLabelFor = ({ sourceToken, hubToken } = {}) => {
 	return pairScopedLabel;
 };
 
+// §14 GRAPH-SIDE RULES THE DME'S USER LAYER READS (W-E-5 / W-E-6 / W-E-7; rulings A12, 2026-10-06: W's recommendations —
+// user links by stableId to declaration roles, the user layer TEXT-ONLY, the four match relation types REFUSED to users).
+// USER_LINK_TARGET_RULE — what a user link names its standard target by: stableId on :ForgedNode (uri exists on CEDS alone,
+// measured), only to a DECLARATION role (an instance, a support node, a hub card or a text node is not a link target), and
+// 'uri' accepted only on READ of a script saved before P2. The roles were read off the gold (2026-10-06, read-only).
+const USER_LINK_TARGET_RULE = Object.freeze({
+	standardKeyName: 'stableId',
+	targetLabel: 'ForgedNode',
+	linkableRoleList: Object.freeze(['DmeClass', 'DmeOptionSet', 'DmeOptionValue', 'DmeProperty']),
+	retiredStandardKeyNameList: Object.freeze(['uri']),
+});
+// USER_EDGE_STAMP_FIELD_LIST — every user-made edge carries these, so re-emit captures user edges BY STAMP
+const USER_EDGE_STAMP_FIELD_LIST = Object.freeze(['userAuthored', 'userRefId', 'userEdgeRefId', 'authoredAt']);
+// USER_EDGE_RULE — the judge's relation types are the judge's: a user edge of one of them is refused by name (A12 REFUSE)
+const USER_EDGE_RULE = Object.freeze({
+	matchRelationTypeList: Object.freeze(['EXACT_MATCH', 'CLOSE_MATCH', 'BROAD_MATCH', 'NARROW_MATCH']),
+	matchRelationPolicy: 'refuse',
+});
+// USER_EMBEDDING_RULE — A12-embeddings: nothing reads a user vector (no index, no search arm), so the user layer is TEXT-ONLY;
+// a user write produces no vector and the write path holds no embedding model
+const USER_EMBEDDING_RULE = Object.freeze({ userVectorPolicy: 'textOnly' });
+
 // ---------------------------------------------------------------------
 // THE JSON DOCUMENT, ITS CANONICAL TEXT AND ITS SHA
 // ---------------------------------------------------------------------
@@ -301,6 +323,12 @@ const graphContractDocument = () => {
 		bridgePairLabelPrefix: BRIDGE_PAIR_LABEL_PREFIX,
 		bridgePairLabelPatternSource: BRIDGE_PAIR_LABEL_PATTERN_SOURCE,
 		producerLocalLabelPatternSourceList: PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST,
+		// W-D-5 (P1 asked): the hub slot list both incoming arms of findMappings walk
+		hubSlotList: require('./vocabulary').HUB_DECOMPOSITION_SLOTS,
+		userLinkTargetRule: USER_LINK_TARGET_RULE,
+		userEdgeStampFieldList: USER_EDGE_STAMP_FIELD_LIST,
+		userEdgeRule: USER_EDGE_RULE,
+		userEmbeddingRule: USER_EMBEDDING_RULE,
 	};
 };
 
@@ -347,6 +375,10 @@ module.exports = Object.freeze({
 	BRIDGE_PAIR_LABEL_PATTERN_SOURCE,
 	pairScopedLabelFor,
 	PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST,
+	USER_LINK_TARGET_RULE,
+	USER_EDGE_STAMP_FIELD_LIST,
+	USER_EDGE_RULE,
+	USER_EMBEDDING_RULE,
 	graphContractDocument,
 	canonicalJsonText,
 	graphContractSha256,
