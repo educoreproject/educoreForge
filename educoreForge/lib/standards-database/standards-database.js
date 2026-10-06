@@ -303,6 +303,9 @@ const buildSchema = ({ runSql, getRows }, callback) => {
 			{ runSql, getRows },
 			{
 				manifests: { recipeName: 'TEXT', recipeHash: 'TEXT', recipeFileName: 'TEXT' },
+				// ⟪campaign P2, W-C-10⟫ the recipe whose build added the block to THIS manifest. blocks.producedBy says only
+				// which recipe FIRST wrote a byte-identical block (first writer wins), so it misattributes every reused block.
+				manifestBlocks: { producedByRecipeName: 'TEXT' },
 			},
 			(err) => next(err, args),
 		);
@@ -598,10 +601,10 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 				const oneMember = members[index];
 				runSql(
 					`INSERT OR IGNORE INTO manifestBlocks
-						(manifestRefId, schemaBlockRefId, position, description)
+						(manifestRefId, schemaBlockRefId, position, description, producedByRecipeName)
 					 VALUES (${esc(refId)}, ${esc(oneMember.schemaBlockRefId)},
 					         ${oneMember.position == null ? 'NULL' : Number(oneMember.position)},
-					         ${esc(oneMember.description)});`,
+					         ${esc(oneMember.description)}, ${recipeName ? esc(recipeName) : 'NULL'});`,
 					(err) => {
 						if (err) {
 							next(err, args); // args carry transactionOpen, so the pipe's end rolls back
@@ -654,7 +657,7 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 				return;
 			}
 			getRows(
-				`SELECT mb.schemaBlockRefId, mb.position, mb.description,
+				`SELECT mb.schemaBlockRefId, mb.position, mb.description, mb.producedByRecipeName,
 				        b.kind, b.subject, b.version
 				 FROM manifestBlocks mb
 				 LEFT JOIN blocks b ON b.refId = mb.schemaBlockRefId

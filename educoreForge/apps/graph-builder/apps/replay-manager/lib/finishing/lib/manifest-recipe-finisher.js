@@ -290,6 +290,9 @@ const moduleFunction =
 							// RULED: the text is carried as-is and LABELLED. 'authored' is not in this enum.
 							purposeSource: classified.purposeSource,
 							purposeTemplateSite: classified.templateSite,
+							// ⟪campaign P2, W-C-10⟫ the recipe whose build added this block to THIS manifest (the membership row); null
+							// on a manifest saved before the column existed
+							producedByRecipeName: oneMember.producedByRecipeName || null,
 						},
 					});
 					edges.push({

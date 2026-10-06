@@ -1,0 +1,37 @@
+{
+  // goldJevAcceptance2 — the recipe for the campaign's full rebuild R2 (acceptance iteration 2), with its OWN name (ruling
+  // G2, campaign P2 / W-C-10, 2026-10-06): the same members as goldJevFresh, so the passport, ManifestRecipe and every
+  // RecipeBlock name THIS build instead of the build whose blocks it reuses. kind 'golden' because its graph is the one
+  // -stampPromotion may name GOLD_EVAL_* (RECIPE_KIND_RULE refuses a dev or subset recipe there). P3 runs it; P2 only writes it.
+  "schemaVersion": "1.0.0",
+  "recipeName": "goldJevAcceptance2",
+  "kind": "golden",
+  "description": "Pure-Jev gold graph: CEDS hub, Ed-Fi (crosswalk excluded), SIF 260928 and all seven PESC releases (College Transcript 1.8.0, High School Transcript 1.6.0, Test Score Report 1.1.0, Learning Record 1.0.0, Document Request 1.0.0, Document Response 1.0.0, Academic ePortfolio 1.0.0), every standard re-forged and every derived bridge re-judged by Jev on fresh stores.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sif260928", "version": "current" },
+    { "token": "pesccollegetranscript1v8v0", "version": "current" },
+    { "token": "peschighschooltranscript1v6v0", "version": "current" },
+    { "token": "pesctestscorereport1v1v0", "version": "current" },
+    { "token": "pesclearningrecord1v0v0", "version": "current" },
+    { "token": "pescdocumentrequest1v0v0", "version": "current" },
+    { "token": "pescdocumentresponse1v0v0", "version": "current" },
+    { "token": "pescacademiceportfolio1v0v0", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] },
+    { "source": "sif260928", "hub": "ceds", "bridge": "sif260928CedsDerivedPlugin", "dependencies": ["sif260928", "ceds"] },
+    { "source": "pesccollegetranscript1v8v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v8v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v8v0", "ceds"] },
+    { "source": "peschighschooltranscript1v6v0", "hub": "ceds", "bridge": "pescHighSchoolTranscript1v6v0CedsDerivedPlugin", "dependencies": ["peschighschooltranscript1v6v0", "ceds"] },
+    { "source": "pesctestscorereport1v1v0", "hub": "ceds", "bridge": "pescTestScoreReport1v1v0CedsDerivedPlugin", "dependencies": ["pesctestscorereport1v1v0", "ceds"] },
+    { "source": "pesclearningrecord1v0v0", "hub": "ceds", "bridge": "pescLearningRecord1v0v0CedsDerivedPlugin", "dependencies": ["pesclearningrecord1v0v0", "ceds"] },
+    { "source": "pescdocumentrequest1v0v0", "hub": "ceds", "bridge": "pescDocumentRequest1v0v0CedsDerivedPlugin", "dependencies": ["pescdocumentrequest1v0v0", "ceds"] },
+    { "source": "pescdocumentresponse1v0v0", "hub": "ceds", "bridge": "pescDocumentResponse1v0v0CedsDerivedPlugin", "dependencies": ["pescdocumentresponse1v0v0", "ceds"] },
+    { "source": "pescacademiceportfolio1v0v0", "hub": "ceds", "bridge": "pescAcademicEportfolio1v0v0CedsDerivedPlugin", "dependencies": ["pescacademiceportfolio1v0v0", "ceds"] }
+  ],
+  "roundTripStage": true
+}

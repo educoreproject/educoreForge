@@ -32,13 +32,16 @@ const RECIPE_SCHEMA = {
 	$id: 'educoreForge/recipe/v1',
 	type: 'object',
 	additionalProperties: false,
-	required: ['schemaVersion', 'recipeName', 'standards'],
+	// ⟪campaign P2, W-C-10 / V1-C41⟫ kind and description REQUIRED: build.js refused a recipe without a description
+	// anyway (now the schema catches it first), and kind now MEANS something — RECIPE_KIND_RULE gates the GOLD_EVAL
+	// promotion stamp on it. The census at this edit: 42 recipes, every one carrying both.
+	required: ['schemaVersion', 'recipeName', 'kind', 'description', 'standards'],
 	properties: {
 		$schema: { type: 'string' },
 		schemaVersion: { type: 'string', pattern: '^\\d+\\.\\d+\\.\\d+$' },
 		recipeName: { type: 'string', minLength: 1 },
 		kind: { type: 'string', enum: ['golden', 'dev', 'subset'] },
-		description: { type: 'string' },
+		description: { type: 'string', minLength: 1 },
 		// roundTripStage — the RT-13 opt-in (doctrine §7.4; R-WO-17): true runs every declared
 		// roundTripValidator against the materialized product post-build; false/absent does not
 		// (documented default false during the big-bang retrofit — the disposition is LOGGED on
@@ -52,11 +55,11 @@ const RECIPE_SCHEMA = {
 				type: 'object',
 				additionalProperties: false,
 				required: ['token', 'version'],
+				// ⟪W-C-10⟫ snapshot / source removed: read by nothing (census: carried by no recipe); additionalProperties
+				// false now refuses a recipe still carrying either, by name
 				properties: {
 					token: { type: 'string', minLength: 1 },
 					version: { type: 'string', minLength: 1 },
-					snapshot: { type: 'string' },
-					source: { type: 'string' },
 				},
 			},
 		},
@@ -71,12 +74,11 @@ const RECIPE_SCHEMA = {
 				// tombstone). No longer required, so OLD recipes still populating it keep validating; new
 				// recipes should not carry it. Same for `params` (topK/cosineFloor ride inferenceConfig,
 				// resolved from build.js's own CLI/config, never from here) — left optional, unread.
+				// ⟪W-C-10⟫ candidateFinder / adjudicatorProfile / params REMOVED (vestigial since P5; carried by no recipe,
+				// only by test fixtures, which are cleaned in the same commit)
 				required: ['standard'],
 				properties: {
 					standard: { type: 'string', minLength: 1 },
-					candidateFinder: { type: 'string', minLength: 1 },
-					adjudicatorProfile: { type: 'string' },
-					params: { type: 'object' },
 				},
 			},
 		},
@@ -139,7 +141,7 @@ const RECIPE_SCHEMA = {
 					// mid-run, after the forge is spent. Closing that is TODO Item 9 (-validateRecipe),
 					// whose own text names this exact case: "reach into the bridge algorithm to validate
 					// its passthrough, which is completely unchecked today."
-					extractor: { type: 'string', minLength: 1 },
+					// ⟪W-C-10⟫ extractor REMOVED (vestigial; carried by no recipe)
 					dependencies: {
 						type: 'array',
 						minItems: 1,
@@ -154,13 +156,16 @@ const RECIPE_SCHEMA = {
 				},
 			},
 		},
-		output: {
-			type: 'object',
-			additionalProperties: false,
-			properties: { graphName: { type: 'string' } },
-		},
 	},
 };
+
+// RECIPE_KIND_RULE — ⟪campaign P2, W-C-10⟫ what a recipe's kind PERMITS, as data: only a golden recipe's graph may be stamped
+// under a GOLD_EVAL_* name (graphBuilder -stampPromotion reads this). A dev or subset recipe is refused by name there.
+const RECIPE_KIND_RULE = Object.freeze({
+	golden: Object.freeze({ promotionRenameAllowed: true }),
+	dev: Object.freeze({ promotionRenameAllowed: false }),
+	subset: Object.freeze({ promotionRenameAllowed: false }),
+});
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validateStructural = ajv.compile(RECIPE_SCHEMA);
@@ -455,7 +460,7 @@ const validateRecipe = (recipe, options = {}) => {
 	};
 };
 
-return { loadRecipe, summarizeRecipe, validateRecipe };
+return { loadRecipe, summarizeRecipe, validateRecipe, RECIPE_KIND_RULE };
 };
 
 // END OF moduleFunction() ============================================================

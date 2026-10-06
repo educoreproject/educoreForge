@@ -4,6 +4,7 @@
   "schemaVersion": "1.0.0",
   "recipeName": "badBridgeHubNotDeclared",
   "kind": "dev",
+  "description": "test fixture bad-bridgeHubNotDeclared (single-cause: description present since campaign P2, W-C-10)",
   "standards": [
     { "token": "ceds", "version": "current" },
     { "token": "lif", "version": "current" }

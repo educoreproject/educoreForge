@@ -4,5 +4,6 @@
   "schemaVersion": "1.0.0",
   "recipeName": "badBareStringStandards",
   "kind": "dev",
+  "description": "test fixture bad-bareStringStandards (single-cause: description present since campaign P2, W-C-10)",
   "standards": ["lif", "ceds"]
 }

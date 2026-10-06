@@ -1799,6 +1799,25 @@ const goldEvalCheckAction = (callback) => {
 // evidence file its run wrote (promotion-evidence.js) and tied to the graph by the manifest id its passport carries. It
 // changes no content node or edge and proves it with a before/after census (promotion-stamp.js). Both evidence paths are
 // REQUIRED: a stamp that recorded one verdict would leave the other reading 'notRun' beside a claim of promotion.
+// promotionKindRefusal — ⟪campaign P2, W-C-10⟫ '' when the stamp may proceed, else the refusal. Only a GOLD_EVAL_* target is
+// gated; its recipe must be locatable by name and its kind must permit promotion (recipe.js RECIPE_KIND_RULE).
+const PROMOTION_GATED_NAME_PATTERN = /^GOLD_EVAL_/;
+const promotionKindRefusal = ({ containerName, recipeName, recipesDirPath = path.join(__dirname, '..', '..', '..', 'recipes') }) => {
+	if (!PROMOTION_GATED_NAME_PATTERN.test(`${containerName}`)) {
+		return '';
+	}
+	const recipePath = path.join(recipesDirPath, `${recipeName}.recipe.jsonc`);
+	if (typeof recipeName !== 'string' || !recipeName || !fs.existsSync(recipePath)) {
+		return `graphBuilder -stampPromotion: REFUSED — '${containerName}' is a GOLD_EVAL name, and the passport's recipe ${JSON.stringify(recipeName)} has no recipe file at ${recipePath}, so its kind (what it permits) cannot be read`;
+	}
+	const loaded = recipeLib.loadRecipe(recipePath);
+	const kindRule = loaded.recipe ? recipeLib.RECIPE_KIND_RULE[loaded.recipe.kind] : undefined;
+	if (!kindRule || !kindRule.promotionRenameAllowed) {
+		return `graphBuilder -stampPromotion: REFUSED — recipe '${recipeName}' is kind ${JSON.stringify(loaded.recipe && loaded.recipe.kind)}, which does not permit a GOLD_EVAL name (RECIPE_KIND_RULE: only 'golden' does); declare the acceptance recipe kind 'golden'`;
+	}
+	return '';
+};
+
 const stampPromotionAction = (callback) => {
 	const { xLog, commandLineParameters } = process.global;
 	const containerName = firstValue(commandLineParameters, 'containerName');
@@ -1835,14 +1854,24 @@ const stampPromotionAction = (callback) => {
 		});
 	});
 	taskList.push((args, next) => {
-		args.runCypher({ cypher: `MATCH (p:GraphProvenance) RETURN p.manifestRefId AS manifestRefId` }, (err, result) => {
+		args.runCypher({ cypher: `MATCH (p:GraphProvenance) RETURN p.manifestRefId AS manifestRefId, p.recipeName AS recipeName` }, (err, result) => {
 			const rows = (result && result.records) || [];
 			if (err || rows.length !== 1) {
 				next(`graphBuilder -stampPromotion: '${containerName}' does not hold exactly one passport with a manifestRefId${err ? ` (${err})` : ''}`);
 				return;
 			}
-			next('', { ...args, manifestRefId: rows[0].get('manifestRefId') });
+			next('', { ...args, manifestRefId: rows[0].get('manifestRefId'), recipeName: rows[0].get('recipeName') });
 		});
+	});
+	// ⟪campaign P2, W-C-10⟫ a GOLD_EVAL_* name is permitted only to a graph whose recipe's kind allows it (RECIPE_KIND_RULE):
+	// the recipe is found by the passport's recipeName under the recipes/<recipeName>.recipe.jsonc convention -goldEvalCheck uses
+	taskList.push((args, next) => {
+		const kindVerdict = promotionKindRefusal({ containerName, recipeName: args.recipeName });
+		if (kindVerdict) {
+			next(kindVerdict);
+			return;
+		}
+		next('', args);
 	});
 	taskList.push((args, next) => {
 		const readList = Object.keys(evidencePathByGate).map((oneGate) => promotionEvidenceLib.gateVerdictFor({ gate: oneGate, evidencePath: evidencePathByGate[oneGate], manifestRefId: args.manifestRefId }));
@@ -2121,6 +2150,9 @@ return {
 	resolveStoreFamilyPath,
 	STORE_FAMILY_RESOLUTION_TABLE,
 	embeddingCacheFilePathFor,
+	// ⟪campaign P2, W-C-10⟫ the GOLD_EVAL kind gate and the -build lineage flag, for their hermetic gates
+	promotionKindRefusal,
+	resolveBasedOnManifestRefId,
 };
 };
 

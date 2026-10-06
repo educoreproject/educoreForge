@@ -3,5 +3,6 @@
   "schemaVersion": "1.0",
   "recipeName": "badSchemaVersion",
   "kind": "dev",
+  "description": "test fixture bad-schemaVersion (single-cause: description present since campaign P2, W-C-10)",
   "standards": [{ "token": "lif", "version": "current" }]
 }

@@ -11,7 +11,7 @@
     { "token": "ceds", "version": "current" },
     { "token": "lif", "version": "current" }
   ],
-  "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
+  "hubs": [{ "standard": "ceds" }],
   "bridges": [
     { "source": "lif", "bridge": "ctdlAuthoredBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] },
     { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] }

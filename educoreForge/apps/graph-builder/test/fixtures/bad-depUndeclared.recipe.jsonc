@@ -3,11 +3,12 @@
   "schemaVersion": "1.0.0",
   "recipeName": "badDepUndeclared",
   "kind": "dev",
+  "description": "test fixture bad-depUndeclared (single-cause: description present since campaign P2, W-C-10)",
   "standards": [
     { "token": "ceds", "version": "current" },
     { "token": "lif", "version": "current" }
   ],
-  "hubs": [{ "standard": "ceds", "candidateFinder": "semanticDefText" }],
+  "hubs": [{ "standard": "ceds" }],
   "bridges": [
     { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "sif"] }
   ]
