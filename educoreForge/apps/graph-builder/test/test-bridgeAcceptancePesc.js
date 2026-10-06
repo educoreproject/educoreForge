@@ -771,7 +771,17 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ONE path, lib/bridge-framework/test/test-bgJudgePredicate.js 1/1 (a1af62e: its cachePayloadDropsPredicate twin re-anchored on
 // W-B-7's putPayload line, found by fleet p0a). No framework source moved since the first P0 anchor. Path list byte-identical;
 // tag cut ON this commit.
-const P1_BASELINE_COMMIT = 'postCampaignP0PescComposeB-100626'; // re-anchored by SILVER_ECHO, campaign P0; the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-06 (CARDINAL_RIVER, campaign P2; pre-authorised, VIOLET_VALLEY 17:42Z standing rule; LAST of P2's re-anchors):
+// postCampaignP0PescComposeB-100626 -> postCampaignP2PescComposeA-100626. CENSUS (numstat from postCampaignP0PescComposeB-100626 over the
+// six declared paths) at 996a907, eleven paths, all campaign P2:
+//   lib/bridge-framework SOURCE — UNTOUCHED: the frameworkFingerprint does NOT move (the W-A-1 and W-B-13 bridge halves were deferred
+//     to P3 for exactly this reason, VIOLET_VALLEY 17:42Z); the one bridge-framework path is test/test-bgNosub.js 33/3 (the three
+//     BG-SEAM-UNTOUCHED re-anchors, fb4b303 33e2894 996a907);
+//   build.js 207/28 (W-A-3/4/8/11, W-B-13, W-C-8, W-C-21, R1 53cc1af);
+//   lib/vocabulary: graph-contract.js 169/44, vocabulary.js 46/159, vocabulary-definitions.js 15/10, and six tests (the census of
+//     BG-SEAM-UNTOUCHED (ii), 33e2894). interfaces.js and bridge-maker/: untouched.
+// Path list byte-identical; tag cut ON this commit.
+const P1_BASELINE_COMMIT = 'postCampaignP2PescComposeA-100626'; // re-anchored by CARDINAL_RIVER, campaign P2; the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
