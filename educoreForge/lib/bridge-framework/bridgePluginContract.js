@@ -286,7 +286,14 @@ const RUN_REPORT_RESULT_KEYS = Object.freeze([
 	'mode',
 	'sssomExportPath',
 	'note',
+	// W-B-10 (V1-C13, 2026-10-06): build.js reads both and refuses a block without harvestEdgeTypeList; they are
+	// composed in bridge-framework.js's runReportFor, outside the producer's literal (the find-text reason stated there)
+	'loadedConservationSummary',
+	'harvestEdgeTypeList',
 ]);
+// RUN_REPORT_OPTIONAL_RESULT_KEYS — keys a run report carries ONLY when the bridge declares them: present iff declared,
+// never null (Phase 7 rule). W-B-10, 2026-10-06.
+const RUN_REPORT_OPTIONAL_RESULT_KEYS = Object.freeze(['subjectDiscriminator']);
 // the walk assertion's forbidden keys — a plugin cannot set what the framework derives (BR-022)
 const WALK_ASSERTION_FORBIDDEN_KEY_LIST = Object.freeze(['resolution', 'confidence', 'matchBasis', 'mappingJustification', 'objectStableId', 'stableId', 'cardStableId']);
 const WALK_ASSERTION_KEY_LIST = Object.freeze([
@@ -1401,6 +1408,7 @@ module.exports = {
 	EVIDENCE_HOOK_NAME_LIST,
 	RUN_CONFIG_KEY_LIST,
 	RUN_REPORT_RESULT_KEYS,
+	RUN_REPORT_OPTIONAL_RESULT_KEYS,
 	WALK_ASSERTION_FORBIDDEN_KEY_LIST,
 	WALK_ASSERTION_KEY_LIST,
 	CHANNEL_REPORT_KEY_LIST,

@@ -660,6 +660,8 @@ const COMPONENT_SHAPES = {
 				'mode',
 				'sssomExportPath',
 				'note',
+				'loadedConservationSummary',
+				'harvestEdgeTypeList',
 			],
 		},
 		// describeBridge — the PRE-SPEND declaration reader (Phase 7, SPEC §3.7). SYNCHRONOUS (arity 1, no

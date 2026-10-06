@@ -430,10 +430,10 @@ const moduleFunction =
 			//
 			// UNDECLARED IS JS `undefined`, NEVER `null`, and the key is not added at all — the report a
 			// plugin without a discriminator produces is the object it produced before this phase, key for
-			// key. `subjectDiscriminator` is deliberately NOT added to RUN_REPORT_RESULT_KEYS: BG-NOSUB (i)
-			// pins `COMPONENT_SHAPES.bridgeMaker.run.resultKeys.length === 13`, and BG-REG (f) checks
-			// CONTAINMENT of that list rather than exact key-set equality (measured, Phase 7 entry), so an
-			// extra key on the runtime report is admitted while the declared list stays at 13.
+			// key. `subjectDiscriminator` is declared in RUN_REPORT_OPTIONAL_RESULT_KEYS, NOT in
+			// RUN_REPORT_RESULT_KEYS: BG-NOSUB (i) pins `COMPONENT_SHAPES.bridgeMaker.run.resultKeys.length === 15`,
+			// and BG-REG (f) checks CONTAINMENT of that list rather than exact key-set equality (measured, Phase 7
+			// entry), so the optional key on the runtime report is admitted.
 			const runReportFor = (oneReportArgumentSet) => {
 				const undiscriminatedRunReport = undiscriminatedRunReportFor(oneReportArgumentSet);
 				// ⟪JOB 5b⟫ ADDED HERE AND NOT IN THE LITERAL ABOVE, for the reason the note above states:
@@ -441,8 +441,8 @@ const moduleFunction =
 				// moduleDouble.assertMutationApplies is EAGER — a key added inside it would not make those
 				// twins fail loudly, it would make them fail to CONSTRUCT, which is a gate that has quietly
 				// stopped watching. ON EACH BLOCK ENTRY TOO, because build.js harvests PER EMITTED BLOCK and
-				// reads the expectation there. The declared RUN_REPORT_RESULT_KEYS list stays at 13 and
-				// BG-REG (f) checks CONTAINMENT, so a runtime key is admitted.
+				// reads the expectation there. The declared RUN_REPORT_RESULT_KEYS list is 15 (W-B-10, 2026-10-06):
+				// these two are DECLARED there and composed here, not in the literal, for the find-text reason above.
 				// (phase B6) harvestEdgeTypeList rides beside the summary, added here for the same reason: the relationship
 				// types this run's writer admits, read from the writer's own closed set (graphSeamRules.PREDICATE_BY_EDGE_TYPE,
 				// the §6 refusal). build.js harvests by it, so the harvest takes what the door can write and never a base

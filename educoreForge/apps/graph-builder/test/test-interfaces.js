@@ -334,6 +334,8 @@ harness.note('nowhere else. interfaces.js says so in the same words.');
 	const RUN_REPORT_RESULT_KEYS_DECLARED = [
 		'inGraph', 'bridge', 'applyLabel', 'producer', 'decisionBlock', 'blocks', 'edgesWritten', 'counts',
 		'generation', 'rendererVersion', 'mode', 'sssomExportPath', 'note',
+		// W-B-10 (V1-C13, 2026-10-06): the two build.js requires, composed outside the producer's literal, now declared
+		'loadedConservationSummary', 'harvestEdgeTypeList',
 	];
 	harness.equal(
 		'COMPONENT_SHAPES.bridgeMaker.run.resultKeys EQUALS the framework runReport key list (BR-140; null is history)',

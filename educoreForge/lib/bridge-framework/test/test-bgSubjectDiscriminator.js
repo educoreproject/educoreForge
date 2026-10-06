@@ -161,7 +161,8 @@ Object.keys(conjunctJudgeByRefId).forEach((oneRefId) => {
 	harness.ok(`${oneRefId} PASS`, verdict.pass, verdict.detail);
 });
 harness.equal('the row declares the plain-optional presence mode', JSON.stringify(contract.BRIDGE_DECLARATION_CONTRACT.subjectDiscriminator), JSON.stringify({ optional: true, kind: 'subjectDiscriminator' }));
-harness.equal('RUN_REPORT_RESULT_KEYS is UNCHANGED at 13 (BG-NOSUB (i) pins this number)', contract.RUN_REPORT_RESULT_KEYS.length, 13);
+harness.equal('RUN_REPORT_RESULT_KEYS is UNCHANGED at 15 after V1-C13 (W-B-10, 2026-10-06: + loadedConservationSummary, harvestEdgeTypeList; BG-NOSUB (i) pins this number)', contract.RUN_REPORT_RESULT_KEYS.length, 15);
+harness.equal('subjectDiscriminator IS the one RUN_REPORT_OPTIONAL_RESULT_KEYS member (present iff declared, never null — W-B-10)', JSON.stringify(contract.RUN_REPORT_OPTIONAL_RESULT_KEYS), JSON.stringify(['subjectDiscriminator']));
 harness.ok('subjectDiscriminator is NOT a RUN_REPORT_RESULT_KEYS member', contract.RUN_REPORT_RESULT_KEYS.indexOf('subjectDiscriminator') === -1);
 
 // =====================================================================
