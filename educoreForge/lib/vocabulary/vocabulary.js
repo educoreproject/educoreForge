@@ -106,8 +106,8 @@ const EDGE_TYPES = {
 	// the fact a consumer asks about -- which nodes does this text describe -- and per-property rows
 	// come from enumerating (edge, propertyName). The shape is CHOSEN, not forced by the loader: since
 	// 2026-09-02 replay-engine merges edges on the FULL property map, so per-property edges would have
-	// survived as distinct edges. The loader stores a one-element list as a SCALAR (pgToStored); every
-	// graph reader re-widens it to a one-element list at its read boundary. Never REFERENCES: a
+	// survived as distinct edges. propertyNameList is declared list-valued (graph-contract §1), so the loader
+	// keeps it a list at every length (campaign P2, W-A-1). Never REFERENCES: a
 	// structural walk must not travel from a standard into its texts.
 	EMBEDS_TEXT_OF: 'EMBEDS_TEXT_OF',
 	// ⟪SIF replacement, phase V1, 2026-09-28; SPEC-sifStructuralBridge-replacement §3.2⟫ the structural

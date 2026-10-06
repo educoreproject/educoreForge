@@ -45,7 +45,7 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const replayBlock = require('./replay-block')();
 const contentAddress = require('../content-address/content-address')();
 // ⟪R-ET-24⟫ the second vector index's label, property and name suffix have ONE home, the vocabulary.
-const { EMBED_TEXT_VECTOR, SKOS_EDGE_TYPES, MAPPING_KIND_LIST } = require('../vocabulary/vocabulary');
+const { EMBED_TEXT_VECTOR, SKOS_EDGE_TYPES, MAPPING_KIND_LIST, LIST_VALUED_PROPERTY_NAME_LIST, INTEGER_VALUED_PROPERTY_NAME_LIST } = require('../vocabulary/vocabulary');
 
 const BATCH_SIZE = 500;
 const NEO4J_USER = 'neo4j';
@@ -68,13 +68,44 @@ const batchArray = (arr, size) => {
 	return out;
 };
 
-// CONTRACT: single-element PG-JSON array -> scalar; multi-element -> array.
+// CONTRACT (campaign P2, W-A-1 / W-A-2; graph-contract §1, §2): a PG-JSON one-element array is a wrapped scalar UNLESS
+// its name is declared list-valued (LIST_VALUED_PROPERTY_NAME_LIST), in which case it stays a list at ANY length; a
+// multi-element array is always a list. A name declared integer-valued (INTEGER_VALUED_PROPERTY_NAME_LIST) is written
+// as a Neo4j INTEGER (neo4j.int), element-wise inside a list. Before V1-C01 every one-element list collapsed and every
+// reader re-widened it; before V1-C04 the driver wrote every JS count as a FLOAT. Harvest is unchanged either way:
+// neoToJs turns an INTEGER and a FLOAT of the same value into the same JS number, and pgArray wraps a scalar and maps
+// a list, so a list of one and a wrapped scalar harvest to the same block bytes.
+const LIST_VALUED_PROPERTY_NAME_SET = new Set(LIST_VALUED_PROPERTY_NAME_LIST);
+const INTEGER_VALUED_PROPERTY_NAME_SET = new Set(INTEGER_VALUED_PROPERTY_NAME_LIST);
+// integerDeclarationViolationOf — '' when every integer-declared property carries integers (or null), else the reason.
+// validateShapedGraph refuses with it BEFORE any row is built; storedNumber below throws the same text should a caller
+// reach the row builder without the guard.
+const integerDeclarationViolationOf = (properties) => {
+	const offendingName = Object.keys(properties || {}).find((onePropertyName) => {
+		if (!INTEGER_VALUED_PROPERTY_NAME_SET.has(onePropertyName)) return false;
+		const valueList = Array.isArray(properties[onePropertyName]) ? properties[onePropertyName] : [properties[onePropertyName]];
+		return valueList.some((oneValue) => oneValue !== null && (typeof oneValue !== 'number' || !Number.isInteger(oneValue)));
+	});
+	return offendingName === undefined
+		? ''
+		: `property '${offendingName}' is declared INTEGER (graph-contract §2, INTEGER_VALUED_PROPERTY_NAME_LIST) but carries ${JSON.stringify(properties[offendingName])}`;
+};
+const storedNumber = (onePropertyName, oneValue) => {
+	if (!INTEGER_VALUED_PROPERTY_NAME_SET.has(onePropertyName) || oneValue === null) return oneValue;
+	if (typeof oneValue !== 'number' || !Number.isInteger(oneValue)) {
+		throw new Error(`replay-engine: ${integerDeclarationViolationOf({ [onePropertyName]: oneValue })}`);
+	}
+	return neo4j.int(oneValue);
+};
 const pgToStored = (properties) => {
 	const out = {};
-	Object.keys(properties || {}).forEach((oneKey) => {
-		const oneValue = properties[oneKey];
-		out[oneKey] =
-			Array.isArray(oneValue) && oneValue.length === 1 ? oneValue[0] : oneValue;
+	Object.keys(properties || {}).forEach((onePropertyName) => {
+		const oneValue = properties[onePropertyName];
+		const keepAsList = LIST_VALUED_PROPERTY_NAME_SET.has(onePropertyName);
+		const collapsedValue = Array.isArray(oneValue) && oneValue.length === 1 && !keepAsList ? oneValue[0] : oneValue;
+		out[onePropertyName] = Array.isArray(collapsedValue)
+			? collapsedValue.map((oneElement) => storedNumber(onePropertyName, oneElement))
+			: storedNumber(onePropertyName, collapsedValue);
 	});
 	return out;
 };
@@ -1333,6 +1364,7 @@ const validateShapedGraph = (groups) => {
 	const nullIdViolations = [];
 	const provenanceViolations = [];
 	const vectorSlotViolations = [];
+	const integerViolations = [];
 	const allNodes = [];
 	const allEdges = [];
 
@@ -1417,6 +1449,15 @@ const validateShapedGraph = (groups) => {
 			);
 		}
 
+		// GUARD 5 ⟪campaign P2, W-A-2⟫ — a property the graph contract declares INTEGER must carry integers; refused here,
+		// by name, before pgToStored would wrap it with neo4j.int (a FLOAT or a string there is a forge defect, not a count).
+		const integerOffenderList = oneGroup.nodes.concat(oneGroup.edges)
+			.map((oneItem) => integerDeclarationViolationOf(oneItem.properties))
+			.filter((oneReason) => oneReason !== '');
+		if (integerOffenderList.length > 0) {
+			integerViolations.push(`${sourceLabel}: ${integerOffenderList.length} item(s); first: ${integerOffenderList[0]}`);
+		}
+
 		oneGroup.nodes.forEach((oneNode) => allNodes.push(oneNode));
 		oneGroup.edges.forEach((oneEdge) => allEdges.push(oneEdge));
 	}
@@ -1450,6 +1491,12 @@ const validateShapedGraph = (groups) => {
 		return refuse(
 			`vector slot enforcement: ${vectorSlotViolations.length} non-conforming source(s). ` +
 				`${vectorSlotViolations.join(' | ')} No writes performed.`,
+		);
+	}
+	if (integerViolations.length > 0) {
+		return refuse(
+			`integer declaration enforcement: ${integerViolations.length} non-conforming source(s). ` +
+				`${integerViolations.join(' | ')} No writes performed.`,
 		);
 	}
 
@@ -1787,6 +1834,11 @@ return {
 	shapeNode,
 	putDistinctNodeVectors,
 	buildNodeRow,
+	// ⟪campaign P2, W-A-1 / W-A-2⟫ the stored-property rule, exported so a hermetic gate drives it without a graph
+	pgToStored,
+	integerDeclarationViolationOf,
+	// the harvest side of the same contract (a stored value back to its PG-JSON array), for the byte-stability gate
+	pgArray,
 	resolveNodeVectors,
 	kernelSupportsVectorIndex,
 	resolveManifestEmbeddingDims,

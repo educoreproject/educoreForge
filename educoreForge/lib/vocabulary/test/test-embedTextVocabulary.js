@@ -54,8 +54,8 @@ const EDGE_DEFINITION_CLAUSE_LIST = [
 	{ clauseName: 'structural tier', pattern: /provenanceTier 'structural'/ },
 	{ clauseName: 'one edge per pair', pattern: /ONE edge per distinct \(text node, described node\) pair/ },
 	{ clauseName: 'sorted propertyNameList', pattern: /propertyNameList — the SORTED list/ },
-	{ clauseName: 'loader scalar collapse', pattern: /stores a one-element list as a SCALAR/ },
-	{ clauseName: 'reader re-widen', pattern: /re-widens a scalar propertyNameList to a one-element list/ },
+	// ⟪campaign P2, W-A-1⟫ the loader no longer collapses a declared list, so the definition states the declaration instead
+	{ clauseName: 'declared list-valued', pattern: /propertyNameList is declared list-valued \(graph-contract §1, LIST_VALUED_PROPERTY_NAME_LIST\), so it is a list at every length/ },
 ];
 
 const ROLE_DEFINITION_CLAUSE_LIST = [
@@ -182,8 +182,8 @@ const twinList = [
 	},
 	{
 		conjunctRefIdList: ['f_edgeDefinitionStatesTheShape'],
-		twinName: 'edgeDefinitionDropsTheScalarCollapse',
-		mutationList: [{ modulePath: DEFINITIONS_PATH, find: 'stores a one-element list as a SCALAR', replace: 'stores a one-element list as a list' }],
+		twinName: 'edgeDefinitionDropsTheListDeclaration',
+		mutationList: [{ modulePath: DEFINITIONS_PATH, find: 'so it is a list at every length on the graph', replace: 'so it is a scalar when it names one property' }],
 	},
 	{
 		conjunctRefIdList: ['g_roleDefinitionStatesNoEmbeddingAndItsIndex'],

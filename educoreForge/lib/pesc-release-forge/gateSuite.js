@@ -47,6 +47,7 @@ const TREE_ROOT = path.join(__dirname, '..', '..');
 const FORGE_FRAMEWORK_DIR = path.join(TREE_ROOT, 'lib', 'forge-framework');
 const { runGateFamily } = require(path.join(FORGE_FRAMEWORK_DIR, 'test', 'testSupport', 'gateSuiteRunner'));
 const moduleDouble = require(path.join(FORGE_FRAMEWORK_DIR, 'test', 'testSupport', 'moduleDouble'));
+const { loadBuildJsDouble } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'test', 'testSupport', 'bridgeTwinFactories'));
 const { makeTwinRegistry } = require(path.join(FORGE_FRAMEWORK_DIR, 'roundTripHarness', 'twinRegistry'));
 const forgeDeclarationContract = require(path.join(FORGE_FRAMEWORK_DIR, 'forgeDeclarationContract'));
 const { MIGRATING_BUNDLE_LIST } = require(path.join(FORGE_FRAMEWORK_DIR, 'migrationAllowanceRegistry'));
@@ -1239,6 +1240,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	const registerReachabilityTwin = (gateId, conjunctId, twinName, leverKind, run) => reachabilityTwinRegistry.register({ gateId, conjunctId, twinName, leverKind, shippedConfig: true, run });
 	const REACHABILITY_PATH = path.join(LIBRARY_DIR, 'reachability.js');
 	const SCOPE_TOOL_LIB_PATH = path.join(LIBRARY_DIR, 'tools', 'writeScopeAndSectionsLib.js');
+	const REPLAY_ENGINE_PATH = path.join(TREE_ROOT, 'lib', 'replay', 'replay-engine.js');
 	const { contextTextOf } = require('./contextText');
 	const missingReachabilityLiteralResult = () => ({ pass: false, detail: `expectedReleaseLiterals.json has no reachability block for ${releaseName}` });
 	const widened = (listOrScalar) => (listOrScalar === undefined ? [] : Array.isArray(listOrScalar) ? listOrScalar : [listOrScalar]);
@@ -1370,8 +1372,8 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		},
 		{
 			conjunctId: 'scopeAndSectionFilesFromTheForge',
-			title: 'writeScopeAndSections over the forge: the scope list holds exactly the reachable declarations (the literal count), the section file exactly the literal sections, each labelled by the readable-path rule, and a graph read (every one-element list a scalar, as the replay engine stores it) yields byte-identical files',
-			twinNameList: ['scalarWideningDisabled'],
+			title: 'writeScopeAndSections over the forge: the scope list holds exactly the reachable declarations (the literal count), the section file exactly the literal sections, each labelled by the readable-path rule, and a graph read (the replay engine\'s own pgToStored: a declared list stays a list of one, campaign P2 W-A-1) yields byte-identical files',
+			twinNameList: ['declaredListCollapsedByTheEngine'],
 			evaluate: (subject, callback) => {
 				if (reachabilityLiteralSet === undefined) {
 					callback('', missingReachabilityLiteralResult());
@@ -1380,9 +1382,13 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 				forgeOrFail({ subject }, callback, (forged) => {
 					const scopeToolLib = subject.scopeToolMutationList.length ? moduleDouble.loadWithMutations({ modulePath: SCOPE_TOOL_LIB_PATH, mutationList: subject.scopeToolMutationList }) : require(SCOPE_TOOL_LIB_PATH);
 					const fromForge = scopeToolLib.scopeAndSectionsOf({ nodeList: forged.nodes, edgeList: forged.edges, labelPrefix: releaseDeclarationData.labelPrefix });
-					// the replay engine's storage: a one-element list reads back as its one value
-					const scalarizedNodeList = forged.nodes.map((oneNode) => ({ ...oneNode, properties: Object.keys(oneNode.properties).reduce((soFar, onePropertyName) => ({ ...soFar, [onePropertyName]: Array.isArray(oneNode.properties[onePropertyName]) && oneNode.properties[onePropertyName].length === 1 ? oneNode.properties[onePropertyName][0] : oneNode.properties[onePropertyName] }), {}) }));
-					const collapsedDeclarationCount = scalarizedNodeList.filter((oneNode) => labelSuffixOf(oneNode) === 'Element' && typeof oneNode.properties.occurrenceSectionList === 'string').length;
+					// the replay engine's storage, by the engine's OWN rule (campaign P2, W-A-1): a one-element list collapses to its
+					// value UNLESS graph-contract declares the name list-valued, so occurrenceSectionList stays a list of one
+					// (loadBuildJsDouble, not moduleDouble: the engine's relative require graph reaches a .json file moduleDouble would compile as JS)
+					const replayEngineLib = subject.replayEngineMutationList.length ? loadBuildJsDouble({ buildJsPath: REPLAY_ENGINE_PATH, mutationList: subject.replayEngineMutationList }) : require(REPLAY_ENGINE_PATH);
+					const { pgToStored } = replayEngineLib();
+					const scalarizedNodeList = forged.nodes.map((oneNode) => ({ ...oneNode, properties: pgToStored(oneNode.properties) }));
+					const listOfOneDeclarationCount = scalarizedNodeList.filter((oneNode) => labelSuffixOf(oneNode) === 'Element' && Array.isArray(oneNode.properties.occurrenceSectionList) && oneNode.properties.occurrenceSectionList.length === 1).length;
 					const fromGraphRead = scopeToolLib.scopeAndSectionsOf({ nodeList: scalarizedNodeList, edgeList: forged.edges, labelPrefix: releaseDeclarationData.labelPrefix });
 					if (fromForge.refusalMessage || fromGraphRead.refusalMessage) {
 						callback('', { pass: false, detail: `refused: ${(fromForge.refusalMessage || fromGraphRead.refusalMessage).slice(0, 400)}` });
@@ -1398,8 +1404,8 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 						labelsFollowRule &&
 						fromForge.scopeFileText === fromGraphRead.scopeFileText &&
 						fromForge.sectionFileText === fromGraphRead.sectionFileText &&
-						collapsedDeclarationCount > 0;
-					callback('', { pass, detail: `scope ${fromForge.reachableSubjectStableIdList.length} (literal ${reachabilityLiteralSet.reachableDeclarationCount}); sections ${fromForge.sectionRowList.length} (literal ${literalSectionPathList.length}); labels follow the rule ${labelsFollowRule}; ${collapsedDeclarationCount} declarations' section list collapses to a scalar in a graph read; graph read identical: scope ${fromForge.scopeFileText === fromGraphRead.scopeFileText}, sections ${fromForge.sectionFileText === fromGraphRead.sectionFileText}; section file sha256 ${fromForge.sectionFileSha256}` });
+						listOfOneDeclarationCount > 0;
+					callback('', { pass, detail: `scope ${fromForge.reachableSubjectStableIdList.length} (literal ${reachabilityLiteralSet.reachableDeclarationCount}); sections ${fromForge.sectionRowList.length} (literal ${literalSectionPathList.length}); labels follow the rule ${labelsFollowRule}; ${listOfOneDeclarationCount} declarations' one-section list stays a list of one in a graph read; graph read identical: scope ${fromForge.scopeFileText === fromGraphRead.scopeFileText}, sections ${fromForge.sectionFileText === fromGraphRead.sectionFileText}; section file sha256 ${fromForge.sectionFileSha256}` });
 				});
 			},
 		},
@@ -1408,7 +1414,9 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	registerReachabilityTwin(REACHABILITY_GATE_ID, 'reachabilityCountsEqualLiterals', 'fixtureExtensionRewritten', 'inputFault', (subject) => ({ ...subject, snapshotDirPath: makeScratchSnapshot({ baseSnapshotDirPath: subject.snapshotDirPath, alterTextByFileName: { [extensionRewrite.fileName]: fixtureExtensionRewritten }, resealManifestEntry: true, resealChecksums: true }) }));
 	registerReachabilityTwin(REACHABILITY_GATE_ID, 'reachabilityCountsEqualLiterals', 'wildcardFollowed', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: REACHABILITY_PATH, find: 'const WILDCARD_IS_FOLLOWED = false;', replace: 'const WILDCARD_IS_FOLLOWED = true;' }));
 	registerReachabilityTwin(REACHABILITY_GATE_ID, 'marksAgreeWithInstances', 'everyElementMarkedReachable', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'reachableFromRoot: declarationIsReachable(elementStableId),', replace: 'reachableFromRoot: true,' }));
-	registerReachabilityTwin(REACHABILITY_GATE_ID, 'scopeAndSectionFilesFromTheForge', 'scalarWideningDisabled', 'productionMutation', (subject) => addMutation(subject, 'scopeToolMutationList', { modulePath: SCOPE_TOOL_LIB_PATH, find: 'const widenedList = (listOrScalar) => (Array.isArray(listOrScalar) ? listOrScalar : [listOrScalar]);', replace: 'const widenedList = (listOrScalar) => listOrScalar;' }));
+	// ⟪campaign P2, W-A-1⟫ the old twin (the scope tool's scalar widening disabled) went blind when the engine stopped
+	// collapsing declared lists: no scalar reaches the tool. Its replacement faults the ENGINE back to collapsing them.
+	registerReachabilityTwin(REACHABILITY_GATE_ID, 'scopeAndSectionFilesFromTheForge', 'declaredListCollapsedByTheEngine', 'productionMutation', (subject) => addMutation(subject, 'replayEngineMutationList', { modulePath: REPLAY_ENGINE_PATH, find: 'const keepAsList = LIST_VALUED_PROPERTY_NAME_SET.has(onePropertyName);', replace: 'const keepAsList = false;' }));
 
 	// ---- F18-OCCURRENCE-IDENTITY
 	const OCCURRENCE_IDENTITY_GATE_ID = 'F18-OCCURRENCE-IDENTITY';
@@ -2092,8 +2100,8 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	const makeRoundTripSubject = () => ({ ...makeSubject(), roundTripMutationList: [], doubleFaultName: null, dropRegeneratedDefinition: false, unboundSchemaAttribute: false });
 	const cloneRoundTripSubject = (subject) => ({ ...cloneSubject(subject), roundTripMutationList: subject.roundTripMutationList.slice() });
 
-	const makeReachabilitySubject = () => ({ ...makeSubject(), scopeToolMutationList: [] });
-	const cloneReachabilitySubject = (subject) => ({ ...cloneSubject(subject), scopeToolMutationList: subject.scopeToolMutationList.slice() });
+	const makeReachabilitySubject = () => ({ ...makeSubject(), scopeToolMutationList: [], replayEngineMutationList: [] });
+	const cloneReachabilitySubject = (subject) => ({ ...cloneSubject(subject), scopeToolMutationList: subject.scopeToolMutationList.slice(), replayEngineMutationList: subject.replayEngineMutationList.slice() });
 
 	// =====================================================================
 	// PHASE F-B FAMILY — borrowed text (DESIGN-pescForge.md §2.7; WORKORDER §3 F-B, gate F21; NOTES 28b).
