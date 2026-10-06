@@ -15,6 +15,8 @@
 // RED TWINS (in memory, loadBuildJsDouble on replay-engine.js):
 //   integerWrapSkipped — storedNumber returns the raw value -> (a) red
 //   guardFiveRemoved — the validate refusal never collects -> (c) red
+//   everyArrayMapped — the pass-through branch removed, every array copied -> (d) red (d: a non-integer array is stored BY
+//   REFERENCE — the fleet finding that the copy doubled replay's heap)
 //
 // Run: node lib/replay/test/test-integerValuedProperties.js
 
@@ -68,11 +70,18 @@ const conjunctJudgeByRefId = {
 		const pass = /integer declaration enforcement/.test(verdict.error) && /'depth'/.test(verdict.error) && cleanVerdict.error === '';
 		return { pass, detail: `refusal: ${(verdict.error || '(none)').slice(0, 160)} | clean: ${cleanVerdict.error || '(none)'}` };
 	},
+	d_otherArraysPassByReference: (mutationList) => {
+		// campaign P2 fleet finding: mapping EVERY array copied every 1024-float embedding and doubled replay's heap
+		const embedding = Array.from({ length: 1024 }, (unused, position) => position / 1024);
+		const stored = engineFor(mutationList).pgToStored({ embedding, sourceFiles: ['a.xsd'] });
+		return { pass: stored.embedding === embedding, detail: stored.embedding === embedding ? 'the embedding array is the same object (no copy)' : 'the embedding array was COPIED' };
+	},
 };
 
 const TWIN_LIST = [
 	{ conjunctRefId: 'a_declaredIntegerIsNeo4jInteger', twinName: 'integerWrapSkipped', find: '	return neo4j.int(oneValue);\n};', replace: '	return oneValue;\n};' },
 	{ conjunctRefId: 'c_nonIntegerRefusedByName', twinName: 'guardFiveRemoved', find: 'integerViolations.push(`${sourceLabel}', replace: 'void (`${sourceLabel}' },
+	{ conjunctRefId: 'd_otherArraysPassByReference', twinName: 'everyArrayMapped', find: '		if (!INTEGER_VALUED_PROPERTY_NAME_SET.has(onePropertyName)) {\n			out[onePropertyName] = collapsedValue;\n			return;\n		}\n', replace: '' },
 ];
 
 harness.section('BASELINE — the real engine passes every conjunct');

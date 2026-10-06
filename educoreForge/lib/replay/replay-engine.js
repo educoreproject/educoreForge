@@ -103,6 +103,12 @@ const pgToStored = (properties) => {
 		const oneValue = properties[onePropertyName];
 		const keepAsList = LIST_VALUED_PROPERTY_NAME_SET.has(onePropertyName);
 		const collapsedValue = Array.isArray(oneValue) && oneValue.length === 1 && !keepAsList ? oneValue[0] : oneValue;
+		// only a declared INTEGER name is rewritten; every other value passes through BY REFERENCE. Mapping every array copied
+		// every 1024-float embedding on every node and doubled replay's heap (campaign P2 fleet finding: test-bgBoltLive OOM)
+		if (!INTEGER_VALUED_PROPERTY_NAME_SET.has(onePropertyName)) {
+			out[onePropertyName] = collapsedValue;
+			return;
+		}
 		out[onePropertyName] = Array.isArray(collapsedValue)
 			? collapsedValue.map((oneElement) => storedNumber(onePropertyName, oneElement))
 			: storedNumber(onePropertyName, collapsedValue);
