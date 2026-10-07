@@ -92,7 +92,7 @@ const RULED_ROLE_BY_LABEL_SUFFIX = Object.freeze({
 	Element: 'DmeProperty',
 	Attribute: 'DmeProperty',
 	GlobalElement: 'DmeProperty',
-	Occurrence: 'DmeSupport',
+	Occurrence: 'DmeInstance',
 	CodeList: 'DmeOptionSet',
 	Code: 'DmeOptionValue',
 	DataType: 'DmeSupport',

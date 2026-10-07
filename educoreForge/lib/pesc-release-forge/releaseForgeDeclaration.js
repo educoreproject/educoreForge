@@ -44,7 +44,7 @@ const DERIVED_NAME_LIST = Object.freeze([
 // releaseDeclaration.json and the scaffold; until then one copy cannot drift from six others.
 const PESC_RELEASE_STANDARD_KIND = STANDARD_KIND.DATA_STANDARD;
 const PESC_RELEASE_STANDARD_USAGE_TIPS =
-	"PESC keeps its mappings on INSTANCE nodes. A PESC element declaration (DmeProperty, the node search finds) carries no match edge; it has one occurrence (DmeSupport) per place it appears in the document, reached by HAS_INSTANCE, and the occurrences carry the mappings. They arrive as dme_find_mappings rows with direction 'outgoingViaInstance' (or rows carrying instanceGroupList / instanceCount / viaInstanceGroupList), and in dme_graph_retriever as instanceView.mappingsViaInstances. Group them by the occurrence's sectionPath, e.g. CollegeTranscript/Student/Person: present each hub concept ONCE with the document sections that hold it and the instance count, never one repeated line per instance. If different sections carry different hub concepts for the same element, say so plainly — the meaning differs by context; it is not an error. Each PESC release (College Transcript, High School Transcript, …) is its own standard with its own card.";
+	"PESC keeps its mappings on INSTANCE nodes. A PESC element declaration (DmeProperty, the node search finds) carries no match edge; it has one occurrence (DmeInstance) per place it appears in the document, reached by HAS_INSTANCE, and the occurrences carry the mappings. They arrive as dme_find_mappings rows with direction 'outgoingViaInstance' (or rows carrying instanceGroupList / instanceCount / viaInstanceGroupList), and in dme_graph_retriever as instanceView.mappingsViaInstances. Group them by the occurrence's sectionPath, e.g. CollegeTranscript/Student/Person: present each hub concept ONCE with the document sections that hold it and the instance count, never one repeated line per instance. If different sections carry different hub concepts for the same element, say so plainly — the meaning differs by context; it is not an error. Each PESC release (College Transcript, High School Transcript, …) is its own standard with its own card.";
 
 const DATA_FIELD_NAME_LIST = Object.freeze(['releaseName', 'standard', 'version'].concat(DERIVED_NAME_LIST));
 
@@ -88,7 +88,7 @@ const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName 
 			includeInImplied: false,
 			impliedTargets: Object.freeze([]),
 		}),
-		nonEmbeddableRoleList: Object.freeze([DME_ROLES.SUPPORT, DME_ROLES.OPTION_SET, DME_ROLES.OPTION_VALUE]),
+		nonEmbeddableRoleList: Object.freeze([DME_ROLES.SUPPORT, DME_ROLES.INSTANCE, DME_ROLES.OPTION_SET, DME_ROLES.OPTION_VALUE]),
 		embedTextDeclaration: Object.freeze({
 			embedTextLabel: releaseDeclarationData.embedTextLabel,
 			textPropertyListByRole: Object.freeze({

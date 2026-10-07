@@ -79,7 +79,9 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // (matchEdgeProperty) and the 3 confidence bands (confidenceBand), the two SchemaView kinds CONTRACTS §9 deferred to P3.
 // ⟪campaign P3, W-C-17, 2026-10-06 (CARDINAL_HORIZON)⟫ +5 more, unrelated to V1: five integer-valued names (maxLength,
 // minLength, decimalPlaces, minCount, maxCount) joined graph-contract §2 once the CEDS parser typed them.
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5;
+// ⟪campaign P3, W-B-12 (a), 2026-10-06 (CARDINAL_HORIZON)⟫ +2 more, unrelated to V1: the new role DmeInstance is projected
+// twice, as a dmeRole member and as a DME role nodeLabel member (the role labels W-A-6 projected).
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2;
 // ⟪campaign P3, W-C-2⟫ rows RETIRED from V1's own five: the real registry is AFTER_V1 + added − retired, and the pre-V1
 // reading (the remaining V1 rows removed) is BEFORE_V1 + added, unchanged.
 const SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1 = RETIRED_V1_EDGE_TYPE_NAME_LIST.length;

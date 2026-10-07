@@ -75,12 +75,13 @@ const RULED_PUBLISHED_VERSION = '4.3';
 const RULED_NODE_KIND_TABLE = {
 	object: { perStandardLabel: 'Sif260928Object', role: 'DmeClass' },
 	question: { perStandardLabel: 'Sif260928Question', role: 'DmeProperty' },
-	field: { perStandardLabel: 'Sif260928Field', role: 'DmeSupport' },
+	// ⟪campaign P3, W-B-12 (a); ruling R1⟫ a Field is the Question's INSTANCE: DmeInstance (was DmeSupport)
+	field: { perStandardLabel: 'Sif260928Field', role: 'DmeInstance' },
 	container: { perStandardLabel: 'Sif260928Container', role: 'DmeSupport' },
 	codeset: { perStandardLabel: 'Sif260928Codeset', role: 'DmeOptionSet' },
 	codesetValue: { perStandardLabel: 'Sif260928CodesetValue', role: 'DmeOptionValue' },
 };
-const RULED_NON_EMBEDDABLE_ROLE_LIST = ['DmeSupport', 'DmeOptionSet', 'DmeOptionValue'];
+const RULED_NON_EMBEDDABLE_ROLE_LIST = ['DmeSupport', 'DmeInstance', 'DmeOptionSet', 'DmeOptionValue'];
 
 // ---- scratch fixtures, all removed at the end
 const scratchRootPathList = [];
@@ -362,7 +363,7 @@ twinRegistry.register({
 const rolesConjunctList = [
 	{
 		conjunctId: 'nodeKindTableEqualsRuling',
-		title: 'the role table EQUALS the ruling: Object DmeClass, Question DmeProperty, Field and Container DmeSupport, Codeset DmeOptionSet, CodesetValue DmeOptionValue, all labels Sif260928-prefixed',
+		title: 'the role table EQUALS the ruling: Object DmeClass, Question DmeProperty, Field DmeInstance (P3, R1), Container DmeSupport, Codeset DmeOptionSet, CodesetValue DmeOptionValue, all labels Sif260928-prefixed',
 		twinNameList: ['fieldAsDmeProperty'],
 		evaluate: (subject, callback) => {
 			const pass = JSON.stringify(subject.nodeKindTable) === JSON.stringify(RULED_NODE_KIND_TABLE);

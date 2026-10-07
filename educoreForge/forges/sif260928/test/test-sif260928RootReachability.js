@@ -16,6 +16,7 @@
 //                  (c) a role with no row is refused BY NAME (rootOwnershipEdgeTypeFor)
 //   G5-INSTANCES   (d) every Field has exactly one incoming HAS_INSTANCE and one incoming HAS_FIELD; every Question's
 //                      instanceCount equals its HAS_INSTANCE out-degree; the instanceCounts sum to the Field count 15,620
+//                  (e) ⟪W-B-12 (a), ruling R1⟫ every HAS_INSTANCE target is role DmeInstance (a Field was DmeSupport)
 //
 // Run: node forges/sif260928/test/test-sif260928RootReachability.js [-verbose]
 
@@ -43,6 +44,7 @@ const WALK_MODULE_PATH = path.join(BUNDLE_DIR, 'lib', 'sif260928Walk.js');
 const QUESTIONS_MODULE_PATH = path.join(BUNDLE_DIR, 'lib', 'sif260928Questions.js');
 const CODESETS_MODULE_PATH = path.join(BUNDLE_DIR, 'lib', 'sif260928Codesets.js');
 const DESCRIPTOR_PATH = path.join(BUNDLE_DIR, 'parserDescriptor.ini');
+const NODE_KIND_TABLE_PATH = path.join(BUNDLE_DIR, 'lib', 'sif260928NodeKindTable.js');
 const VOCABULARY_MODULE_PATH = path.join(TREE_ROOT, 'lib', 'vocabulary', 'vocabulary.js');
 
 const { runGateFamily } = require(path.join(FORGE_FRAMEWORK_DIR, 'test', 'testSupport', 'gateSuiteRunner'));
@@ -192,6 +194,18 @@ const instanceConjunctList = [
 		}),
 	},
 ];
+instanceConjunctList.push({
+	conjunctId: 'instanceTargetsAreDmeInstance',
+	title: '⟪campaign P3, W-B-12 (a)⟫ every HAS_INSTANCE edge runs DmeProperty -> DmeInstance, and no DmeSupport node is a HAS_INSTANCE target',
+	twinNameList: ['fieldRoleBackToSupport'],
+	evaluate: overForged((forged) => {
+		const roleByStableId = new Map(forged.nodes.map((oneNode) => [oneNode.stableId, oneNode.role]));
+		const instanceEdgeList = forged.edges.filter((oneEdge) => oneEdge.type === EDGE_TYPES.HAS_INSTANCE);
+		const wrongList = instanceEdgeList.filter((oneEdge) => roleByStableId.get(oneEdge.fromRef.id) !== DME_ROLES.PROPERTY || roleByStableId.get(oneEdge.toRef.id) !== DME_ROLES.INSTANCE).map((oneEdge) => `${roleByStableId.get(oneEdge.fromRef.id)} -> ${roleByStableId.get(oneEdge.toRef.id)} ${oneEdge.toRef.id}`);
+		return { pass: instanceEdgeList.length === RULED_FIELD_COUNT && wrongList.length === 0, detail: `HAS_INSTANCE ${instanceEdgeList.length}; wrong roles ${wrongList.length}${firstOf(wrongList)}` };
+	}),
+});
+registerMutationTwin({ gateId: INSTANCE_GATE_ID, conjunctId: 'instanceTargetsAreDmeInstance', twinName: 'fieldRoleBackToSupport', mutation: { modulePath: NODE_KIND_TABLE_PATH, find: "	field: Object.freeze({ perStandardLabel: 'Sif260928Field', role: DME_ROLES.INSTANCE }),", replace: "	field: Object.freeze({ perStandardLabel: 'Sif260928Field', role: DME_ROLES.SUPPORT })," } });
 // the first instance edge of every Question skipped: instanceCount (from the facts) no longer equals the out-degree
 registerMutationTwin({ gateId: INSTANCE_GATE_ID, conjunctId: 'instanceStructureHolds', twinName: 'oneInstanceEdgeDropped', mutation: { modulePath: QUESTIONS_MODULE_PATH, find: '		questionFacts.fieldXpathList.forEach((fieldXpath) => {', replace: '		questionFacts.fieldXpathList.slice(1).forEach((fieldXpath) => {' } });
 
@@ -200,6 +214,6 @@ const gateDeclarationList = [
 	{ gateId: INSTANCE_GATE_ID, title: '(d) the G5 instance structure', conjunctList: instanceConjunctList },
 ];
 
-runGateFamily({ harness, familyName: 'sif260928 W-C-1 root reachability', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 4, expectedTwinCount: 5 }, () => {
+runGateFamily({ harness, familyName: 'sif260928 W-C-1 root reachability', gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 5, expectedTwinCount: 6 }, () => {
 	harness.report();
 });

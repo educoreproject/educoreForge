@@ -143,7 +143,9 @@ const TERM_DEFINITIONS = {
 		DmeProperty: 'A property/field/element of a source standard — the primary mapping unit at the property tier.',
 		DmeOptionSet: 'An enumerated value set (codeset) constraining one or more properties.',
 		DmeOptionValue: 'One enumerated value of an option set — the mapping unit at the value tier.',
-		DmeSupport: 'Producer-specific supporting material attached to structural nodes (documentation, examples).',
+		DmeSupport: 'Producer-specific supporting material attached to structural nodes (documentation, examples, containers, schema files). Never a mapping unit: since campaign P3 the occurrences that carry mapping edges are DmeInstance.',
+		DmeInstance:
+			'One occurrence of a DmeProperty in a concrete context — a SIF Field inside an Object, a PESC element occurrence inside a document section. Reached from its declaration by HAS_INSTANCE; it carries the declaration\'s CEDS mapping edges, judged once per declaration (judgedSubjectStableId names it), and no text or vector of its own.',
 		// ⟪graphSelfDoc, 2026-08-31⟫ PRE-EXISTING DEBT CLOSED. These three roles were added to DME_ROLES
 		// after this bucket was authored; their text was written under `nodeLabel` instead, so the finisher
 		// — which reads Object.values(DME_ROLES) into the `dmeRole` bucket — found nothing. Per GRANITE_ECHO's

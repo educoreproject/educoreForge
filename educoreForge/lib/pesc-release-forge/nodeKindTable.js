@@ -14,9 +14,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // not in the table: the framework mints it from the declaration's rootLabel.
 //
 // Roles decide texts and node vectors (the declaration keys embedTextDeclaration and
-// nonEmbeddableRoleList by role). The occurrence is DmeSupport, as SIF's Field is (QUIET_ORBIT
-// ruling 3A.3): it carries no text and no vector, and the lever to make it DmeProperty is this one
-// row, TQ's to pull.
+// nonEmbeddableRoleList by role). The occurrence is DmeInstance, as SIF's Field is (⟪campaign P3,
+// W-B-12 (a), ruling R1⟫; DmeSupport before, QUIET_ORBIT ruling 3A.3): it carries no text and no vector,
+// and the declaration lists DmeInstance non-embeddable.
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
@@ -30,7 +30,8 @@ const NODE_KIND_SUFFIX_TABLE = Object.freeze({
 	element: Object.freeze({ labelSuffix: 'Element', role: DME_ROLES.PROPERTY }),
 	attribute: Object.freeze({ labelSuffix: 'Attribute', role: DME_ROLES.PROPERTY }),
 	globalElement: Object.freeze({ labelSuffix: 'GlobalElement', role: DME_ROLES.PROPERTY }),
-	occurrence: Object.freeze({ labelSuffix: 'Occurrence', role: DME_ROLES.SUPPORT }),
+	// ⟪campaign P3, W-B-12 (a); ruling R1⟫ the lever this table's header named, pulled: an occurrence is a DmeInstance
+	occurrence: Object.freeze({ labelSuffix: 'Occurrence', role: DME_ROLES.INSTANCE }),
 	codeList: Object.freeze({ labelSuffix: 'CodeList', role: DME_ROLES.OPTION_SET }),
 	code: Object.freeze({ labelSuffix: 'Code', role: DME_ROLES.OPTION_VALUE }),
 	dataType: Object.freeze({ labelSuffix: 'DataType', role: DME_ROLES.SUPPORT }),

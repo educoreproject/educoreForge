@@ -71,6 +71,11 @@ const DME_ROLES = {
 	// <graphName>_vector (label ForgedNode, property embedding): a node with no `embedding` property
 	// has no entry there, so search never sees a text.
 	EMBED_TEXT: 'DmeEmbedText',
+	// ⟪campaign P3, W-B-12 (a); ruling R1⟫ ONE OCCURRENCE of a DmeProperty in a concrete context: a SIF Field inside an Object,
+	// a PESC element occurrence inside a document section. Reached from its declaration by HAS_INSTANCE, it carries the
+	// declaration's CEDS mapping edges (12,681 of them sat on DmeSupport nodes before this role) and no text or vector of
+	// its own, so every forge that mints one declares the role non-embeddable.
+	INSTANCE: 'DmeInstance',
 };
 
 // =====================================================================

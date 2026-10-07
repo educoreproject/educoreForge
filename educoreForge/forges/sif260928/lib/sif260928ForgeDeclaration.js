@@ -26,7 +26,7 @@ const sif260928ForgeDeclaration = Object.freeze({
 	// ⟪campaign P3, W-C-4⟫ the family and which member of it, version-free (CONTRACTS §7)
 	standardFamily: STANDARD_FAMILY.SIF,
 	releaseLabel: 'sif260928',
-	standardUsageTips: "SIF keeps its mappings on INSTANCE nodes. A SIF Question (DmeProperty, the node search finds) carries no match edge; it has one Field (DmeSupport) per object it appears in, reached by HAS_INSTANCE, and the Fields carry the mappings. They arrive as dme_find_mappings rows with direction 'outgoingViaInstance' (or rows carrying instanceGroupList / instanceCount / viaInstanceGroupList), and in dme_graph_retriever as instanceView.mappingsViaInstances. Group them by the owning object, (object)-[:HAS_FIELD]->(field), e.g. StudentPersonal, StaffPersonal: present each hub concept ONCE with the objects that hold it and the instance count, never one repeated line per instance. If different objects carry different hub concepts for the same Question, say so plainly — the meaning differs by context; it is not an error. Structure: HAS_FIELD reads 'object has field', HAS_CHILD 'element contains element' (Object -> Container -> Container|Field).",
+	standardUsageTips: "SIF keeps its mappings on INSTANCE nodes. A SIF Question (DmeProperty, the node search finds) carries no match edge; it has one Field (DmeInstance) per object it appears in, reached by HAS_INSTANCE, and the Fields carry the mappings. They arrive as dme_find_mappings rows with direction 'outgoingViaInstance' (or rows carrying instanceGroupList / instanceCount / viaInstanceGroupList), and in dme_graph_retriever as instanceView.mappingsViaInstances. Group them by the owning object, (object)-[:HAS_FIELD]->(field), e.g. StudentPersonal, StaffPersonal: present each hub concept ONCE with the objects that hold it and the instance count, never one repeated line per instance. If different objects carry different hub concepts for the same Question, say so plainly — the meaning differs by context; it is not an error. Structure: HAS_FIELD reads 'object has field', HAS_CHILD 'element contains element' (Object -> Container -> Container|Field).",
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// sif260928:<kind> or sif260928:<kind>/<rest>. trimmed is true because '(/.+)' admits
 	// whitespace, so the pattern alone would not forbid a leading or trailing space.
@@ -47,10 +47,10 @@ const sif260928ForgeDeclaration = Object.freeze({
 		includeInImplied: false,
 		impliedTargets: Object.freeze([]),
 	}),
-	// RULED (EBONY_DREAM, review #9): Field and Container (DmeSupport) and the codesets
+	// RULED (EBONY_DREAM, review #9): Field (DmeInstance since campaign P3) and Container (DmeSupport) and the codesets
 	// (DmeOptionSet, DmeOptionValue) get no node vector. Only Objects (159) and Questions (5,018 by
 	// C1's measurement, SPEC §9 A21) do. The roles themselves live in sif260928NodeKindTable.js.
-	nonEmbeddableRoleList: Object.freeze([DME_ROLES.SUPPORT, DME_ROLES.OPTION_SET, DME_ROLES.OPTION_VALUE]),
+	nonEmbeddableRoleList: Object.freeze([DME_ROLES.SUPPORT, DME_ROLES.INSTANCE, DME_ROLES.OPTION_SET, DME_ROLES.OPTION_VALUE]),
 	// the search texts (phase A5; SPEC §9 A1): a Question's name, description and contextText, an
 	// Object's name. No other role carries one. The framework mints one text node per distinct trimmed
 	// string; an absent description is counted as absent, never minted.

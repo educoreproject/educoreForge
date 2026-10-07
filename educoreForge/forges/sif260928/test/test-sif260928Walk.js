@@ -70,7 +70,7 @@ const RULED_NODE_COUNT_BY_LABEL = Object.freeze({ Sif260928Root: 1, Sif260928Obj
 const RULED_ROLE_BY_LABEL = Object.freeze({
 	Sif260928Root: 'DmeStandardRoot',
 	Sif260928Object: 'DmeClass',
-	Sif260928Field: 'DmeSupport',
+	Sif260928Field: 'DmeInstance', // ⟪campaign P3, W-B-12 (a); ruling R1⟫ was DmeSupport
 	Sif260928Container: 'DmeSupport',
 	Sif260928Question: 'DmeProperty',
 	Sif260928Codeset: 'DmeOptionSet',
@@ -307,7 +307,7 @@ registerMutationTwin({
 const rolesConjunctList = [
 	{
 		conjunctId: 'everyNodeRoleEqualsRuledTable',
-		title: "every minted node's role (its role property and its role label) equals the ruled table for its per-standard label: Object DmeClass, Field and Container DmeSupport, Question DmeProperty, Codeset DmeOptionSet, CodesetValue DmeOptionValue",
+		title: "every minted node's role (its role property and its role label) equals the ruled table for its per-standard label: Object DmeClass, Field DmeInstance (P3, R1), Container DmeSupport, Question DmeProperty, Codeset DmeOptionSet, CodesetValue DmeOptionValue",
 		twinNameList: ['oneFieldMintedAsDmeProperty'],
 		evaluate: overForged((forged) => {
 			const wrongList = forged.nodes.filter((oneNode) => {
