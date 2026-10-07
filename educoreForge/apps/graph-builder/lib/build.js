@@ -228,13 +228,10 @@ const resolveHeapAdequacy = ({
 //     refusal naming it, even though its NAME no longer picks the file. Dropping the check because the
 //     filename no longer depends on it would discard the guard and keep only the habit.
 //
-//   * THE SHARING WITH THE INCUMBENT IS NOW ENDED, and that is a real consequence rather than a
-//     bookkeeping note. The incumbent path is still reachable (cli/lib.d/forger, cli/lib.d/edf-replay,
-//     cli/lib.d/edf-migrate-embeddings all still reference vector-store), so the 19 files under
-//     system/dataStores/vectorStores/ are LEFT EXACTLY WHERE THEY ARE — their contents were COPIED
-//     into the support store, never moved. If the incumbent is run again it must keep finding its own
-//     warm cache rather than silently re-embedding at Voyage's expense. Their disposition is TQ's call
-//     at Phase 8, not this phase's.
+//   * THE SHARING WITH THE INCUMBENT IS NOW ENDED. The incumbent CLI (forger, edf-replay,
+//     edf-migrate-embeddings) lives only in system/codeAttic/cli/lib.d/, and its 19 per-standard stores
+//     were COPIED into the support store, then (2026-10-07, campaign P4b, PLAN G17) moved to
+//     system/dataStores/zArchive_preFresh_100226/vectorStores/. Nothing in the live tree reads them.
 const makeVectorStoreResolver = ({ supportStoreFilePath } = {}) => {
 	let openedSupportStore = null;
 	return (standardKey, callback) => {

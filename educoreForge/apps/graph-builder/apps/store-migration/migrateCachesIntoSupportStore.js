@@ -11,6 +11,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // WHAT MOVES, AND WHY ONLY THIS. Three families are content-keyed, which is what makes carrying them
 // across honest rather than an ad-hoc rescue of whatever happened to be lying around:
 //   * vectors             (19 per-standard stores)  keyed sha256(modelVersion + NUL + inputText)
+//                         — carried once; the row is retired (P4b G17) and the stores are archived
 //   * vectorCacheEntries  (one store)               keyed (embeddingModelVersion, embeddingDims, textHash)
 //   * judgmentCacheEntries(one store)               keyed (promptHash, model, rendererVersion)
 // Reuse of a content-keyed row is BYTE-IDENTICAL to recomputing it, so the carry is a cache warm-up,
@@ -94,14 +95,10 @@ const MIGRATION_PLAN = [
 		columnList: 'seq, promptHash, model, rendererVersion, judgmentJson, generation, createdAt',
 		distinctKeyExpression: 'seq',
 	},
-	{
-		familyName: 'vectors',
-		sourceKind: 'directoryGlob',
-		sourceRelativePath: 'vectorStores',
-		tableName: 'vectors',
-		columnList: 'vectorId, modelVersion, dims, dtype, inputText, vector, vectorHash',
-		distinctKeyExpression: 'vectorId',
-	},
+	// The 'vectors' row (sourceKind directoryGlob over dataStores/vectorStores/, the 19 legacy per-standard
+	// stores) was REMOVED 2026-10-07 (campaign P4b, PLAN G17 / W-C-20 option (i)): the carry it performed is
+	// done, and the 19 files were moved to dataStores/zArchive_preFresh_100226/vectorStores/. The
+	// directoryGlob source kind stays declared for a future row.
 ];
 
 // START OF moduleFunction() ============================================================
