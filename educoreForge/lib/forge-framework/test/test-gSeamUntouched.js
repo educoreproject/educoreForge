@@ -174,7 +174,11 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // ═══ RE-ANCHOR, 2026-10-06 (CARDINAL_RIVER; campaign P2, third; pre-authorised) ═══ postCampaignP2GSeamUntouchedB-100626 ->
 // postCampaignP2GSeamUntouchedC-100626, tag cut ON this commit. CENSUS at 4ca1c75: exactly ONE, lib/replay/replay-engine.js 6 — the
 // fleet finding b2d390d (pgToStored passes non-integer values by reference; mapping every array had doubled replay's heap).
-const PRE_MIGRATION_REF = 'postCampaignP2GSeamUntouchedC-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 (third); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-06 (CARDINAL_HORIZON; campaign P3, G-SEAM-UNTOUCHED; pre-authorised by the P3 work order) ═══ postCampaignP2GSeamUntouchedC-100626 ->
+// postCampaignP3GSeamUntouched-100626, tag cut ON this commit. CENSUS at HEAD before the move (git diff --shortstat postCampaignP2GSeamUntouchedC-100626 over this gate's own
+// paths): 5 files changed, 173 insertions(+), 68 deletions(-); 5 file(s) — the P3 entries W-B-1..14, W-C-1..17, ruling B (DEVLOG-P3). Path list
+// byte-identical; nothing excluded.
+const PRE_MIGRATION_REF = 'postCampaignP3GSeamUntouched-100626'; // re-anchored by CARDINAL_HORIZON, campaign P3 (G-SEAM-UNTOUCHED); the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
