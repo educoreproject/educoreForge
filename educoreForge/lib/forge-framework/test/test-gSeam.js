@@ -119,7 +119,9 @@ const gateDeclarationList = [
 				twinNameList: ['dropEmbeddingModelVersion'],
 				judge: succeeded((result) => {
 					const embedded = result.nodes.filter((oneNode) => oneNode.properties.embedding !== undefined);
-					const offender = embedded.find((oneNode) => oneNode.embeddingModelVersion === undefined || oneNode.properties.embeddingModelVersion === undefined);
+					// ⟪campaign P4b, W-C-19⟫ the vector and its model version ride in properties ONLY (the top-level mirror had no
+					// production reader and was removed); this conjunct used to demand the mirror as well
+					const offender = embedded.find((oneNode) => typeof oneNode.properties.embeddingModelVersion !== 'string' || oneNode.properties.embeddingModelVersion === '');
 					return { pass: embedded.length > 0 && offender === undefined, detail: offender ? `'${offender.stableId}' has an embedding without embeddingModelVersion` : `${embedded.length} embedded nodes all carry embeddingModelVersion` };
 				}),
 			}),
@@ -161,7 +163,7 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'me
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'embedCallCountNumeric', twinName: 'embedCallCountAsString', fileName: 'forge-framework.js', find: '\t\t\t\t\t\tembedCallCount: args.embedCallCount,', replace: '\t\t\t\t\t\tembedCallCount: String(args.embedCallCount),' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'standardKeyEqualsToken', twinName: 'standardKeyFromSource', fileName: 'forge-framework.js', find: '\t\t\t\t\t\tstandardKey,\n\t\t\t\t\t\tstableUriPropertyName,\n\t\t\t\t\t\tcomplianceReport,', replace: '\t\t\t\t\t\tstandardKey: standardSource,\n\t\t\t\t\t\tstableUriPropertyName,\n\t\t\t\t\t\tcomplianceReport,' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'stableUriPropertyCarried', twinName: 'stableUriPropertyNameMisnamed', fileName: 'forge-framework.js', find: '\t\t\t\t\t\tstableUriPropertyName,\n\t\t\t\t\t\tcomplianceReport,', replace: "\t\t\t\t\t\tstableUriPropertyName: stableUriPropertyName + 'X',\n\t\t\t\t\t\tcomplianceReport," });
-frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'modelVersionBesideEmbedding', twinName: 'dropEmbeddingModelVersion', fileName: 'embedPass.js', find: '\t\t\t\t\t\toneNode.embeddingModelVersion = embedResult.embeddingModelVersion;\n', replace: '' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'modelVersionBesideEmbedding', twinName: 'dropEmbeddingModelVersion', fileName: 'embedPass.js', find: '\t\t\t\t\t\toneNode.properties.embeddingModelVersion = embedResult.embeddingModelVersion;\n', replace: '' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'proxyReadsThreeOnly', twinName: 'frameworkReadsOwner', fileName: 'forge-framework.js', find: '\t\t\t\tconst skipEmbedding = forgeArgs.skipEmbedding;\n', replace: '\t\t\t\tconst skipEmbedding = forgeArgs.skipEmbedding;\n\t\t\t\tconst ownerRead = forgeArgs.owner;\n' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'fifthKeyRefused', twinName: 'disableUnknownArgCheck', fileName: 'forge-framework.js', find: '\t\t\t\tif (unknownArgName !== undefined) {', replace: '\t\t\t\tif (unknownArgName === undefined && false) {' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'absentEmbedderKeyRefused', twinName: 'disableEmbedderKeyCheck', fileName: 'forge-framework.js', find: "\t\tif (!Object.prototype.hasOwnProperty.call(deps, 'embedder')) {", replace: "\t\tif (false && !Object.prototype.hasOwnProperty.call(deps, 'embedder')) {" });
