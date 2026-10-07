@@ -98,6 +98,8 @@ const {
 	validateHubDeclaration,
 	validateHubHooks,
 } = require(path.join(__dirname, 'hubDeclarationContract'));
+// ⟪campaign P3, W-C-5⟫ the ONE declaration of a card's fields: it builds the slotProfile and checks every emitted card
+const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, slotProfileFromFieldTable, cardFieldRefusal } = require(path.join(__dirname, 'hubCardFieldTable'));
 
 // slot NAME -> slot NAME, derived from the vocabulary's own roster so the five slot tokens are never
 // re-typed here as literals. HUB_DECOMPOSITION_SLOTS is the single source of the slot vocabulary.
@@ -702,6 +704,14 @@ const moduleFunction =
 					cardProperties,
 				});
 
+				// ⟪campaign P3, W-C-5⟫ the drift gate AT THE PRODUCER: a card carrying a field the table does not declare for
+				// its tier, or lacking an 'always' one, is refused by name — no degraded card, as the provenance refusal above
+				const cardFieldFaultText = cardFieldRefusal({ fieldTable: HUB_CARD_FIELD_TABLE, referenceTier, cardPropertyNameList: Object.keys(cardProperties) });
+				if (cardFieldFaultText) {
+					recordDerivationFault(`${moduleName}: REFUSED — card '${cardUri}' (property '${propertyKey}', domain '${domainId}') ${cardFieldFaultText}`);
+					return;
+				}
+
 				nodes.push({
 					labels: [
 						NODE_LABELS.FORGED_NODE,
@@ -976,60 +986,13 @@ const moduleFunction =
 			});
 
 			// ---- the HubDefinition card (§2) — the namespace authority ----
-			const slotProfile = {
-				cardStructureVersion: 2,
-				addressSlots: [
-					'hubName',
-					'hubVersion',
-					'referenceTier',
-					'domainId',
-					'propertyKey',
-					'rangeDatatype|rangeClassId|rangeOptionSetId',
-					'valueKey',
-					'qualifierKeys',
-				],
-				identityFields: ['addressSignature', 'uri', 'canonicalKey', 'name'],
-				meaningFieldsByTier: {
-					property: [
-						'domainName',
-						'domainDefinition',
-						'propertyName',
-						'propertyDefinition',
-						'propertyNotation',
-						'propertyDataType',
-						'propertyTextFormat',
-						'rangeClassName',
-						'rangeClassDefinition',
-						'rangeOptionSetName',
-						'rangeOptionSetDefinition',
-						'qualifierNames',
-					],
-					value: [
-						'domainName',
-						'domainDefinition',
-						'propertyName',
-						'propertyDefinition',
-						'propertyNotation',
-						'propertyDataType',
-						'propertyTextFormat',
-						'rangeOptionSetName',
-						'rangeOptionSetDefinition',
-						'valueName',
-						'valueDefinition',
-						'valueNotation',
-						'valuePrefLabel',
-						'qualifierNames',
-					],
-				},
-				provenanceFields: [
-					'anchorUri',
-					'domainUri',
-					'propertyUri',
-					'rangeUri',
-					'valueUri',
-				],
-				derivedFields: ['embedText', 'embedding', 'embeddingModelVersion'],
-			};
+			// ⟪campaign P3, W-C-5⟫ the profile IS the field table, serialised (cardStructureVersion 3: the five hand-kept lists of
+			// version 2 are gone; a reader keyed on addressSlots must read fieldList)
+			const slotProfile = slotProfileFromFieldTable({
+				cardStructureVersion: HUB_CARD_STRUCTURE_VERSION,
+				fieldTable: HUB_CARD_FIELD_TABLE,
+				addressSignatureFieldOrder: ADDRESS_SIGNATURE_FIELD_ORDER,
+			});
 			const rootProps = rootNode.properties;
 			const sourceProvenance = JSON.stringify({
 				standardKey: v1(rootProps.standardKey),

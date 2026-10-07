@@ -81,7 +81,7 @@ const hubDeclaration = {
 	// ---- PROVENANCE LABEL — BLOCK BYTES. See the header. ---------------------------------------
 	provenanceLabel: {
 		forgeModule: 'hub-framework',
-		forgeModuleVersion: '1.0.0',
+		forgeModuleVersion: '1.1.0', // ⟪campaign P3, W-C-5⟫ slotProfile v3, built from hubCardFieldTable
 	},
 };
 

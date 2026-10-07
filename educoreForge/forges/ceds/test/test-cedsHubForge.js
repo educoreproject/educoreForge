@@ -65,6 +65,7 @@ const cedsHubForgeFactory = require('../hubCeds');
 const gatesLib = require('../lib/roundTripGates')();
 const vocab = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const { ADDRESS_SIGNATURE_FIELD_ORDER, DME_ROLES, IN_HUB_EDGE_TYPE } = vocab;
+const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, hashedSlotNameListOf, cardFieldRefusal } = require(path.join(__dirname, '..', '..', '..', 'lib', 'hub-framework', 'hubCardFieldTable'));
 
 const CEDS_SOURCE_PATH = path.join(
 	__dirname, '..', 'assets', 'standardSourceData', '01', 'CEDS-Ontology.rdf',
@@ -639,38 +640,28 @@ const computeHubDefinitionViolations = ({ hubNodes, hubEdges, cards, hubVersion 
 	if (slotProfileFault) {
 		violations.push(`slotProfile does not parse: ${slotProfileFault}`);
 	} else {
-		const addressSlots = (slotProfile || {}).addressSlots || [];
-		// S-4: EVERY address slot, not a sample
-		[
-			'hubName',
-			'hubVersion',
-			'referenceTier',
-			'domainId',
-			'propertyKey',
-			'valueKey',
-			'qualifierKeys',
-		].forEach((oneSlot) => {
-			if (addressSlots.indexOf(oneSlot) === -1) {
-				violations.push(`slotProfile.addressSlots missing '${oneSlot}'`);
-			}
-		});
-		const addressSlotsJoined = addressSlots.join(' ');
-		['rangeDatatype', 'rangeClassId', 'rangeOptionSetId'].forEach((oneRangeShape) => {
-			if (addressSlotsJoined.indexOf(oneRangeShape) === -1) {
-				violations.push(`slotProfile.addressSlots missing range shape '${oneRangeShape}'`);
-			}
-		});
-		const meaningByTier = (slotProfile || {}).meaningFieldsByTier || {};
-		['domainName', 'propertyDefinition'].forEach((oneField) => {
-			if (((meaningByTier.property || []).indexOf(oneField)) === -1) {
-				violations.push(`slotProfile.meaningFieldsByTier.property missing '${oneField}'`);
-			}
-		});
-		['valueName', 'valuePrefLabel'].forEach((oneField) => {
-			if (((meaningByTier.value || []).indexOf(oneField)) === -1) {
-				violations.push(`slotProfile.meaningFieldsByTier.value missing '${oneField}'`);
-			}
-		});
+		// ⟪campaign P3, W-C-5⟫ the profile IS the field table: version 3, fieldList deep-equal to HUB_CARD_FIELD_TABLE,
+		// the signature order the vocabulary's, and the table's hashed slots EXACTLY that order's slots
+		if ((slotProfile || {}).cardStructureVersion !== HUB_CARD_STRUCTURE_VERSION) {
+			violations.push(`slotProfile.cardStructureVersion ${JSON.stringify((slotProfile || {}).cardStructureVersion)} != ${HUB_CARD_STRUCTURE_VERSION}`);
+		}
+		if (JSON.stringify((slotProfile || {}).fieldList) !== JSON.stringify(HUB_CARD_FIELD_TABLE)) {
+			violations.push('slotProfile.fieldList is not the hub card field table, serialised');
+		}
+		if (JSON.stringify((slotProfile || {}).addressSignatureFieldOrder) !== JSON.stringify(ADDRESS_SIGNATURE_FIELD_ORDER)) {
+			violations.push('slotProfile.addressSignatureFieldOrder is not vocabulary ADDRESS_SIGNATURE_FIELD_ORDER');
+		}
+		const hashedSlotNameList = hashedSlotNameListOf(HUB_CARD_FIELD_TABLE);
+		if (JSON.stringify(hashedSlotNameList.slice().sort()) !== JSON.stringify(ADDRESS_SIGNATURE_FIELD_ORDER.slice().sort())) {
+			violations.push(`the table's hashed slots [${hashedSlotNameList.join(', ')}] are not ADDRESS_SIGNATURE_FIELD_ORDER [${ADDRESS_SIGNATURE_FIELD_ORDER.join(', ')}]`);
+		}
+		// every card carries exactly what the table allows for its tier (EVERY card, not a sample)
+		const cardFaultList = cards
+			.map((oneCard) => ({ stableId: oneCard.stableId, faultText: cardFieldRefusal({ fieldTable: HUB_CARD_FIELD_TABLE, referenceTier: oneCard.properties.referenceTier, cardPropertyNameList: Object.keys(oneCard.properties) }) }))
+			.filter((oneVerdict) => oneVerdict.faultText !== '');
+		if (cardFaultList.length) {
+			violations.push(`${cardFaultList.length} card(s) disagree with the field table (first ${cardFaultList[0].stableId}: ${cardFaultList[0].faultText})`);
+		}
 	}
 	const { parsed: sourceProvenance, faultMessage: provenanceFault } = parsedJsonOf(
 		hd.sourceProvenance,

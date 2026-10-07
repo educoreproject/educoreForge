@@ -910,7 +910,7 @@ const ADDRESS_SIGNATURE_FIELD_ORDER = [
 	'canonicalKey',
 	'domainId',
 	'propertyKey',
-	'range', // rangeOptionSetId || rangeDatatype
+	'range', // rangeOptionSetId || rangeClassId || rangeDatatype (hubCardFieldTable hashSlot 'range')
 	'valueKey',
 	'qualifierKeys', // sort()ed
 	'hubVersion',
