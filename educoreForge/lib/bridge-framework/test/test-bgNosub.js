@@ -150,7 +150,11 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // ═══ RE-ANCHOR (ii) THIRD, 2026-10-06 (CARDINAL_RIVER, campaign P2; pre-authorised) ═══ -> postCampaignP2VocabularyIiC-100626, tag ON
 // this commit. CENSUS at 6122536: ONE file, outside — graph-contract.js 4 (fleet finding: 'Sif' joins the producer-local label tokens,
 // the old SIF forge's family). List NOT widened.
-const POST_D1_BASE_TAG = 'postCampaignP2VocabularyIiC-100626'; // re-anchored 2026-10-06 (campaign P2, third) — base moved, allowed-path list NOT widened
+// ═══ RE-ANCHOR, 2026-10-06 (CARDINAL_HORIZON; campaign P3, (ii); pre-authorised by the P3 work order) ═══ postCampaignP2VocabularyIiC-100626 ->
+// postCampaignP3VocabularyIi-100626, tag cut ON this commit. CENSUS at HEAD before the move (git diff --shortstat postCampaignP2VocabularyIiC-100626 over this gate's own
+// paths): 8 files changed, 520 insertions(+), 48 deletions(-); 8 file(s) — the P3 entries W-B-1..14, W-C-1..17, ruling B (DEVLOG-P3). Path list
+// byte-identical; nothing excluded.
+const POST_D1_BASE_TAG = 'postCampaignP3VocabularyIi-100626'; // re-anchored by CARDINAL_HORIZON, campaign P3 ((ii)); the tag is cut ON the re-anchor commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
