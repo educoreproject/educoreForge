@@ -142,9 +142,21 @@ const copyDirectory = (fromDir, toDir) => {
 	fs.mkdirSync(toDir, { recursive: true });
 	fs.readdirSync(fromDir, { withFileTypes: true }).forEach((oneEntry) => (oneEntry.isDirectory() ? copyDirectory(path.join(fromDir, oneEntry.name), path.join(toDir, oneEntry.name)) : fs.copyFileSync(path.join(fromDir, oneEntry.name), path.join(toDir, oneEntry.name))));
 };
+const TOY_SCOPE_STABLE_ID_LIST = Object.freeze([MODEL_QUESTION, METADATA_QUESTION]);
+const writeToyScopeList = (forgesDirPath) => {
+	const { scopeStableIdListPath } = shippedDeclaration().subjectSource;
+	if (typeof scopeStableIdListPath !== 'string' || path.isAbsolute(scopeStableIdListPath)) {
+		throw new Error(`${moduleName}: the shipped plugin's subjectSource.scopeStableIdListPath is ${JSON.stringify(scopeStableIdListPath)} — this double writes a RELATIVE scope list beside the plugin and cannot stand in for anything else`);
+	}
+	fs.writeFileSync(path.join(forgesDirPath, STANDARD_KEY, scopeStableIdListPath), JSON.stringify(TOY_SCOPE_STABLE_ID_LIST, null, 1));
+};
 const replayShape = (scenario) => {
 	scenario.forgesDirOverride = scenarioLib.makeScratchForgesCopy();
 	copyDirectory(SHIPPED_BRIDGES_DIR, path.join(scenario.forgesDirOverride, STANDARD_KEY, 'bridges'));
+	// ⟪campaign P4a⟫ the shipped plugin declares an evaluation scope (subjectSource.scopeStableIdListPath, since goldJev A
+	// 51d14f7): 5,017 real Question stableIds, which this two-Question toy graph cannot hold, so the framework rightly
+	// refused. The double writes ITS OWN scope list — the toy's two Questions — at the path the shipped declaration names.
+	writeToyScopeList(scenario.forgesDirOverride);
 	scenario.graph = replayGraph();
 	scenario.graphEdit(scenario.graph);
 	scenario.judgeRule = 'first';
