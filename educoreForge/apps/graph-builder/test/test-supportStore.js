@@ -197,7 +197,7 @@ const equivalenceBlockText = '{"kind":"header","blockType":"standardBase","stand
 const saveBlockAndManifest = (databaseFilePath, done) => {
 	standardsDatabaseModule().open({ databaseFilePath }, (openErr, store) => {
 		if (openErr) { done(openErr); return; }
-		store.saveBlock({ text: equivalenceBlockText, kind: 'standardBase', subject: 'ceds@1_base' }, (blockErr, saved) => {
+		store.saveBlock({ text: equivalenceBlockText, kind: 'standardBase', subject: 'ceds@1_base', version: '1' } /* ⟪P3, W-C-7⟫ every block names its version */, (blockErr, saved) => {
 			if (blockErr) { done(blockErr); return; }
 			store.saveManifest({ name: 'equivalence', members: [{ schemaBlockRefId: saved.refId, position: 0 }] }, (manifestErr, manifest) => done(manifestErr || '', { blockRefId: saved.refId, manifestRefId: manifest && manifest.refId }));
 		});

@@ -396,7 +396,8 @@ const writeConjuncts = ({ handle, realReader, subjectStableId }) => {
 };
 
 const harvestConjunct = ({ handle, realReader, realWriter, driver, subjectId, bareP001572, anotherCard }) => {
-	const harvestHeader = { blockType: 'relationship', standardKey: 'edfi', pairA: 'edfi', pairB: 'ceds', pairAVersion: '5.2.0', pairBVersion: '14.0.0.0', stableUriPropertyName: 'stableId', resolutionKey: 'stableId', embeddingModelVersion: 'voyage-4-large', embeddingEncoding: 'base64', embeddingDtype: 'float32', embeddingByteOrder: 'little-endian', embeddingDims: 1024 };
+	// ⟪campaign P3, W-C-6⟫ the relationship header shape: the pair (hub first), its pretty versions and the producer; no standardKey
+	const harvestHeader = { blockType: 'relationship', pairA: 'ceds', pairAVersion: '14.0.0.0', pairB: 'edfi', pairBVersion: '5.2.0', producer: 'inferred', embeddingModelVersion: 'voyage-4-large', embeddingEncoding: 'base64', embeddingDtype: 'float32', embeddingByteOrder: 'little-endian', embeddingDims: 1024 };
 	// ⟪JOB 2⟫ This harvests material the BRIDGE WRITER wrote, through lib/bridge-framework/graphWriter
 	// and not through replayManager.init, so there is no init-captured loaded set to conserve against
 	// and the declared exemption is TRUE here today. JOB 5 makes the bridge write produce a real

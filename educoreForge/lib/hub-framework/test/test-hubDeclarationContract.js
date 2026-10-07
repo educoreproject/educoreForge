@@ -267,7 +267,7 @@ harness.match(
 harness.equal(
 	'CONTROL: the live provenanceLabel is exactly the pair Phase 2b re-keyed and proved',
 	JSON.stringify(liveDeclaration.provenanceLabel),
-	JSON.stringify({ forgeModule: 'hub-framework', forgeModuleVersion: '1.0.0' }),
+	JSON.stringify({ forgeModule: 'hub-framework', forgeModuleVersion: '1.1.0' }), // ⟪campaign P3, W-C-5⟫ slotProfile v3 bumped the module version
 );
 
 harness.section('H1 HOOKS — present and empty is legal; an unimplemented hook is refused, not ignored');

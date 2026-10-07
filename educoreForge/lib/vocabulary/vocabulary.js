@@ -122,8 +122,11 @@ const EDGE_TYPES = {
 	REFERENCES_OBJECT: 'REFERENCES_OBJECT',
 };
 
-// ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE ⟪campaign P3, W-C-1 (V1-C28, G5)⟫ — the ONE table a root-parented node's ownership edge
-// is read from: a node whose parentId is the standard root is reached from the root by the edge its role names here. Each
+// ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE ⟪campaign P3, W-C-1 (V1-C28, G5)⟫ — the table a forge reads a root-parented node's ownership
+// edge from: a node whose parentId is the standard root is reached from the root by the edge its role names here. READ BY
+// sif260928 ONLY (since P3). Measured on the pre-P3 gold, CEDS (6 option sets), Ed-Fi (57 option sets) and each PESC release
+// (about 11 properties, 575 support nodes, 110 option sets) hang some root-parented nodes on the root by another edge or by
+// none — an open finding, not yet routed through this table. Each
 // row is licensed by its EDGE_TYPES definition ("root or container to a class"; "class (or root) to a property"; "property,
 // field or root to the option set"). A role with no row has no root ownership edge, and rootOwnershipEdgeTypeFor refuses it
 // by name rather than guessing (sif260928 minted its Objects, Questions and Codesets on the root with NO edge, so all
@@ -1200,10 +1203,7 @@ const vocabulary = {
 	slugifyVersion,
 	baseSubject,
 	parseBlockSubject,
-	BASE_SUBJECT_PATTERN,
-	RELATIONSHIP_SUBJECT_PATTERN,
 	SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND,
-	SCHEMA_BLOCK_HEADER_IDENTITY_FIELD_LIST_BY_KIND,
 	subjectOfHeader,
 	relationshipProducerFromSubject,
 	// pair / version-key vocabulary (Phase C)
