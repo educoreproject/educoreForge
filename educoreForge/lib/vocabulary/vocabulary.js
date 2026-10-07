@@ -292,6 +292,10 @@ const subjectWithoutRelationshipDiscriminator = (subject) =>
 // naming the producer (never a silent default).
 const suffixForRelationshipProducer = (oneProducer) => RELATIONSHIP_PRODUCER_SUFFIX[oneProducer];
 
+// slugifyVersion — a version made safe to sit in a SUBJECT. ⟪campaign P3, W-C-6⟫ MOVED here from build.js, the one home
+// of the subject grammar, so the base composer, the relationship composer and the parser cannot slug differently.
+const slugifyVersion = (version) => `${version}`.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
 // relationshipSubject — COMPOSE the pair-scoped, version-keyed relationship name. Both versions are
 // REQUIRED (there is no default — a relationship block that cannot name a resolved version on both
 // endpoints has no address, polyArch2 §6). Returns { subject } or { error }.
@@ -309,7 +313,9 @@ const relationshipSubject = ({ hubStandard, hubVersion, sourceStandard, sourceVe
 	if (!producerSuffix) {
 		return { error: `relationshipSubject: producer '${producer}' has no registered suffix — known producers: ${Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).join(', ')}.` };
 	}
-	const undiscriminatedSubject = `${hubStandard}@${hubVersion}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${sourceVersion}${producerSuffix}`;
+	// ⟪campaign P3, W-C-6⟫ ONE grammar: both versions are SLUGGED inside a subject, exactly as the base subject's is (a
+	// subject is a key, not prose; the pretty version lives in blocks.version and the header's pairAVersion/pairBVersion)
+	const undiscriminatedSubject = `${hubStandard}@${slugifyVersion(hubVersion)}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${slugifyVersion(sourceVersion)}${producerSuffix}`;
 	// ABSENT IS TODAY'S ANSWER, ON TODAY'S PATH. An undeclared discriminator returns the string composed
 	// exactly as it was before this parameter existed — the same template, no separator, no tail. That is
 	// what makes the whole change backward compatible, and it is why the check is `=== undefined` rather
@@ -377,6 +383,87 @@ const subjectAgreesWithKind = (subject, oneKind) => {
 		return false;
 	}
 	return SUFFIX_MATCHERS[entry.match](subject, entry.marker);
+};
+
+// =====================================================================
+// ⟪campaign P3, W-C-6 (V1-S40/S41/S42, V1-C35/C36)⟫ ONE BLOCK-SUBJECT GRAMMAR AND ONE HEADER SHAPE PER KIND.
+// =====================================================================
+//   base:          <standardKey>@<versionSlug>_base
+//   relationship:  <pairA>@<pairAVersionSlug>_rel_<pairB>@<pairBVersionSlug><producerSuffix>[~<discriminator>]
+// Versions are ALWAYS slugged (slugifyVersion); before P3 the relationship form kept the pretty version
+// ('ceds@14.0.0.0_rel_edfi@5.2.0_close') while the base form slugged it ('ceds@14_0_0_0_base').
+const SUBJECT_STANDARD_KEY_SOURCE = '[a-z][a-z0-9]*';
+const SUBJECT_VERSION_SLUG_SOURCE = '[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*';
+const BASE_SUBJECT_PATTERN = new RegExp(`^(${SUBJECT_STANDARD_KEY_SOURCE})@(${SUBJECT_VERSION_SLUG_SOURCE})_base$`);
+const RELATIONSHIP_SUBJECT_PATTERN = new RegExp(
+	`^(${SUBJECT_STANDARD_KEY_SOURCE})@(${SUBJECT_VERSION_SLUG_SOURCE})${RELATIONSHIP_PAIR_INFIX}(${SUBJECT_STANDARD_KEY_SOURCE})@(${SUBJECT_VERSION_SLUG_SOURCE}?)(${RELATIONSHIP_PRODUCER_SUFFIXES.join('|')})(?:${RELATIONSHIP_DISCRIMINATOR_SEPARATOR}(${RELATIONSHIP_DISCRIMINATOR_PATTERN.source.replace(/^\^/, '').replace(/\$$/, '')}))?$`,
+);
+// baseSubject — COMPOSE a standardBase subject. Returns { subject } or { error }.
+const baseSubject = ({ standardKey, version } = {}) => {
+	if (typeof standardKey !== 'string' || !new RegExp(`^${SUBJECT_STANDARD_KEY_SOURCE}$`).test(standardKey)) {
+		return { error: `baseSubject: standardKey ${JSON.stringify(standardKey)} is not a lower-case standard token` };
+	}
+	if (version === undefined || version === null || slugifyVersion(version) === '') {
+		return { error: `baseSubject: version ${JSON.stringify(version)} slugs to nothing — a base block names its resolved version; there is no default` };
+	}
+	return { subject: `${standardKey}@${slugifyVersion(version)}_base` };
+};
+// parseBlockSubject — the subject read back into its parts. A subject in neither form (the pre-P3 dotted relationship form
+// included) is refused by name: a reader never guesses which grammar it is holding.
+const producerBySuffix = Object.keys(RELATIONSHIP_PRODUCER_SUFFIX).reduce((soFar, oneProducer) => ({ ...soFar, [RELATIONSHIP_PRODUCER_SUFFIX[oneProducer]]: oneProducer }), {});
+const parseBlockSubject = (subject) => {
+	const baseMatch = typeof subject === 'string' ? BASE_SUBJECT_PATTERN.exec(subject) : null;
+	if (baseMatch) {
+		return { kind: SCHEMA_BLOCK_KIND.STANDARD_BASE, standardKey: baseMatch[1], versionSlug: baseMatch[2] };
+	}
+	const relationshipMatch = typeof subject === 'string' ? RELATIONSHIP_SUBJECT_PATTERN.exec(subject) : null;
+	if (relationshipMatch) {
+		return {
+			kind: SCHEMA_BLOCK_KIND.RELATIONSHIP,
+			pairA: relationshipMatch[1],
+			pairAVersionSlug: relationshipMatch[2],
+			pairB: relationshipMatch[3],
+			pairBVersionSlug: relationshipMatch[4],
+			producer: producerBySuffix[relationshipMatch[5]],
+			...(relationshipMatch[6] === undefined ? {} : { discriminator: relationshipMatch[6] }),
+		};
+	}
+	return { error: `parseBlockSubject: ${JSON.stringify(subject)} is neither <standardKey>@<versionSlug>_base nor <pairA>@<slug>_rel_<pairB>@<slug><producerSuffix>[~<discriminator>] (versions are slugged since campaign P3, W-C-6)` };
+};
+// SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND — the header line's fields, IN ORDER, per blockType (serializerVersion 2). The
+// serializer writes exactly these; harvest requires the kind's identity fields. A relationship header names its PAIR and
+// carries no standardKey (before P3 its standardKey held the whole subject).
+const SCHEMA_BLOCK_HEADER_EMBEDDING_FIELD_LIST = Object.freeze(['embeddingModelVersion', 'embeddingEncoding', 'embeddingDtype', 'embeddingByteOrder', 'embeddingDims']);
+const SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND = Object.freeze({
+	[SCHEMA_BLOCK_KIND.STANDARD_BASE]: Object.freeze(['kind', 'blockType', 'serializerVersion', 'standardKey', 'version', 'stableUriPropertyName', 'resolutionKey', 'embeddingRefGrammar', ...SCHEMA_BLOCK_HEADER_EMBEDDING_FIELD_LIST]),
+	// discriminator: present only on a discriminated subject (vanishes otherwise), so the header names the subject EXACTLY
+	[SCHEMA_BLOCK_KIND.RELATIONSHIP]: Object.freeze(['kind', 'blockType', 'serializerVersion', 'pairA', 'pairAVersion', 'pairB', 'pairBVersion', 'producer', 'discriminator', ...SCHEMA_BLOCK_HEADER_EMBEDDING_FIELD_LIST]),
+});
+// the fields a header of each kind MUST carry (a harvest refuses a header missing one, by name)
+const SCHEMA_BLOCK_HEADER_IDENTITY_FIELD_LIST_BY_KIND = Object.freeze({
+	[SCHEMA_BLOCK_KIND.STANDARD_BASE]: Object.freeze(['standardKey', 'version']),
+	[SCHEMA_BLOCK_KIND.RELATIONSHIP]: Object.freeze(['pairA', 'pairAVersion', 'pairB', 'pairBVersion', 'producer']),
+});
+
+// headerSubjectRefusal / subjectOfHeader — a header's own subject, read by the table. serializerVersion '1' headers (before
+// P3) carried the subject in standardKey for EVERY kind; they are still read, so a historical manifest replays.
+const subjectOfHeader = (header) => {
+	const h = header || {};
+	if (h.serializerVersion === '1' || h.serializerVersion === undefined) {
+		return typeof h.standardKey === 'string' && h.standardKey !== '' ? { subject: h.standardKey } : { error: `a serializerVersion-1 header names its subject in standardKey, and this one carries ${JSON.stringify(h.standardKey)}` };
+	}
+	const identityFieldList = SCHEMA_BLOCK_HEADER_IDENTITY_FIELD_LIST_BY_KIND[h.blockType];
+	if (identityFieldList === undefined) {
+		return { error: `blockType ${JSON.stringify(h.blockType)} has no header identity (SCHEMA_BLOCK_HEADER_IDENTITY_FIELD_LIST_BY_KIND)` };
+	}
+	const missingFieldList = identityFieldList.filter((fieldName) => typeof h[fieldName] !== 'string' || h[fieldName] === '');
+	if (missingFieldList.length) {
+		return { error: `a ${h.blockType} header must carry ${identityFieldList.join(', ')}; it lacks ${missingFieldList.join(', ')}` };
+	}
+	if (h.blockType === SCHEMA_BLOCK_KIND.STANDARD_BASE) {
+		return baseSubject({ standardKey: h.standardKey, version: h.version });
+	}
+	return relationshipSubject({ hubStandard: h.pairA, hubVersion: h.pairAVersion, sourceStandard: h.pairB, sourceVersion: h.pairBVersion, producer: h.producer, discriminator: h.discriminator });
 };
 
 // kindImpliedBySubject — which kind's role marker (if any) a subject actually carries. Used
@@ -1109,6 +1196,15 @@ const vocabulary = {
 	RELATIONSHIP_DISCRIMINATOR_TAIL_PATTERN,
 	subjectWithoutRelationshipDiscriminator,
 	relationshipSubject,
+	// ⟪campaign P3, W-C-6⟫ the one subject grammar and the per-kind header shape
+	slugifyVersion,
+	baseSubject,
+	parseBlockSubject,
+	BASE_SUBJECT_PATTERN,
+	RELATIONSHIP_SUBJECT_PATTERN,
+	SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND,
+	SCHEMA_BLOCK_HEADER_IDENTITY_FIELD_LIST_BY_KIND,
+	subjectOfHeader,
 	relationshipProducerFromSubject,
 	// pair / version-key vocabulary (Phase C)
 	// structural-bridge vocabulary (forgeArchitectureRefactor S1)

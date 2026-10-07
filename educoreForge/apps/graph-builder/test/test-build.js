@@ -196,24 +196,30 @@ const doubleConservationRecord = ({ blockId, header, loadedNodeCount, loadedEdge
 			duplicateEdgeCount: 0,
 			duplicateNodeCount: 0,
 			blockRefId: blockId,
-			blockSubject: (header || {}).standardKey,
+			blockSubject: harvestSubjectOf(header).subject, // ⟪P3, W-C-6⟫ the header's own subject, by kind
 		},
 	};
 };
 
+// ⟪campaign P3, W-C-6⟫ the double reads a header's identity the way the real harvest does: by kind, from the vocabulary
+// (a relationship header names its pair and producer; only a base header carries standardKey)
+const harvestSubjectOf = (header) => require('../../../lib/vocabulary/vocabulary').subjectOfHeader({ ...(header || {}), serializerVersion: '2' });
 const doubleBlockText = (header, selectionLabels) => {
-	const stableId = `${header.standardKey}/${(selectionLabels || []).join('')}`;
+	const headerSubject = harvestSubjectOf(header).subject;
+	const stableId = `${headerSubject}/${(selectionLabels || []).join('')}`;
 	const headerLine = JSON.stringify({
 		kind: 'header',
 		blockType: header.blockType,
 		standardKey: header.standardKey,
 		version: header.version,
+		pairA: header.pairA,
+		pairB: header.pairB,
 		embeddingDims: null,
 		selectionLabels,
 	});
 	const nodeLine = JSON.stringify({
 		kind: 'node',
-		ref: { source: header.standardKey, id: stableId },
+		ref: { source: headerSubject, id: stableId },
 		labels: (selectionLabels || []).concat('ForgedNode'),
 		stableId,
 		properties: {},
@@ -310,8 +316,9 @@ const workingReplayManager = (overrides) => () => {
 				});
 			},
 			harvest: ({ inGraph, selectionLabels, header }, cb) => {
-				if (!header || !header.blockType || !header.standardKey) {
-					cb(`replayManager.harvest: a header carrying blockType and standardKey is required`);
+				const doubleHarvestSubject = header && header.blockType ? harvestSubjectOf(header) : { error: 'no blockType' };
+				if (doubleHarvestSubject.error) {
+					cb(`replayManager.harvest: a header carrying its kind's identity is required — ${doubleHarvestSubject.error}`);
 					return;
 				}
 				const blockText = doubleBlockText(header, selectionLabels);

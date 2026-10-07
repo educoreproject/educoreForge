@@ -117,6 +117,21 @@ const INLINE_CONTROL_BASELINE = [
 // red and names why, so a missing oracle can never look like a pass.
 const FROZEN_SUBJECT_BASELINE = frozenArtifactReading.error ? INLINE_CONTROL_BASELINE : frozenArtifactReading.rowList;
 
+// ⟪campaign P3, W-C-6⟫ A DECLARED DELTA, not a re-freeze: P3 slugs both versions inside a relationship subject (one subject
+// grammar). The frozen subject's two version spans are rewritten to their slugs — each must be found EXACTLY once, or the
+// delta refuses, so it can only ever move what W-C-6 moved. The frozen artifact itself (md5-pinned) is untouched.
+const p3SlugDeltaOf = (oneRow) => {
+	const producerSuffix = vocabulary.suffixForRelationshipProducer(oneRow.tuple.producer);
+	const hubSpan = `@${oneRow.tuple.hubVersion}_rel_`;
+	const sourceSpan = `@${oneRow.tuple.sourceVersion}${producerSuffix}`;
+	if (oneRow.expectedSubject.split(hubSpan).length !== 2 || oneRow.expectedSubject.split(sourceSpan).length !== 2) {
+		throw new Error(`${moduleName}: the P3 slug delta cannot place ${hubSpan} / ${sourceSpan} exactly once in ${oneRow.expectedSubject}`);
+	}
+	return oneRow.expectedSubject
+		.replace(hubSpan, `@${vocabulary.slugifyVersion(oneRow.tuple.hubVersion)}_rel_`)
+		.replace(sourceSpan, `@${vocabulary.slugifyVersion(oneRow.tuple.sourceVersion)}${producerSuffix}`);
+};
+
 // The malformed discriminators, each with the reason it must be refused. '' and null are deliberately
 // here: they are NOT "absent" — absent is `undefined` and returns today's string.
 const MALFORMED_DISCRIMINATOR_LIST = [
@@ -151,15 +166,15 @@ const conjunctJudgeByRefId = {
 	a_frozenBaselineComposesByteIdentically: (subject) => {
 		const wrong = FROZEN_SUBJECT_BASELINE.filter((oneRow) => {
 			const composed = subject.relationshipSubject({ ...oneRow.tuple, discriminator: undefined });
-			return composed.subject !== oneRow.expectedSubject;
-		}).map((oneRow) => `${oneRow.bridgeName}: got ${JSON.stringify(subject.relationshipSubject({ ...oneRow.tuple, discriminator: undefined }).subject)} want ${JSON.stringify(oneRow.expectedSubject)}`);
+			return composed.subject !== p3SlugDeltaOf(oneRow);
+		}).map((oneRow) => `${oneRow.bridgeName}: got ${JSON.stringify(subject.relationshipSubject({ ...oneRow.tuple, discriminator: undefined }).subject)} want ${JSON.stringify(p3SlugDeltaOf(oneRow))}`);
 		return { pass: wrong.length === 0, detail: wrong.length ? wrong.join(' | ') : `${FROZEN_SUBJECT_BASELINE.length} tuples byte-identical` };
 	},
 	// The SAME table with the parameter OMITTED ENTIRELY rather than passed as undefined — the call shape
 	// every caller in the tree uses today. A composer that read a missing key differently from an explicit
 	// undefined would pass the conjunct above and still break every existing caller.
 	a_omittedParameterIsAlsoByteIdentical: (subject) => {
-		const wrong = FROZEN_SUBJECT_BASELINE.filter((oneRow) => subject.relationshipSubject(oneRow.tuple).subject !== oneRow.expectedSubject);
+		const wrong = FROZEN_SUBJECT_BASELINE.filter((oneRow) => subject.relationshipSubject(oneRow.tuple).subject !== p3SlugDeltaOf(oneRow));
 		return { pass: wrong.length === 0, detail: wrong.length ? wrong.map((oneRow) => oneRow.bridgeName).join(', ') : `${FROZEN_SUBJECT_BASELINE.length} tuples byte-identical with the key absent` };
 	},
 	b_theCollisionIsReal: (subject) => {
@@ -171,7 +186,7 @@ const conjunctJudgeByRefId = {
 		const composed = subject.relationshipSubject({ ...FROZEN_SUBJECT_BASELINE[4].tuple, discriminator: 'optionSet' });
 		const sibling = subject.relationshipSubject(FROZEN_SUBJECT_BASELINE[3].tuple);
 		return {
-			pass: composed.subject === 'ceds@14.0.0.0_rel_pesc260805@aggregate-01_close~optionSet' && composed.subject !== sibling.subject,
+			pass: composed.subject === 'ceds@14_0_0_0_rel_pesc260805@aggregate_01_close~optionSet' && composed.subject !== sibling.subject, // ⟪P3, W-C-6⟫ slugged
 			detail: `${JSON.stringify(composed.subject)} vs sibling ${JSON.stringify(sibling.subject)}`,
 		};
 	},
@@ -303,8 +318,8 @@ const twinList = [
 		conjunctRefIdList: ['b_theCollisionIsReal'],
 		twinName: 'producerSuffixDroppedFromTemplate',
 		leverKind: 'productionMutation',
-		find: '\tconst undiscriminatedSubject = `${hubStandard}@${hubVersion}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${sourceVersion}${producerSuffix}`;',
-		replace: '\tconst undiscriminatedSubject = `${hubStandard}@${hubVersion}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${sourceVersion}`;',
+		find: '\tconst undiscriminatedSubject = `${hubStandard}@${slugifyVersion(hubVersion)}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${slugifyVersion(sourceVersion)}${producerSuffix}`;',
+		replace: '\tconst undiscriminatedSubject = `${hubStandard}@${slugifyVersion(hubVersion)}${RELATIONSHIP_PAIR_INFIX}${sourceStandard}@${slugifyVersion(sourceVersion)}`;',
 	},
 ];
 const observedRedSet = new Set();

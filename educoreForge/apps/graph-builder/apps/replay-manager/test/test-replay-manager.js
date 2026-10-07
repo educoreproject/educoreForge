@@ -89,7 +89,7 @@ manager.harvest(
 		harness.match(
 			'harvest refuses to mint a schema block with a GUESSED header',
 			err,
-			/header carrying at least blockType and standardKey is required/,
+			/header carrying its kind's identity is required/,
 		);
 	},
 );

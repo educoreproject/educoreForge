@@ -1223,10 +1223,9 @@ const resolveInferenceConfig = (deps, rebridgeScope, debugJudgeRule, callback) =
 
 const standardKey = (std) => `${std.token}@${std.version}`;
 
-// slugifyVersion — a version string made safe to sit in a SUBJECT (a subject is a key, not prose):
-// every run of non-alphanumerics collapses to a single '_'. Only the subject is slugged; the PRETTY
-// version is kept verbatim in blocks.version and on the node.
-const slugifyVersion = (version) => `${version}`.replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+// ⟪campaign P3, W-C-6⟫ slugifyVersion MOVED to the vocabulary, beside baseSubject / relationshipSubject / parseBlockSubject:
+// the one subject grammar has one home. Only a subject is slugged; the PRETTY version stays in blocks.version, the header
+// (version, pairAVersion, pairBVersion) and the node.
 
 // explicitVersionFrom — the resolved EXPLICIT version a persisted block carries in place of the recipe's
 // floating 'current'. A KNOWN source gives the published version; source 'unknown' gives an honest
@@ -1540,9 +1539,12 @@ const build = (recipe, deps, callback) => {
 				return;
 			}
 			const reuseVersion = explicitVersionFrom(stamp.value);
-			const reuseSubject = `${std.token}@${slugifyVersion(reuseVersion)}${vocabulary.suffixMarkerForKind(
-				vocabulary.SCHEMA_BLOCK_KIND.STANDARD_BASE,
-			)}`;
+			const composedReuseSubject = vocabulary.baseSubject({ standardKey: std.token, version: reuseVersion });
+			if (composedReuseSubject.error) {
+				callback(composedReuseSubject.error);
+				return;
+			}
+			const reuseSubject = composedReuseSubject.subject;
 			standardsDatabase.findBlockBySubject(
 				{ kind: 'standardBase', subject: reuseSubject, version: reuseVersion },
 				(findError, found) => {
@@ -1689,9 +1691,12 @@ const build = (recipe, deps, callback) => {
 							// persisted place: composed HERE from the forge's snapshot-provenance triple, then
 							// read by the harvest header (pretty), the block subject (slugged), and blocks.version.
 							explicitVersion = explicitVersionFrom(forgeReport);
-							baseSubject = `${std.token}@${slugifyVersion(explicitVersion)}${vocabulary.suffixMarkerForKind(
-								vocabulary.SCHEMA_BLOCK_KIND.STANDARD_BASE,
-							)}`;
+							const composedBaseSubject = vocabulary.baseSubject({ standardKey: std.token, version: explicitVersion });
+							if (composedBaseSubject.error) {
+								next(`[A] ${std.token}: ${composedBaseSubject.error}`);
+								return;
+							}
+							baseSubject = composedBaseSubject.subject;
 							// carried per token for Phase C's version-keyed relationship subjects — NOT the
 							// recipe token, NOT bundleVersion.
 							resolvedVersionByToken[std.token] = explicitVersion;
@@ -2220,9 +2225,17 @@ const build = (recipe, deps, callback) => {
 								// must not be indistinguishable from a seam that legitimately has nothing to
 								// compare. Do not restore the exemption to quiet that refusal — find the drop.
 								conservationExpectation: oneBlock.loadedConservationSummary,
+								// ⟪campaign P3, W-C-6⟫ the relationship header names its PAIR, the pretty versions and the producer
+								// (SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND); its subject is re-composed from them, discriminator
+								// included. Before P3 standardKey held the whole subject here.
 								header: {
 									blockType: 'relationship',
-									standardKey: oneSubject,
+									pairA: nameFirst,
+									pairAVersion: resolvedVersionByToken[nameFirst],
+									pairB: nameSecond,
+									pairBVersion: resolvedVersionByToken[nameSecond],
+									producer,
+									discriminator: oneBlock.subjectDiscriminator,
 									// SECOND SITE of the missing-embedding-header defect (2026-07-26). A bridged
 									// node is an embedded base node, so a relationship block that carries it must
 									// declare the SAME embedding width/model as the bases, or the materialize

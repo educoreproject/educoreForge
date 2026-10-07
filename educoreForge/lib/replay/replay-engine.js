@@ -45,7 +45,7 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const replayBlock = require('./replay-block')();
 const contentAddress = require('../content-address/content-address')();
 // ⟪R-ET-24⟫ the second vector index's label, property and name suffix have ONE home, the vocabulary.
-const { EMBED_TEXT_VECTOR, SKOS_EDGE_TYPES, MAPPING_KIND_LIST, LIST_VALUED_PROPERTY_NAME_LIST, INTEGER_VALUED_PROPERTY_NAME_LIST, vectorIndexNameRefusal, vectorIndexNameFor } = require('../vocabulary/vocabulary');
+const { EMBED_TEXT_VECTOR, SKOS_EDGE_TYPES, MAPPING_KIND_LIST, LIST_VALUED_PROPERTY_NAME_LIST, INTEGER_VALUED_PROPERTY_NAME_LIST, vectorIndexNameRefusal, vectorIndexNameFor, subjectOfHeader } = require('../vocabulary/vocabulary');
 
 const BATCH_SIZE = 500;
 const NEO4J_USER = 'neo4j';
@@ -939,6 +939,11 @@ const resolveNodeVectors = ({ nodes, storeResolver, header }, callback) => {
 	eachEntrySequentialStackSafe(
 		distinctEntries,
 		(oneEntry, entryDone) => {
+			// ⟪campaign P3, W-C-6⟫ only a standardBase block names its standard; an embeddingRef in any other block has no store
+			if (typeof oneEntry.standardKey !== 'string' || oneEntry.standardKey === '') {
+				entryDone(`resolveNodeVectors: embeddingRef ${oneEntry.embeddingRef} sits in a block that names no standardKey (only a standardBase block's vectors live in a vector store; a relationship block inlines its vectors)`);
+				return;
+			}
 			storeResolver(oneEntry.standardKey, (resolverErr, vectorStore) => {
 				if (resolverErr) {
 					entryDone(
@@ -1787,18 +1792,24 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 			return;
 		}
 		const h = block.header || {};
-		const blockName =
-			h.blockType === 'bridge'
-				? `bridge ${h.pairA}~${h.pairB}`
-				: `${h.blockType} ${h.standardKey} v${h.version}`;
+		// ⟪campaign P3, W-C-6⟫ the block named by its own subject, read from the header by kind (serializerVersion 1 headers
+		// carried it in standardKey and are still read); an unreadable header names itself rather than 'v undefined'
+		const relationshipHeaderSubject = h.blockType === 'relationship' && h.serializerVersion !== '1' ? subjectOfHeader(h) : null;
+		const blockName = relationshipHeaderSubject === null
+			? `${h.blockType} ${h.standardKey} v${h.version}`
+			: relationshipHeaderSubject.error
+				? `relationship (header subject unreadable: ${relationshipHeaderSubject.error})`
+				: `relationship ${relationshipHeaderSubject.subject}`;
 
 		blockDims.push({ blockName, embeddingDims: h.embeddingDims });
 
 		// Tag each node with its block's standardKey — a TRANSIENT carrier resolveNodeVectors reads
 		// to pick the per-standard store, then STRIPS (it never persists; buildNodeRow whitelists
 		// fields). Edges are tagged with blockType the same way, for violation reporting.
+		// ONLY a standardBase block names a standard whose vector store holds embeddingRef vectors; a relationship block
+		// inlines its vectors (resolveNodeVectors refuses an embeddingRef node whose block names no standardKey, by name)
 		block.nodes.forEach((oneNode) => {
-			oneNode._standardKey = h.standardKey;
+			oneNode._standardKey = h.blockType === 'standardBase' ? h.standardKey : undefined;
 		});
 
 		groups.push({

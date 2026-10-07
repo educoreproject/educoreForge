@@ -1027,10 +1027,15 @@ const moduleFunction =
 		// A schema block without a header is not a schema block: the header carries the standard
 		// key, the version and the embedding contract that make the bytes interpretable later.
 		// Deriving it by guesswork would produce a block that deserializes and means nothing.
-		if (!header || typeof header !== 'object' || !header.blockType || !header.standardKey) {
+		// ⟪campaign P3, W-C-6⟫ the identity a header must carry is read from the vocabulary by kind (a relationship header
+		// names its pair and producer, not a standardKey); the header handed in here is serialised at SERIALIZER_VERSION.
+		const harvestSubject = header && typeof header === 'object' && header.blockType
+			? vocabulary.subjectOfHeader({ ...header, serializerVersion: replayBlockLib.SERIALIZER_VERSION })
+			: { error: 'no blockType' };
+		if (harvestSubject.error) {
 			callback(
-				`replayManager.harvest: a header carrying at least blockType and standardKey is ` +
-					`required — a schema block whose provenance is guessed is worse than no block.`,
+				`replayManager.harvest: a header carrying its kind's identity is required — ${harvestSubject.error} — ` +
+					`a schema block whose provenance is guessed is worse than no block.`,
 			);
 			return;
 		}
@@ -1087,7 +1092,7 @@ const moduleFunction =
 				callback('', {
 					...result,
 					blockId,
-					conservationRecord: { ...conservationReport.record, blockRefId: blockId, blockSubject: (header || {}).standardKey },
+					conservationRecord: { ...conservationReport.record, blockRefId: blockId, blockSubject: harvestSubject.subject },
 				});
 			},
 		);

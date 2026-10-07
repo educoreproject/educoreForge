@@ -23,7 +23,9 @@
 // @concept: [[GreenfieldResolutionKey]]
 // @concept: [[Replay]]
 
-const SERIALIZER_VERSION = '1';
+// ⟪campaign P3, W-C-6⟫ '2': the header line is written from SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND (a relationship header names
+// its pair and producer and carries no standardKey). Version-1 blocks are still READ (replay of any existing manifest).
+const SERIALIZER_VERSION = '2';
 
 // Edge type is a validated identifier (CONTRACT; schemas.md §2). Guards against Cypher
 // injection through the relationship-type position, which cannot be parameterized.
@@ -36,7 +38,7 @@ const { EDGE_TYPE_RE, isValidEdgeType } = require('../vocabulary/vocabulary');
 // Phase 1: the canonical provenanceTier set + validator come from the vocabulary registry (single
 // source of truth). The array order + values are byte-identical; replay-block re-exports them, so its
 // public API (PROVENANCE_TIERS, isValidProvenanceTier) is unchanged.
-const { PROVENANCE_TIERS, isValidProvenanceTier } = require('../vocabulary/vocabulary');
+const { PROVENANCE_TIERS, isValidProvenanceTier, SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND } = require('../vocabulary/vocabulary');
 
 // =====================================================================
 // EMBEDDING CODEC — explicit little-endian float32 (byte order intrinsic)
@@ -127,16 +129,11 @@ const canonicalProperties = (properties) => {
 	return out;
 };
 
-const serializeHeaderLine = (header) => {
-	const h = header || {};
-	// Fixed field order per CONTRACT. Bridge blocks carry pairA/pairB instead of
-	// standardKey/version; everything else is identical. resolutionKey is the greenfield
-	// stable-URI key.
-	const ordered = {
-		kind: 'header',
-		blockType: h.blockType,
-		serializerVersion: SERIALIZER_VERSION,
-	};
+// serializeVersionOneHeaderLine — the serializerVersion '1' header writer, KEPT VERBATIM so a block read at version 1 is
+// written back byte for byte (a legacy block's codec round trip and restore->harvest stay byte-identical; replay of any
+// existing manifest must succeed). Only a header that SAYS serializerVersion '1' reaches it; producers pass none.
+const serializeVersionOneHeaderLine = (h) => {
+	const ordered = { kind: 'header', blockType: h.blockType, serializerVersion: '1' };
 	if (h.blockType === 'bridge') {
 		ordered.pairA = h.pairA;
 		ordered.pairB = h.pairB;
@@ -144,30 +141,33 @@ const serializeHeaderLine = (header) => {
 		ordered.standardKey = h.standardKey;
 		ordered.version = h.version;
 	}
-	// pair/version-key + tier-scope fields (BINDING spec §4.2/§4.3, Phase C) — ALL OPTIONAL:
-	// an undefined value is omitted by JSON.stringify, so every pre-Phase-C block's header
-	// bytes are unchanged. Pair-keyed mapping blocks carry pairA/pairB INSTEAD of standardKey
-	// (the undefined standardKey above vanishes the same way). tierScope is the granularity
-	// axis (property|value|crosswalk) — distinct from the edges' provenanceTier authorship
-	// axis. hubSnapshotKey is the reference block's §4.3 hub-version key.
 	if (h.blockType !== 'bridge') {
 		ordered.pairA = h.pairA;
 		ordered.pairB = h.pairB;
 	}
-	ordered.pairAVersion = h.pairAVersion;
-	ordered.pairBVersion = h.pairBVersion;
-	ordered.publishedVersionA = h.publishedVersionA;
-	ordered.publishedVersionB = h.publishedVersionB;
-	ordered.tierScope = h.tierScope;
-	ordered.hubSnapshotKey = h.hubSnapshotKey;
-	ordered.stableUriPropertyName = h.stableUriPropertyName;
-	ordered.resolutionKey = h.resolutionKey;
-	ordered.goldenVersionAuthoredAgainst = h.goldenVersionAuthoredAgainst;
-	ordered.embeddingModelVersion = h.embeddingModelVersion;
-	ordered.embeddingEncoding = h.embeddingEncoding;
-	ordered.embeddingDtype = h.embeddingDtype;
-	ordered.embeddingByteOrder = h.embeddingByteOrder;
-	ordered.embeddingDims = h.embeddingDims;
+	['pairAVersion', 'pairBVersion', 'publishedVersionA', 'publishedVersionB', 'tierScope', 'hubSnapshotKey', 'stableUriPropertyName', 'resolutionKey', 'goldenVersionAuthoredAgainst', 'embeddingModelVersion', 'embeddingEncoding', 'embeddingDtype', 'embeddingByteOrder', 'embeddingDims'].forEach((fieldName) => {
+		ordered[fieldName] = h[fieldName];
+	});
+	return JSON.stringify(ordered);
+};
+
+const serializeHeaderLine = (header) => {
+	const h = header || {};
+	if (h.serializerVersion === '1') {
+		return serializeVersionOneHeaderLine(h);
+	}
+	// ⟪campaign P3, W-C-6⟫ ONE shape per kind, read from the vocabulary's table IN ORDER — no per-kind branch here and no
+	// optional slot nobody sets (the 'bridge' branch and pairA/pairB/publishedVersionA/B/tierScope/hubSnapshotKey/
+	// goldenVersionAuthoredAgainst are gone: no producer wrote them). An undefined value still vanishes in JSON.stringify,
+	// so a base header with no embedding fields is unchanged in shape. An unknown blockType is refused by name.
+	const fieldNameList = SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND[h.blockType];
+	if (fieldNameList === undefined) {
+		throw new Error(`replay-block.serializeHeaderLine: blockType ${JSON.stringify(h.blockType)} has no header shape (SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND: ${Object.keys(SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND).join(', ')})`);
+	}
+	const ordered = {};
+	fieldNameList.forEach((fieldName) => {
+		ordered[fieldName] = fieldName === 'kind' ? 'header' : fieldName === 'serializerVersion' ? SERIALIZER_VERSION : h[fieldName];
+	});
 	return JSON.stringify(ordered);
 };
 
