@@ -838,5 +838,20 @@ rmUnderTest.create({ purpose: 'forge' }, (createErr, createHandle) => {
 		/rm -f DEV_gb_forge_/,
 	);
 
+	// ⟪campaign P4b, X5 (ruled B, VIOLET_VALLEY 2026-10-07)⟫ the launched container carries the declared security env:
+	// APOC narrowed to apoc.merge.* (the forge's ONE procedure, apoc.merge.relationship), no unrestricted grant, and
+	// Neo4j's URL blocklist covering every IPv4 and IPv6 address, so neither LOAD CSV nor an APOC loader can fetch
+	harness.section('X5 — the docker run carries the declared container security env, and nothing broader');
+	const runArgText = (runCalls[0] || []).join(' ');
+	const securityEnvList = replayManagerModule.NEO4J_CONTAINER_SECURITY_ENV_LIST || [];
+	harness.ok('  NEO4J_CONTAINER_SECURITY_ENV_LIST is declared and frozen', Array.isArray(securityEnvList) && securityEnvList.length > 0 && Object.isFrozen(securityEnvList), JSON.stringify(securityEnvList));
+	harness.ok('  it allows exactly apoc.merge.*', securityEnvList.indexOf('NEO4J_dbms_security_procedures_allowlist=apoc.merge.*') !== -1, JSON.stringify(securityEnvList));
+	harness.ok('  it blocks every IPv4 and IPv6 URL', securityEnvList.indexOf('NEO4J_internal_dbms_cypher__ip__blocklist=0.0.0.0/0,::/0') !== -1, JSON.stringify(securityEnvList));
+	securityEnvList.forEach((oneEnv) => {
+		harness.ok(`  the docker run passes -e ${oneEnv}`, runArgText.indexOf(`-e ${oneEnv}`) !== -1, runArgText);
+	});
+	harness.ok('  the docker run grants no unrestricted procedures', runArgText.indexOf('procedures_unrestricted') === -1, runArgText);
+	harness.ok('  the docker run allows no apoc.* wildcard', runArgText.indexOf('procedures_allowlist=apoc.*') === -1, runArgText);
+
 	harness.report();
 });

@@ -76,6 +76,24 @@ const engineVersionsFor = () => ({
 // is nothing to omit and nothing to shadow (polyArch2 §6).
 const NEO4J_USER = 'neo4j';
 
+// NEO4J_CONTAINER_SECURITY_ENV_LIST — ⟪campaign P4b, X5; ruled B by VIOLET_VALLEY 2026-10-07⟫ the environment every
+// graph container is launched with (and so every promoted GOLD, which is the same container renamed).
+//   * APOC is installed from the image's own labs directory (no download at start) and ALLOWED ONLY as apoc.merge.*:
+//     the forge calls exactly one APOC procedure, apoc.merge.relationship (replay-engine, graphWriter), and the DME
+//     calls none. apoc.load.*, apoc.import.* and apoc.cypher.* are therefore absent, not merely unused. No procedure is
+//     granted unrestricted access (merge needs none; measured on a scratch container).
+//   * internal.dbms.cypher_ip_blocklist covers every IPv4 and IPv6 address, so LOAD CSV FROM <url> is refused by
+//     Neo4j before any connection is opened. The public name dbms.security.cypher_ip_blocklist is REFUSED by neo4j
+//     5.26's strict config validation; only the internal. name is accepted (measured).
+// Why not an --internal Docker network: on Docker Desktop an internal network publishes no ports, so the host-side
+// DME could not reach the graph; masquerade-off and routed bridges still reached the internet (measured, evidence
+// P4b/X5-findings.md). The network wall is a production option, written in the deploy-dme-graph notes.
+const NEO4J_CONTAINER_SECURITY_ENV_LIST = Object.freeze([
+	'NEO4J_PLUGINS=["apoc"]',
+	'NEO4J_dbms_security_procedures_allowlist=apoc.merge.*',
+	'NEO4J_internal_dbms_cypher__ip__blocklist=0.0.0.0/0,::/0',
+]);
+
 // THE DECLARED CONSERVATION EXEMPTION (WORKORDER-sifViaConservation-090226, JOB 2).
 // harvest REFUSES a spec that carries no conservationExpectation at all, because an absent field
 // would make "nobody threaded the loaded set" indistinguishable from "there is legitimately nothing
@@ -710,12 +728,7 @@ const moduleFunction =
 				`${args.httpPort}:7474`,
 				'-e',
 				`NEO4J_AUTH=${NEO4J_USER}/${password}`,
-				'-e',
-				'NEO4J_PLUGINS=["apoc"]',
-				'-e',
-				'NEO4J_dbms_security_procedures_unrestricted=apoc.*',
-				'-e',
-				'NEO4J_dbms_security_procedures_allowlist=apoc.*',
+				...NEO4J_CONTAINER_SECURITY_ENV_LIST.reduce((soFar, oneEnv) => soFar.concat(['-e', oneEnv]), []),
 				settings.neo4jImage,
 			];
 			xLog.status(
@@ -1337,6 +1350,7 @@ module.exports.resolveSettings = resolveSettings;
 module.exports.resolveEmbeddingDims = resolveEmbeddingDims;
 module.exports.disposeScratchGraph = disposeScratchGraph;
 module.exports.engineVersionsFor = engineVersionsFor;
+module.exports.NEO4J_CONTAINER_SECURITY_ENV_LIST = NEO4J_CONTAINER_SECURITY_ENV_LIST;
 // The declared conservation exemption, exported so a caller NAMES it rather than repeating a
 // magic string that could drift from the one harvest compares against.
 module.exports.CONSERVATION_NOT_LOADED_THROUGH_INIT = CONSERVATION_NOT_LOADED_THROUGH_INIT;
