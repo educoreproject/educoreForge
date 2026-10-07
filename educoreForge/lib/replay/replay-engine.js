@@ -77,21 +77,31 @@ const batchArray = (arr, size) => {
 // a list, so a list of one and a wrapped scalar harvest to the same block bytes.
 const LIST_VALUED_PROPERTY_NAME_SET = new Set(LIST_VALUED_PROPERTY_NAME_LIST);
 const INTEGER_VALUED_PROPERTY_NAME_SET = new Set(INTEGER_VALUED_PROPERTY_NAME_LIST);
-// integerDeclarationViolationOf — '' when every integer-declared property carries integers (or null), else the reason.
+// integerDeclarationViolationOf — '' when every integer-declared property carries integers, null or a STRING, else the reason.
 // validateShapedGraph refuses with it BEFORE any row is built; storedNumber below throws the same text should a caller
 // reach the row builder without the guard.
+// ⟪campaign P3; VIOLET_VALLEY ruling B on W-C-17, 2026-10-07; TQ doctrine: validation is PRODUCER-time, replay of any
+// existing manifest must succeed⟫ a STRING under a declared-integer name is a LEGACY value — a block produced before the
+// name joined §2 (CEDS carried maxLength "80" until W-C-17). It is written through unchanged and COUNTED (legacy string
+// integers, below), never refused and never silently converted. A non-integer NUMBER is still refused: that is the FLOAT
+// bug §2 exists to catch, and no producer era ever made one legitimately.
+const integerValueListOf = (properties, onePropertyName) => (Array.isArray(properties[onePropertyName]) ? properties[onePropertyName] : [properties[onePropertyName]]);
 const integerDeclarationViolationOf = (properties) => {
 	const offendingName = Object.keys(properties || {}).find((onePropertyName) => {
 		if (!INTEGER_VALUED_PROPERTY_NAME_SET.has(onePropertyName)) return false;
-		const valueList = Array.isArray(properties[onePropertyName]) ? properties[onePropertyName] : [properties[onePropertyName]];
-		return valueList.some((oneValue) => oneValue !== null && (typeof oneValue !== 'number' || !Number.isInteger(oneValue)));
+		return integerValueListOf(properties, onePropertyName).some((oneValue) => oneValue !== null && typeof oneValue !== 'string' && (typeof oneValue !== 'number' || !Number.isInteger(oneValue)));
 	});
 	return offendingName === undefined
 		? ''
 		: `property '${offendingName}' is declared INTEGER (graph-contract §2, INTEGER_VALUED_PROPERTY_NAME_LIST) but carries ${JSON.stringify(properties[offendingName])}`;
 };
+// legacyStringIntegerCountOf — how many declared-integer VALUES on one item are strings (each list element counts)
+const legacyStringIntegerCountOf = (properties) =>
+	Object.keys(properties || {})
+		.filter((onePropertyName) => INTEGER_VALUED_PROPERTY_NAME_SET.has(onePropertyName))
+		.reduce((soFar, onePropertyName) => soFar + integerValueListOf(properties, onePropertyName).filter((oneValue) => typeof oneValue === 'string').length, 0);
 const storedNumber = (onePropertyName, oneValue) => {
-	if (!INTEGER_VALUED_PROPERTY_NAME_SET.has(onePropertyName) || oneValue === null) return oneValue;
+	if (!INTEGER_VALUED_PROPERTY_NAME_SET.has(onePropertyName) || oneValue === null || typeof oneValue === 'string') return oneValue;
 	if (typeof oneValue !== 'number' || !Number.isInteger(oneValue)) {
 		throw new Error(`replay-engine: ${integerDeclarationViolationOf({ [onePropertyName]: oneValue })}`);
 	}
@@ -1365,6 +1375,7 @@ const validateShapedGraph = (groups) => {
 	const provenanceViolations = [];
 	const vectorSlotViolations = [];
 	const integerViolations = [];
+	const legacyStringIntegerCountBySource = {};
 	const allNodes = [];
 	const allEdges = [];
 
@@ -1457,6 +1468,10 @@ const validateShapedGraph = (groups) => {
 		if (integerOffenderList.length > 0) {
 			integerViolations.push(`${sourceLabel}: ${integerOffenderList.length} item(s); first: ${integerOffenderList[0]}`);
 		}
+		const sourceLegacyStringIntegerCount = oneGroup.nodes.concat(oneGroup.edges).reduce((soFar, oneItem) => soFar + legacyStringIntegerCountOf(oneItem.properties), 0);
+		if (sourceLegacyStringIntegerCount > 0) {
+			legacyStringIntegerCountBySource[sourceLabel] = sourceLegacyStringIntegerCount;
+		}
 
 		oneGroup.nodes.forEach((oneNode) => allNodes.push(oneNode));
 		oneGroup.edges.forEach((oneEdge) => allEdges.push(oneEdge));
@@ -1500,7 +1515,7 @@ const validateShapedGraph = (groups) => {
 		);
 	}
 
-	return { error: '', nodes: allNodes, edges: allEdges };
+	return { error: '', nodes: allNodes, edges: allEdges, legacyStringIntegerCountBySource };
 };
 // writeShapedGraph — validate, resolve vectors, index, merge, index. The caller owns the session
 // (and closing it); this owns what a safe write IS.
@@ -1556,7 +1571,7 @@ const writeShapedGraph = (
 			next(validated.error);
 			return;
 		}
-		next('', { ...args, allNodes: validated.nodes, allEdges: validated.edges });
+		next('', { ...args, allNodes: validated.nodes, allEdges: validated.edges, legacyStringIntegerCountBySource: validated.legacyStringIntegerCountBySource });
 	});
 
 	// --- RESOLVE embedding refs (PLAN §3.5): for every node carrying an embeddingRef, resolve it to
@@ -1692,6 +1707,9 @@ const writeShapedGraph = (
 			edgesMerged: args.edgesMerged,
 			danglingRefs: args.danglingRefs,
 			indexesBuilt: args.indexesBuilt,
+			// ⟪campaign P3, ruling B⟫ string values under declared-integer names, per source block; a new build shows {}
+			legacyStringIntegerCountBySource: args.legacyStringIntegerCountBySource,
+			legacyStringIntegerTotal: Object.keys(args.legacyStringIntegerCountBySource).reduce((soFar, sourceLabel) => soFar + args.legacyStringIntegerCountBySource[sourceLabel], 0),
 		});
 	});
 };
@@ -1842,6 +1860,7 @@ return {
 	// ⟪campaign P2, W-A-1 / W-A-2⟫ the stored-property rule, exported so a hermetic gate drives it without a graph
 	pgToStored,
 	integerDeclarationViolationOf,
+	legacyStringIntegerCountOf,
 	// the harvest side of the same contract (a stored value back to its PG-JSON array), for the byte-stability gate
 	pgArray,
 	resolveNodeVectors,

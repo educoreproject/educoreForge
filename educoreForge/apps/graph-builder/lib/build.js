@@ -709,7 +709,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 			callback(`materialize failed: creating the eval golden: ${createError}`);
 			return;
 		}
-		replay.init({ inGraph: goldEval, schemaBlocks: resolvedSchemaBlocks, storeResolver }, (initError) => {
+		replay.init({ inGraph: goldEval, schemaBlocks: resolvedSchemaBlocks, storeResolver }, (initError, initReport) => {
 			if (initError) {
 				replay.delete(goldEval, (deleteErr) => {
 					callback(
@@ -721,7 +721,17 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 				});
 				return;
 			}
-			xLog.status(`  [materialize] -> ${goldEval.boltUrl}`);
+			if (!initReport || typeof initReport.legacyStringIntegerTotal !== 'number' || typeof initReport.legacyStringIntegerCountBySource !== 'object') {
+				callback(`materialize failed: replay.init reported no legacyStringIntegerTotal / legacyStringIntegerCountBySource (the eval golden '${goldEval.graphName}' is left for inspection)`);
+				return;
+			}
+			// ⟪campaign P3, VIOLET_VALLEY ruling B⟫ string values under declared-integer names are admitted at replay (historical
+			// blocks must replay) but never silently: the run report names their count per block, on the materialize line (one
+			// line per phase — test-build reads the phase sequence off these lines). A fresh build shows 0.
+			const legacyStringIntegerText = initReport.legacyStringIntegerTotal > 0
+				? ` (${Object.keys(initReport.legacyStringIntegerCountBySource).map((sourceLabel) => `legacy string, block ${sourceLabel}: ${initReport.legacyStringIntegerCountBySource[sourceLabel]}`).join('; ')})`
+				: '';
+			xLog.status(`  [materialize] -> ${goldEval.boltUrl}; legacy string integers: ${initReport.legacyStringIntegerTotal}${legacyStringIntegerText}`);
 			// R-1: the product is not a product until it round-trips. The graph is NOT deleted on
 			// failure -- an operator needs to inspect the thing that failed.
 			fidelityGateRunner(

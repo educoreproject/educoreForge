@@ -10,6 +10,9 @@
 //   (b) an undeclared numeric stays a JS number (mappingConfidence 0.9 is a genuine FLOAT)
 //   (c) validateShapedGraph refuses a node whose declared integer carries 3.5, naming the property; integerDeclaration
 //       ViolationOf answers '' for integers and null
+//   (e) ⟪campaign P3, VIOLET_VALLEY ruling B on W-C-17⟫ a STRING under a declared-integer name (a block produced before
+//       the name joined §2 — CEDS maxLength "80") is ADMITTED, written through UNCHANGED (never converted), and COUNTED per
+//       source (legacyStringIntegerCountBySource); a non-integer NUMBER beside it is still refused (c)
 //   (d) harvest byte-stability: the engine's own harvest conversion (pgArray over neoToJs) turns neo4j.int(402) and the
 //       FLOAT 402 into the same JSON text '[402]', so no block moves
 // RED TWINS (in memory, loadBuildJsDouble on replay-engine.js):
@@ -70,6 +73,14 @@ const conjunctJudgeByRefId = {
 		const pass = /integer declaration enforcement/.test(verdict.error) && /'depth'/.test(verdict.error) && cleanVerdict.error === '';
 		return { pass, detail: `refusal: ${(verdict.error || '(none)').slice(0, 160)} | clean: ${cleanVerdict.error || '(none)'}` };
 	},
+	e_legacyStringAdmittedAndCounted: (mutationList) => {
+		const engine = engineFor(mutationList);
+		const verdict = engine.validateShapedGraph(toyGroupWith({ maxLength: ['80'], minLength: [1] }));
+		const stored = engine.pgToStored({ maxLength: ['80'] });
+		const countBySource = verdict.legacyStringIntegerCountBySource || {};
+		const pass = verdict.error === '' && stored.maxLength === '80' && countBySource['toy integer group'] === 1 && Object.keys(countBySource).length === 1;
+		return { pass, detail: `error ${JSON.stringify(verdict.error)}; stored ${JSON.stringify(stored.maxLength)}; counted ${JSON.stringify(countBySource)}` };
+	},
 	d_otherArraysPassByReference: (mutationList) => {
 		// campaign P2 fleet finding: mapping EVERY array copied every 1024-float embedding and doubled replay's heap
 		const embedding = Array.from({ length: 1024 }, (unused, position) => position / 1024);
@@ -81,6 +92,10 @@ const conjunctJudgeByRefId = {
 const TWIN_LIST = [
 	{ conjunctRefId: 'a_declaredIntegerIsNeo4jInteger', twinName: 'integerWrapSkipped', find: '	return neo4j.int(oneValue);\n};', replace: '	return oneValue;\n};' },
 	{ conjunctRefId: 'c_nonIntegerRefusedByName', twinName: 'guardFiveRemoved', find: 'integerViolations.push(`${sourceLabel}', replace: 'void (`${sourceLabel}' },
+	// the pre-ruling engine: a string is refused like a float (historical blocks stop replaying)
+	{ conjunctRefId: 'e_legacyStringAdmittedAndCounted', twinName: 'stringRefusedLikeAFloat', find: "oneValue !== null && typeof oneValue !== 'string' && (typeof oneValue", replace: "oneValue !== null && (typeof oneValue" },
+	// the string admitted but not counted: a legacy value would pass silently
+	{ conjunctRefId: 'e_legacyStringAdmittedAndCounted', twinName: 'legacyCountDropped', find: '			legacyStringIntegerCountBySource[sourceLabel] = sourceLegacyStringIntegerCount;', replace: '			void sourceLegacyStringIntegerCount;' },
 	{ conjunctRefId: 'd_otherArraysPassByReference', twinName: 'everyArrayMapped', find: '		if (!INTEGER_VALUED_PROPERTY_NAME_SET.has(onePropertyName)) {\n			out[onePropertyName] = collapsedValue;\n			return;\n		}\n', replace: '' },
 ];
 

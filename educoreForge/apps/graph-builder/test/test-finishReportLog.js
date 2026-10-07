@@ -46,7 +46,7 @@ const runMaterialize = (mutationList, finishReportFilePath, done) => {
 	const statusLineList = [];
 	const replayDouble = {
 		create: (spec, callback) => callback('', { graphName: 'DEV_finishReportDouble', boltUrl: 'bolt://double:1' }),
-		init: (spec, callback) => callback(''),
+		init: (spec, callback) => callback('', { legacyStringIntegerTotal: 0, legacyStringIntegerCountBySource: {} }), // ⟪P3, ruling B⟫ the replay report's legacy count
 		delete: (graphHandle, callback) => callback(''),
 		finish: (spec, callback) => callback('', FINISH_REPORT),
 	};

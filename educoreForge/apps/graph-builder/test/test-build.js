@@ -274,6 +274,9 @@ const workingReplayManager = (overrides) => () => {
 					nodesMerged: nodeEdges ? nodeEdges.nodes.length : 0,
 					edgesMerged: nodeEdges ? nodeEdges.edges.length : 0,
 					schemaBlockCount: schemaBlocks ? schemaBlocks.length : 0,
+					// ⟪campaign P3, ruling B⟫ the real report names its legacy string integers; a double's blocks carry none
+					legacyStringIntegerTotal: 0,
+					legacyStringIntegerCountBySource: {},
 				});
 			},
 			// ⟪graphSelfDoc Phase 5⟫ THE FIFTH VERB on the hermetic double. It is written to ENFORCE

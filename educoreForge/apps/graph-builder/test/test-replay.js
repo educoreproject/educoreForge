@@ -180,7 +180,7 @@ const seedReplayManager = () => () => {
 				httpPort: 7700 + createSeq,
 			});
 		},
-		init: (spec, cb) => cb('', { schemaBlockCount: (spec && spec.schemaBlocks) ? spec.schemaBlocks.length : 0 }),
+		init: (spec, cb) => cb('', { schemaBlockCount: (spec && spec.schemaBlocks) ? spec.schemaBlocks.length : 0, legacyStringIntegerTotal: 0, legacyStringIntegerCountBySource: {} }), // ⟪P3, ruling B⟫
 		harvest: ({ header, selectionLabels }, cb) => {
 			const blockText = doubleBlockText(header, selectionLabels);
 			const blockId = contentAddress.blockIdForText(blockText);
@@ -257,7 +257,7 @@ const makeReplaySpy = () => {
 		},
 		init: (spec, cb) => {
 			calls.init.push(spec);
-			cb('');
+			cb('', { legacyStringIntegerTotal: 0, legacyStringIntegerCountBySource: {} }); // ⟪P3, ruling B⟫ the replay report's legacy count
 		},
 		// finish is PRESENT and RECORDED, unlike forge/harvest below, because -replay DOES finish:
 		// the verb runs at materialize's tail (build.js) and stamping the graph's self-documentation
