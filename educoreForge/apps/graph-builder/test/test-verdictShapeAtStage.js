@@ -20,7 +20,7 @@
 //   (h-ceds) (h-edfi) (h-sif) each bespoke validator's normativeVerdictPartFor, over a synthetic lossy report, makes a verdict
 //       verifyVerdictShape accepts — so that validator emits the whole shape. RED TWIN ON EACH: a validator double whose
 //       part omits its lostList (the shape every one of them carried before P3) -> its conjunct red.
-// (c)'s fixture now carries the whole shape (5 contentGap + 2 explicitlyOmitted items, no inventions, a limit, a census).
+// (c)'s fixture now carries the whole shape (5 contentGap items, 2 declared omissions (G21), no inventions, a limit, a census).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -55,9 +55,12 @@ const runStageWith = (mutationList, verdict, done) => {
 	);
 };
 const lostItemFor = (lostCategory, itemIndex) => ({ statementKey: `s${itemIndex}`, statement: { subject: `s${itemIndex}` }, lostCategory });
+// ⟪G21⟫ the omitted items live in explicitlyOmittedList under their declaration, no longer inside lostList
 const WELL_TYPED = {
 	roundTripClean: false, inventedTotal: 0, lostTotal: 5, contentGapTotal: 5, explicitlyOmittedTotal: 2,
-	lostList: [0, 1, 2, 3, 4].map((itemIndex) => lostItemFor('contentGap', itemIndex)).concat([5, 6].map((itemIndex) => lostItemFor('explicitlyOmitted', itemIndex))),
+	lostList: [0, 1, 2, 3, 4].map((itemIndex) => lostItemFor('contentGap', itemIndex)),
+	explicitlyOmittedList: [5, 6].map((itemIndex) => ({ statementKey: `s${itemIndex}`, kind: 'toyKind', rule: 'toy/rule.js' })),
+	explicitOmissionDeclaration: { rule: 'toy/rule.js', kindPropertyName: 'omittedKind', kindList: ['toyKind'], caveatText: '' },
 	inventedList: [],
 	semanticValidationLimit: 'a toy limit',
 	census: { wallClockMs: 1, peakMemoryBytes: 1, statementCensus: { sourceStatementCount: 7, graphStatementCount: 0, matchedCount: 0 } },
@@ -85,10 +88,11 @@ const bespokeConjunctFor = (validatorName) => (mutationList, done) => {
 	const shape = verdictAssembler.verifyVerdictShape(verdict);
 	done({ pass: shape.error === '', detail: shape.error || `${validatorName}: the whole shape (${part.lostList.length} lost item, census ${JSON.stringify(Object.keys(part.census))})` });
 };
+// ⟪G21 re-anchor⟫ each part now returns its partitioned lostList (the true losses); the twin still withholds it
 const LOST_LIST_FIND_BY_VALIDATOR = {
-	ceds: '		lostList: report.lostItemList.map(',
-	edfi: '	lostList: report.lostDetailList.map((oneLost) => ({ statementKey:',
-	sif: '	lostList: report.lostDetailList.map((oneLost) => ({ statementKey:',
+	ceds: 'lostList: partitioned.lostList,',
+	edfi: 'lostList: partitioned.lostList,',
+	sif: 'lostList: partitioned.lostList,',
 };
 
 const conjunctJudgeByRefId = {

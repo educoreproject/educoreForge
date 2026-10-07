@@ -374,7 +374,10 @@ const stageRunBehavior = (done) => {
 		lostTotal: contentGap,
 		contentGapTotal: contentGap,
 		explicitlyOmittedTotal: omitted,
-		lostList: Array.from({ length: contentGap }, (unused, itemIndex) => ({ statementKey: `gap${itemIndex}`, lostCategory: 'contentGap' })).concat(Array.from({ length: omitted }, (unused, itemIndex) => ({ statementKey: `omit${itemIndex}`, lostCategory: 'explicitlyOmitted' }))),
+		// ⟪G21⟫ lostList holds only the true losses; the omitted items are declared beside it with their kind and rule
+		lostList: Array.from({ length: contentGap }, (unused, itemIndex) => ({ statementKey: `gap${itemIndex}`, lostCategory: 'contentGap' })),
+		explicitlyOmittedList: Array.from({ length: omitted }, (unused, itemIndex) => ({ statementKey: `omit${itemIndex}`, kind: 'toyKind', rule: 'toy/rule.js' })),
+		explicitOmissionDeclaration: { rule: 'toy/rule.js', kindPropertyName: 'omittedKind', kindList: ['toyKind'], caveatText: '' },
 		inventedList: Array.from({ length: invented }, (unused, itemIndex) => ({ statementKey: `inv${itemIndex}` })),
 		semanticValidationLimit: 'a toy limit for the stage suite',
 		census: { wallClockMs: 1, peakMemoryBytes: 1, statementCensus: {} },

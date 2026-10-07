@@ -74,6 +74,14 @@ const GRAPH_LABEL_DISPOSITION_TABLE = Object.freeze({
 
 const STATEMENT_KIND = Object.freeze({ FILE: 'file', TABLE: 'table', ROW: 'row', CONTAINER: 'container' });
 const LOST_REASON = Object.freeze({ ABSENT_FROM_GRAPH: 'absentFromGraph', VALUE_DIFFERS: 'valueDiffers' });
+// ⟪G21⟫ the declaration the verdict carries: THIS module is the rule and 'container' the one kind it omits — an element
+// path prefix derived from row xpaths, with no line of its own in the TSV (containerPathListOf)
+const OMISSION_DECLARATION = Object.freeze({
+	rule: 'forges/sif260928/lib/sif260928RoundTripPair.js',
+	kindPropertyName: 'omittedKind',
+	kindList: Object.freeze([STATEMENT_KIND.CONTAINER]),
+	caveatText: '',
+});
 const STATEMENT_SEPARATOR = '|';
 const XPATH_SEPARATOR = '/';
 const OBJECT_SEGMENT_COUNT = 2; // /<collection>/<object>
@@ -161,7 +169,7 @@ const sourceStatementsOf = ({ sourceFileName, sourceText }) => {
 	});
 
 	containerPathListOf(xpathList).forEach((containerPath) => {
-		statements.set(statementKeyOf(STATEMENT_KIND.CONTAINER, containerPath), { containerPath, explicitlyOmitted: true });
+		statements.set(statementKeyOf(STATEMENT_KIND.CONTAINER, containerPath), { containerPath, omittedKind: STATEMENT_KIND.CONTAINER, explicitlyOmitted: true });
 	});
 	return { statements, stats: { lineCount: lineTextList.length, rowCount: xpathList.length, statementCount: statements.size } };
 };
@@ -335,7 +343,7 @@ const moduleFunction =
 			callback('', diffStatementsOf({ sourceStatements, graphStatements }));
 		};
 
-		return { canonicalizeSource, emitFromGraph, diffStatements, semanticValidationLimit: SEMANTIC_VALIDATION_LIMIT };
+		return { canonicalizeSource, emitFromGraph, diffStatements, semanticValidationLimit: SEMANTIC_VALIDATION_LIMIT, omissionDeclaration: OMISSION_DECLARATION };
 	};
 
 // END OF moduleFunction() ============================================================
@@ -345,3 +353,4 @@ module.exports.GRAPH_LABEL_DISPOSITION_TABLE = GRAPH_LABEL_DISPOSITION_TABLE;
 module.exports.NODE_DISPOSITION = NODE_DISPOSITION;
 module.exports.LOST_REASON = LOST_REASON;
 module.exports.STATEMENT_KIND = STATEMENT_KIND;
+module.exports.OMISSION_DECLARATION = OMISSION_DECLARATION;

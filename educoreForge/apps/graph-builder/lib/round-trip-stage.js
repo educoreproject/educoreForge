@@ -103,7 +103,9 @@ const VERDICT_FILE_NAME = 'roundTripVerdict.json';
 // framework's WHOLE rule (verifyVerdictShape: normative fields typed and finite, the complete lost and invented item lists,
 // the A13 identity, the declared limit, the A8 census) to every bundle's verdict. P2 applied only the normative half because
 // the bespoke CEDS / Ed-Fi verdicts carried counts and no item lists; every bespoke validator now emits the whole shape.
-const { NORMATIVE_VERDICT_FIELD_NAME_LIST, verifyVerdictShape } = require(path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
+// ⟪G21⟫ and its omission declaration in words (omissionDeclarationTextFor) and by kind (omittedCountByKindListOf): the
+// summary row states what each standard omitted, by kind, with the rule that licenses it — one implementation, the assembler's.
+const { NORMATIVE_VERDICT_FIELD_NAME_LIST, verifyVerdictShape, omittedCountByKindListOf, omissionDeclarationTextFor } = require(path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
 const STAGE_SUMMARY_FILE_NAME = 'roundTripStageSummary.json';
 const STAGE_SUBDIR_NAME = 'roundTrip';
 
@@ -294,6 +296,7 @@ const moduleFunction =
 						`said, and the build FAILS. Verdict detail: ${path.join(verdictDirPath, VERDICT_FILE_NAME)}`,
 				};
 			}
+			const omissionDeclarationText = omissionDeclarationTextFor({ token: oneRow.token, verdict });
 			return {
 				rowSummary: {
 					token: oneRow.token,
@@ -307,6 +310,9 @@ const moduleFunction =
 					// alone can tell genuine loss from deliberate omission without opening the verdict.
 					contentGapTotal: verdict.contentGapTotal,
 					explicitlyOmittedTotal: verdict.explicitlyOmittedTotal,
+					// ⟪G21⟫ the omissions DECLARED, not merely counted: by kind with the rule, and in words (with the rule's caveat)
+					explicitlyOmittedCountByKindList: omittedCountByKindListOf(verdict),
+					explicitOmissionDeclarationText: omissionDeclarationText,
 					// ⟪PHASE 7, F-6⟫ THE MODELLING QUALIFICATION TRAVELS WITH THE ZERO. `lostTotal: 0`
 					// means zero loss IN THE DIMENSIONS THE COMPARATOR MODELS — a dimension unread by
 					// the emitter AND unmeasured by the canonicalizer reports zero on BOTH sides and
@@ -519,6 +525,7 @@ const moduleFunction =
 									`inventedTotal=${verdict.inventedTotal}, lostTotal=${verdict.lostTotal}, ` +
 									`roundTripClean=${verdict.roundTripClean} -> ${adjudicated.rowSummary.verdictPath}`,
 							);
+							xLog.status(`  [roundTrip] omitted, declared — ${adjudicated.rowSummary.explicitOmissionDeclarationText}`);
 							rowSummaryList.push(adjudicated.rowSummary);
 							rowDone('');
 						},

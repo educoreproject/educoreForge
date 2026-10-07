@@ -76,6 +76,15 @@ const FACET_TAG_LIST = Object.freeze(['length', 'minLength', 'maxLength', 'patte
 const FILE_ANNOTATION_POSITION_DIVISOR = 1000;
 const OMITTED_KIND = Object.freeze({ COMMENT: 'comment', WHITESPACE: 'whitespace', PROCESSING_INSTRUCTION: 'processingInstruction' });
 const LOST_REASON = Object.freeze({ ABSENT_FROM_GRAPH: 'absentFromGraph', VALUE_DIFFERS: 'valueDiffers' });
+// ⟪G21⟫ the declaration the verdict carries: THIS module is the rule, the three OMITTED_KIND words are the only kinds it
+// may omit, and the caveat says what the one kind with prose in it can hold. Comments are mostly rulers and banners, but
+// some carry content the graph does not (change-log lines, a deprecation notice on AgencyAssignedID): PLAN G20.
+const OMISSION_DECLARATION = Object.freeze({
+	rule: 'lib/pesc-release-forge/roundTripPair.js',
+	kindPropertyName: 'omittedKind',
+	kindList: Object.freeze(Object.values(OMITTED_KIND)),
+	caveatText: 'comments may carry content (PLAN G20)',
+});
 const DONOR_FOLDER_NAME = 'donorLibraries';
 const DONOR_RELATIVE_PATH_RE = new RegExp(`^${DONOR_FOLDER_NAME}[\\\\/]`);
 const BORROWED_PROPERTY_NAME_LIST = Object.freeze(['borrowedDocumentation', 'borrowedFrom']);
@@ -515,7 +524,7 @@ const makeRoundTripPair = ({ labelPrefix }) => {
 
 	const diffStatements = ({ sourceStatements, graphStatements }, callback) => callback('', diffStatementsOf({ sourceStatements, graphStatements }));
 
-	return { canonicalizeSource, emitFromGraph, diffStatements, semanticValidationLimit: SEMANTIC_VALIDATION_LIMIT, regenerateFromGraph, lastRegeneration };
+	return { canonicalizeSource, emitFromGraph, diffStatements, semanticValidationLimit: SEMANTIC_VALIDATION_LIMIT, omissionDeclaration: OMISSION_DECLARATION, regenerateFromGraph, lastRegeneration };
 };
 
 module.exports = {
@@ -526,6 +535,7 @@ module.exports = {
 	GRAPH_LABEL_SUFFIX_DISPOSITION_TABLE,
 	NODE_DISPOSITION,
 	OMITTED_KIND,
+	OMISSION_DECLARATION,
 	LOST_REASON,
 	SEMANTIC_VALIDATION_LIMIT,
 	DONOR_FOLDER_NAME,

@@ -555,7 +555,11 @@ const frameworkFingerprintListFor = ({ decisionStore, pairKeyList }, callback) =
 // explicitlyOmittedTotal, standardCount) summed over the standards that ran, and the verdict is DERIVED from them: pass
 // only when every ran standard is clean and nothing was lost or invented — so 'fail' is reachable, and names the
 // standards that failed. Before P2 a stage that ran read 'pass' whatever its rows said.
+// ⟪G21⟫ and its OMISSION DECLARATION (graph-contract §4 explicitOmissionDeclarationList): one line per ran standard, the
+// stage row's explicitOmissionDeclarationText — what it omitted, by kind, under which rule, with the rule's caveat — so the
+// in-graph certificate declares the omissions instead of counting them bare. A ran standard without one is UNMEASURED.
 const ROUND_TRIP_TOTAL_FIELD_LIST = Object.freeze(['lostTotal', 'inventedTotal', 'explicitlyOmittedTotal']);
+const hasDeclarationText = (oneRow) => typeof oneRow.explicitOmissionDeclarationText === 'string' && oneRow.explicitOmissionDeclarationText.trim() !== '';
 const roundTripRowFor = (roundTripStageReport) => {
 	if (roundTripStageReport && roundTripStageReport.stageRan === false) {
 		return { gate: 'roundTrip', verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN, detail: `${roundTripStageReport.disposition || 'the runner reported no disposition'}` };
@@ -572,7 +576,8 @@ const roundTripRowFor = (roundTripStageReport) => {
 	const ranRowList = roundTripStageReport.standards.filter((oneRow) => oneRow.ran === true);
 	// a standard that RAN must report its totals: one that did not is UNMEASURED and fails the row by name (campaign P2
 	// self-audit — the totals were read with '|| 0', so an unmeasured standard summed as clean)
-	const unmeasuredTokenList = ranRowList.filter((oneRow) => ROUND_TRIP_TOTAL_FIELD_LIST.some((fieldName) => !Number.isInteger(oneRow[fieldName]))).map((oneRow) => oneRow.token);
+	const unmeasuredTokenList = ranRowList.filter((oneRow) => ROUND_TRIP_TOTAL_FIELD_LIST.some((fieldName) => !Number.isInteger(oneRow[fieldName])) || !hasDeclarationText(oneRow)).map((oneRow) => oneRow.token);
+	const explicitOmissionDeclarationList = ranRowList.filter(hasDeclarationText).map((oneRow) => oneRow.explicitOmissionDeclarationText);
 	const totalOf = (fieldName) => ranRowList.filter((oneRow) => Number.isInteger(oneRow[fieldName])).reduce((runningTotal, oneRow) => runningTotal + oneRow[fieldName], 0);
 	const failedTokenList = ranRowList.filter((oneRow) => oneRow.roundTripClean !== true || unmeasuredTokenList.indexOf(oneRow.token) !== -1 || oneRow.lostTotal > 0 || oneRow.inventedTotal > 0).map((oneRow) => oneRow.token);
 	const lostTotal = totalOf('lostTotal');
@@ -584,13 +589,14 @@ const roundTripRowFor = (roundTripStageReport) => {
 		verdict: ranRowList.length > 0 && failedTokenList.length === 0 ? vocabulary.BUILD_ATTESTATION_VERDICT.PASS : vocabulary.BUILD_ATTESTATION_VERDICT.FAIL,
 		detail:
 			`${ranRowList.length} standard(s) ran: clean ${cleanCount}/${ranRowList.length}, lost ${lostTotal}, invented ${inventedTotal}, ` +
-			`explicitly omitted ${explicitlyOmittedTotal} (${ranRowList.map((oneRow) => `${oneRow.token} ${Number.isInteger(oneRow.explicitlyOmittedTotal) ? oneRow.explicitlyOmittedTotal : 'unmeasured'}`).join(', ')})` +
-			`${unmeasuredTokenList.length ? `; UNMEASURED (ran, reported no totals): ${unmeasuredTokenList.join(', ')}` : ''}` +
+			`explicitly omitted ${explicitlyOmittedTotal}, declared per standard: ${explicitOmissionDeclarationList.join(' | ') || 'none'}` +
+			`${unmeasuredTokenList.length ? `; UNMEASURED (ran, reported no totals or no omission declaration): ${unmeasuredTokenList.join(', ')}` : ''}` +
 			`${failedTokenList.length ? `; FAILED: ${failedTokenList.join(', ')}` : ''}${ranRowList.length === 0 ? '; no standard ran, so nothing was certified' : ''}; summary ${roundTripStageReport.summaryFilePath}`,
 		roundTripClean: ranRowList.length > 0 && failedTokenList.length === 0,
 		inventedTotal,
 		lostTotal,
 		explicitlyOmittedTotal,
+		explicitOmissionDeclarationList,
 		standardCount: ranRowList.length,
 	};
 };

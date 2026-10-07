@@ -13,7 +13,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // nothing that opens a bolt session; only this module reaches graphReader.js.
 //
 //   validatorFrom({ forgeDeclaration, canonicalizeSource, emitFromGraph, semanticValidationLimit,
-//                   verdictVersion, extraVerdictFieldList?, diffStatements?, gateDeclarationList?, twinRegistry? })
+//                   verdictVersion, omissionDeclaration, extraVerdictFieldList?, diffStatements?, gateDeclarationList?, twinRegistry? })
+//     omissionDeclaration (G21) = { rule, kindPropertyName, kindList, caveatText }: the module that declares the
+//     source items this forge does not carry, the statement member holding an omitted item's kind, the kinds it may
+//     omit ([] for none), and what a reader should know about them ('' for nothing) — verdictAssembler.js header.
 //     → { validate, validateWithReader }
 //   validate({ containerName, boltUrl, user, password, snapshotPath, outputPath }, cb)   the uniform
 //     stage contract (round-trip-stage.js:490-498); opens the bolt reader, runs validateWithReader, closes.
@@ -97,6 +100,7 @@ const moduleFunction =
 			emitFromGraph,
 			semanticValidationLimit,
 			verdictVersion,
+			omissionDeclaration,
 			extraVerdictFieldList,
 			diffStatements,
 			gateDeclarationList,
@@ -116,6 +120,10 @@ const moduleFunction =
 			}
 			if (typeof verdictVersion !== 'string' || verdictVersion.length === 0) {
 				throw new Error(`${moduleName} REFUSED: forge-${forgeDeclaration.standardKey} declares no verdictVersion (R9)`);
+			}
+			const omissionDeclarationFault = verdictAssemblerLib.omissionDeclarationError(omissionDeclaration);
+			if (omissionDeclarationFault) {
+				throw new Error(`${omissionDeclarationFault} [forge-${forgeDeclaration.standardKey} validatorFrom omissionDeclaration]`);
 			}
 			if (diffStatements !== undefined && (typeof diffStatements !== 'function' || diffStatements.length !== 2)) {
 				throw new Error(`${moduleName} REFUSED: forge-${forgeDeclaration.standardKey} diffStatements must be diffStatements({ sourceStatements, graphStatements }, callback) — arity 2`);
@@ -239,6 +247,7 @@ const moduleFunction =
 						// ruling 2026-10-01; SIF260928 needs the same)
 						extraFields: { standardKey: forgeDeclaration.standardKey, standardSource: forgeDeclaration.standardSource, snapshotPath, ...(graphIdentity === undefined ? {} : { graphIdentity, graph: graphIdentity }) },
 						extraVerdictFieldList,
+						omissionDeclaration,
 					});
 					if (assembled.error) {
 						next(`${validatorPrefix}: ${assembled.error}`);

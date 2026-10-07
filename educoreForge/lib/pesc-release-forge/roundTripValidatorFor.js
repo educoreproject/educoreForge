@@ -47,6 +47,7 @@ const makeRoundTripValidator = ({ forgeDeclaration }) => {
 		emitFromGraph: roundTripPair.emitFromGraph,
 		diffStatements: roundTripPair.diffStatements,
 		semanticValidationLimit: roundTripPair.semanticValidationLimit,
+		omissionDeclaration: roundTripPair.omissionDeclaration,
 		verdictVersion: VERDICT_VERSION,
 	});
 

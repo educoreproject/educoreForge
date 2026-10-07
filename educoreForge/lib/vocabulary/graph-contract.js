@@ -27,6 +27,8 @@ const GRAPH_CONTRACT_VERSION = '1';
 const LIST_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 	// edges
 	'attestationChannelList', 'propertyNameList',
+	// attestations (G21: the roundTrip row's omission declaration, one line per standard)
+	'explicitOmissionDeclarationList',
 	// hub cards
 	'qualifierKeys', 'qualifierNames',
 	// finishers
@@ -136,6 +138,7 @@ const ATTESTATION_FIELD_LIST = Object.freeze([
 	{ name: 'roundTripClean', type: 'boolean', channel: 'channelA', gateList: ['roundTrip'], meaning: 'true when every standard that ran round-tripped clean, losing and inventing nothing' },
 	{ name: 'lostTotal', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'source statements the round trip could not find again, summed over the standards that ran' },
 	{ name: 'explicitlyOmittedTotal', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'source statements a forge declares it does not carry, summed over the standards that ran' },
+	{ name: 'explicitOmissionDeclarationList', type: 'stringList', channel: 'channelA', gateList: ['roundTrip'], meaning: 'one line per standard that ran: what its round trip omitted by declaration, by kind with counts, the rule (module) that declares it, and the rule\'s caveat — e.g. "pesccollegetranscript1v8v0: whitespace 28,428, comment 907, processingInstruction 4 (rule: lib/pesc-release-forge/roundTripPair.js); comments may carry content (PLAN G20)" (G21)' },
 	{ name: 'standardCount', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'how many standards the round trip ran over' },
 	{ name: 'exemplarCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'], meaning: 'usage-pattern exemplars re-executed against the finished graph' },
 	{ name: 'verifiedCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'], meaning: 'exemplars that returned rows against the finished graph' },

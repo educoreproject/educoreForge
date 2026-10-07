@@ -368,23 +368,24 @@ const verdictConjunctList = [
 	},
 	{
 		conjunctId: 'containersAreTheOmittedItems',
-		title: "the 6,586 explicitlyOmitted items are container statements only, and their paths are exactly the graph's Container paths",
+		title: "the 6,586 explicitlyOmitted items are container statements only, declared with kind 'container' under the pair's rule (G21: in explicitlyOmittedList, none in lostList), and their paths are exactly the graph's Container paths",
 		twinNameList: ['oneContainerDeleted'],
 		evaluate: overStageRun((stageRun) => {
 			const { verdict } = stageRun.runFacts;
 			if (verdict === null) {
 				return { pass: false, detail: `no verdict; ${stageFailureText(stageRun)}` };
 			}
-			const omittedList = lostListOf(verdict, (oneLost) => oneLost.lostCategory === 'explicitlyOmitted');
-			const nonContainerOmittedList = omittedList.filter((oneLost) => statementKindOf(oneLost.statementKey) !== STATEMENT_KIND.CONTAINER).map((oneLost) => oneLost.statementKey);
-			const omittedPathSet = new Set(omittedList.map((oneLost) => oneLost.statement.containerPath));
+			const omittedList = verdict.explicitlyOmittedList;
+			const omittedInLostList = lostListOf(verdict, (oneLost) => oneLost.lostCategory !== 'contentGap').length;
+			const nonContainerOmittedList = omittedList.filter((oneEntry) => statementKindOf(oneEntry.statementKey) !== STATEMENT_KIND.CONTAINER || oneEntry.kind !== STATEMENT_KIND.CONTAINER || oneEntry.rule !== 'forges/sif260928/lib/sif260928RoundTripPair.js').map((oneEntry) => oneEntry.statementKey);
+			const omittedPathSet = new Set(omittedList.map((oneEntry) => oneEntry.statementKey.slice(`${STATEMENT_KIND.CONTAINER}|`.length)));
 			const { graphContainerPathList } = stageRun.runFacts;
 			const graphOnlyList = graphContainerPathList.filter((containerPath) => !omittedPathSet.has(containerPath));
 			const graphContainerPathSet = new Set(graphContainerPathList);
 			const omittedOnlyList = [...omittedPathSet].filter((containerPath) => !graphContainerPathSet.has(containerPath));
 			return {
-				pass: verdict.explicitlyOmittedTotal === RULED_EXPLICITLY_OMITTED_TOTAL && nonContainerOmittedList.length === 0 && graphOnlyList.length === 0 && omittedOnlyList.length === 0,
-				detail: `explicitlyOmittedTotal ${verdict.explicitlyOmittedTotal}; not containers ${nonContainerOmittedList.length}${firstOf(nonContainerOmittedList)}; graph Containers ${graphContainerPathList.length}, in the graph only ${graphOnlyList.length}${firstOf(graphOnlyList)}, omitted only ${omittedOnlyList.length}${firstOf(omittedOnlyList)}`,
+				pass: verdict.explicitlyOmittedTotal === RULED_EXPLICITLY_OMITTED_TOTAL && omittedList.length === RULED_EXPLICITLY_OMITTED_TOTAL && omittedInLostList === 0 && nonContainerOmittedList.length === 0 && graphOnlyList.length === 0 && omittedOnlyList.length === 0,
+				detail: `explicitlyOmittedTotal ${verdict.explicitlyOmittedTotal}; listed ${omittedList.length}; omitted still in lostList ${omittedInLostList}; not containers (statement, kind or rule) ${nonContainerOmittedList.length}${firstOf(nonContainerOmittedList)}; graph Containers ${graphContainerPathList.length}, in the graph only ${graphOnlyList.length}${firstOf(graphOnlyList)}, omitted only ${omittedOnlyList.length}${firstOf(omittedOnlyList)}`,
 			};
 		}),
 	},

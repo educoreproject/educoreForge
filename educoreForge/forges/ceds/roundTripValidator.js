@@ -86,17 +86,33 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const compilerLib = require('./lib/roundTripCompiler')();
 const diffLib = require('./lib/roundTripDiff')();
-const { verifyVerdictShape, LOST_CATEGORY } = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
+const { verifyVerdictShape, partitionLostList, LOST_CATEGORY } = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
 
 // normativeVerdictPartFor — ⟪campaign P3, W-C-14; ruling VIOLET_VALLEY 2026-10-06: ONE verdict shape, no exceptions⟫ the
 // members the forge framework's verifyVerdictShape requires and this bespoke verdict lacked until P3: the complete lostList
 // (every lost statement, labelled explicitlyOmitted when its predicate is on the declared registry, else contentGap), the
 // complete inventedList, and the A8 census. PURE, so the stage's gate can hold it to the shape without a graph.
-//   normativeVerdictPartFor({ report, explicitlyOmittedPredicateList, wallClockMs, peakMemoryBytes }) → { lostList, inventedList, census }
+// ⟪G21⟫ lostList holds only the true losses; an item on the registry is declared in explicitlyOmittedList with its
+// predicate as its kind and the registry as its rule — empty while the registry is empty by ruling.
+//   normativeVerdictPartFor({ report, explicitlyOmittedPredicateList, wallClockMs, peakMemoryBytes })
+//     → { lostList, explicitlyOmittedList, explicitOmissionDeclaration, inventedList, census } | { error }
+const omissionDeclarationFor = (explicitlyOmittedPredicateList) => ({
+	rule: 'forges/ceds/roundTripValidator.js EXPLICITLY_OMITTED_PREDICATES (empty by ruling, TQ 2026-08-02)',
+	kindPropertyName: 'predicate',
+	kindList: explicitlyOmittedPredicateList.slice(),
+	caveatText: '',
+});
 const normativeVerdictPartFor = ({ report, explicitlyOmittedPredicateList, wallClockMs, peakMemoryBytes }) => {
 	const omittedPredicateSet = new Set(explicitlyOmittedPredicateList);
+	const omissionDeclaration = omissionDeclarationFor(explicitlyOmittedPredicateList);
+	const partitioned = partitionLostList({ lostList: report.lostItemList.map((oneItem) => ({ ...oneItem, lostCategory: omittedPredicateSet.has(oneItem.statement.predicate) ? LOST_CATEGORY.EXPLICITLY_OMITTED : LOST_CATEGORY.CONTENT_GAP })), omissionDeclaration });
+	if (partitioned.error) {
+		return { error: partitioned.error };
+	}
 	return {
-		lostList: report.lostItemList.map((oneItem) => ({ ...oneItem, lostCategory: omittedPredicateSet.has(oneItem.statement.predicate) ? LOST_CATEGORY.EXPLICITLY_OMITTED : LOST_CATEGORY.CONTENT_GAP })),
+		lostList: partitioned.lostList,
+		explicitlyOmittedList: partitioned.explicitlyOmittedList,
+		explicitOmissionDeclaration: omissionDeclaration,
 		inventedList: report.inventedItemList.slice(),
 		census: {
 			wallClockMs,
@@ -438,6 +454,11 @@ const moduleFunction =
 				const { headline } = args.report;
 				const { numbers } = args;
 				const memoryUsage = process.memoryUsage();
+				const normativePart = normativeVerdictPartFor({ report: args.report, explicitlyOmittedPredicateList: EXPLICITLY_OMITTED_PREDICATES, wallClockMs: Date.now() - startedAtMs, peakMemoryBytes: memoryUsage.rss });
+				if (normativePart.error) {
+					next(`${moduleName}: ${normativePart.error}`);
+					return;
+				}
 				const verdict = {
 					verdictVersion: VERDICT_VERSION,
 					standard: STANDARD_SOURCE,
@@ -547,7 +568,7 @@ const moduleFunction =
 						emittedCounts: args.compiled.counts,
 					},
 					report: args.report,
-					...normativeVerdictPartFor({ report: args.report, explicitlyOmittedPredicateList: EXPLICITLY_OMITTED_PREDICATES, wallClockMs: Date.now() - startedAtMs, peakMemoryBytes: memoryUsage.rss }),
+					...normativePart,
 				};
 				// ONE SHAPE (W-C-14): the verdict is held to the forge framework's whole rule before it is written; a verdict
 				// the stage would refuse is refused here, by the same function, naming what is wrong

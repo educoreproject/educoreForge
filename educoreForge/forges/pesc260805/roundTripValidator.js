@@ -606,6 +606,19 @@ const moduleFunction =
 					return;
 				}
 
+				// ⟪G21⟫ lostList holds only the true losses; a statement whose predicate is on the canonicalizer's registry
+				// is declared in explicitlyOmittedList with its predicate as its kind and the registry as its rule
+				const omissionDeclaration = {
+					rule: 'forges/pesc260805/lib/roundTripXsdCanonical.js EXPLICITLY_OMITTED_PREDICATES',
+					kindPropertyName: 'predicate',
+					kindList: canonicalLib.EXPLICITLY_OMITTED_PREDICATES.slice(),
+					caveatText: '',
+				};
+				const partitioned = frameworkVerdictAssembler.partitionLostList({ lostList: args.report.lostItemList, omissionDeclaration });
+				if (partitioned.error) {
+					next(`${moduleName}: ${partitioned.error}`);
+					return;
+				}
 				const verdict = {
 					verdictVersion: VERDICT_VERSION,
 					standard: emitterLib.STANDARD_SOURCE,
@@ -742,7 +755,9 @@ const moduleFunction =
 					},
 					report: args.report,
 					// ⟪campaign P3, W-C-14 (ONE verdict shape, no exceptions)⟫ the complete lost / invented items and the A8 census
-					lostList: args.report.lostItemList.slice(),
+					lostList: partitioned.lostList,
+					explicitlyOmittedList: partitioned.explicitlyOmittedList,
+					explicitOmissionDeclaration: omissionDeclaration,
 					inventedList: args.report.inventedItemList.slice(),
 					census: {
 						wallClockMs: Date.now() - validationStartedAtMs,

@@ -6,7 +6,7 @@
 // reachable. Pure: the finisher and the build's row composer are driven directly; Channel B through a runCypher double.
 //
 // PROVES:
-//   (a) the channel-A finisher copies every declared roundTrip field (roundTripClean, inventedTotal, lostTotal,
+//   (a) the channel-A finisher copies every declared roundTrip field (roundTripClean, inventedTotal, lostTotal, the G21 explicitOmissionDeclarationList,
 //       explicitlyOmittedTotal, standardCount) from the supplied row, and only the fields declared for a gate
 //   (b) every channel-A row carries the declared label set, writtenOnChannel 'channelA' and a note; the expected gates
 //       are ATTESTATION_GATE_LIST_BY_CHANNEL.channelA, an unsupplied one reading notRun with verdictSupplied false
@@ -41,9 +41,10 @@ const WRITER_PATH = path.join(__dirname, '..', 'passport-writer.js');
 const BUILD_JS_PATH = path.join(__dirname, '..', '..', '..', '..', '..', 'lib', 'build.js');
 const doubleOrReal = (modulePath, mutationList) => (mutationList.length === 0 ? require(modulePath) : loadBuildJsDouble({ buildJsPath: modulePath, mutationList }));
 
-const ROUND_TRIP_FIELD_LIST = ['roundTripClean', 'inventedTotal', 'lostTotal', 'explicitlyOmittedTotal', 'standardCount'];
+const ROUND_TRIP_FIELD_LIST = ['roundTripClean', 'inventedTotal', 'lostTotal', 'explicitlyOmittedTotal', 'explicitOmissionDeclarationList', 'standardCount'];
 const stageReportWith = (standardRowList) => ({ stageRan: true, disposition: 'ran', summaryFilePath: '/tmp/roundTripStageSummary.json', standards: standardRowList });
-const cleanRow = (token, explicitlyOmittedTotal) => ({ token, ran: true, roundTripClean: true, inventedTotal: 0, lostTotal: 0, explicitlyOmittedTotal });
+// ⟪G21⟫ a ran row carries its omission declaration in words, as the stage writes it
+const cleanRow = (token, explicitlyOmittedTotal) => ({ token, ran: true, roundTripClean: true, inventedTotal: 0, lostTotal: 0, explicitlyOmittedTotal, explicitOmissionDeclarationText: `${token}: toyKind ${explicitlyOmittedTotal} (rule: toy/rule.js)` });
 const emitRows = (mutationList, gateResults, done) => doubleOrReal(FINISHER_PATH, mutationList)({ vocabulary }).emit({ gateResults }, (err, result) => done(err, result));
 
 const conjunctJudgeByRefId = {

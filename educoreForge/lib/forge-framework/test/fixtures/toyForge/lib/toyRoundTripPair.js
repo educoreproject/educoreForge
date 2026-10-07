@@ -21,6 +21,14 @@ const fs = require('fs');
 const path = require('path');
 
 const MODEL_FILE_NAME = 'toyModel.json';
+// ⟪G21⟫ the omission declaration: this module is the rule, a support note's text the one kind it omits
+const SUPPORT_NOTE_TEXT_KIND = 'supportNoteText';
+const OMISSION_DECLARATION = Object.freeze({
+	rule: 'lib/forge-framework/test/fixtures/toyForge/lib/toyRoundTripPair.js',
+	kindPropertyName: 'omittedKind',
+	kindList: Object.freeze([SUPPORT_NOTE_TEXT_KIND]),
+	caveatText: '',
+});
 
 const SEMANTIC_VALIDATION_LIMIT =
 	'SEMANTIC round-trip over the statement domain THIS INSTRUMENT MODELS: class, property, option set, ' +
@@ -62,7 +70,7 @@ const moduleFunction =
 			model.supports.forEach((oneSupport) => {
 				statements.set(`support|${oneSupport.name}`, { name: oneSupport.name });
 				// the note TEXT is a dimension the emitter does not model — declared explicitlyOmitted
-				statements.set(`support|${oneSupport.name}|text`, { text: oneSupport.text, explicitlyOmitted: true });
+				statements.set(`support|${oneSupport.name}|text`, { text: oneSupport.text, omittedKind: SUPPORT_NOTE_TEXT_KIND, explicitlyOmitted: true });
 			});
 			callback('', { statements, stats: { classCount: model.classes.length, statementCount: statements.size } });
 		};
@@ -117,7 +125,7 @@ const moduleFunction =
 			});
 		};
 
-		return { canonicalizeSource, emitFromGraph, semanticValidationLimit: SEMANTIC_VALIDATION_LIMIT };
+		return { canonicalizeSource, emitFromGraph, semanticValidationLimit: SEMANTIC_VALIDATION_LIMIT, omissionDeclaration: OMISSION_DECLARATION };
 	};
 
 module.exports = moduleFunction({ moduleName });
