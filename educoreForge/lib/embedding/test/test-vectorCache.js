@@ -60,10 +60,13 @@ const DIMS_B = 512;
 
 const TEXT_ONE = 'SOC | Major Group | 11-0000';
 const HASH_ONE = vectorCacheModule.textHashOf(TEXT_ONE);
-const VECTOR_ONE = 'QUJDRA=='; // arbitrary base64; the cache holds it verbatim
+// ⟪campaign P3, W-C-12⟫ a vector of the address's real width: the cache now verifies on read that the base64 decodes to
+// exactly embeddingDims float32s (an arbitrary 4-byte payload under dims 1024 is a corrupt row and is refused)
+const vectorBase64Of = (seed, dims) => Buffer.alloc(dims * 4, seed).toString('base64');
+const VECTOR_ONE = vectorBase64Of(1, DIMS_A); // the cache holds it verbatim
 const TEXT_TWO = 'SOC | Detailed | 11-1011';
 const HASH_TWO = vectorCacheModule.textHashOf(TEXT_TWO);
-const VECTOR_TWO = 'RUZHSA==';
+const VECTOR_TWO = vectorBase64Of(2, DIMS_A);
 
 // =====================================================================
 harness.section('THE PATH IS REQUIRED — proven REFUSING, the same safety story decision-store tells');
@@ -138,7 +141,7 @@ function idempotenceGates(cache) {
 			embeddingModelVersion: MODEL_A,
 			embeddingDims: DIMS_A,
 			// same address, DIFFERENT payload — INSERT OR IGNORE must keep the FIRST and not error
-			entries: [{ textHash: HASH_ONE, sourceText: TEXT_ONE, vectorBase64: 'WlpaWg==' }],
+			entries: [{ textHash: HASH_ONE, sourceText: TEXT_ONE, vectorBase64: vectorBase64Of(9, DIMS_A) }],
 		},
 		(reErr) => {
 			harness.ok('a re-put of an existing address succeeds', !reErr, reErr);
@@ -198,9 +201,37 @@ function badIdentityGates(cache) {
 					harness.ok('an empty put batch is a no-op success', !e4 && r4 && r4.requested === 0, e4);
 					cache.getVectors({ embeddingModelVersion: MODEL_A, embeddingDims: DIMS_A, textHashes: [] }, (e5, r5) => {
 						harness.ok('an empty get batch returns an empty map', !e5 && r5 && Object.keys(r5.byHash).length === 0, e5);
-						cleanup();
-						harness.report();
+						verificationGates(cache);
 					});
+				});
+			});
+		});
+	});
+}
+
+// =====================================================================
+// ⟪campaign P3, W-C-12 (V1-S117)⟫ EVERY ROW SERVED IS VERIFIED: its textHash is the hash of its stored text, and its base64
+// decodes to embeddingDims float32s. Before P3 the cache returned vectorBase64 as stored. RED TWIN: the same check over a
+// vectorCache double with the verification removed serves the corrupt row.
+function verificationGates(cache) {
+	harness.section('VERIFY ON READ — a row whose text does not hash to its textHash, or whose width is wrong, is REFUSED');
+	const Database = require('better-sqlite3');
+	const TEXT_THREE = 'SOC | Detailed | 11-2011';
+	const HASH_THREE = vectorCacheModule.textHashOf(TEXT_THREE);
+	cache.putVectors({ embeddingModelVersion: MODEL_A, embeddingDims: DIMS_A, entries: [{ textHash: HASH_THREE, sourceText: TEXT_THREE, vectorBase64: vectorBase64Of(3, DIMS_A) }] }, (putError) => {
+		const database = new Database(databaseFilePath);
+		database.prepare('UPDATE vectorCacheEntries SET sourceText = ? WHERE textHash = ?').run('a DIFFERENT text', HASH_THREE);
+		database.close();
+		cache.getVectors({ embeddingModelVersion: MODEL_A, embeddingDims: DIMS_A, textHashes: [HASH_THREE] }, (textError) => {
+			harness.match('a row whose sourceText no longer hashes to its textHash is REFUSED by name', textError || '', /fails verification — its sourceText hashes to/);
+			const { loadBuildJsDouble } = require('../../bridge-framework/test/testSupport/bridgeTwinFactories');
+			const twinCacheModule = loadBuildJsDouble({ buildJsPath: path.join(__dirname, '..', 'vectorCache.js'), mutationList: [{ find: '				if (faultyRow) {', replace: '				if (false) {' }] })();
+			twinCacheModule.open({ databaseFilePath }, (twinOpenError, twinCache) => {
+				twinCache.getVectors({ embeddingModelVersion: MODEL_A, embeddingDims: DIMS_A, textHashes: [HASH_THREE] }, (twinError, twinGot) => {
+					harness.ok('  RED-OBSERVED: with the verification removed (twin verificationRemoved) the corrupt row is SERVED', !twinOpenError && !twinError && twinGot.byHash[HASH_THREE] !== undefined, twinOpenError || twinError);
+					harness.ok('  (the corrupt row was stored by a real put)', !putError, putError);
+					cleanup();
+					harness.report();
 				});
 			});
 		});

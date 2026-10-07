@@ -169,13 +169,22 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 		}
 		const inList = distinct.map((oneHash) => esc(oneHash)).join(', ');
 		getRows(
-			`SELECT textHash, vectorBase64 FROM vectorCacheEntries
+			`SELECT textHash, vectorBase64, sourceText FROM vectorCacheEntries
 			 WHERE embeddingModelVersion=${esc(embeddingModelVersion)}
 			   AND embeddingDims=${Number(embeddingDims)}
 			   AND textHash IN (${inList});`,
 			(err, rows) => {
 				if (err) {
 					callback(err);
+					return;
+				}
+				// ⟪campaign P3, W-C-12⟫ VERIFY EVERY ROW SERVED (the cache never did): its textHash must be the hash of the text
+				// it stores, and its base64 must decode to exactly embeddingDims float32s. A row failing either is refused by
+				// name — a cached vector that answers for a different text or width would enter a build as a real embedding.
+				const expectedBase64Length = Math.ceil((embeddingDims * 4) / 3) * 4;
+				const faultyRow = (rows || []).find((oneRow) => textHashOf(oneRow.sourceText) !== oneRow.textHash || typeof oneRow.vectorBase64 !== 'string' || oneRow.vectorBase64.length !== expectedBase64Length);
+				if (faultyRow) {
+					callback(`vectorCache.getVectors: row ${faultyRow.textHash} fails verification — ${textHashOf(faultyRow.sourceText) !== faultyRow.textHash ? `its sourceText hashes to ${textHashOf(faultyRow.sourceText)}` : `its vectorBase64 is ${String(faultyRow.vectorBase64).length} characters, not the ${expectedBase64Length} that ${embeddingDims} float32s encode to`}; the cache row is corrupt. Refusing to serve it.`);
 					return;
 				}
 				const byHash = {};

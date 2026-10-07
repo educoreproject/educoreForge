@@ -60,7 +60,7 @@ const contentAddress = require('../content-address/content-address')();
 const moduleFunction =
 	({ moduleName } = {}) =>
 	(injectedDeps = {}) => {
-		const { vectorIdForInput, vectorHashForBytes } = contentAddress;
+		const { vectorIdForInput, versionOneVectorIdForInput, vectorHashForBytes } = contentAddress;
 
 		// rawOpts: bypass sqlite-instance's <!tableName!> requirement and statement noise; we
 		// issue fully-formed SQL against our explicitly-named `vectors` table.
@@ -158,7 +158,14 @@ const moduleFunction =
 		// putVector — compute vectorId from the determinants, content-address the raw bytes,
 		//   idempotent insert-or-ignore (dedup on vectorId, FIRST-WRITE-WINS — mirrors
 		//   saveBlock). Returns { vectorId, deduped }. `vector` is a number[] | Float32Array.
-		const putVector = ({ modelVersion, inputText, vector }, callback) => {
+		// ⟪campaign P3, W-C-12⟫ embeddingRefGrammar is REQUIRED and names which vector-id grammar the caller's block declares:
+		// 2 for every block since P3 (model + dims + text), 1 only when a pre-P3 block is restored and re-harvested (its refs
+		// were minted under grammar 1, and replay of an existing manifest must reproduce them). No default.
+		const putVector = ({ modelVersion, inputText, vector, embeddingRefGrammar }, callback) => {
+			if (embeddingRefGrammar !== 1 && embeddingRefGrammar !== 2) {
+				callback(`${moduleName}.putVector: embeddingRefGrammar ${JSON.stringify(embeddingRefGrammar)} is neither 1 (a pre-P3 block) nor 2 (every block since campaign P3) — the caller's block header declares it`);
+				return;
+			}
 			// required-field guards — determinants and payload must be present (a null here is a
 			// caller bug; content-address helpers assume non-null). Fail loud BEFORE any SQL.
 			if (modelVersion == null || `${modelVersion}` === '') {
@@ -191,8 +198,8 @@ const moduleFunction =
 				return;
 			}
 
-			const vectorId = vectorIdForInput(modelVersion, inputText);
 			const dims = vector.length;
+			const vectorId = embeddingRefGrammar === 2 ? vectorIdForInput({ modelVersion, embeddingDims: dims, inputText }) : versionOneVectorIdForInput(modelVersion, inputText);
 			const vectorBuffer = encodeVectorBlob(vector);
 			const vectorHash = vectorHashForBytes(vectorBuffer);
 
@@ -200,13 +207,19 @@ const moduleFunction =
 
 			taskList.push((args, next) => {
 				getRows(
-					`SELECT vectorId FROM vectors WHERE vectorId=${esc(vectorId)};`,
+					`SELECT vectorId, vectorHash FROM vectors WHERE vectorId=${esc(vectorId)};`,
 					(err, rows) => next(err, { ...args, rows }),
 				);
 			});
 
 			taskList.push((args, next) => {
 				if (args.rows && args.rows.length > 0) {
+					// ⟪campaign P3, W-C-12⟫ the dedup no longer trusts the id alone: the same (model, dims, text) must be the same
+					// bytes. A different vector under one address means the store already holds a different answer — refused
+					if (args.rows[0].vectorHash !== vectorHash) {
+						next(`${moduleName}.putVector: vector ${vectorId} — the same (model, dims, text) hashes to a different vector (stored ${args.rows[0].vectorHash}, offered ${vectorHash}); the store already holds a different answer`, args);
+						return;
+					}
 					next('skipRestOfPipe', { ...args, deduped: true }); // already present — dedup
 					return;
 				}
@@ -280,12 +293,15 @@ const moduleFunction =
 						return;
 					}
 
-					// (2) determinant re-hash — sha256(modelVersion + NUL + inputText) MUST == vectorId.
-					const recomputedId = vectorIdForInput(row.modelVersion, row.inputText);
-					if (recomputedId !== row.vectorId) {
+					// (2) determinant re-hash — the id MUST be the content address of the stored determinants. ⟪campaign P3, W-C-12⟫
+					// under grammar 2 (model, dims, text) for a row written since P3, or grammar 1 (model, text) for a row written
+					// before it (a historical store must stay readable). Either recompute proves the determinants; neither is refusal.
+					const recomputedId = vectorIdForInput({ modelVersion: row.modelVersion, embeddingDims: Number(row.dims), inputText: row.inputText });
+					const recomputedVersionOneId = versionOneVectorIdForInput(row.modelVersion, row.inputText);
+					if (recomputedId !== row.vectorId && recomputedVersionOneId !== row.vectorId) {
 						callback(
 							`${moduleName}.getVector: content-address verification failed reading vector ` +
-								`${row.vectorId}: (modelVersion, inputText) hashes to ${recomputedId} — the ` +
+								`${row.vectorId}: (modelVersion, dims, inputText) hashes to ${recomputedId} (grammar 2) and (modelVersion, inputText) to ${recomputedVersionOneId} (grammar 1) — the ` +
 								`determinants are corrupt or tampered. Refusing to return it.`,
 						);
 						return;

@@ -51,6 +51,7 @@ const {
 	dedupMembersByBlockId,
 	sha256Hex,
 	vectorIdForInput,
+	versionOneVectorIdForInput,
 	vectorHashForBytes,
 } = contentAddress;
 
@@ -185,7 +186,7 @@ harness.section('DETERMINISM — the same input twice yields byte-identical outp
 // =====================================================================
 
 harness.equal('manifestKeyForMembership is deterministic', manifestKeyForMembership([A, B, C]), manifestKeyForMembership([A, B, C]));
-harness.equal('vectorIdForInput is deterministic', vectorIdForInput('model-1', 'input text'), vectorIdForInput('model-1', 'input text'));
+harness.equal('vectorIdForInput is deterministic', vectorIdForInput({ modelVersion: 'model-1', embeddingDims: 4, inputText: 'input text' }), vectorIdForInput({ modelVersion: 'model-1', embeddingDims: 4, inputText: 'input text' }));
 harness.equal('vectorHashForBytes is deterministic', vectorHashForBytes(Buffer.from([1, 2, 3])), vectorHashForBytes(Buffer.from([1, 2, 3])));
 
 // =====================================================================
@@ -199,20 +200,31 @@ harness.section('vectorIdForInput — addresses the INPUT (dedup) and its NUL se
 
 harness.equal(
 	'identical determinants intern to ONE vectorId (dedup)',
-	vectorIdForInput('model-1', 'same text'),
-	vectorIdForInput('model-1', 'same text'),
+	vectorIdForInput({ modelVersion: 'model-1', embeddingDims: 4, inputText: 'same text' }),
+	vectorIdForInput({ modelVersion: 'model-1', embeddingDims: 4, inputText: 'same text' }),
 );
 harness.ok(
 	'a different model version is a different vectorId',
-	vectorIdForInput('model-1', 'same text') !== vectorIdForInput('model-2', 'same text'),
+	vectorIdForInput({ modelVersion: 'model-1', embeddingDims: 4, inputText: 'same text' }) !== vectorIdForInput({ modelVersion: 'model-2', embeddingDims: 4, inputText: 'same text' }),
 );
 harness.ok(
 	'a different input text is a different vectorId',
-	vectorIdForInput('model-1', 'text a') !== vectorIdForInput('model-1', 'text b'),
+	vectorIdForInput({ modelVersion: 'model-1', embeddingDims: 4, inputText: 'text a' }) !== vectorIdForInput({ modelVersion: 'model-1', embeddingDims: 4, inputText: 'text b' }),
 );
 harness.equal(
-	'vectorId pins its exact serialization (modelVersion + NUL + inputText, sha256)',
-	vectorIdForInput('m', 'i'),
+	'vectorId pins its exact serialization (⟪P3, W-C-12⟫ grammar 2: modelVersion + NUL + dims + NUL + inputText, sha256)',
+	vectorIdForInput({ modelVersion: 'm', embeddingDims: 4, inputText: 'i' }),
+	sha256Hex(`m${NUL}4${NUL}i`),
+);
+// ⟪campaign P3, W-C-12⟫ the width is IN the address: the same text at two widths is two vectors (grammar 1 made them one,
+// and the store's first write won); the positional grammar-1 call is refused by name; grammar 1 survives read-side only
+harness.ok(
+	'W-C-12: the same (model, text) at 512 and at 1024 dims is TWO vectorIds',
+	vectorIdForInput({ modelVersion: 'm', embeddingDims: 512, inputText: 'same' }) !== vectorIdForInput({ modelVersion: 'm', embeddingDims: 1024, inputText: 'same' }),
+);
+harness.equal(
+	'W-C-12: grammar 1 is kept read-side, pinned to its old serialization (modelVersion + NUL + inputText)',
+	versionOneVectorIdForInput('m', 'i'),
 	sha256Hex(`m${NUL}i`),
 );
 
@@ -227,12 +239,12 @@ const catchThrow = (fn) => {
 
 harness.match(
 	'RED PROOF: a NUL in the input text is REFUSED by name',
-	catchThrow(() => vectorIdForInput('model-1', NUL + 'b')),
+	catchThrow(() => vectorIdForInput({ modelVersion: 'model-1', embeddingDims: 4, inputText: NUL + 'b' })),
 	/must not contain a NUL/,
 );
 harness.match(
 	'RED PROOF: a NUL in the model version is REFUSED by name',
-	catchThrow(() => vectorIdForInput('model' + NUL, 'text')),
+	catchThrow(() => vectorIdForInput({ modelVersion: 'model' + NUL, embeddingDims: 4, inputText: 'text' })),
 	/must not contain a NUL/,
 );
 // The exact collision pair the module's own comment cites: WITHOUT the guard both serialize to
@@ -240,8 +252,8 @@ harness.match(
 // collision can never be reached.
 harness.ok(
 	'  the cited collision pair ("a",NUL+"b") and ("a"+NUL,"b") BOTH throw — the guard closes it',
-	!!catchThrow(() => vectorIdForInput('a', NUL + 'b')) &&
-		!!catchThrow(() => vectorIdForInput('a' + NUL, 'b')),
+	!!catchThrow(() => vectorIdForInput({ modelVersion: 'a', embeddingDims: 4, inputText: NUL + 'b' })) &&
+		!!catchThrow(() => vectorIdForInput({ modelVersion: 'a' + NUL, embeddingDims: 4, inputText: 'b' })),
 );
 
 // =====================================================================

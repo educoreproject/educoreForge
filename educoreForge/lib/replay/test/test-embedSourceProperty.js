@@ -58,7 +58,7 @@ const contentAddress = require('../../content-address/content-address')();
 const vectorStoreModule = require('../../vector-store/vector-store');
 
 const MODEL_VERSION = 'voyage-test-model';
-const HEADER = { stableUriPropertyName: 'uri', embeddingModelVersion: MODEL_VERSION };
+const HEADER = { stableUriPropertyName: 'uri', embeddingModelVersion: MODEL_VERSION, embeddingRefGrammar: 2 }; // ⟪P3, W-C-12⟫ the header names its vector-id grammar
 
 // a throwing seam contained in ONE place (the parseJsonOrFault precedent): shapeNode refuses
 // by throw; the suite needs the message as data.
@@ -96,7 +96,7 @@ const declaredCardNode = shapeNode(
 harness.equal(
 	'a DECLARED record addresses its vector by the declared property value (embedText)',
 	declaredCardNode.embeddingRef,
-	contentAddress.vectorIdForInput(MODEL_VERSION, 'Domain · Property · the composed retrieval string'),
+	contentAddress.vectorIdForInput({ modelVersion: MODEL_VERSION, embeddingDims: 8, inputText: 'Domain · Property · the composed retrieval string' }),
 );
 harness.equal(
 	'  and the sidecar input text is the declared value verbatim',
@@ -113,7 +113,7 @@ const undeclaredBaseNode = shapeNode(
 harness.equal(
 	'an UNDECLARED record keeps the ORIGINAL searchText addressing EXACTLY',
 	undeclaredBaseNode.embeddingRef,
-	contentAddress.vectorIdForInput(MODEL_VERSION, 'the base node search text'),
+	contentAddress.vectorIdForInput({ modelVersion: MODEL_VERSION, embeddingDims: 8, inputText: 'the base node search text' }),
 );
 harness.equal(
 	'  original-format sidecar input is searchText verbatim',
@@ -131,7 +131,7 @@ harness.ok(
 		}),
 		HEADER,
 		true,
-	).embeddingRef === contentAddress.vectorIdForInput(MODEL_VERSION, 'this MUST be the address input'),
+	).embeddingRef === contentAddress.vectorIdForInput({ modelVersion: MODEL_VERSION, embeddingDims: 8, inputText: 'this MUST be the address input' }),
 	'declaration did not take precedence',
 );
 

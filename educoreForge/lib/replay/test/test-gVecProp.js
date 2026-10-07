@@ -112,6 +112,7 @@ const HEADER = {
 	version: '14.0.0.0',
 	stableUriPropertyName: 'uri',
 	resolutionKey: 'uri',
+	embeddingRefGrammar: 2, // ⟪campaign P3, W-C-12⟫ a header since P3 names its vector-id grammar
 	embeddingModelVersion: MODEL_VERSION,
 	embeddingEncoding: 'base64',
 	embeddingDtype: 'float32',
@@ -438,7 +439,7 @@ const conjunctJudgeByRefId = {
 				seedEntryList.forEach((oneEntry) =>
 					checkList.push({
 						checkName: `${oneExcerpt.excerptName} ref ${oneEntry.embeddingRef.slice(0, 12)} is the content address of its input`,
-						pass: contentAddress.vectorIdForInput(oneEntry.modelVersion, oneEntry.inputText) === oneEntry.embeddingRef,
+						pass: contentAddress.versionOneVectorIdForInput(oneEntry.modelVersion, oneEntry.inputText) === oneEntry.embeddingRef, // a LEGACY excerpt: grammar 1
 						detail: oneEntry.inputText.slice(0, 80),
 					}),
 				);
@@ -448,7 +449,7 @@ const conjunctJudgeByRefId = {
 						const oneEntry = seedEntryList[seedIndex];
 						seedIndex++;
 						scratch.vectorStore.putVector(
-							{ modelVersion: oneEntry.modelVersion, inputText: oneEntry.inputText, vector: oneEntry.vector },
+							{ modelVersion: oneEntry.modelVersion, inputText: oneEntry.inputText, vector: oneEntry.vector, embeddingRefGrammar: 1 }, // ⟪P3, W-C-12⟫ a LEGACY excerpt's refs are grammar 1
 							(putError) => {
 								if (putError) {
 									done(failedVerdict(`seeding the store: ${putError}`));
@@ -568,7 +569,7 @@ const conjunctJudgeByRefId = {
 					verdictOf([
 						{
 							checkName: 'embeddingRef is the content address of the declared text',
-							pass: parsedLine.embeddingRef === contentAddress.vectorIdForInput(MODEL_VERSION, TEXT_VALUE),
+							pass: parsedLine.embeddingRef === contentAddress.vectorIdForInput({ modelVersion: MODEL_VERSION, embeddingDims: VECTOR_DIMS, inputText: TEXT_VALUE }), // ⟪P3, W-C-12⟫ grammar 2
 							detail: parsedLine.embeddingRef,
 						},
 						{ checkName: 'NO textEmbedding key in properties', pass: !hasOwn(parsedLine.properties, 'textEmbedding'), detail: harvested.nodeLine.slice(0, 300) },
@@ -718,7 +719,7 @@ const conjunctJudgeByRefId = {
 				done(failedVerdict(storeError));
 				return;
 			}
-			const textEmbeddingRef = contentAddress.vectorIdForInput(MODEL_VERSION, TEXT_VALUE);
+			const textEmbeddingRef = contentAddress.vectorIdForInput({ modelVersion: MODEL_VERSION, embeddingDims: VECTOR_DIMS, inputText: TEXT_VALUE });
 			const restoredRecord = {
 				...engineTextRecord(),
 				embedding: null,

@@ -756,10 +756,17 @@ const shapeNode = (neoNode, header, emitEmbeddingRef) => {
 				}
 				embedInputValue = searchTextValue;
 			}
-			node.embeddingRef = contentAddress.vectorIdForInput(
-				header.embeddingModelVersion,
-				embedInputValue,
-			);
+			// ⟪campaign P3, W-C-12⟫ the ref is minted under the grammar the HEADER declares: a serializerVersion-1 header (a pre-P3
+			// block restored and re-harvested) is grammar 1, so its refs come back byte-identical; any other header must SAY
+			// embeddingRefGrammar 2 (the width is in the address) — a header that carries vectors and names no grammar is refused
+			const embeddingRefGrammar = embeddingRefGrammarOf(header);
+			if (embeddingRefGrammar.error) {
+				throw new Error(`replay-engine.shapeNode: node '${stableId}': ${embeddingRefGrammar.error}`);
+			}
+			node.embeddingRef = embeddingRefGrammar.grammar === 2
+				? contentAddress.vectorIdForInput({ modelVersion: header.embeddingModelVersion, embeddingDims: slotVectorList.length, inputText: embedInputValue })
+				: contentAddress.versionOneVectorIdForInput(header.embeddingModelVersion, embedInputValue);
+			node._embeddingRefGrammar = embeddingRefGrammar.grammar;
 			node.embeddingModelVersion = header.embeddingModelVersion;
 			node._sidecarVector = slotVectorList.map(neoToJs);
 			node._sidecarInputText = embedInputValue;
@@ -769,6 +776,18 @@ const shapeNode = (neoNode, header, emitEmbeddingRef) => {
 		}
 	}
 	return node;
+};
+
+// embeddingRefGrammarOf — which vector-id grammar a block header declares (⟪campaign P3, W-C-12⟫): { grammar } or { error }
+const embeddingRefGrammarOf = (header) => {
+	const h = header || {};
+	if (h.serializerVersion === '1') {
+		return { grammar: 1 };
+	}
+	if (h.embeddingRefGrammar === 1 || h.embeddingRefGrammar === 2) {
+		return { grammar: h.embeddingRefGrammar };
+	}
+	return { error: `the block header carries vectors but declares embeddingRefGrammar ${JSON.stringify(h.embeddingRefGrammar)} (a header since campaign P3 names 2; a serializerVersion-1 header is grammar 1)` };
 };
 
 // eachEntrySequentialStackSafe — run an async worker over items ONE at a time, STACK-SAFE whether
@@ -837,6 +856,7 @@ const putDistinctNodeVectors = ({ nodes, vectorStore }, callback) => {
 				modelVersion: oneNode.embeddingModelVersion,
 				inputText: oneNode._sidecarInputText,
 				vector: oneNode._sidecarVector,
+				embeddingRefGrammar: oneNode._embeddingRefGrammar,
 			});
 		}
 	});
@@ -852,6 +872,7 @@ const putDistinctNodeVectors = ({ nodes, vectorStore }, callback) => {
 			(nodes || []).forEach((oneNode) => {
 				delete oneNode._sidecarVector;
 				delete oneNode._sidecarInputText;
+				delete oneNode._embeddingRefGrammar;
 			});
 			callback('');
 		},

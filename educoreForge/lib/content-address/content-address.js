@@ -87,7 +87,31 @@ const moduleFunction =
 
 		const NUL = String.fromCharCode(0);
 
-		const vectorIdForInput = (embeddingModelVersion, embeddingInputText) => {
+		// ⟪campaign P3, W-C-12 (V1-C43)⟫ GRAMMAR 2 puts the vector's WIDTH in its address: sha256(model + NUL + dims + NUL +
+		// text). Under grammar 1 the same text at 512 and at 1024 dims was ONE id, and the store's first-write-wins kept
+		// whichever came first. The object form is the only form; a positional call is refused by name (a caller still
+		// passing (model, text) would otherwise mint a grammar-1-looking id under grammar 2's name).
+		const VECTOR_ID_GRAMMAR_VERSION = 2;
+		const vectorIdForInput = (vectorIdInput) => {
+			if (vectorIdInput === null || typeof vectorIdInput !== 'object') {
+				throw new Error('content-address.vectorIdForInput takes { modelVersion, embeddingDims, inputText } (grammar 2, campaign P3 W-C-12); the positional (modelVersion, inputText) form is grammar 1, kept only as versionOneVectorIdForInput for verifying stores written before P3');
+			}
+			const { modelVersion, embeddingDims, inputText } = vectorIdInput;
+			if (!Number.isInteger(embeddingDims) || embeddingDims <= 0) {
+				throw new Error(`content-address.vectorIdForInput: embeddingDims ${JSON.stringify(embeddingDims)} is not a positive integer — grammar 2 addresses the vector's width`);
+			}
+			if (`${modelVersion}`.indexOf(NUL) !== -1 || `${inputText}`.indexOf(NUL) !== -1) {
+				throw new Error(
+					'content-address.vectorIdForInput: modelVersion/inputText must not contain a NUL ' +
+						'byte (NUL is the field separator; a NUL inside a field makes vectorId ambiguous)',
+				);
+			}
+			return sha256Hex(`${modelVersion}${NUL}${embeddingDims}${NUL}${inputText}`);
+		};
+
+		// versionOneVectorIdForInput — GRAMMAR 1, read-side ONLY: the vector store verifies a row written before P3 against it
+		// (replay of any existing manifest must succeed). No producer mints with it.
+		const versionOneVectorIdForInput = (embeddingModelVersion, embeddingInputText) => {
 			// PRECONDITION (separator-collision guard): neither determinant may contain a NUL. The
 			// NUL is the field SEPARATOR, so a NUL inside a field makes the boundary ambiguous and
 			// lets two DISTINCT (modelVersion, inputText) pairs collide to ONE vectorId
@@ -159,6 +183,8 @@ const moduleFunction =
 			dedupMembersByBlockId,
 			sha256Hex,
 			vectorIdForInput,
+			versionOneVectorIdForInput,
+			VECTOR_ID_GRAMMAR_VERSION,
 			vectorHashForBytes,
 			treeFingerprint,
 		};

@@ -1890,6 +1890,10 @@ const build = (recipe, deps, callback) => {
 							// them undefined/null and the optional fields drop, as an un-embedded block wants.
 							stableUriPropertyName: args.forgeReport.stableUriPropertyName,
 							resolutionKey: args.forgeReport.stableUriPropertyName,
+							// ⟪campaign P3, W-C-12⟫ the vector-id grammar this block's embeddingRefs were minted under (2: model + dims
+							// + text), named so a reader can tell a v1 ref from a v2 ref by name instead of by failure. Present only
+							// when the block carries vectors (an un-embedded block mints no ref).
+							embeddingRefGrammar: args.forgeReport.embeddingModelVersion ? require('../../../lib/content-address/content-address')().VECTOR_ID_GRAMMAR_VERSION : undefined,
 							embeddingModelVersion: args.forgeReport.embeddingModelVersion,
 							embeddingEncoding: 'base64',
 							embeddingDtype: 'float32',
