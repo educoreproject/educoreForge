@@ -753,7 +753,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // b2d390d and its gate. Path list unchanged.
 // campaign P2 FIFTH RE-ANCHOR of seamDiffEmpty (CARDINAL_RIVER, 2026-10-06; pre-authorised): -> postCampaignP2SeamDiffEmptyE-100626, tag
 // ON this commit. CENSUS: ONE file, replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 19 (conjunct e, 6122536).
-const PHASE3_ANCHOR_TAG = 'postCampaignP2SeamDiffEmptyE-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 (fifth)
+// ═══ RE-ANCHOR, 2026-10-06 (CARDINAL_HORIZON; campaign P3, seamDiffEmpty; pre-authorised by the P3 work order) ═══ postCampaignP2SeamDiffEmptyE-100626 ->
+// postCampaignP3SeamDiffEmpty-100626, tag cut ON this commit. CENSUS at HEAD before the move (git diff --shortstat postCampaignP2SeamDiffEmptyE-100626 over this gate's own
+// paths): 35 files changed, 494 insertions(+), 144 deletions(-); 35 file(s) — the P3 entries W-B-1..14, W-C-1..17, ruling B (DEVLOG-P3). Path list
+// byte-identical; nothing excluded.
+const PHASE3_ANCHOR_TAG = 'postCampaignP3SeamDiffEmpty-100626'; // re-anchored by CARDINAL_HORIZON, campaign P3 (seamDiffEmpty); the tag is cut ON the re-anchor commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
