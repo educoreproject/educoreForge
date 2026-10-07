@@ -25,7 +25,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   lostList               ONLY true losses (lostCategory contentGap), so lostList.length === lostTotal
 //   explicitlyOmittedList  every omitted item as { statementKey, kind, rule }, so its length === explicitlyOmittedTotal
 // and the declaration that licenses the omissions, explicitOmissionDeclaration = { rule, kindPropertyName, kindList,
-// caveatText }: `rule` names the module that declares them (a reader goes THERE to judge the rule), `kindList` the only
+// textBearingKindList, textPropertyName, caveatText } (⟪G21b⟫ an entry of a textBearingKindList kind also carries `text`,
+// read from statement[textPropertyName] — "an omission declaration whose comment text cannot be read cannot be audited",
+// VIOLET_VALLEY 2026-10-07 — and an entry of any other kind carries none; textPropertyName is '' when no kind bears text): `rule` names the module that declares them (a reader goes THERE to judge the rule), `kindList` the only
 // kinds it may omit (an item of any other kind is refused, never filed), `caveatText` what a reader should know about
 // what those kinds can hold ('' when the declaring forge states none). The forge supplies the declaration
 // (validatorFrom's omissionDeclaration); a bespoke validator builds its part with partitionLostList. A declaration
@@ -59,6 +61,17 @@ const omissionDeclarationError = (declaration) => {
 	if (!Array.isArray(declaration.kindList) || !declaration.kindList.every(isNonBlankString)) {
 		return `${moduleName} REFUSED: the omission declaration (${declaration.rule}) kindList must be a list of kind names ([] when nothing may be omitted)`;
 	}
+	// ⟪G21b⟫ the kinds whose entries carry their text, each one a declared kind, and where the statement holds it
+	if (!Array.isArray(declaration.textBearingKindList)) {
+		return `${moduleName} REFUSED: the omission declaration (${declaration.rule}) textBearingKindList must be a list ([] when no omitted kind carries text)`;
+	}
+	const undeclaredTextKind = declaration.textBearingKindList.find((oneKind) => declaration.kindList.indexOf(oneKind) === -1);
+	if (undeclaredTextKind !== undefined) {
+		return `${moduleName} REFUSED: the omission declaration (${declaration.rule}) textBearingKindList names '${undeclaredTextKind}', which its kindList [${declaration.kindList.join(', ')}] does not`;
+	}
+	if (typeof declaration.textPropertyName !== 'string' || (declaration.textBearingKindList.length > 0) !== isNonBlankString(declaration.textPropertyName)) {
+		return `${moduleName} REFUSED: the omission declaration (${declaration.rule}) textPropertyName must name the statement member holding the text when a kind bears text, and be '' when none does`;
+	}
 	if (typeof declaration.caveatText !== 'string') {
 		return `${moduleName} REFUSED: the omission declaration (${declaration.rule}) caveatText must be a string ('' when the rule states no caveat)`;
 	}
@@ -91,7 +104,12 @@ const partitionLostList = ({ lostList, omissionDeclaration }) => {
 		if (omissionDeclaration.kindList.indexOf(kind) === -1) {
 			return { error: `${moduleName} REFUSED: omitted item ${lostIndex} (${oneLost.statementKey}) has kind ${JSON.stringify(kind)} (statement.${omissionDeclaration.kindPropertyName}), which its declaration (${omissionDeclaration.rule}) does not list [${omissionDeclaration.kindList.join(', ')}] — an undeclared omission is not an omission` };
 		}
-		explicitlyOmittedList.push({ statementKey: oneLost.statementKey, kind, rule: omissionDeclaration.rule });
+		const omittedText = omissionDeclaration.textBearingKindList.indexOf(kind) === -1 ? undefined : oneLost.statement[omissionDeclaration.textPropertyName];
+		if (omissionDeclaration.textBearingKindList.indexOf(kind) !== -1 && typeof omittedText !== 'string') {
+			return { error: `${moduleName} REFUSED: omitted item ${lostIndex} (${oneLost.statementKey}) is of text-bearing kind '${kind}' but its statement carries no ${omissionDeclaration.textPropertyName} string` };
+		}
+		const textMember = omittedText === undefined ? {} : { text: omittedText };
+		explicitlyOmittedList.push({ statementKey: oneLost.statementKey, kind, rule: omissionDeclaration.rule, ...textMember });
 	}
 	return { lostList: trueLostList, explicitlyOmittedList };
 };
@@ -191,6 +209,13 @@ const verifyVerdictShape = (verdict) => {
 		}
 		if (declaration.kindList.indexOf(oneEntry.kind) === -1) {
 			return { error: `${moduleName} REFUSED: explicitly omitted item ${omittedIndex} (${oneEntry.statementKey}) has kind '${oneEntry.kind}', which its declaration (${declaration.rule}) does not list [${declaration.kindList.join(', ')}]` };
+		}
+		const isTextBearing = declaration.textBearingKindList.indexOf(oneEntry.kind) !== -1;
+		if (isTextBearing && typeof oneEntry.text !== 'string') {
+			return { error: `${moduleName} REFUSED: explicitly omitted item ${omittedIndex} (${oneEntry.statementKey}) of text-bearing kind '${oneEntry.kind}' carries no text — a declared omission whose content cannot be read cannot be audited (G21b)` };
+		}
+		if (!isTextBearing && oneEntry.text !== undefined) {
+			return { error: `${moduleName} REFUSED: explicitly omitted item ${omittedIndex} (${oneEntry.statementKey}) of kind '${oneEntry.kind}' carries text, but its declaration (${declaration.rule}) makes only [${declaration.textBearingKindList.join(', ')}] text-bearing` };
 		}
 		if (oneEntry.rule !== declaration.rule) {
 			return { error: `${moduleName} REFUSED: explicitly omitted item ${omittedIndex} (${oneEntry.statementKey}) names rule '${oneEntry.rule}', not its verdict's declaration (${declaration.rule})` };

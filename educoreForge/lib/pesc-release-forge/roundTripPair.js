@@ -83,6 +83,10 @@ const OMISSION_DECLARATION = Object.freeze({
 	rule: 'lib/pesc-release-forge/roundTripPair.js',
 	kindPropertyName: 'omittedKind',
 	kindList: Object.freeze(Object.values(OMITTED_KIND)),
+	// ⟪G21b⟫ a comment entry carries its text (the auditable part: change logs, the AgencyAssignedID deprecation notice, G20);
+	// whitespace runs and the XML declaration carry none
+	textBearingKindList: Object.freeze([OMITTED_KIND.COMMENT]),
+	textPropertyName: 'omittedText',
 	caveatText: 'comments may carry content (PLAN G20)',
 });
 const DONOR_FOLDER_NAME = 'donorLibraries';

@@ -123,7 +123,7 @@ const conjunctList = [
 		twinNameList: ['disableShapeChecks'],
 		evaluate: (subject, callback) => {
 			const assembler = assemblerFor(subject);
-			const baseVerdict = { roundTripClean: true, inventedTotal: 0, lostTotal: 1, contentGapTotal: 1, explicitlyOmittedTotal: 0, semanticValidationLimit: 'x', lostList: [{ statementKey: 'k', lostCategory: 'contentGap' }], explicitlyOmittedList: [], explicitOmissionDeclaration: { rule: 'x.js', kindPropertyName: 'omittedKind', kindList: [], caveatText: '' }, census: { wallClockMs: 1, peakMemoryBytes: 1, statementCensus: {} } };
+			const baseVerdict = { roundTripClean: true, inventedTotal: 0, lostTotal: 1, contentGapTotal: 1, explicitlyOmittedTotal: 0, semanticValidationLimit: 'x', lostList: [{ statementKey: 'k', lostCategory: 'contentGap' }], explicitlyOmittedList: [], explicitOmissionDeclaration: { rule: 'x.js', kindPropertyName: 'omittedKind', kindList: [], textBearingKindList: [], textPropertyName: '', caveatText: '' }, census: { wallClockMs: 1, peakMemoryBytes: 1, statementCensus: {} } };
 			const identityBroken = assembler.verifyVerdictShape(baseVerdict);
 			const noCategory = assembler.verifyVerdictShape({ ...baseVerdict, roundTripClean: false, lostList: [{ statementKey: 'k' }] });
 			const pass = /A13 identity broken/.test(identityBroken.error || '') && /carries lostCategory undefined/.test(noCategory.error || '');

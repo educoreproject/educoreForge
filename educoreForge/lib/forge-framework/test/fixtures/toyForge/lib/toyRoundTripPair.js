@@ -27,6 +27,8 @@ const OMISSION_DECLARATION = Object.freeze({
 	rule: 'lib/forge-framework/test/fixtures/toyForge/lib/toyRoundTripPair.js',
 	kindPropertyName: 'omittedKind',
 	kindList: Object.freeze([SUPPORT_NOTE_TEXT_KIND]),
+	textBearingKindList: [],
+	textPropertyName: '',
 	caveatText: '',
 });
 

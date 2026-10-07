@@ -60,7 +60,7 @@ const WELL_TYPED = {
 	roundTripClean: false, inventedTotal: 0, lostTotal: 5, contentGapTotal: 5, explicitlyOmittedTotal: 2,
 	lostList: [0, 1, 2, 3, 4].map((itemIndex) => lostItemFor('contentGap', itemIndex)),
 	explicitlyOmittedList: [5, 6].map((itemIndex) => ({ statementKey: `s${itemIndex}`, kind: 'toyKind', rule: 'toy/rule.js' })),
-	explicitOmissionDeclaration: { rule: 'toy/rule.js', kindPropertyName: 'omittedKind', kindList: ['toyKind'], caveatText: '' },
+	explicitOmissionDeclaration: { rule: 'toy/rule.js', kindPropertyName: 'omittedKind', kindList: ['toyKind'], textBearingKindList: [], textPropertyName: '', caveatText: '' },
 	inventedList: [],
 	semanticValidationLimit: 'a toy limit',
 	census: { wallClockMs: 1, peakMemoryBytes: 1, statementCensus: { sourceStatementCount: 7, graphStatementCount: 0, matchedCount: 0 } },

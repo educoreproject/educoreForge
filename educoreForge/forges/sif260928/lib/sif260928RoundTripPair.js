@@ -80,6 +80,8 @@ const OMISSION_DECLARATION = Object.freeze({
 	rule: 'forges/sif260928/lib/sif260928RoundTripPair.js',
 	kindPropertyName: 'omittedKind',
 	kindList: Object.freeze([STATEMENT_KIND.CONTAINER]),
+	textBearingKindList: [],
+	textPropertyName: '',
 	caveatText: '',
 });
 const STATEMENT_SEPARATOR = '|';

@@ -100,6 +100,8 @@ const omissionDeclarationFor = (explicitlyOmittedPredicateList) => ({
 	rule: 'forges/ceds/roundTripValidator.js EXPLICITLY_OMITTED_PREDICATES (empty by ruling, TQ 2026-08-02)',
 	kindPropertyName: 'predicate',
 	kindList: explicitlyOmittedPredicateList.slice(),
+	textBearingKindList: [],
+	textPropertyName: '',
 	caveatText: '',
 });
 const normativeVerdictPartFor = ({ report, explicitlyOmittedPredicateList, wallClockMs, peakMemoryBytes }) => {

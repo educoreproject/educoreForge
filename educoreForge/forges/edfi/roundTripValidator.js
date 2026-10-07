@@ -63,6 +63,8 @@ const OMISSION_DECLARATION = Object.freeze({
 	rule: 'forges/edfi/lib/roundTripDiff.js LOST_BUCKET_PREFIX_REGISTRY (no explicitlyOmitted entry: empty by design)',
 	kindPropertyName: 'predicate',
 	kindList: Object.freeze([]),
+	textBearingKindList: [],
+	textPropertyName: '',
 	caveatText: '',
 });
 const normativeVerdictPartFor = ({ report, crosswalkGuardViolationList, wallClockMs, peakMemoryBytes }) => {

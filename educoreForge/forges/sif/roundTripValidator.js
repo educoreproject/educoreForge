@@ -77,6 +77,8 @@ const OMISSION_DECLARATION = Object.freeze({
 	rule: 'forges/sif/lib/roundTripSifCanonical.js EXPLICITLY_OMITTED_PREDICATES (empty)',
 	kindPropertyName: 'predicate',
 	kindList: Object.freeze(canonicalLib.EXPLICITLY_OMITTED_PREDICATES.slice()),
+	textBearingKindList: [],
+	textPropertyName: '',
 	caveatText: '',
 });
 const normativeVerdictPartFor = ({ report, wallClockMs, peakMemoryBytes }) => {

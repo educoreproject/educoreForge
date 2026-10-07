@@ -612,6 +612,8 @@ const moduleFunction =
 					rule: 'forges/pesc260805/lib/roundTripXsdCanonical.js EXPLICITLY_OMITTED_PREDICATES',
 					kindPropertyName: 'predicate',
 					kindList: canonicalLib.EXPLICITLY_OMITTED_PREDICATES.slice(),
+					textBearingKindList: [],
+					textPropertyName: '',
 					caveatText: '',
 				};
 				const partitioned = frameworkVerdictAssembler.partitionLostList({ lostList: args.report.lostItemList, omissionDeclaration });
