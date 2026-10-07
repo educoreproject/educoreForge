@@ -9,7 +9,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // graph, per standard: every role the kit counted must have exactly that many content nodes of the standard, and every
 // edge type it counted exactly that many edges between two of the standard's nodes. Option sets and option values are
 // roles, so a lost code list or code value fails the row by name. Nodes minted OUTSIDE the kit (hub cards and the hub
-// definition by the hub framework, DmeEmbedText by the embed-text pass) are outside the census by label.
+// definition, by the hub framework) are outside the census by label. ⟪campaign P3, R2 finding⟫ DmeEmbedText is NOT: the
+// embed-text derivation mints its nodes through kit.makeNode (embedTextDerivation.js), so the kit counts them and the graph
+// census must too — excluding them read 'forged 6684, graph 0' for every standard on the first live measurement.
 //
 // A -replay forges nothing, so it has no expectation: notRun, said so. A forge result carrying no stats is notRun naming
 // the standard (a double, or a bundle outside the framework) — never pass.
@@ -25,7 +27,7 @@ const path = require('path');
 const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 
 const GATE_NAME = 'forgeCensus';
-const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition', vocabulary.EMBED_TEXT_VECTOR.label]);
+const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition']);
 const NODE_CENSUS_CYPHER = `
 	MATCH (n:ForgedNode) WHERE n._source = $standardName AND ${OUTSIDE_THE_KIT_LABEL_LIST.map((oneLabel) => `NOT n:\`${oneLabel}\``).join(' AND ')}
 	RETURN n.role AS role, count(n) AS nodeCount`;

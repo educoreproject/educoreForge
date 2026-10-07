@@ -72,7 +72,9 @@ const moduleFunction =
 			return {
 				nodes: kit.nodes,
 				edges: kit.edges,
-				stats: { releaseCensus: parsed[LOADER_NAME.PESC_RELEASE_XSD_SET].releaseCensus, ...walkStats },
+				// ⟪campaign P3, R2 finding⟫ the KIT's counts ride first (nodeCountByRole, edgeCountByType — the framework's contract:
+				// 'return kit.stats, extended by the walk'): without them the forgeCensus attestation read notRun for all seven releases
+				stats: { ...kit.stats, releaseCensus: parsed[LOADER_NAME.PESC_RELEASE_XSD_SET].releaseCensus, ...walkStats },
 				sequenceGroups,
 			};
 		};

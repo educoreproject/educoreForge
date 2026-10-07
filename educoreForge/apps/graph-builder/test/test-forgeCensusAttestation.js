@@ -58,14 +58,19 @@ const conjunctJudgeByRefId = {
 	},
 	e_kitOutsidersExcluded: (mutationList, done) => {
 		const gate = gateFor(mutationList);
-		const missingList = ['HubReference', 'HubDefinition', 'DmeEmbedText'].filter((oneLabel) => gate.NODE_CENSUS_CYPHER.indexOf(`NOT n:\`${oneLabel}\``) === -1);
-		done({ pass: missingList.length === 0, detail: missingList.length ? `not excluded: ${missingList.join(', ')}` : 'hub cards, hub definition and text nodes excluded' });
+		// ⟪campaign P3, R2 finding⟫ hub cards and the hub definition are outside the kit; DmeEmbedText is INSIDE it (the derivation
+		// mints through kit.makeNode, and the kit counts it), so excluding it made every standard read 'forged N, graph 0'
+		const missingList = ['HubReference', 'HubDefinition'].filter((oneLabel) => gate.NODE_CENSUS_CYPHER.indexOf(`NOT n:\`${oneLabel}\``) === -1);
+		const wronglyExcluded = gate.NODE_CENSUS_CYPHER.indexOf('NOT n:`DmeEmbedText`') !== -1;
+		done({ pass: missingList.length === 0 && !wronglyExcluded, detail: `${missingList.length ? `not excluded: ${missingList.join(', ')}` : 'hub cards and hub definition excluded'}; DmeEmbedText ${wronglyExcluded ? 'WRONGLY excluded' : 'counted (kit-minted)'}` });
 	},
 };
 const TWIN_LIST = [
 	{ conjunctRefId: 'b_missingValueFailsByName', twinName: 'mismatchIgnored', find: "		return mismatchList.length ? soFar.concat(", replace: "		return false ? soFar.concat(" },
 	{ conjunctRefId: 'c_statlessIsNotRun', twinName: 'statlessReadAsPass', find: '	if (statlessList.length) {\n		return { gate: GATE_NAME, verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN,', replace: '	if (statlessList.length) {\n		return { gate: GATE_NAME, verdict: vocabulary.BUILD_ATTESTATION_VERDICT.PASS,' },
-	{ conjunctRefId: 'e_kitOutsidersExcluded', twinName: 'kitExclusionDropped', find: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition', vocabulary.EMBED_TEXT_VECTOR.label]);", replace: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubDefinition']);" },
+	{ conjunctRefId: 'e_kitOutsidersExcluded', twinName: 'kitExclusionDropped', find: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition']);", replace: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubDefinition']);" },
+	// the P2 list: text nodes excluded although the kit counts them
+	{ conjunctRefId: 'e_kitOutsidersExcluded', twinName: 'textNodesExcludedAgain', find: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition']);", replace: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition', vocabulary.EMBED_TEXT_VECTOR.label]);" },
 ];
 
 const refIdList = Object.keys(conjunctJudgeByRefId);
