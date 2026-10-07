@@ -1,7 +1,8 @@
 'use strict';
 
-// vectorCache.js — the ONE shared, content-addressed embedding cache that every forge and every
-// bridge reads and writes through embedding-client. A vector is a pure function of (the text, the
+// vectorCache.js — the ONE shared, content-addressed embedding cache, read and written through
+// embedding-client. Its only writers are the forger's embed passes (no bridge embeds: a bridge reads
+// the vectors the forge already wrote). A vector is a pure function of (the text, the
 // model that embedded it, the dimension it was cut to), so it need not be isolated per standard —
 // the same string embedded for CEDS and for SIF is the same vector, and paying Voyage twice for it
 // is waste. This store makes the embedding of any distinct text a once-ever cost.
@@ -12,9 +13,9 @@
 // golden, and every content address computed from it would name a model that did not make it. The
 // three columns are the address; nothing here is ever silently substituted (polyArch2 §6).
 //
-// textHash is sha256(text) as hex — the SAME hash the bridge vectorizer has always used — so a text
-// embedded by the forge is a cache HIT for the bridge and vice versa. It is exported (textHashOf) so
-// the one caller (embedding-client) hashes identically to what is stored, never a second formula.
+// textHash is sha256(text) as hex, so the same text embedded by any forge is one cache HIT. It is
+// exported (textHashOf) so the one caller (embedding-client) hashes identically to what is stored,
+// never a second formula.
 //
 // IDEMPOTENT BY THE UNIQUE INDEX. putVectors is INSERT OR IGNORE across the address: storing the same
 // (model, dims, textHash) twice is a no-op, so a re-forge over the same text neither errors nor forks
@@ -47,8 +48,7 @@ const sqliteInstance = require(path.join(TREE_LIB, 'sqlite-instance', 'sqlite-in
 const RAW_OPTS = { noTableNameOk: true, suppressStatementLog: true };
 
 // textHashOf — sha256(text) as hex. The single hashing formula; exported so the caller stores and
-// looks up under one address, never two. Matches the bridge vectorizer's long-standing hash so the
-// two share cache entries for identical text.
+// looks up under one address, never two.
 const textHashOf = (text) => crypto.createHash('sha256').update(`${text}`, 'utf8').digest('hex');
 
 // START OF moduleFunction() ============================================================

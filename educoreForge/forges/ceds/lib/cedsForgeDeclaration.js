@@ -90,9 +90,11 @@ const cedsForgeDeclaration = Object.freeze({
 	}),
 	// the three roles forgeCeds.js:829-833 excluded from the embedding pass. They carry NO
 	// searchText at all, which the kit reproduces by omitting it for a non-embeddable role. The
-	// reason is load-bearing and is the source's own: there is ONE vector index in the published
-	// graph, golden_vector on :ForgedNode(embedding), so anything embedded becomes a semantic-search
-	// result — a search for "school" must never start returning changelog entries.
+	// reason is load-bearing and is the source's own: the published graph's node vector index,
+	// <graphName>_vector on :ForgedNode(embedding), serves semantic search (its sibling
+	// <graphName>_embedText_vector, named by EMBED_TEXT_VECTOR's suffix, holds only text nodes), so
+	// anything embedded becomes a semantic-search result — a search for "school" must never start
+	// returning changelog entries.
 	nonEmbeddableRoleList: Object.freeze([
 		DME_ROLES.EDIT_HISTORY_ENTRY,
 		DME_ROLES.RESTRICTION,

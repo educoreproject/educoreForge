@@ -9,8 +9,8 @@
 // lives in its OWN table, in its OWN database.
 //
 // CONTENT-ADDRESSED, exactly as standards-database is. A block's decisionBlockHash IS sha256 of its frozen
-// text (the pin the whole freeze model rests on — decisionFreezer computes the identical hash, and every
-// materialized CLOSE_MATCH edge is stamped with it). Two consequences, both load-bearing:
+// text (the pin the whole freeze model rests on — decisionBlock.js (lib/bridge-framework) computes the identical
+// hash, and every materialized match edge, EXACT, CLOSE, BROAD and NARROW alike, is stamped with it). Two consequences, both load-bearing:
 //   * writing the same frozen text twice is a no-op (idempotent save), so a re-run of the same --rebridge
 //     costs nothing and never forks the pair into two identical blocks;
 //   * every READ recomputes the hash and REFUSES a mismatch, naming the block — a corrupted or tampered
@@ -33,7 +33,7 @@
 // its CLI caller, AFTER bootstrapGlobal has run — a top-level require in actions.js would kill even -help.
 // standards-database carries the identical trap and the identical warning; actions.js requires BOTH lazily.
 //
-// THE CONTRACT semanticBridge CALLS (bridgePlugins/semanticBridge.js — matched EXACTLY, not invented):
+// THE CONTRACT THE BRIDGE FRAMEWORK CALLS (lib/bridge-framework/bridge-framework.js checks both verbs at spec time):
 //   getDecisionBlock({ pairKey }, cb)   -> cb('', { frozenText })              // frozenText null when absent
 //   saveDecisionBlock({ pairKey, frozenText, decisionBlockHash }, cb) -> cb('', { ... })
 //
@@ -140,7 +140,7 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 	// -----
 	// saveDecisionBlock — content-address the frozen text, insert if absent. Idempotent by construction.
 	//
-	// The caller (decisionFreezer via semanticBridge) hands BOTH the frozen text and the decisionBlockHash it
+	// The caller (the bridge framework, via decisionBlock.js) hands BOTH the frozen text and the decisionBlockHash it
 	// computed for it. This recomputes the address and REFUSES a disagreement by name: the two must be the
 	// same sha256 or one of them is wrong, and a store that admitted the mismatch would hold a row addressed
 	// under a hash its own text does not produce — the exact corruption verify-on-read exists to make

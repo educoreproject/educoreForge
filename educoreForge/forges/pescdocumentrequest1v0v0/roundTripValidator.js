@@ -2,7 +2,7 @@
 
 // roundTripValidator.js — pescdocumentrequest1v0v0's round-trip validator, declared in parserDescriptor.ini.
 // WRITTEN BY lib/pesc-release-forge/tools/scaffoldReleaseBundle.js. The validator itself is the shared
-// library's (lib/pesc-release-forge/roundTripValidatorFor.js), a refusing stub until phase F4.
+// library's (lib/pesc-release-forge/roundTripValidatorFor.js), harness-backed since F4.
 
 const path = require('path');
 const { makeRoundTripValidator } = require(path.join(__dirname, '..', '..', 'lib', 'pesc-release-forge', 'roundTripValidatorFor'));

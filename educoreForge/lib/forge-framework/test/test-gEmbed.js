@@ -5,7 +5,8 @@
 // and a spy embedder that throws on call is never called; skipEmbedding false + embedder null → refused
 // by name; N embeddable nodes → ceil(N/128) calls; embedNodeLimit n → exactly min(n, embeddable) nodes
 // carry vectors, role filter FIRST then slice in emission order; non-embeddable roles carry none and
-// stay in place; a vector/text count mismatch is refused; a batch failure names its batch number.
+// stay in place; the vector rides in properties only (no top-level mirror, P4b W-C-19); a vector/text count
+// mismatch is refused; a batch failure names its batch number.
 // EQUALITY of counts throughout — the trap is "count is a number".
 //
 // Run: node lib/forge-framework/test/test-gEmbed.js [-verbose]
@@ -113,6 +114,20 @@ const conjunctList = [
 			return { pass: supportNode !== undefined && supportNode.properties.embedding === undefined && embeddedCount === TOY_EMBEDDABLE_COUNT && result.nodes.length === 16, detail: `support has vector: ${supportNode && supportNode.properties.embedding !== undefined}; embedded ${embeddedCount} of ${result.nodes.length}` };
 		}),
 	}),
+	// ⟪campaign P4b, W-C-19 (V1-C51)⟫ the shaper lifts the vector from properties (shape-forged-graph.js), so the forge
+	// node carries it there ONLY: a top-level mirror had no reader and claimed one ("for serializeBlock")
+	shapedConjunct({
+		conjunctId: 'vectorRidesInPropertiesOnly',
+		title: 'every embedded node carries embedding and embeddingModelVersion in properties ONLY; no forge node has a top-level embedding or embeddingModelVersion',
+		twinNameList: ['restoreTopLevelMirror'],
+		shape: (scenario) => withSpy(scenario, {}),
+		judge: succeeded((result) => {
+			const embeddedList = result.nodes.filter((oneNode) => oneNode.properties.embedding !== undefined);
+			const mirroredList = result.nodes.filter((oneNode) => oneNode.embedding !== undefined || oneNode.embeddingModelVersion !== undefined);
+			const versionlessList = embeddedList.filter((oneNode) => typeof oneNode.properties.embeddingModelVersion !== 'string');
+			return { pass: embeddedList.length === TOY_EMBEDDABLE_COUNT && mirroredList.length === 0 && versionlessList.length === 0, detail: `embedded ${embeddedList.length}; top-level mirror on ${mirroredList.length}; embedded without a properties.embeddingModelVersion ${versionlessList.length}` };
+		}),
+	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'vectorCountMismatchRefused',
 		title: 'vectors.length !== texts.length is refused naming both counts',
@@ -144,7 +159,8 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'ba
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'limitFilterThenSlice', twinName: 'sliceBeforeFilter', fileName: EMBED_FILE,
 	find: "\t\t\tconst embeddableNodeList = nodes.filter((oneNode) => passNonEmbeddableRoleList.indexOf(oneNode.role) === -1);\n\t\t\tconst targetNodeList =\n\t\t\t\tnodeSubsetLimit !== undefined && nodeSubsetLimit < embeddableNodeList.length\n\t\t\t\t\t? embeddableNodeList.slice(0, nodeSubsetLimit)\n\t\t\t\t\t: embeddableNodeList;",
 	replace: "\t\t\tconst slicedFirst = nodeSubsetLimit !== undefined && nodeSubsetLimit < nodes.length ? nodes.slice(0, nodeSubsetLimit) : nodes;\n\t\t\tconst targetNodeList = slicedFirst.filter((oneNode) => passNonEmbeddableRoleList.indexOf(oneNode.role) === -1);" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'vectorRidesInPropertiesOnly', twinName: 'restoreTopLevelMirror', fileName: EMBED_FILE, find: '\t\t\t\t\t\toneNode.properties.embedding = Array.from(embedResult.vectors[nodeIndex]);', replace: '\t\t\t\t\t\toneNode.properties.embedding = Array.from(embedResult.vectors[nodeIndex]);\n\t\t\t\t\t\toneNode.embedding = oneNode.properties.embedding;' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'nonEmbeddableStaysInPlace', twinName: 'embedNonEmbeddableToo', fileName: EMBED_FILE, find: '\t\t\tconst embeddableNodeList = nodes.filter((oneNode) => passNonEmbeddableRoleList.indexOf(oneNode.role) === -1);', replace: '\t\t\tconst embeddableNodeList = nodes.slice();' });
 
 const gateDeclarationList = [{ gateId: GATE_ID, title: 'the embed pass', conjunctList }];
-runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 8, expectedTwinCount: 8 }, () => harness.report());
+runGateFamily({ harness, familyName: GATE_ID, gateDeclarationList, twinRegistry, makeSubject: toyScenario.makeScenario, cloneSubject: toyScenario.cloneScenario, expectedConjunctCount: 9, expectedTwinCount: 9 }, () => harness.report());

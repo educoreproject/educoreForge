@@ -23,9 +23,11 @@
 //       <graphName>_embedText_vector index for text nodes (R-ET-8), + db.awaitIndexes.
 // Idempotent (MERGE, not CREATE) + deterministic.
 //
-// provenanceTier ENFORCEMENT (§21): every edge MUST carry a provenanceTier in the four-value
-// set. A missing/invalid tier is an ERROR (a distinct malformed-edge case — NOT dangling/
-// partial), surfaced like an audit finding; the engine refuses to write any edge in that block.
+// PROVENANCE ENFORCEMENT (§21), TWO EDGE CLASSES: a non-mapping edge MUST carry a provenanceTier in the
+// four-value set; a MAPPING edge (EXACT/CLOSE/BROAD/NARROW_MATCH) carries mappingKind and must NOT carry a
+// provenanceTier (PROVENANCE_RULE_BY_EDGE_CLASS below). A violation is an ERROR (a distinct malformed-edge
+// case — NOT dangling/partial), surfaced like an audit finding; the engine refuses to write any edge in
+// that block.
 //
 // Async style (DECISIONS §2): qtools-asynchronous-pipe-plus taskListPlus/pipeRunner for
 // orchestration; each neo4j-driver call resolves at the leaf via .then().catch(err=>next(err)).

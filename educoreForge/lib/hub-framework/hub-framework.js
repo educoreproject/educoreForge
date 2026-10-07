@@ -313,7 +313,8 @@ const moduleFunction =
 								.join(' · '),
 							// slot 2 NAME
 							cardProperties.valueName,
-							// slot 3 DEFINITION (absent for ~52% of values — slot simply empty)
+							// slot 3 DEFINITION (absent for 77% of values — slot simply empty; measured on
+							// GOLD_EVAL_261006_jevContract: 21,114 of 91,825 value cards carry one)
 							cardProperties.valueDefinition,
 							// slot 4 CONTEXT DEF — option-set definition; the range on value tier IS an
 							// option set (stated rule, full stop — not a chain)

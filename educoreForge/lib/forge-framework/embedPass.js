@@ -98,8 +98,6 @@ const moduleFunction =
 					embedCallCount++;
 					batch.forEach((oneNode, nodeIndex) => {
 						oneNode.properties.embedding = Array.from(embedResult.vectors[nodeIndex]);
-						oneNode.embedding = oneNode.properties.embedding; // for serializeBlock
-						oneNode.embeddingModelVersion = embedResult.embeddingModelVersion;
 						oneNode.properties.embeddingModelVersion = embedResult.embeddingModelVersion;
 					});
 					xLog.status(`[${prefixText}] embedded batch ${batchIndex}/${batchList.length} (${batch.length} nodes)`);

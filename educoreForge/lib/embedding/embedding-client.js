@@ -56,7 +56,7 @@ const DEFAULT_PROVIDER_NAME = 'voyage';
 const defaultConfigFilePath =
 	'/Users/tqwhite/Documents/webdev/educoreForge/system/configs/instanceSpecific/qbook/voyageEmbedding.ini';
 
-// canonical home of the ONE shared vector cache (dataStores, used by every forge and every bridge).
+// canonical home of the ONE shared vector cache (dataStores; written by the forger's embed passes, no bridge embeds).
 // A DOCUMENTED default standing behind an optional module parameter — polyArch2 §6 permits exactly
 // that: the cache is ON by default because a vector is a once-ever cost and isolating it per build is
 // waste, and a caller (the test suite) turns it OFF or redirects it by passing cacheFilePath. Passing
@@ -327,8 +327,8 @@ const moduleFunction =
 							}
 						});
 
-						// observability, mirroring the bridge vectorizer's long-standing line: every
-						// text not named a miss was served from the shared cache and cost no Voyage.
+						// observability: every text not named a miss was served from the shared cache and
+						// cost no Voyage.
 						const { xLog } = process.global || {};
 						if (xLog && xLog.status) {
 							xLog.status(

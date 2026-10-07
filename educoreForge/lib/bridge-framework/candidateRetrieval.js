@@ -457,7 +457,7 @@ const buildCardSlotIndex = ({ cardSlotEdgeList, slotNameBySlotKind, baseRoleByBa
 		if (priorBaseKind !== undefined && priorBaseKind !== baseKind) {
 			return { error: refuse.byName({ moduleName, what: `base ${oneEdge.baseStableId} arrives as both a ${priorBaseKind} and a ${baseKind}`, where: 'a node carries one role' }) };
 		}
-		const edgeRefId = `${oneEdge.cardStableId} ${oneEdge.slot} ${oneEdge.baseStableId}`;
+		const edgeRefId = `${oneEdge.cardStableId}\u0000${oneEdge.slot}\u0000${oneEdge.baseStableId}`;
 		if (seenEdgeRefIdSet.has(edgeRefId)) {
 			return { error: refuse.byName({ moduleName, what: `${edgeLabel} repeats (${oneEdge.cardStableId}, ${oneEdge.slot}, ${oneEdge.baseStableId})`, where: 'one slot edge per (card, slot, base)' }) };
 		}
