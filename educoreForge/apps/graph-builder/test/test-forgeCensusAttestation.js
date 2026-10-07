@@ -12,7 +12,11 @@
 //   (c) a forge result with no stats -> notRun naming the standard (never pass)
 //   (d) a replay (spec null) -> notRun, without touching a graph; an absent spec is refused by name
 //   (e) the census Cypher keeps nodes minted outside the kit (hub cards, hub definition, text nodes) out of the count
-// RED TWINS (in memory, gate double): mismatchIgnored -> (b); statlessReadAsPass -> (c); kitExclusionDropped -> (e).
+//   (f) ⟪campaign P4a, G5/G6⟫ a failing structure check (instanceStructure, codeListStructure) fails the row by name, and
+//       a passing one is reported in the detail; the row REFUSES to be built without the structure rows (no silent pass)
+//   (g) the runner runs exactly the two verdict checks of graph-structure-check.js (rootOwnership is a measurement)
+// RED TWINS (in memory, gate double): mismatchIgnored -> (b); statlessReadAsPass -> (c); kitExclusionDropped -> (e);
+// structureFailureIgnored -> (f); structureCheckDropped -> (g).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -37,17 +41,17 @@ const LIVE_EQUAL = { TOY: { nodeCountByRole: { DmeOptionSet: 3, DmeOptionValue: 
 
 const conjunctJudgeByRefId = {
 	a_equalCountsPass: (mutationList, done) => {
-		const row = gateFor(mutationList).forgeCensusRowFor({ expectationList: [EXPECTATION], liveByStandardName: LIVE_EQUAL });
+		const row = gateFor(mutationList).forgeCensusRowFor({ expectationList: [EXPECTATION], liveByStandardName: LIVE_EQUAL, structureCheckRowList: [] });
 		done({ pass: row.verdict === 'pass' && row.gate === 'forgeCensus', detail: `${row.verdict}: ${row.detail}` });
 	},
 	b_missingValueFailsByName: (mutationList, done) => {
 		const gate = gateFor(mutationList);
-		const nodeRow = gate.forgeCensusRowFor({ expectationList: [EXPECTATION], liveByStandardName: { TOY: { ...LIVE_EQUAL.TOY, nodeCountByRole: { ...LIVE_EQUAL.TOY.nodeCountByRole, DmeOptionValue: 99 } } } });
-		const edgeRow = gate.forgeCensusRowFor({ expectationList: [EXPECTATION], liveByStandardName: { TOY: { ...LIVE_EQUAL.TOY, edgeCountByType: { HAS_OPTION_SET: 3 } } } });
+		const nodeRow = gate.forgeCensusRowFor({ structureCheckRowList: [], expectationList: [EXPECTATION], liveByStandardName: { TOY: { ...LIVE_EQUAL.TOY, nodeCountByRole: { ...LIVE_EQUAL.TOY.nodeCountByRole, DmeOptionValue: 99 } } } });
+		const edgeRow = gate.forgeCensusRowFor({ structureCheckRowList: [], expectationList: [EXPECTATION], liveByStandardName: { TOY: { ...LIVE_EQUAL.TOY, edgeCountByType: { HAS_OPTION_SET: 3 } } } });
 		done({ pass: nodeRow.verdict === 'fail' && /TOY: role DmeOptionValue: forged 100, graph 99/.test(nodeRow.detail) && edgeRow.verdict === 'fail' && /edge HAS_VALUE: forged 100, graph 0/.test(edgeRow.detail), detail: `${nodeRow.detail} | ${edgeRow.detail}` });
 	},
 	c_statlessIsNotRun: (mutationList, done) => {
-		const row = gateFor(mutationList).forgeCensusRowFor({ expectationList: [{ standardName: 'TOY' }], liveByStandardName: {} });
+		const row = gateFor(mutationList).forgeCensusRowFor({ expectationList: [{ standardName: 'TOY' }], liveByStandardName: {}, structureCheckRowList: [] });
 		done({ pass: row.verdict === 'notRun' && /no kit stats for TOY/.test(row.detail), detail: `${row.verdict}: ${row.detail}` });
 	},
 	d_replayNotRunAbsentRefused: (mutationList, done) => {
@@ -64,6 +68,18 @@ const conjunctJudgeByRefId = {
 		const wronglyExcluded = gate.NODE_CENSUS_CYPHER.indexOf('NOT n:`DmeEmbedText`') !== -1;
 		done({ pass: missingList.length === 0 && !wronglyExcluded, detail: `${missingList.length ? `not excluded: ${missingList.join(', ')}` : 'hub cards and hub definition excluded'}; DmeEmbedText ${wronglyExcluded ? 'WRONGLY excluded' : 'counted (kit-minted)'}` });
 	},
+	f_structureFailureFailsRow: (mutationList, done) => {
+		const gate = gateFor(mutationList);
+		const failingRow = gate.forgeCensusRowFor({ expectationList: [EXPECTATION], liveByStandardName: LIVE_EQUAL, structureCheckRowList: [{ checkName: 'instanceStructure', verdict: 'pass', detail: 'ok' }, { checkName: 'codeListStructure', verdict: 'fail', detail: 'FAILED — TOY: 1 of 100 option value(s) lack exactly one owning option set' }] });
+		const passingRow = gate.forgeCensusRowFor({ expectationList: [EXPECTATION], liveByStandardName: LIVE_EQUAL, structureCheckRowList: [{ checkName: 'instanceStructure', verdict: 'pass', detail: 'every instance has one declaration and one owner' }] });
+		let refusalText = '';
+		try { gate.forgeCensusRowFor({ expectationList: [EXPECTATION], liveByStandardName: LIVE_EQUAL }); } catch (rowError) { refusalText = rowError.message; }
+		done({ pass: failingRow.verdict === 'fail' && /codeListStructure fail: FAILED — TOY: 1 of 100 option value/.test(failingRow.detail) && passingRow.verdict === 'pass' && /instanceStructure pass: every instance/.test(passingRow.detail) && /structureCheckRowList is REQUIRED/.test(refusalText), detail: `${failingRow.verdict}: ${failingRow.detail} | ${passingRow.verdict} | refusal: ${refusalText || 'none'}` });
+	},
+	g_runnerRunsBothVerdictChecks: (mutationList, done) => {
+		const gate = gateFor(mutationList);
+		done({ pass: JSON.stringify(gate.STRUCTURE_CHECK_NAME_LIST) === JSON.stringify(['instanceStructure', 'codeListStructure']), detail: JSON.stringify(gate.STRUCTURE_CHECK_NAME_LIST) });
+	},
 };
 const TWIN_LIST = [
 	{ conjunctRefId: 'b_missingValueFailsByName', twinName: 'mismatchIgnored', find: "		return mismatchList.length ? soFar.concat(", replace: "		return false ? soFar.concat(" },
@@ -71,6 +87,8 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'e_kitOutsidersExcluded', twinName: 'kitExclusionDropped', find: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition']);", replace: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubDefinition']);" },
 	// the P2 list: text nodes excluded although the kit counts them
 	{ conjunctRefId: 'e_kitOutsidersExcluded', twinName: 'textNodesExcludedAgain', find: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition']);", replace: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition', vocabulary.EMBED_TEXT_VECTOR.label]);" },
+	{ conjunctRefId: 'f_structureFailureFailsRow', twinName: 'structureFailureIgnored', find: "	const failedStructureRowList = structureCheckRowList.filter((oneRow) => oneRow.verdict !== vocabulary.BUILD_ATTESTATION_VERDICT.PASS);", replace: '	const failedStructureRowList = [];' },
+	{ conjunctRefId: 'g_runnerRunsBothVerdictChecks', twinName: 'structureCheckDropped', find: "const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure']);", replace: "const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure']);" },
 ];
 
 const refIdList = Object.keys(conjunctJudgeByRefId);

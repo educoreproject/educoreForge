@@ -13,10 +13,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // embed-text derivation mints its nodes through kit.makeNode (embedTextDerivation.js), so the kit counts them and the graph
 // census must too — excluding them read 'forged 6684, graph 0' for every standard on the first live measurement.
 //
+// ⟪campaign P4a, PLAN G5/G6⟫ the row also carries the two verdict checks of graph-structure-check.js, run in the same READ
+// session after the census: instanceStructure (every SIF Field / PESC occurrence has one declaration and one owner) and
+// codeListStructure (every option value has one owning set of its standard; counts per standard). Either failing fails the
+// row by name. The source-census half of codeListStructure is compared by tools/graphStructureCheck.js, which reads the
+// graph's StandardDefinitions; here the census map is {} and the detail says no standard was compared to one.
+//
 // A -replay forges nothing, so it has no expectation: notRun, said so. A forge result carrying no stats is notRun naming
 // the standard (a double, or a bundle outside the framework) — never pass.
 //
-//   forgeCensusRowFor({ expectationList, liveByStandardName }) → the row (pure)
+//   forgeCensusRowFor({ expectationList, liveByStandardName, structureCheckRowList }) → the row (pure)
 //   runForgeCensusGate({ containerHandle, forgeCensusSpec }, callback(err, row))
 //     forgeCensusSpec: null (a replay) | { expectationList: [{ standardName, nodeCountByRole, edgeCountByType }] }
 //
@@ -25,8 +31,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const neo4j = require('neo4j-driver');
 const path = require('path');
 const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
+const graphStructureCheck = require(path.join(__dirname, 'graph-structure-check'));
 
 const GATE_NAME = 'forgeCensus';
+const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure']);
 const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition']);
 const NODE_CENSUS_CYPHER = `
 	MATCH (n:ForgedNode) WHERE n._source = $standardName AND ${OUTSIDE_THE_KIT_LABEL_LIST.map((oneLabel) => `NOT n:\`${oneLabel}\``).join(' AND ')}
@@ -38,7 +46,10 @@ const EDGE_CENSUS_CYPHER = `
 const mismatchListFor = ({ expectedByName, liveByName, kindText }) =>
 	Object.keys(expectedByName).sort().filter((oneName) => Number(liveByName[oneName] || 0) !== Number(expectedByName[oneName])).map((oneName) => `${kindText} ${oneName}: forged ${expectedByName[oneName]}, graph ${Number(liveByName[oneName] || 0)}`);
 
-const forgeCensusRowFor = ({ expectationList, liveByStandardName }) => {
+const forgeCensusRowFor = ({ expectationList, liveByStandardName, structureCheckRowList }) => {
+	if (!Array.isArray(structureCheckRowList)) {
+		throw new Error(`${moduleName}.forgeCensusRowFor: structureCheckRowList is REQUIRED — [] when no structure check ran; an absent list would read as a pass`);
+	}
 	const statlessList = expectationList.filter((oneExpectation) => !oneExpectation.nodeCountByRole || !oneExpectation.edgeCountByType).map((oneExpectation) => oneExpectation.standardName);
 	if (statlessList.length) {
 		return { gate: GATE_NAME, verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN, detail: `the forge reported no kit stats for ${statlessList.join(', ')}, so nothing could be compared` };
@@ -48,10 +59,13 @@ const forgeCensusRowFor = ({ expectationList, liveByStandardName }) => {
 		const mismatchList = mismatchListFor({ expectedByName: oneExpectation.nodeCountByRole, liveByName: live.nodeCountByRole, kindText: 'role' }).concat(mismatchListFor({ expectedByName: oneExpectation.edgeCountByType, liveByName: live.edgeCountByType, kindText: 'edge' }));
 		return mismatchList.length ? soFar.concat([`${oneExpectation.standardName}: ${mismatchList.slice(0, 5).join('; ')}${mismatchList.length > 5 ? `; +${mismatchList.length - 5} more` : ''}`]) : soFar;
 	}, []);
+	const failedStructureRowList = structureCheckRowList.filter((oneRow) => oneRow.verdict !== vocabulary.BUILD_ATTESTATION_VERDICT.PASS);
+	const censusText = failureList.length === 0 ? `${expectationList.length} standard(s): every role and edge type the forge counted is in the graph at that count` : `FAILED — ${failureList.join(' | ')}`;
+	const structureText = structureCheckRowList.map((oneRow) => ` || ${oneRow.checkName} ${oneRow.verdict}: ${oneRow.detail}`).join('');
 	return {
 		gate: GATE_NAME,
-		verdict: failureList.length === 0 ? vocabulary.BUILD_ATTESTATION_VERDICT.PASS : vocabulary.BUILD_ATTESTATION_VERDICT.FAIL,
-		detail: failureList.length === 0 ? `${expectationList.length} standard(s): every role and edge type the forge counted is in the graph at that count` : `FAILED — ${failureList.join(' | ')}`,
+		verdict: failureList.length === 0 && failedStructureRowList.length === 0 ? vocabulary.BUILD_ATTESTATION_VERDICT.PASS : vocabulary.BUILD_ATTESTATION_VERDICT.FAIL,
+		detail: `${censusText}${structureText}`,
 	};
 };
 
@@ -64,7 +78,7 @@ const runForgeCensusGate = ({ containerHandle, forgeCensusSpec } = {}, callback)
 		callback(`${moduleName}: forgeCensusSpec is REQUIRED — null for a replay, or { expectationList } from the build's forges`);
 		return;
 	}
-	const statlessRow = forgeCensusRowFor({ expectationList: forgeCensusSpec.expectationList.filter((oneExpectation) => !oneExpectation.nodeCountByRole || !oneExpectation.edgeCountByType), liveByStandardName: {} });
+	const statlessRow = forgeCensusRowFor({ expectationList: forgeCensusSpec.expectationList.filter((oneExpectation) => !oneExpectation.nodeCountByRole || !oneExpectation.edgeCountByType), liveByStandardName: {}, structureCheckRowList: [] });
 	if (statlessRow.verdict === vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN) {
 		callback('', statlessRow);
 		return;
@@ -79,8 +93,14 @@ const runForgeCensusGate = ({ containerHandle, forgeCensusSpec } = {}, callback)
 	const liveByStandardName = {};
 	const censusNext = (expectationIndex) => {
 		if (expectationIndex >= forgeCensusSpec.expectationList.length) {
-			closeAll();
-			callback('', forgeCensusRowFor({ expectationList: forgeCensusSpec.expectationList, liveByStandardName }));
+			graphStructureCheck.runGraphStructureCheck({ session, checkNameList: STRUCTURE_CHECK_NAME_LIST, sourceCodeListCensusByStandard: {} }, (structureError, structureCheckRowList) => {
+				closeAll();
+				if (structureError) {
+					callback(`${moduleName}: the structure checks failed to run: ${structureError}`);
+					return;
+				}
+				callback('', forgeCensusRowFor({ expectationList: forgeCensusSpec.expectationList, liveByStandardName, structureCheckRowList }));
+			});
 			return;
 		}
 		const oneExpectation = forgeCensusSpec.expectationList[expectationIndex];
@@ -108,4 +128,4 @@ const runForgeCensusGate = ({ containerHandle, forgeCensusSpec } = {}, callback)
 	censusNext(0);
 };
 
-module.exports = { GATE_NAME, NODE_CENSUS_CYPHER, EDGE_CENSUS_CYPHER, OUTSIDE_THE_KIT_LABEL_LIST, forgeCensusRowFor, runForgeCensusGate, moduleName };
+module.exports = { GATE_NAME, STRUCTURE_CHECK_NAME_LIST, NODE_CENSUS_CYPHER, EDGE_CENSUS_CYPHER, OUTSIDE_THE_KIT_LABEL_LIST, forgeCensusRowFor, runForgeCensusGate, moduleName };

@@ -1,0 +1,14 @@
+{
+	"_note": "campaign P4a (PLAN G5, G6): the data the graph-structure check (graph-structure-check.js) reads. instanceOwnerEdgeTypeByLabelSuffix: the ONE edge that names an instance's group, by the suffix of the instance's own label (a DmeInstance whose label matches no suffix is refused by name, never guessed). codeListSourceCensusRuleByStandardFamily: where a forge keeps a FROZEN SOURCE census of its code lists (counted from the release files by a separate tool, not by the walk), and which of its fields count option sets and option values; a standard whose family has no rule is reported by name as not compared to a source census.",
+	"instanceOwnerEdgeTypeByLabelSuffix": {
+		"Field": "HAS_FIELD",
+		"Occurrence": "HAS_CHILD"
+	},
+	"codeListSourceCensusRuleByStandardFamily": {
+		"PESC": {
+			"censusFilePathTemplate": "forges/<standardKey>/lib/releaseCensus.json",
+			"optionSetCountFieldPathList": ["census.namedCodeListCount", "census.anonymousCodeListCount"],
+			"optionValueCountFieldPathList": ["census.codeCount"]
+		}
+	}
+}
