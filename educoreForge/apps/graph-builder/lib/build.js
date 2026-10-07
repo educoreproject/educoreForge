@@ -1495,6 +1495,9 @@ const build = (recipe, deps, callback) => {
 		// ⟪campaign P2, W-C-21⟫ one entry per forged standard: { standardName, nodeCountByRole, edgeCountByType }
 		const forgeCensusExpectationList = [];
 		const baseBlockByToken = {};
+		// ⟪campaign P3, W-C-7⟫ the stored refId of each standard's base block, from the add report (forged) or the store row
+		// (reused) — what a relationship block names in blocks.requires
+		const baseBlockRefIdByToken = {};
 		// The build's ONE embedding identity (all standards in a run share the run's embedder), captured
 		// in Phase A and reused for the Phase C relationship-block harvest header: a bridged node is an
 		// embedded base node, so its relationship block must declare the SAME embeddingDims/model as the
@@ -1621,7 +1624,12 @@ const build = (recipe, deps, callback) => {
 								// refused.
 								schemaBlock: { blockText: text, refId: found.refId },
 							},
-							(addError) => callback(addError ? `reuse add ${reuseSubject}: ${addError}` : '', !addError),
+							(addError) => {
+								if (!addError) {
+									baseBlockRefIdByToken[std.token] = found.refId;
+								}
+								callback(addError ? `reuse add ${reuseSubject}: ${addError}` : '', !addError);
+							},
 						);
 					});
 				},
@@ -1930,6 +1938,7 @@ const build = (recipe, deps, callback) => {
 						// nothing, and by row count the two are indistinguishable. Observability ONLY — this line
 						// changes no block text, no block id and no control flow. (versionFromStamp order, scope
 						// addition authorized by the design authority 2026-08-31.)
+						baseBlockRefIdByToken[std.token] = addReport.schemaBlockRefId;
 						xLog.status(
 							`  [A] forge ${baseSubject} -> standardBase ${addReport.schemaBlockRefId} ` +
 								`(alreadyPresent ${addReport.alreadyPresent === true ? 'true' : addReport.alreadyPresent === false ? 'false' : 'NOT REPORTED'})`,
@@ -2263,10 +2272,19 @@ const build = (recipe, deps, callback) => {
 									blockDone(`harvest relationships ${pairLabel}: ${relationshipArtifactRefusal}`);
 									return;
 								}
+								// ⟪campaign P3, W-C-7⟫ a relationship row names its primary (hub, pairA) version and the two base blocks
+								// it was built over; a base whose refId this build never recorded is refused by name, never guessed
+								const requiredBaseRefIdList = [baseBlockRefIdByToken[nameFirst], baseBlockRefIdByToken[nameSecond]];
+								if (requiredBaseRefIdList.some((oneRefId) => typeof oneRefId !== 'string')) {
+									blockDone(`add relationship ${pairLabel}: the base block of ${nameFirst} or ${nameSecond} has no recorded refId in this build (${JSON.stringify(baseBlockRefIdByToken)}); a relationship block cannot name the bases it requires`);
+									return;
+								}
 								manifest.add(
 									{
 										subject: oneSubject,
 										kind: 'relationship',
+										version: resolvedVersionByToken[nameFirst],
+										requires: requiredBaseRefIdList.slice().sort(),
 										description: `relationship schema block for ${oneSubject}, bridged by bridge '${bridgeName}' from recipe '${recipe.recipeName}'`,
 										schemaBlock,
 									},

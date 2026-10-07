@@ -272,6 +272,28 @@ const moduleFunction =
 				});
 
 				// HAS_BLOCK fan-out, ROOT ONLY.
+				// ⟪campaign P3, W-C-7⟫ a relationship member names its pair (parsed from its slugged subject), each side's PRETTY
+				// version (pairA: the row's own version column; pairB: the version column of pairB's base member in this same
+				// manifest) and the base blocks it requires. A member saved before P3 (dotted subject, no requires, NULL
+				// version) is carried with those fields null — finishing never refuses a historical manifest (TQ doctrine:
+				// validation is producer-time); r2ContractCheck reports them, and a P3 build must show none.
+				const baseVersionByStandardKey = (rootRow.members || []).reduce((soFar, oneMember) => {
+					const parsedSubject = vocabulary.parseBlockSubject(oneMember.subject);
+					return parsedSubject.kind === 'standardBase' ? { ...soFar, [parsedSubject.standardKey]: oneMember.version || null } : soFar;
+				}, {});
+				const relationshipFieldsOf = (oneMember) => {
+					const parsedSubject = vocabulary.parseBlockSubject(oneMember.subject);
+					if (parsedSubject.kind !== 'relationship') {
+						return {};
+					}
+					return {
+						requiresSchemaBlockRefIdList: Array.isArray(oneMember.requires) ? oneMember.requires.slice() : null,
+						pairA: parsedSubject.pairA,
+						pairAVersion: oneMember.version || null,
+						pairB: parsedSubject.pairB,
+						pairBVersion: baseVersionByStandardKey[parsedSubject.pairB] || null,
+					};
+				};
 				(rootRow.members || []).forEach((oneMember) => {
 					const stableId = `${blockPrefix}${oneMember.schemaBlockRefId}`;
 					const classified = classifyPurpose(oneMember.description);
@@ -293,6 +315,7 @@ const moduleFunction =
 							// ⟪campaign P2, W-C-10⟫ the recipe whose build added this block to THIS manifest (the membership row); null
 							// on a manifest saved before the column existed
 							producedByRecipeName: oneMember.producedByRecipeName || null,
+							...relationshipFieldsOf(oneMember),
 						},
 					});
 					edges.push({

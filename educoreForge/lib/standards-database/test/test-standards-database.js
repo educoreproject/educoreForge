@@ -98,6 +98,7 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 	harness.section('BLOCKS — content-addressed, deduping, taxonomy enforced');
 	// =====================================================================
 
+	// ⟪campaign P3, W-C-7⟫ every saveBlock below names a version: a blank one is now refused at the producer (gate below)
 	standardsDatabase.saveBlock({ text: BLOCK_TEXT, kind: 'standardBase', subject: 'lif@1_base', version: '1' }, (e1, first) => {
 		if (e1) {
 			harness.ok('a block saved', false, e1);
@@ -112,7 +113,7 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 			harness.equal('the SAME bytes are the SAME block', again.refId, first.refId);
 			harness.equal('  and the second write is a no-op, not a rewrite', again.alreadyPresent, true);
 
-			standardsDatabase.saveBlock({ text: OTHER_TEXT, kind: 'standardBase', subject: 'ceds@1_base' }, (e3, other) => {
+			standardsDatabase.saveBlock({ text: OTHER_TEXT, kind: 'standardBase', version: '1', subject: 'ceds@1_base' }, (e3, other) => {
 				harness.ok('different bytes get a different address', other.refId !== first.refId);
 
 				standardsDatabase.saveBlock({ text: 'x', kind: 'somethingInvented' }, (kindErr) => {
@@ -260,7 +261,7 @@ function headerKindGates(standardsDatabase) {
 	// stored under the other and the standardsDatabase would hold a row whose text contradicts its own column.
 	// The vocabulary split ('standard' vs 'standardBase') was the symptom; this is the defect.
 
-	standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'standardBase', subject: 'ceds@1:hub' }, (disagreeErr) => {
+	standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'standardBase', version: '1', subject: 'ceds@1:hub' }, (disagreeErr) => {
 		harness.match(
 			'RED PROOF: a header disagreeing with the kind it is stored under is REFUSED',
 			disagreeErr,
@@ -273,7 +274,7 @@ function headerKindGates(standardsDatabase) {
 			/kind 'standardBase'/,
 		);
 
-		standardsDatabase.saveBlock({ text: HEADERLESS_TEXT, kind: 'standardBase', subject: 'nothing@1' }, (headerlessErr) => {
+		standardsDatabase.saveBlock({ text: HEADERLESS_TEXT, kind: 'standardBase', version: '1', subject: 'nothing@1' }, (headerlessErr) => {
 			harness.match(
 				'text carrying no readable header is REFUSED',
 				headerlessErr,
@@ -285,14 +286,14 @@ function headerKindGates(standardsDatabase) {
 				/kind 'standardBase'/,
 			);
 
-			standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'hub', subject: 'ceds@1_hub' }, (agreeErr, hubBlock) => {
+			standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'hub', version: '1', subject: 'ceds@1_hub' }, (agreeErr, hubBlock) => {
 				harness.ok(
 					'a header AGREEING with its kind is admitted',
 					!agreeErr && !!hubBlock && !!hubBlock.refId,
 					agreeErr,
 				);
 
-				standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'somethingInvented', subject: 'x@1' }, (kindErr) => {
+				standardsDatabase.saveBlock({ text: HUB_TEXT, kind: 'somethingInvented', version: '1', subject: 'x@1' }, (kindErr) => {
 					harness.match(
 						'an unknown kind is STILL refused, header or no header',
 						kindErr,
@@ -318,7 +319,7 @@ function suffixKindGates(standardsDatabase) {
 	// by — and it was ADMITTED until this gate existed (proven: State-1 probe). Both the marker the
 	// name carries and the kind it is stored under are named, because either could be the mistake.
 	standardsDatabase.saveBlock(
-		{ text: BASE_TEXT_A, kind: 'standardBase', subject: 'ceds@current_hub' },
+		{ text: BASE_TEXT_A, kind: 'standardBase', version: '1', subject: 'ceds@current_hub' },
 		(disagreeErr) => {
 			harness.match(
 				'RED PROOF: a _hub-marked subject under kind standardBase is REFUSED',
@@ -329,7 +330,7 @@ function suffixKindGates(standardsDatabase) {
 			harness.match('  and the kind it is stored under', disagreeErr, /kind 'standardBase'/);
 
 			standardsDatabase.saveBlock(
-				{ text: BASE_TEXT_B, kind: 'standardBase', subject: 'ceds@current' },
+				{ text: BASE_TEXT_B, kind: 'standardBase', version: '1', subject: 'ceds@current' },
 				(absentErr) => {
 					harness.match(
 						'a subject carrying NO role marker under a kind that requires one is REFUSED',
@@ -346,7 +347,7 @@ function suffixKindGates(standardsDatabase) {
 					// POSITIVE CONTROL — a _base-marked name under kind standardBase is admitted, without
 					// which "refuse everything" would satisfy the two refusals above.
 					standardsDatabase.saveBlock(
-						{ text: BASE_TEXT_C, kind: 'standardBase', subject: 'ceds@current_base' },
+						{ text: BASE_TEXT_C, kind: 'standardBase', version: '1', subject: 'ceds@current_base' },
 						(agreeErr, agreed) => {
 							harness.ok(
 								'a _base-marked subject under kind standardBase is ADMITTED (positive control)',

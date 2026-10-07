@@ -425,6 +425,13 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			return;
 		}
 
+		// ⟪campaign P3, W-C-7⟫ every block names its PRIMARY standard's pretty version (base: the standard; relationship: the
+		// hub, pairA) — a NULL version column on 9 of 19 gold blocks was the defect; refused at the producer, by name
+		if (typeof version !== 'string' || version.trim() === '') {
+			callback(`standardsDatabase.saveBlock '${subject}': version ${JSON.stringify(version)} is blank — every block names its primary standard's version (a relationship block: its hub's)`);
+			return;
+		}
+
 		const refId = contentAddress.blockIdForText(text);
 
 		getRows(`SELECT refId FROM blocks WHERE refId=${esc(refId)};`, (err, rows) => {
@@ -658,7 +665,7 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			}
 			getRows(
 				`SELECT mb.schemaBlockRefId, mb.position, mb.description, mb.producedByRecipeName,
-				        b.kind, b.subject, b.version
+				        b.kind, b.subject, b.version, b.requires
 				 FROM manifestBlocks mb
 				 LEFT JOIN blocks b ON b.refId = mb.schemaBlockRefId
 				 WHERE mb.manifestRefId=${esc(refId)}
@@ -668,7 +675,9 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 						callback(memberErr);
 						return;
 					}
-					callback('', { ...manifestRow, members: memberRows || [] });
+					// requires is stored as JSON text (saveBlock escJson); a member reads back the parsed list, or null when the row
+					// has none (every block saved before campaign P3, W-C-7)
+					callback('', { ...manifestRow, members: (memberRows || []).map((oneRow) => ({ ...oneRow, requires: oneRow.requires == null ? null : JSON.parse(oneRow.requires) })) });
 				},
 			);
 		});

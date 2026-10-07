@@ -212,7 +212,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 	harness.section('ADD — every refusal, firing, naming what offended');
 
 	manifest.add(
-		{ subject: '', kind: 'standardBase', description: 'd', schemaBlock: LIF_BLOCK },
+		{ subject: '', version: '1.0', kind: 'standardBase', description: 'd', schemaBlock: LIF_BLOCK },
 		(blankSubjectErr) => {
 			harness.match(
 				'a blank subject is REFUSED',
@@ -223,6 +223,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 			manifest.add(
 				{
 					subject: 'lif@1.0_base',
+					version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 					kind: 'somethingInvented',
 					description: 'd',
 					schemaBlock: LIF_BLOCK,
@@ -238,6 +239,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 					manifest.add(
 						{
 							subject: 'lif@1.0_base',
+							version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 							kind: 'standardBase',
 							description: '   ',
 							schemaBlock: LIF_BLOCK,
@@ -257,6 +259,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 							manifest.add(
 								{
 									subject: 'lif@1.0_base',
+									version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 									kind: 'standardBase',
 									description: 'd',
 									schemaBlock: { blockId: 'whatever', blockText: '' },
@@ -272,6 +275,7 @@ function addRefusalGates(standardsDatabase, manifest) {
 									manifest.add(
 										{
 											subject: 'lif@1.0_base',
+											version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 											kind: 'standardBase',
 											description: 'd',
 											schemaBlock: {
@@ -321,6 +325,7 @@ function writeThroughGates(standardsDatabase, manifest) {
 	manifest.add(
 		{
 			subject: 'lif@1.0_base',
+			version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 			kind: 'standardBase',
 			description: 'LIF 1.0 — the standard\'s own nodes and internal edges',
 			schemaBlock: LIF_BLOCK,
@@ -354,6 +359,7 @@ function writeThroughGates(standardsDatabase, manifest) {
 				manifest.add(
 					{
 						subject: 'lif@1.0_base',
+						version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 						kind: 'standardBase',
 						description: 'a second try at the same subject',
 						schemaBlock: LIF_BLOCK,
@@ -374,6 +380,7 @@ function writeThroughGates(standardsDatabase, manifest) {
 						manifest.add(
 							{
 								subject: 'ceds@11_base',
+								version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 								kind: 'standardBase',
 								description: 'CEDS 11 — the standard base',
 								schemaBlock: CEDS_BLOCK,
@@ -387,6 +394,7 @@ function writeThroughGates(standardsDatabase, manifest) {
 								manifest.add(
 									{
 										subject: 'ceds@11_hub',
+										version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 										kind: 'hub',
 										description: 'CEDS 11 — the hub reference subgraph',
 										schemaBlock: HUB_BLOCK,
@@ -434,7 +442,7 @@ function membershipGates(standardsDatabase, manifest) {
 	// noticing, because identity IS membership. So members() hands back a copy of the records,
 	// not the records.
 	const addressBefore = manifest.refId();
-	members.push({ subject: 'smuggled@1', kind: 'hub', schemaBlockRefId: 'x', position: 99 });
+	members.push({ subject: 'smuggled@1', version: '1.0', kind: 'hub', schemaBlockRefId: 'x', position: 99 });
 	members[0].schemaBlockRefId = 'tampered';
 	members[0].position = 42;
 
@@ -542,6 +550,7 @@ function descriptionGates(standardsDatabase, composedAddress) {
 	twin.add(
 		{
 			subject: 'lif@1.0_base',
+			version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 			kind: 'standardBase',
 			description: 'described in wholly different words',
 			schemaBlock: LIF_BLOCK,
@@ -555,6 +564,7 @@ function descriptionGates(standardsDatabase, composedAddress) {
 			twin.add(
 				{
 					subject: 'ceds@11_base',
+					version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 					kind: 'standardBase',
 					description: 'and so is this one',
 					schemaBlock: CEDS_BLOCK,
@@ -568,6 +578,7 @@ function descriptionGates(standardsDatabase, composedAddress) {
 					twin.add(
 						{
 							subject: 'ceds@11_hub',
+							version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 							kind: 'hub',
 							description: 'and this one too',
 							schemaBlock: HUB_BLOCK,
@@ -672,6 +683,7 @@ function openGates(standardsDatabase, composedAddress) {
 					reopened.add(
 						{
 							subject: 'sneak@1',
+							version: '1.0', // ⟪P3, W-C-7⟫ every block names its version
 							kind: 'standardBase',
 							description: 'smuggled in after the fact',
 							schemaBlock: CEDS_BLOCK,

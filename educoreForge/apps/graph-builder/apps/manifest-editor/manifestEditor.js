@@ -214,7 +214,7 @@ function makeManifest({ name, description, recipeName, recipeHash, recipeFileNam
 
 	// -----
 	// add — validate, write the schema block THROUGH to the standardsDatabase, then record the membership.
-	const add = ({ subject, kind, version, description: memberDescription, schemaBlock }, callback) => {
+	const add = ({ subject, kind, version, requires, description: memberDescription, schemaBlock }, callback) => {
 		if (storedRefId) {
 			callback(
 				`manifestEditor.add '${subject}' to ${selfName()}: REFUSED — a manifest opened ` +
@@ -276,6 +276,29 @@ function makeManifest({ name, description, recipeName, recipeHash, recipeFileNam
 			return;
 		}
 
+		// ⟪campaign P3, W-C-7⟫ a RELATIONSHIP block names the two base blocks it was built over (requires: their refIds,
+		// sorted), and each must already be a member — a relationship whose bases are unknown has no provenance. Any other
+		// kind requires nothing and may not claim to.
+		const memberRefIdList = members.map((oneMember) => oneMember.schemaBlockRefId);
+		if (kind === 'relationship') {
+			const requiresFault = !Array.isArray(requires) || requires.length !== 2
+				? `requires must list the two base block refIds it was built over (got ${JSON.stringify(requires)})`
+				: requires.find((oneRefId) => typeof oneRefId !== 'string' || !/^[0-9a-f]{64}$/.test(oneRefId))
+					? `requires holds a value that is not a 64-hex block refId (${JSON.stringify(requires)})`
+					: requires.slice().sort().join(',') !== requires.join(',')
+						? `requires must be sorted (got ${JSON.stringify(requires)})`
+						: requires.find((oneRefId) => memberRefIdList.indexOf(oneRefId) === -1)
+							? `requires names ${requires.find((oneRefId) => memberRefIdList.indexOf(oneRefId) === -1)}, which is not a member of this manifest — a block may require only members already in it`
+							: '';
+			if (requiresFault) {
+				callback(`manifestEditor.add '${subject}' to ${selfName()}: ${requiresFault}`);
+				return;
+			}
+		} else if (requires !== undefined) {
+			callback(`manifestEditor.add '${subject}' to ${selfName()}: a ${kind} block requires nothing; only a relationship block names the bases it was built over (got ${JSON.stringify(requires)})`);
+			return;
+		}
+
 		const alreadyThere = members.filter((oneMember) => oneMember.subject === subject)[0];
 		if (alreadyThere) {
 			callback(
@@ -300,6 +323,7 @@ function makeManifest({ name, description, recipeName, recipeHash, recipeFileNam
 				kind,
 				subject,
 				version,
+				requires,
 				producedBy: recipeName
 					? `manifestEditor '${name}' (recipe ${recipeName})`
 					: `manifestEditor '${name}'`,
