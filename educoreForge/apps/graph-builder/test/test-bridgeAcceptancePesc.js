@@ -796,7 +796,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postCampaignP3PescCompose-100626, tag cut ON this commit. CENSUS at HEAD before the move (git diff --shortstat postCampaignP2PescComposeE-100626 over this gate's own
 // paths): 65 files changed, 2360 insertions(+), 282 deletions(-); 65 file(s) — the P3 entries W-B-1..14, W-C-1..17, ruling B (DEVLOG-P3). Path list
 // byte-identical; nothing excluded.
-const P1_BASELINE_COMMIT = 'postCampaignP3PescCompose-100626'; // re-anchored by CARDINAL_HORIZON, campaign P3 (BG-COMPOSE-PESC); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-07 (GOLDEN_ECHO; campaign P4b, BG-COMPOSE-PESC; pre-authorised by the P4 work order) ═══ postCampaignP3PescCompose-100626 ->
+// postCampaignP4bPescCompose-100726, tag cut ON this commit. CENSUS at HEAD before the move: 2 paths — apps/graph-builder/lib/build.js 4/7 (G17 comment) and
+// lib/bridge-framework/candidateRetrieval.js 1/1 (W-C-19: two literal NULs written as \u0000, the same string at run time). Path list
+// byte-identical; nothing excluded.
+const P1_BASELINE_COMMIT = 'postCampaignP4bPescCompose-100726'; // re-anchored by GOLDEN_ECHO, campaign P4b (BG-COMPOSE-PESC); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

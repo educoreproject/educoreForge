@@ -358,7 +358,10 @@ const POST_D1_BASE_TAG = 'postCampaignP3VocabularyIi-100626'; // re-anchored by 
 // postCampaignP3ForgeFrameworkIii-100626, tag cut ON this commit. CENSUS at HEAD before the move (git diff --shortstat postCampaignP2ForgeFrameworkIiiC-100626 over this gate's own
 // paths): 11 files changed, 162 insertions(+), 37 deletions(-); 11 file(s) — the P3 entries W-B-1..14, W-C-1..17, ruling B (DEVLOG-P3). Path list
 // byte-identical; nothing excluded.
-const PHASE0_ANCHOR_TAG = 'postCampaignP3ForgeFrameworkIii-100626'; // re-anchored by CARDINAL_HORIZON, campaign P3 ((iii)); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-07 (GOLDEN_ECHO; campaign P4b, (iii); pre-authorised by the P4 work order) ═══ postCampaignP3ForgeFrameworkIii-100626 ->
+// postCampaignP4bForgeFrameworkIii-100726, tag cut ON this commit. CENSUS at HEAD before the move: 2 files — lib/forge-framework/embedPass.js (W-C-19: the top-level mirror
+// removed) and test/test-gEmbed.js (its conjunct vectorRidesInPropertiesOnly). Path list byte-identical; nothing excluded.
+const PHASE0_ANCHOR_TAG = 'postCampaignP4bForgeFrameworkIii-100726'; // re-anchored by GOLDEN_ECHO, campaign P4b ((iii)); the tag is cut ON the re-anchor commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -757,7 +760,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postCampaignP3SeamDiffEmpty-100626, tag cut ON this commit. CENSUS at HEAD before the move (git diff --shortstat postCampaignP2SeamDiffEmptyE-100626 over this gate's own
 // paths): 35 files changed, 494 insertions(+), 144 deletions(-); 35 file(s) — the P3 entries W-B-1..14, W-C-1..17, ruling B (DEVLOG-P3). Path list
 // byte-identical; nothing excluded.
-const PHASE3_ANCHOR_TAG = 'postCampaignP3SeamDiffEmpty-100626'; // re-anchored by CARDINAL_HORIZON, campaign P3 (seamDiffEmpty); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-07 (GOLDEN_ECHO; campaign P4b, seamDiffEmpty; pre-authorised by the P4 work order) ═══ postCampaignP3SeamDiffEmpty-100626 ->
+// postCampaignP4bSeamDiffEmpty-100726, tag cut ON this commit. CENSUS at HEAD before the move: 8 files, 87+/23- — replayManager.js + test-replay-manager.js + x5LaunchProbe.js
+// (X5), build.js (G17), cedsForgeDeclaration.js and replay-engine.js (W-C-18), embedPass.js + test-gEmbed.js (W-C-19). Path list
+// byte-identical; nothing excluded.
+const PHASE3_ANCHOR_TAG = 'postCampaignP4bSeamDiffEmpty-100726'; // re-anchored by GOLDEN_ECHO, campaign P4b (seamDiffEmpty); the tag is cut ON the re-anchor commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

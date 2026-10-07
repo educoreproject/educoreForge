@@ -178,7 +178,10 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // postCampaignP3GSeamUntouched-100626, tag cut ON this commit. CENSUS at HEAD before the move (git diff --shortstat postCampaignP2GSeamUntouchedC-100626 over this gate's own
 // paths): 5 files changed, 173 insertions(+), 68 deletions(-); 5 file(s) — the P3 entries W-B-1..14, W-C-1..17, ruling B (DEVLOG-P3). Path list
 // byte-identical; nothing excluded.
-const PRE_MIGRATION_REF = 'postCampaignP3GSeamUntouched-100626'; // re-anchored by CARDINAL_HORIZON, campaign P3 (G-SEAM-UNTOUCHED); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-07 (GOLDEN_ECHO; campaign P4b, G-SEAM-UNTOUCHED; pre-authorised by the P4 work order) ═══ postCampaignP3GSeamUntouched-100626 ->
+// postCampaignP4bGSeamUntouched-100726, tag cut ON this commit. CENSUS at HEAD before the move: 3 files, 29+/16- — replayManager.js (X5 NEO4J_CONTAINER_SECURITY_ENV_LIST), build.js (G17 comment), replay-engine.js (W-C-18
+// comment). Path list byte-identical; nothing excluded.
+const PRE_MIGRATION_REF = 'postCampaignP4bGSeamUntouched-100726'; // re-anchored by GOLDEN_ECHO, campaign P4b (G-SEAM-UNTOUCHED); the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
