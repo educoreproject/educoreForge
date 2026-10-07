@@ -154,7 +154,11 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // postCampaignP3VocabularyIi-100626, tag cut ON this commit. CENSUS at HEAD before the move (git diff --shortstat postCampaignP2VocabularyIiC-100626 over this gate's own
 // paths): 8 files changed, 520 insertions(+), 48 deletions(-); 8 file(s) — the P3 entries W-B-1..14, W-C-1..17, ruling B (DEVLOG-P3). Path list
 // byte-identical; nothing excluded.
-const POST_D1_BASE_TAG = 'postCampaignP3VocabularyIi-100626'; // re-anchored by CARDINAL_HORIZON, campaign P3 ((ii)); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21 omission declaration; pre-authorised by WORKORDER-G21) ═══ (ii) postCampaignP3VocabularyIi-100626 ->
+// postCampaignG21VocabularyIi-100726, tag cut ON this commit. CENSUS at c049bc8 over this gate's own path: 2 files, both outside the
+// allowed list — graph-contract.js 3/0 (explicitOmissionDeclarationList in §1 and §4) and vocabulary-definitions.js 1/1 (the
+// BuildAttestation definition names it). Path list NOT widened.
+const POST_D1_BASE_TAG = 'postCampaignG21VocabularyIi-100726'; // re-anchored by BRONZE_SIGNAL, G21 ((ii)); the tag is cut ON the re-anchor commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -363,7 +367,11 @@ const POST_D1_BASE_TAG = 'postCampaignP3VocabularyIi-100626'; // re-anchored by 
 // removed) and test/test-gEmbed.js (its conjunct vectorRidesInPropertiesOnly). Path list byte-identical; nothing excluded.
 // RE-ANCHOR 2026-10-07 (GOLDEN_ECHO, campaign P4b, (iii), second; pre-authorised): postCampaignP4bForgeFrameworkIii-100726 -> postCampaignP4bForgeFrameworkIiiB-100726, tag ON this
 // commit. CENSUS: ONE file, lib/forge-framework/test/test-gSeam.js 4/2 — the fleet p4b-2 finding (its conjunct demanded the mirror W-C-19 removed).
-const PHASE0_ANCHOR_TAG = 'postCampaignP4bForgeFrameworkIiiB-100726'; // re-anchored by GOLDEN_ECHO, campaign P4b ((iii), second); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21 omission declaration; pre-authorised by WORKORDER-G21) ═══ (iii) postCampaignP4bForgeFrameworkIiiB-100726 ->
+// postCampaignG21ForgeFrameworkIii-100726, tag cut ON this commit. CENSUS at c049bc8 (lib/forge-framework/): 4 files —
+// roundTripHarness/verdictAssembler.js (the G21 verdict shape), roundTripHarness/roundTripHarness.js (omissionDeclaration),
+// roundTripHarness/test/test-gRt.js and test/fixtures/toyForge/lib/toyRoundTripPair.js (fixtures). Nothing excluded.
+const PHASE0_ANCHOR_TAG = 'postCampaignG21ForgeFrameworkIii-100726'; // re-anchored by BRONZE_SIGNAL, G21 ((iii)); the tag is cut ON the re-anchor commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -768,7 +776,10 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // byte-identical; nothing excluded.
 // RE-ANCHOR 2026-10-07 (GOLDEN_ECHO, campaign P4b, seamDiffEmpty, second; pre-authorised): postCampaignP4bSeamDiffEmpty-100726 -> postCampaignP4bSeamDiffEmptyB-100726, tag ON this
 // commit. CENSUS: ONE file, lib/forge-framework/test/test-gSeam.js 4/2 (the same finding).
-const PHASE3_ANCHOR_TAG = 'postCampaignP4bSeamDiffEmptyB-100726'; // re-anchored by GOLDEN_ECHO, campaign P4b (seamDiffEmpty, second); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21 omission declaration; pre-authorised by WORKORDER-G21) ═══ seamDiffEmpty postCampaignP4bSeamDiffEmptyB-100726 ->
+// postCampaignG21SeamDiffEmpty-100726, tag cut ON this commit. CENSUS at c049bc8: 6 files, 183+/30- — build.js 12 (roundTripRowFor
+// carries the declaration list), the three forge-framework sources and fixtures above, replay-manager's test-attestationContract.js 7.
+const PHASE3_ANCHOR_TAG = 'postCampaignG21SeamDiffEmpty-100726'; // re-anchored by BRONZE_SIGNAL, G21 (seamDiffEmpty); the tag is cut ON the re-anchor commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

@@ -181,7 +181,10 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // ═══ RE-ANCHOR, 2026-10-07 (GOLDEN_ECHO; campaign P4b, G-SEAM-UNTOUCHED; pre-authorised by the P4 work order) ═══ postCampaignP3GSeamUntouched-100626 ->
 // postCampaignP4bGSeamUntouched-100726, tag cut ON this commit. CENSUS at HEAD before the move: 3 files, 29+/16- — replayManager.js (X5 NEO4J_CONTAINER_SECURITY_ENV_LIST), build.js (G17 comment), replay-engine.js (W-C-18
 // comment). Path list byte-identical; nothing excluded.
-const PRE_MIGRATION_REF = 'postCampaignP4bGSeamUntouched-100726'; // re-anchored by GOLDEN_ECHO, campaign P4b (G-SEAM-UNTOUCHED); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21 omission declaration; pre-authorised by WORKORDER-G21) ═══ G-SEAM-UNTOUCHED postCampaignP4bGSeamUntouched-100726
+// -> postCampaignG21GSeamUntouched-100726, tag cut ON this commit. CENSUS at c049bc8 over the 7 seam files: 2 files, 17+/4- —
+// apps/graph-builder/lib/build.js 12 (roundTripRowFor) and apps/graph-builder/lib/round-trip-stage.js 9 (the summary row).
+const PRE_MIGRATION_REF = 'postCampaignG21GSeamUntouched-100726'; // re-anchored by BRONZE_SIGNAL, G21 (G-SEAM-UNTOUCHED); the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
