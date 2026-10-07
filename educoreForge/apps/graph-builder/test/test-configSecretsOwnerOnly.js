@@ -27,7 +27,10 @@ const path = require('path');
 // a key ENDING in a secret word, with a value; `apiKeyEnvironmentVariableName` names a variable, so it does not match
 const SECRET_ASSIGNMENT_PATTERN = /^[ \t]*[A-Za-z0-9_.]*(?:[Aa]pi[Kk]ey|[Pp]assword|[Ss]ecret|[Aa]pi[Tt]oken|[Bb]ot[Tt]oken)[ \t]*=[ \t]*[^\s;<]/m;
 const GROUP_OR_OTHER_PERMISSION_MASK = 0o077;
-const CONFIGS_ROOT_PATH = path.join(__dirname, '..', '..', '..', '..', '..', '..', 'configs');
+// test -> graph-builder -> apps -> educoreForge -> code root (system/code, or a codeWorktrees/<name> worktree), then the
+// sibling configs: system/configs from the main tree; from a worktree, codeWorktrees/configs, a symlink to ../configs.
+// (Six levels was right only inside a worktree, so the gate passed in builders' worktrees and failed on main.)
+const CONFIGS_ROOT_PATH = path.join(__dirname, '..', '..', '..', '..', '..', 'configs');
 
 const listIniFiles = (dirPath) => fs.readdirSync(dirPath, { withFileTypes: true }).reduce((soFar, oneEntry) => {
 	const entryPath = path.join(dirPath, oneEntry.name);
