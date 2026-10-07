@@ -800,7 +800,9 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postCampaignP4bPescCompose-100726, tag cut ON this commit. CENSUS at HEAD before the move: 2 paths — apps/graph-builder/lib/build.js 4/7 (G17 comment) and
 // lib/bridge-framework/candidateRetrieval.js 1/1 (W-C-19: two literal NULs written as \u0000, the same string at run time). Path list
 // byte-identical; nothing excluded.
-const P1_BASELINE_COMMIT = 'postCampaignP4bPescCompose-100726'; // re-anchored by GOLDEN_ECHO, campaign P4b (BG-COMPOSE-PESC); the tag is cut ON the re-anchor commit
+// RE-ANCHOR 2026-10-07 (GOLDEN_ECHO, campaign P4b, BG-COMPOSE-PESC, second; pre-authorised): postCampaignP4bPescCompose-100726 -> postCampaignP4bPescComposeB-100726, tag ON this
+// commit. CENSUS: ONE path, lib/bridge-framework/test/test-bgNosub.js (its own (iii) and seamDiffEmpty re-anchors). Bridge-framework SOURCE unchanged since the first.
+const P1_BASELINE_COMMIT = 'postCampaignP4bPescComposeB-100726'; // re-anchored by GOLDEN_ECHO, campaign P4b (BG-COMPOSE-PESC, second); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
