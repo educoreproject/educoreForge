@@ -371,7 +371,10 @@ const POST_D1_BASE_TAG = 'postCampaignG21VocabularyIi-100726'; // re-anchored by
 // postCampaignG21ForgeFrameworkIii-100726, tag cut ON this commit. CENSUS at c049bc8 (lib/forge-framework/): 4 files —
 // roundTripHarness/verdictAssembler.js (the G21 verdict shape), roundTripHarness/roundTripHarness.js (omissionDeclaration),
 // roundTripHarness/test/test-gRt.js and test/fixtures/toyForge/lib/toyRoundTripPair.js (fixtures). Nothing excluded.
-const PHASE0_ANCHOR_TAG = 'postCampaignG21ForgeFrameworkIii-100726'; // re-anchored by BRONZE_SIGNAL, G21 ((iii)); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21b comment text; pre-authorised) ═══ (iii) postCampaignG21ForgeFrameworkIii-100726 -> postCampaignG21bForgeFrameworkIii-100726,
+// tag ON this commit. CENSUS at cce29e1 (lib/forge-framework/): 3 files, 30+/3- — verdictAssembler.js (text-bearing kinds),
+// test-gRt.js and toyRoundTripPair.js (the two new declaration members). Nothing excluded.
+const PHASE0_ANCHOR_TAG = 'postCampaignG21bForgeFrameworkIii-100726'; // re-anchored by BRONZE_SIGNAL, G21b ((iii)); the tag is cut ON the re-anchor commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -779,7 +782,10 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21 omission declaration; pre-authorised by WORKORDER-G21) ═══ seamDiffEmpty postCampaignP4bSeamDiffEmptyB-100726 ->
 // postCampaignG21SeamDiffEmpty-100726, tag cut ON this commit. CENSUS at c049bc8: 6 files, 183+/30- — build.js 12 (roundTripRowFor
 // carries the declaration list), the three forge-framework sources and fixtures above, replay-manager's test-attestationContract.js 7.
-const PHASE3_ANCHOR_TAG = 'postCampaignG21SeamDiffEmpty-100726'; // re-anchored by BRONZE_SIGNAL, G21 (seamDiffEmpty); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21b comment text; pre-authorised) ═══ seamDiffEmpty postCampaignG21SeamDiffEmpty-100726 ->
+// postCampaignG21bSeamDiffEmpty-100726, tag ON this commit. CENSUS at cce29e1: the same three forge-framework files (this gate's
+// paths); build.js, forger/, replay/ and replay-manager/ untouched by G21b.
+const PHASE3_ANCHOR_TAG = 'postCampaignG21bSeamDiffEmpty-100726'; // re-anchored by BRONZE_SIGNAL, G21b (seamDiffEmpty); the tag is cut ON the re-anchor commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
