@@ -792,7 +792,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ONE path, lib/bridge-framework/test/test-bgNosub.js 7/2 (the (iii) and seamDiffEmpty re-anchors). Bridge-framework SOURCE untouched.
 // RE-ANCHOR 2026-10-06 (CARDINAL_RIVER, campaign P2, fifth; pre-authorised): -> postCampaignP2PescComposeE-100626. CENSUS: TWO paths —
 // lib/vocabulary/graph-contract.js 3/1 (6122536, old SIF label family) and lib/bridge-framework/test/test-bgNosub.js 7/2 (its re-anchors).
-const P1_BASELINE_COMMIT = 'postCampaignP2PescComposeE-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 (fifth); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-06 (CARDINAL_HORIZON; campaign P3, BG-COMPOSE-PESC; pre-authorised by the P3 work order) ═══ postCampaignP2PescComposeE-100626 ->
+// postCampaignP3PescCompose-100626, tag cut ON this commit. CENSUS at HEAD before the move (git diff --shortstat postCampaignP2PescComposeE-100626 over this gate's own
+// paths): 65 files changed, 2360 insertions(+), 282 deletions(-); 65 file(s) — the P3 entries W-B-1..14, W-C-1..17, ruling B (DEVLOG-P3). Path list
+// byte-identical; nothing excluded.
+const P1_BASELINE_COMMIT = 'postCampaignP3PescCompose-100626'; // re-anchored by CARDINAL_HORIZON, campaign P3 (BG-COMPOSE-PESC); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
