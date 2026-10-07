@@ -350,7 +350,11 @@ const POST_D1_BASE_TAG = 'postCampaignP2VocabularyIiC-100626'; // re-anchored 20
 // second re-anchor. lib/forge-framework SOURCE: unchanged since the first P2 anchor. Path unchanged, no exclusion. The FIFTEENTH anchor.
 // campaign P2 THIRD RE-ANCHOR of (iii) (CARDINAL_RIVER, 2026-10-06; pre-authorised): -> postCampaignP2ForgeFrameworkIiiC-100626, tag ON
 // this commit. CENSUS: ONE file, test/test-gSeamUntouched.js 4 — its own third re-anchor. Framework SOURCE unchanged. The SIXTEENTH anchor.
-const PHASE0_ANCHOR_TAG = 'postCampaignP2ForgeFrameworkIiiC-100626'; // re-anchored by CARDINAL_RIVER, campaign P2 (third) — the SIXTEENTH anchor
+// ═══ RE-ANCHOR, 2026-10-06 (CARDINAL_HORIZON; campaign P3, (iii); pre-authorised by the P3 work order) ═══ postCampaignP2ForgeFrameworkIiiC-100626 ->
+// postCampaignP3ForgeFrameworkIii-100626, tag cut ON this commit. CENSUS at HEAD before the move (git diff --shortstat postCampaignP2ForgeFrameworkIiiC-100626 over this gate's own
+// paths): 11 files changed, 162 insertions(+), 37 deletions(-); 11 file(s) — the P3 entries W-B-1..14, W-C-1..17, ruling B (DEVLOG-P3). Path list
+// byte-identical; nothing excluded.
+const PHASE0_ANCHOR_TAG = 'postCampaignP3ForgeFrameworkIii-100626'; // re-anchored by CARDINAL_HORIZON, campaign P3 ((iii)); the tag is cut ON the re-anchor commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
