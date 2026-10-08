@@ -130,7 +130,8 @@ harness.ok(
 // terminal materialize graph is the build's deliverable and stays up. A test must leave nothing behind.
 const materializeGraph = combinedOutput.match(/DEV_gb_materialize_\d+_\d+/);
 if (materializeGraph) {
-	spawnSync('docker', ['rm', '-f', materializeGraph[0]], { encoding: 'utf8' });
+	// -v: with its anonymous volumes (forgeClean CLEAN: plain rm -f orphaned neo4j data volumes)
+	spawnSync('docker', ['rm', '-f', '-v', materializeGraph[0]], { encoding: 'utf8' });
 }
 try {
 	fs.rmSync(scratchDir, { recursive: true, force: true });

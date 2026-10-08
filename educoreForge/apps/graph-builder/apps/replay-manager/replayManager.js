@@ -29,7 +29,8 @@
 // Provisioning mechanics (image, port-pair allocation, auth env, readiness = bolt TCP + an
 // authenticated cypher round-trip) are carried from the incumbent instance-lifecycle — MINUS
 // its forge-store credential registry and named volumes: a scratch graph's credential lives in
-// the returned handle and nowhere else, and its data dies with the container (`docker rm -f`).
+// the returned handle and nowhere else, and its data dies with the container (`docker rm -f -v`: the neo4j image declares
+// data volumes, so a plain `rm -f` left each one behind — 459 orphans, 408 GB, measured by REFORGE 2026-10-08).
 //
 // HARD SAFETY LINE (GNC-001): every container this module creates or deletes is DEV_*-named.
 // GOLD_* and gf_* are refused by name before any docker command runs.
@@ -516,9 +517,10 @@ const disposeScratchGraph = (
 		callback(refusal);
 		return;
 	}
-	runDockerCommand(['rm', '-f', graphName], (err, stdout, stderr) => {
+	// -v: the container AND its anonymous volumes (the image's declared data volume); our own DEV_* container only, by the guard above
+	runDockerCommand(['rm', '-f', '-v', graphName], (err, stdout, stderr) => {
 		if (err) {
-			callback(`docker rm -f '${graphName}' failed: ${err.message}${stderr ? `\n${stderr}` : ''}`);
+			callback(`docker rm -f -v '${graphName}' failed: ${err.message}${stderr ? `\n${stderr}` : ''}`);
 			return;
 		}
 		callback('');

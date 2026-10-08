@@ -739,7 +739,8 @@ harness.equal(
 harness.section('DISPOSE — the shared best-effort idiom, DEV_* only, proven with a docker SPY (no docker)');
 // =====================================================================
 // Item 4. disposeScratchGraph is the ONE dispose-then-report helper the three provisioning homes
-// share. Here it is proven directly: a DEV_* name is disposed (the spy sees `rm -f <name>`); a
+// share. Here it is proven directly: a DEV_* name is disposed (the spy sees `rm -f -v <name>`: ⟪forgeClean CLEAN, VIOLET_VALLEY
+// 2026-10-08⟫ WITH its anonymous volumes — REFORGE measured 459 orphan neo4j data volumes, 408 GB, left by scratch graphs); a
 // GOLD_*/gf_* name is REFUSED before any docker command (the spy is never called — no door from
 // this module opens onto a production graph); a failed rm is REPORTED, not swallowed.
 
@@ -762,9 +763,9 @@ disposeScratchGraph({ graphName: 'DEV_gb_forge_9', runDockerCommand: okDispose.r
 	harness.equal('a DEV_* graph is disposed cleanly', err, '');
 });
 harness.equal(
-	'  and the spy saw exactly `rm -f <name>`',
+	'  and the spy saw exactly `rm -f -v <name>` (the container AND its anonymous volumes)',
 	JSON.stringify(okDispose.calls),
-	JSON.stringify([['rm', '-f', 'DEV_gb_forge_9']]),
+	JSON.stringify([['rm', '-f', '-v', 'DEV_gb_forge_9']]),
 );
 
 const goldDispose = dockerSpy('ok');
@@ -788,7 +789,7 @@ disposeScratchGraph({ graphName: 'DEV_x', runDockerCommand: failDispose.run }, (
 	harness.match(
 		'a FAILED docker rm is REPORTED (the caller decides best-effort vs fatal), never swallowed',
 		err,
-		/docker rm -f 'DEV_x' failed[\s\S]*daemon unreachable/,
+		/docker rm -f -v 'DEV_x' failed[\s\S]*daemon unreachable/,
 	);
 });
 
@@ -836,7 +837,7 @@ rmUnderTest.create({ purpose: 'forge' }, (createErr, createHandle) => {
 	harness.match(
 		'    naming that exact DEV_* container',
 		(rmCalls[0] || []).join(' '),
-		/rm -f DEV_gb_forge_/,
+		/rm -f -v DEV_gb_forge_/,
 	);
 
 	// ⟪campaign P4b, X5 (ruled B, VIOLET_VALLEY 2026-10-07)⟫ the launched container carries the declared security env:

@@ -18,8 +18,11 @@
 //   (e) ⟪ONYX_SUMMIT's measurement, 13:21: a container on a just-freed port died 1 s after start, exit 64, and readiness polled
 //       the dead port for the whole timeout⟫ a container that dies while readiness polls fails create AT ONCE, naming its exit
 //       code, cancels the readiness poll, and is disposed (pure: an injected docker that reports exit 64)
+//   (f) ⟪VIOLET_VALLEY 2026-10-08: REFORGE measured 459 orphan neo4j data volumes, 408 GB⟫ LIVE: create then delete a scratch
+//       graph, and every volume the container mounted is GONE (its own volumes, named from docker inspect, so another
+//       lane's volumes cannot confuse the count)
 // RED TWINS: (a) checkAccepted (the check passes anything); (b) lockNotExclusive (mkdir's refusal ignored); (c)
-// staleNeverBroken; (e) livenessUnwatched (create waits on readiness alone); (d) withoutPortLock — the two children run with the lock replaced by one always granted (the code
+// staleNeverBroken; (f) volumesKept (dispose back to a plain rm -f; the twin removes the volume it leaked); (e) livenessUnwatched (create waits on readiness alone); (d) withoutPortLock — the two children run with the lock replaced by one always granted (the code
 // before the fix): they choose the same pair, and they do not both succeed on distinct ports.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -131,9 +134,33 @@ const conjunctJudgeByRefId = {
 		manager.create({ purpose: 'deadContainer' }, (createErr) => {
 			setTimeout(() => {
 				const elapsedMs = Date.now() - startedAt;
-				const removed = dockerCallList.some((oneCall) => /^rm -f DEV_gb_deadContainer_/.test(oneCall));
+				const removed = dockerCallList.some((oneCall) => /^rm -f -v DEV_gb_deadContainer_/.test(oneCall));
 				judge({ pass: /its own container stopped while neo4j was starting \(running 'false', exit code 64\)/.test(createErr) && /was disposed/.test(createErr) && elapsedMs < 15000 && readinessCancelled && removed, detail: `after ${elapsedMs} ms: ${createErr}; readiness cancelled ${readinessCancelled}; disposed ${removed}` });
 			}, 500);
+		});
+	},
+	f_destroyRemovesItsVolumes: (mutationList, done) => {
+		const manager = managerModuleFor(mutationList)();
+		manager.create({ purpose: 'volumeCheck' }, (createErr, handle) => {
+			if (createErr) {
+				done({ pass: false, detail: `create failed: ${createErr}` });
+				return;
+			}
+			execFile('docker', ['inspect', '-f', '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}} {{end}}{{end}}', handle.graphName], { encoding: 'utf8' }, (inspectErr, mountText) => {
+				const volumeNameList = String(mountText || '').trim().split(/\s+/).filter(Boolean);
+				manager.delete(handle, (deleteErr) => {
+					execFile('docker', ['volume', 'ls', '-q'], { encoding: 'utf8' }, (listErr, volumeListText) => {
+						const remainingVolumeNameList = volumeNameList.filter((volumeName) => String(volumeListText).split('\n').indexOf(volumeName) !== -1);
+						const report = { pass: !inspectErr && !deleteErr && volumeNameList.length > 0 && remainingVolumeNameList.length === 0, detail: `mounted ${volumeNameList.length} volume(s); left after delete ${remainingVolumeNameList.length}${remainingVolumeNameList.length ? ` (${remainingVolumeNameList.join(', ')})` : ''}${deleteErr ? `; delete error ${deleteErr}` : ''}` };
+						// a twin's leaked volume is removed here, by name, so the red observation leaves nothing behind
+						if (remainingVolumeNameList.length === 0) {
+							done(report);
+							return;
+						}
+						execFile('docker', ['volume', 'rm', ...remainingVolumeNameList], { encoding: 'utf8' }, () => done(report));
+					});
+				});
+			});
 		});
 	},
 	d_twoProcessesTwoPorts: (mutationList, done) => {
@@ -166,6 +193,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'b_lockIsExclusive', twinName: 'lockNotExclusive', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: "			if (!mkdirErr) {", replace: "			if (!mkdirErr || mkdirErr.code === 'EEXIST') {" }] },
 	{ conjunctRefId: 'c_staleLockBroken', twinName: 'staleNeverBroken', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: '				if (Date.now() - lockStat.mtimeMs > PORT_ALLOCATION_LOCK_STALE_MS) {', replace: '				if (false) {' }] },
 	{ conjunctRefId: 'e_deadContainerRefusedAtOnce', twinName: 'livenessUnwatched', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: '			const livenessWatch = watchContainerLiveness({ runDockerCommand, graphName }, settleReadiness);', replace: '			const livenessWatch = { stop: () => {} };' }] },
+	{ conjunctRefId: 'f_destroyRemovesItsVolumes', twinName: 'volumesKept', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: "	runDockerCommand(['rm', '-f', '-v', graphName], (err, stdout, stderr) => {", replace: "	runDockerCommand(['rm', '-f', graphName], (err, stdout, stderr) => {" }] },
 	{ conjunctRefId: 'd_twoProcessesTwoPorts', twinName: 'withoutPortLock', mutationList: [{ childWithoutPortLock: true }] },
 ];
 
