@@ -528,14 +528,44 @@ const disposeScratchGraph = (
 // -----
 // defaultWaitForReadiness — bolt TCP open, then an authenticated cypher round-trip. Injectable so a
 // create-failure test can force a readiness timeout without a real container.
-const defaultWaitForReadiness = ({ boltPort, boltUrl, password, deadline, readyTimeoutMs }, callback) => {
+// isCancelled (optional): create's liveness watch cancels a readiness poll whose container died, so a poller left running
+// cannot knock on the NEXT container published on the same port with this one's credential
+const defaultWaitForReadiness = ({ boltPort, boltUrl, password, deadline, readyTimeoutMs, isCancelled = () => false }, callback) => {
 	waitForBoltPort(boltPort, deadline, readyTimeoutMs, (portErr) => {
 		if (portErr) {
 			callback(portErr);
 			return;
 		}
-		waitForAuthenticatedCypher(boltUrl, password, deadline, readyTimeoutMs, callback);
-	});
+		waitForAuthenticatedCypher(boltUrl, password, deadline, readyTimeoutMs, callback, isCancelled);
+	}, isCancelled);
+};
+
+// watchContainerLiveness — ⟪forgeClean CLEAN; ONYX_SUMMIT's measurement 2026-10-08 13:21⟫ a scratch container on a port freed
+// seconds before started and DIED one second later (exit code 64), and readiness polled the dead port for the whole timeout.
+// While readiness polls, this asks docker every CONTAINER_LIVENESS_POLL_MS whether OUR container still runs; the first answer
+// that it does not refuses at once, by name, with its exit code. stop() ends the watch.
+const CONTAINER_LIVENESS_POLL_MS = 3000;
+const watchContainerLiveness = ({ runDockerCommand, graphName }, onDead) => {
+	let watchStopped = false;
+	const checkOnce = () => {
+		if (watchStopped) {
+			return;
+		}
+		runDockerCommand(['inspect', '-f', '{{.State.Running}} {{.State.ExitCode}}', graphName], (inspectErr, stdout) => {
+			if (watchStopped) {
+				return;
+			}
+			const [runningText, exitCodeText] = String(stdout || '').trim().split(' ');
+			if (inspectErr || runningText !== 'true') {
+				watchStopped = true;
+				onDead(`its own container stopped while neo4j was starting (running '${runningText || 'unknown'}', exit code ${exitCodeText || 'unknown'}${inspectErr ? `; ${inspectErr.message}` : ''}); refused at once rather than polling a dead port`);
+				return;
+			}
+			setTimeout(checkOnce, CONTAINER_LIVENESS_POLL_MS);
+		});
+	};
+	setTimeout(checkOnce, CONTAINER_LIVENESS_POLL_MS);
+	return { stop: () => { watchStopped = true; } };
 };
 
 // -----
@@ -670,14 +700,18 @@ const findAvailablePortPair = ({ portSearchStart, portSearchSpan }, callback) =>
 // -----
 // readiness: bolt TCP open, then an authenticated cypher round-trip (a container accepts TCP
 // well before auth works; only the cypher proves it).
-const waitForBoltPort = (boltPort, deadline, readyTimeoutMs, callback) => {
+const waitForBoltPort = (boltPort, deadline, readyTimeoutMs, callback, isCancelled = () => false) => {
+	if (isCancelled()) {
+		callback(`readiness polling of bolt port ${boltPort} was cancelled`);
+		return;
+	}
 	if (Date.now() > deadline) {
 		callback(`bolt port ${boltPort} did not open within ${readyTimeoutMs / 1000}s`);
 		return;
 	}
 	const socket = new net.Socket();
 	const retry = () =>
-		setTimeout(() => waitForBoltPort(boltPort, deadline, readyTimeoutMs, callback), 1000);
+		setTimeout(() => waitForBoltPort(boltPort, deadline, readyTimeoutMs, callback, isCancelled), 1000);
 	socket.once('connect', () => {
 		socket.destroy();
 		callback('');
@@ -689,7 +723,7 @@ const waitForBoltPort = (boltPort, deadline, readyTimeoutMs, callback) => {
 	socket.connect(boltPort, 'localhost');
 };
 
-const waitForAuthenticatedCypher = (boltUrl, password, deadline, readyTimeoutMs, callback) => {
+const waitForAuthenticatedCypher = (boltUrl, password, deadline, readyTimeoutMs, callback, isCancelled = () => false) => {
 	const neo4j = require('neo4j-driver');
 	// LATENT BUG FIXED 2026-07-22: the success path used to invoke callback INSIDE the promise
 	// chain, so any exception thrown DOWNSTREAM of the callback — anywhere in the caller's entire
@@ -701,6 +735,11 @@ const waitForAuthenticatedCypher = (boltUrl, password, deadline, readyTimeoutMs,
 	let settled = false;
 	const attempt = () => {
 		if (settled) {
+			return;
+		}
+		if (isCancelled()) {
+			settled = true;
+			callback(`readiness polling of ${boltUrl} was cancelled`);
 			return;
 		}
 		if (Date.now() > deadline) {
@@ -842,9 +881,20 @@ const moduleFunction =
 		taskList.push((args, next) => {
 			const deadline = Date.now() + settings.readyTimeoutMs;
 			const boltUrl = `bolt://localhost:${args.boltPort}`;
+			// readiness and the liveness watch race; the first to finish decides, and the other is stopped (one next, ever)
+			let readinessSettled = false;
+			const settleReadiness = (readyErr) => {
+				if (readinessSettled) {
+					return;
+				}
+				readinessSettled = true;
+				livenessWatch.stop();
+				next(readyErr, { ...args, boltUrl });
+			};
+			const livenessWatch = watchContainerLiveness({ runDockerCommand, graphName }, settleReadiness);
 			waitForReadiness(
-				{ boltPort: args.boltPort, boltUrl, password, deadline, readyTimeoutMs: settings.readyTimeoutMs },
-				(readyErr) => next(readyErr, { ...args, boltUrl }),
+				{ boltPort: args.boltPort, boltUrl, password, deadline, readyTimeoutMs: settings.readyTimeoutMs, isCancelled: () => readinessSettled },
+				settleReadiness,
 			);
 		});
 
@@ -1456,6 +1506,7 @@ module.exports.disposeScratchGraph = disposeScratchGraph;
 module.exports.acquirePortAllocationLock = acquirePortAllocationLock;
 module.exports.releasePortAllocationLock = releasePortAllocationLock;
 module.exports.verifyOwnContainerPublished = verifyOwnContainerPublished;
+module.exports.watchContainerLiveness = watchContainerLiveness;
 module.exports.findAvailablePortPair = findAvailablePortPair;
 module.exports.PORT_ALLOCATION_LOCK_DIR_PATH = PORT_ALLOCATION_LOCK_DIR_PATH;
 module.exports.engineVersionsFor = engineVersionsFor;

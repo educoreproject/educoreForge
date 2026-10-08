@@ -15,8 +15,11 @@
 //   (c) a lock older than the stale age is broken and granted (pure: a back-dated scratch lock)
 //   (d) LIVE: two provisions in two PROCESSES, each pausing between its port search and its docker run, BOTH succeed, on
 //       DISTINCT bolt ports (Docker; run with no other build active — another lane's provisions would share the ports)
+//   (e) ⟪ONYX_SUMMIT's measurement, 13:21: a container on a just-freed port died 1 s after start, exit 64, and readiness polled
+//       the dead port for the whole timeout⟫ a container that dies while readiness polls fails create AT ONCE, naming its exit
+//       code, cancels the readiness poll, and is disposed (pure: an injected docker that reports exit 64)
 // RED TWINS: (a) checkAccepted (the check passes anything); (b) lockNotExclusive (mkdir's refusal ignored); (c)
-// staleNeverBroken; (d) withoutPortLock — the two children run with the lock replaced by one always granted (the code
+// staleNeverBroken; (e) livenessUnwatched (create waits on readiness alone); (d) withoutPortLock — the two children run with the lock replaced by one always granted (the code
 // before the fix): they choose the same pair, and they do not both succeed on distinct ports.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -98,6 +101,41 @@ const conjunctJudgeByRefId = {
 			releasePortAllocationLock({ lockDirPath }, () => done({ pass: acquireErr === '' && new RegExp(`^pid ${process.pid} at `).test(ownerText), detail: `acquire '${acquireErr}'; owner now '${ownerText}'` }));
 		});
 	},
+	e_deadContainerRefusedAtOnce: (mutationList, done) => {
+		const managerModule = managerModuleFor(mutationList);
+		const dockerCallList = [];
+		let readinessCancelled = false;
+		const manager = managerModule({
+			portAllocationLockDirPath: scratchLockDirPath(),
+			findAvailablePortPair: (settings, callback) => callback('', { boltPort: 17901, httpPort: 17902 }),
+			runDockerCommand: (dockerArgs, callback) => {
+				dockerCallList.push(dockerArgs.join(' '));
+				const answerText = dockerArgs[0] === 'run' ? 'containerId\n' : dockerArgs[0] === 'inspect' ? (dockerArgs[2].indexOf('NetworkSettings') !== -1 ? 'true 17901\n' : 'false 64\n') : '';
+				callback(null, answerText, '');
+			},
+			// a readiness that never succeeds: it returns only when create cancels it
+			waitForReadiness: (readySpec, callback) => {
+				const pollCancel = () => (readySpec.isCancelled() ? ((readinessCancelled = true), callback('cancelled')) : setTimeout(pollCancel, 200));
+				pollCancel();
+			},
+		});
+		const startedAt = Date.now();
+		let judged = false;
+		const judge = (verdict) => {
+			if (!judged) {
+				judged = true;
+				done(verdict);
+			}
+		};
+		setTimeout(() => judge({ pass: false, detail: 'create did not refuse within 15 s: a dead container was polled as if it might still come up' }), 15000);
+		manager.create({ purpose: 'deadContainer' }, (createErr) => {
+			setTimeout(() => {
+				const elapsedMs = Date.now() - startedAt;
+				const removed = dockerCallList.some((oneCall) => /^rm -f DEV_gb_deadContainer_/.test(oneCall));
+				judge({ pass: /its own container stopped while neo4j was starting \(running 'false', exit code 64\)/.test(createErr) && /was disposed/.test(createErr) && elapsedMs < 15000 && readinessCancelled && removed, detail: `after ${elapsedMs} ms: ${createErr}; readiness cancelled ${readinessCancelled}; disposed ${removed}` });
+			}, 500);
+		});
+	},
 	d_twoProcessesTwoPorts: (mutationList, done) => {
 		const withoutPortLock = mutationList.some((oneMutation) => oneMutation.childWithoutPortLock === true);
 		const resultList = [];
@@ -127,6 +165,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'a_postRunCheckIsOurs', twinName: 'checkAccepted', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: "		if (err || observedText !== `true ${boltPort}`) {", replace: '		if (false) {' }] },
 	{ conjunctRefId: 'b_lockIsExclusive', twinName: 'lockNotExclusive', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: "			if (!mkdirErr) {", replace: "			if (!mkdirErr || mkdirErr.code === 'EEXIST') {" }] },
 	{ conjunctRefId: 'c_staleLockBroken', twinName: 'staleNeverBroken', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: '				if (Date.now() - lockStat.mtimeMs > PORT_ALLOCATION_LOCK_STALE_MS) {', replace: '				if (false) {' }] },
+	{ conjunctRefId: 'e_deadContainerRefusedAtOnce', twinName: 'livenessUnwatched', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: '			const livenessWatch = watchContainerLiveness({ runDockerCommand, graphName }, settleReadiness);', replace: '			const livenessWatch = { stop: () => {} };' }] },
 	{ conjunctRefId: 'd_twoProcessesTwoPorts', twinName: 'withoutPortLock', mutationList: [{ childWithoutPortLock: true }] },
 ];
 
