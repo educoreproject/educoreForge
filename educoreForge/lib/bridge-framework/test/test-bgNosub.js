@@ -377,7 +377,10 @@ const POST_D1_BASE_TAG = 'postForgeCleanReforgeVocabularyIi-100826'; // re-ancho
 // ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21b comment text; pre-authorised) ═══ (iii) postCampaignG21ForgeFrameworkIii-100726 -> postCampaignG21bForgeFrameworkIii-100726,
 // tag ON this commit. CENSUS at cce29e1 (lib/forge-framework/): 3 files, 30+/3- — verdictAssembler.js (text-bearing kinds),
 // test-gRt.js and toyRoundTripPair.js (the two new declaration members). Nothing excluded.
-const PHASE0_ANCHOR_TAG = 'postCampaignG21bForgeFrameworkIii-100726'; // re-anchored by BRONZE_SIGNAL, G21b ((iii)); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (ONYX_SUMMIT; forgeClean lane REFORGE; pre-authorised) ═══ (iii) postCampaignG21bForgeFrameworkIii-100726 ->
+// postForgeCleanReforgeForgeFrameworkIii-100826, tag cut ON this commit. CENSUS at 39669479: ONE file, lib/forge-framework/test/test-gSeamUntouched.js
+// 4/1 (REFORGE's own G-SEAM-UNTOUCHED re-anchor comment and tag constant). No forge-framework source touched.
+const PHASE0_ANCHOR_TAG = 'postForgeCleanReforgeForgeFrameworkIii-100826'; // re-anchored by ONYX_SUMMIT, forgeClean REFORGE ((iii)); the tag is cut ON the re-anchor commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
