@@ -792,7 +792,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21b comment text; pre-authorised) ═══ seamDiffEmpty postCampaignG21SeamDiffEmpty-100726 ->
 // postCampaignG21bSeamDiffEmpty-100726, tag ON this commit. CENSUS at cce29e1: the same three forge-framework files (this gate's
 // paths); build.js, forger/, replay/ and replay-manager/ untouched by G21b.
-const PHASE3_ANCHOR_TAG = 'postCampaignG21bSeamDiffEmpty-100726'; // re-anchored by BRONZE_SIGNAL, G21b (seamDiffEmpty); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN; pre-authorised) ═══ seamDiffEmpty (and its (i-live) companion, which reads the
+// same tag) postCampaignG21bSeamDiffEmpty-100726 -> postForgeCleanSeamDiffEmpty-100826, tag ON this commit. CENSUS at 12babd9 over this gate's paths:
+// 6 files, 595+/28- — replay-manager/replayManager.js 261 (port lock, post-run and liveness checks, rm -f -v, scratch registry, exit watchdog,
+// retain), its test/test-provisionPortRace.js 270 + testSupport/provisionPortRaceChild.js 53 (new) + test/test-replay-manager.js 14,
+// lib/build.js 9 (the deliverable retained), forger/test/integration-forge.js 16 (-keepGraph retains). (i-live): replayManager's shape gained
+// retain, declared in interfaces.js. Path list byte-identical; nothing excluded.
+const PHASE3_ANCHOR_TAG = 'postForgeCleanSeamDiffEmpty-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN (seamDiffEmpty); the tag is cut ON the re-anchor commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
