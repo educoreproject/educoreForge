@@ -158,7 +158,11 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // postCampaignG21VocabularyIi-100726, tag cut ON this commit. CENSUS at c049bc8 over this gate's own path: 2 files, both outside the
 // allowed list — graph-contract.js 3/0 (explicitOmissionDeclarationList in §1 and §4) and vocabulary-definitions.js 1/1 (the
 // BuildAttestation definition names it). Path list NOT widened.
-const POST_D1_BASE_TAG = 'postCampaignG21VocabularyIi-100726'; // re-anchored by BRONZE_SIGNAL, G21 ((ii)); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN, G19; pre-authorised by WORKORDER-CLEAN) ═══ (ii) postCampaignG21VocabularyIi-100726 ->
+// postForgeCleanVocabularyIi-100826, tag cut ON this commit. CENSUS at a094ec4 (lib/vocabulary/): 3 files, 9+/2- — vocabulary.js 3
+// (EDGE_TYPES.HAS_DEFINITION), vocabulary-definitions.js 3/1 (its definition; REFERENCES_TYPE widened to anonymous types) and
+// test/test-sifEdgeVocabulary.js 3/1 (the SchemaView ledger +1). Allowed-path list NOT widened; nothing excluded.
+const POST_D1_BASE_TAG = 'postForgeCleanVocabularyIi-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN ((ii)); the tag is cut ON the re-anchor commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
