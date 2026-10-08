@@ -65,6 +65,8 @@ const sssomExporterLib = require('./sssomExporter');
 const boundedRunnerLib = require('./boundedRunner');
 const conflictDetectorLib = require('./conflictDetector');
 const graphSeamRulesLib = require('./graphSeamRules');
+// the ONE definition of a loaded-conservation summary (graphWriter.close builds its summary with it too)
+const replayEngineLib = require(path.join(__dirname, '..', 'replay', 'replay-engine'))();
 // (phase B6) the relationship types a block's harvest selects: exactly the writer's admitted set, sorted for a stable report
 const HARVEST_EDGE_TYPE_LIST = Object.freeze(Object.keys(graphSeamRulesLib.PREDICATE_BY_EDGE_TYPE).sort());
 const promptIdentifierScanLib = require('./promptIdentifierScan');
@@ -523,7 +525,9 @@ const moduleFunction =
 					if (!stored || stored.frozenText === null || stored.frozenText === undefined) {
 						const note = `no frozen decision block for ${pairKey}; zero edges; nothing judged`;
 						say(note);
-						callback('', runReportFor({ decisionBlockHash: null, blocksDecisionBlock: null, edgesWritten: 0, counts: null, sssomExportPath: null, note }));
+						// ⟪lane REFORGE, forgeClean R3⟫ nothing was written, and the summary SAYS so: the harvest compares the pair-scoped
+						// selection against the empty set (an invented edge still refuses) instead of refusing an absent expectation
+						callback('', runReportFor({ decisionBlockHash: null, blocksDecisionBlock: null, edgesWritten: 0, counts: null, sssomExportPath: null, note, loadedConservationSummary: replayEngineLib.conservationSummaryFor({ nodes: [], edges: [] }) }));
 						return;
 					}
 					const parsed = decisionBlockLib.parseFrozenText(stored.frozenText);

@@ -9,7 +9,8 @@
 //   (c) A' === A: two re-judges under digest freeze the SAME block id; with a REAL-client double on a warm cache A'
 //   === A with liveJudgmentCount 0; (d) a card deleted after freezing → materialise REFUSES naming it; a subject absent
 //   → sourceGap, no edge; (e) no block → edgesWritten 0, decisionBlock null, producer authored, the note says so
-//   (BG-MODES also holds it); (f) a drifted document / hubVersion / declaration → refused "re-judge required".
+//   (BG-MODES also holds it); (e2) and carries the EMPTY loaded-conservation summary (lane REFORGE: a plain build on fresh
+//   stores was refused at the relationship harvest without it); (f) a drifted document / hubVersion / declaration → refused "re-judge required".
 //   BG-CACHE (a) an identical rendered question is served from the cache across two judgings (spy count); (b) a hit
 //   whose chosenStableId is not in the CURRENT rendered list is REFUSED; (c) a DEBUG run leaves the row count UNCHANGED
 //   and writes NO row; (d) putJudgment failure is FATAL; (e) the report carries liveJudgmentCount / cacheHitCount and the
@@ -241,6 +242,20 @@ replayConjunctList.push(
 	}),
 );
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-REPLAY', conjunctId: 'e_noBlockSaysSoAloud', twinName: 'silentZeroNote', fileName: FRAMEWORK_FILE, find: "\t\t\t\t\t\tconst note = `no frozen decision block for ${pairKey}; zero edges; nothing judged`;", replace: "\t\t\t\t\t\tconst note = '';" });
+// ⟪lane REFORGE, forgeClean R3, 2026-10-08⟫ (e2) the no-block report carries the EMPTY loaded-conservation summary: a plain build
+// on fresh stores (no frozen block for any pair) was REFUSED at the relationship harvest ("the spec carries no
+// conservationExpectation"), because this branch returned no summary at all. Nothing was written, and the summary says so.
+const isEmptyConservationSummary = (summary) => !!summary && summary.nodeTotal === 0 && summary.edgeTotal === 0 && summary.nodeIdentitySet instanceof Set && summary.nodeIdentitySet.size === 0 && summary.edgeIdentitySet instanceof Set && summary.edgeIdentitySet.size === 0;
+replayConjunctList.push(
+	runConjunct({
+		conjunctId: 'e2_noBlockCarriesEmptyConservation',
+		title: 'a pairing with NO block → the run report (and each block entry) carries the EMPTY loaded-conservation summary, so the harvest compares against nothing-written instead of refusing an absent expectation',
+		twinNameList: ['noBlockSummaryDropped'],
+		shape: (scenario) => { scenario.spec.rebridge = false; },
+		judge: succeeded((runReport) => ({ pass: isEmptyConservationSummary(runReport.loadedConservationSummary) && Array.isArray(runReport.blocks) && runReport.blocks.length > 0 && runReport.blocks.every((oneBlock) => isEmptyConservationSummary(oneBlock.loadedConservationSummary)), detail: `report summary ${runReport.loadedConservationSummary === undefined ? 'ABSENT' : JSON.stringify({ nodeTotal: runReport.loadedConservationSummary.nodeTotal, edgeTotal: runReport.loadedConservationSummary.edgeTotal })}; block entries ${(runReport.blocks || []).length}` })),
+	}),
+);
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-REPLAY', conjunctId: 'e2_noBlockCarriesEmptyConservation', twinName: 'noBlockSummaryDropped', fileName: FRAMEWORK_FILE, find: "sssomExportPath: null, note, loadedConservationSummary: replayEngineLib.conservationSummaryFor({ nodes: [], edges: [] }) }));", replace: "sssomExportPath: null, note }));" });
 // (f) drift → re-judge required: three faults, one twin (a framework double that skips the re-verify)
 [
 	{ conjunctId: 'f_documentDriftRefused', title: 'a document byte changed after freezing (scratch copy) → the plain materialise is refused "re-judge required"', drift: (second) => {
@@ -906,6 +921,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 9 + 8 + 20 + 3 + 4, expectedTwinCount: 9 + 8 + 20 + 3 + 4 }, // BG-CACHE 7 → 8: (g) W-B-7, 2026-10-06
+	{ harness, familyName: 'BG-REPLAY+BG-CACHE+BG-JUDGE+BG-POOL-ORDER+BG-DET', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 10 + 8 + 20 + 3 + 4, expectedTwinCount: 10 + 8 + 20 + 3 + 4 }, // BG-CACHE 7 → 8: (g) W-B-7, 2026-10-06; BG-REPLAY 9 → 10: (e2) lane REFORGE, 2026-10-08
 	() => harness.report(),
 );
