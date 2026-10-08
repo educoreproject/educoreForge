@@ -16,7 +16,7 @@
 //       type changes is reported as an edge
 //   (h) the comparison is a MULTISET: two identical nodes against one is a difference
 //   (i) an empty comparison list FAILS, never passes
-//   (j) -compareStores end to end: identical stores pass; a changed block text and an unregistered table are named; a
+//   (j) -compareStores end to end: a LIST of stores compares every pair; a store holding NO table is refused; identical stores pass; a changed block text and an unregistered table are named; a
 //       block whose refId is not sha256(text) fails the content-address row
 // RED TWINS (in memory, a double of lib/reforge-compare.js): wrongLabelExcluded -> (d); listSortedAway -> (c);
 // integerReadAsFloat -> (f); patternAdmitted -> (e); emptyListPasses -> (i); endpointByHashAlways -> (g);
@@ -146,6 +146,12 @@ const conjunctJudgeByRefId = {
 		makeStore(pathOf('d.sqlite3'), { blockText: 'block one', extraTable: 'mysteryTable' });
 		makeStore(pathOf('e.sqlite3'), { blockText: 'block one', forgedRefId: 'f'.repeat(64) });
 		const storeArgumentsFor = (fileNameB, reportName) => ['-compareStores', `--storeFilePathListA=${pathOf('a.sqlite3')}`, `--storeFilePathListB=${pathOf(fileNameB)}`, `--reportFilePath=${pathOf(reportName)}`];
+		// a LIST of stores: every pair is compared (the parser splits a comma list into values; reading only the first value
+		// once compared the first store and silently skipped the rest)
+		const listArgumentList = ['-compareStores', `--storeFilePathListA=${pathOf('a.sqlite3')},${pathOf('b.sqlite3')}`, `--storeFilePathListB=${pathOf('b.sqlite3')},${pathOf('c.sqlite3')}`, `--reportFilePath=${pathOf('list.json')}`];
+		new (require('better-sqlite3'))(pathOf('empty.sqlite3')).close();
+		runTool(storeArgumentsFor('empty.sqlite3', 'empty.json'), (emptyRun) =>
+		runTool(listArgumentList, (listRun) =>
 		runTool(storeArgumentsFor('b.sqlite3', 'same.json'), (sameRun) =>
 			runTool(storeArgumentsFor('c.sqlite3', 'changed.json'), (changedRun) =>
 				runTool(storeArgumentsFor('d.sqlite3', 'mystery.json'), (mysteryRun) =>
@@ -158,13 +164,18 @@ const conjunctJudgeByRefId = {
 							mysteryRun.exitCode === 1 &&
 							/table\(s\) mysteryTable with no rule in reforgeStoreTableRules\.json/.test(mysteryRun.outputText) &&
 							addressRun.exitCode === 1 &&
-							/B blocks refId f{64} is not sha256\(text\)/.test(addressRun.outputText);
+							/B blocks refId f{64} is not sha256\(text\)/.test(addressRun.outputText) &&
+							listRun.exitCode === 1 &&
+							/IDENTICAL a\.sqlite3 ↔ b\.sqlite3 table blocks/.test(listRun.outputText) &&
+							/DIFFERENT b\.sqlite3 ↔ c\.sqlite3 table blocks/.test(listRun.outputText) &&
+							emptyRun.exitCode === 1 &&
+							/empty\.sqlite3 holds NO table/.test(emptyRun.outputText);
 						fs.rmSync(workDirPath, { recursive: true, force: true });
-						done({ pass, detail: `same exit ${sameRun.exitCode}; changed exit ${changedRun.exitCode}; mystery exit ${mysteryRun.exitCode}; address exit ${addressRun.exitCode}${pass ? '' : `\n${[sameRun, changedRun, mysteryRun, addressRun].map((oneRun) => oneRun.outputText.slice(0, 600)).join('\n---\n')}`}` });
+						done({ pass, detail: `empty exit ${emptyRun.exitCode}; list exit ${listRun.exitCode}; same exit ${sameRun.exitCode}; changed exit ${changedRun.exitCode}; mystery exit ${mysteryRun.exitCode}; address exit ${addressRun.exitCode}${pass ? '' : `\n${[listRun, sameRun, changedRun, mysteryRun, addressRun].map((oneRun) => oneRun.outputText.slice(0, 600)).join('\n---\n')}`}` });
 					}),
 				),
 			),
-		);
+		)));
 	},
 };
 const TWIN_LIST = [

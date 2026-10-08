@@ -94,9 +94,13 @@ const flagValueOf = (flagName) => {
 	const flagValue = commandLineParameters.values[flagName];
 	return Array.isArray(flagValue) ? flagValue[0] : flagValue;
 };
+// a LIST flag: qtools-parse-command-line already splits a comma list into the values array, so EVERY element is read (and
+// each split again, for a caller who hands one joined string through the JSON envelope). Reading only the first element
+// compared the first store of a list and silently skipped the rest.
 const listFlagValueOf = (flagName) => {
-	const flagValue = flagValueOf(flagName);
-	return typeof flagValue === 'string' && flagValue !== '' ? flagValue.split(',') : [];
+	const flagValue = commandLineParameters.values[flagName];
+	const elementList = Array.isArray(flagValue) ? flagValue : flagValue === undefined ? [] : [flagValue];
+	return elementList.reduce((soFar, oneElement) => soFar.concat(`${oneElement}`.split(',')), []).filter((oneFilePath) => oneFilePath !== '');
 };
 
 // readJsonFile — the one sanctioned try/catch shape: a synchronous parse converted to an error value
@@ -341,6 +345,10 @@ const openReadOnly = (filePath) => {
 // storeRecordListFor — every row of every table in one store, as records; refused when a table has no rule
 const storeRecordListFor = ({ database, filePath, tableRuleByName, volatileFieldList }) => {
 	const tableNameList = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map((oneRow) => oneRow.name);
+	// a store with no table is not an empty comparison, it is no comparison (an unreadable WAL, the wrong file): refused
+	if (tableNameList.length === 0) {
+		return { error: `${moduleName}: REFUSED: ${filePath} holds NO table — there is nothing to compare, and comparing nothing must not read as identical` };
+	}
 	const unregisteredList = tableNameList.filter((oneName) => !tableRuleByName[oneName]);
 	if (unregisteredList.length) {
 		return { error: `${moduleName}: REFUSED: ${filePath} holds table(s) ${unregisteredList.join(', ')} with no rule in reforgeStoreTableRules.json — a table nobody registered is a table nobody compared` };
