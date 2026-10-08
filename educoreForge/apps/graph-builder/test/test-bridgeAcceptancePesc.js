@@ -816,7 +816,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postForgeCleanPescComposeB-100826, tag ON this commit. CENSUS at d0dce87 over this gate's paths: 3 files — lib/vocabulary/graph-contract.js 3/0,
 // lib/vocabulary/test/test-sifEdgeVocabulary.js 3/2, lib/bridge-framework/test/test-bgNosub.js 4/1 (its (ii) re-anchor, whose comment says
 // graph-contract.js 4/0: the measured figure is 3/0). Bridge-framework SOURCE unchanged. Path list byte-identical; nothing excluded.
-const P1_BASELINE_COMMIT = 'postForgeCleanPescComposeB-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN (BG-COMPOSE-PESC, second); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN, the scratch-lifecycle rulings; pre-authorised) ═══ BG-COMPOSE-PESC
+// postForgeCleanPescComposeB-100826 -> postForgeCleanPescComposeC-100826, tag ON this commit. CENSUS at c707945 over this gate's paths: 3 files —
+// apps/graph-builder/interfaces.js 6/0 (the retain verb declared), apps/graph-builder/lib/build.js 8/1 (the deliverable retained),
+// lib/bridge-framework/test/test-bgNosub.js 7/1 (its seamDiffEmpty re-anchor). Bridge-framework SOURCE unchanged. Path list byte-identical.
+const P1_BASELINE_COMMIT = 'postForgeCleanPescComposeC-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN (BG-COMPOSE-PESC, third); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
