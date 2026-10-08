@@ -265,7 +265,11 @@ const unreachedStableIdListByStandardFor = ({ session, rowListByName }, callback
 				callback(cypherError);
 				return;
 			}
-			unreachedStableIdListByStandard[shortStandardNameList[standardIndex]] = rowList.length === 1 ? unreachedStableIdListFor(rowList[0]) : [];
+			if (rowList.length !== 1) {
+				callback(`${moduleName}: the orphan read for ${shortStandardNameList[standardIndex]} returned ${rowList.length} root row(s), not 1; its orphans are not named by guess`);
+				return;
+			}
+			unreachedStableIdListByStandard[shortStandardNameList[standardIndex]] = unreachedStableIdListFor(rowList[0]);
 			nextStandard(standardIndex + 1);
 		});
 	};

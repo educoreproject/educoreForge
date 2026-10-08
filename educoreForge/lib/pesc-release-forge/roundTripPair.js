@@ -336,14 +336,14 @@ const regenerateXsdTextByFileName = ({ nodes, edges, labelPrefix }) => {
 		const attributeText = (attributePairList) => attributePairList.filter((onePair) => onePair[1] !== undefined && onePair[1] !== null).map((onePair) => ` ${onePair[0]}="${xmlEscapedAttributeValue(onePair[1])}"`).join('');
 		const annotationText = (documentationList) => (documentationList.length === 0 ? '' : `<xs:annotation>${documentationList.map((oneText) => `<xs:documentation>${xmlEscapedText(oneText)}</xs:documentation>`).join('')}</xs:annotation>`);
 		// a comment's text is written verbatim: the source parsed, so it holds no '--'
-		const commentText = (textList) => textList.map((oneText) => `<!--${oneText}-->`).join('');
+		const commentMarkupOf = (textList) => textList.map((oneText) => `<!--${oneText}-->`).join('');
 
 		const compositorText = ({ shape, ownerStableId }) => {
 			const particleText = shape.particles
 				.map((oneParticle) => {
 					if (oneParticle.element !== undefined) {
 						const elementNode = childrenOfKind(ownerStableId, 'Element').find((oneNode) => oneNode.properties.sequencePosition === oneParticle.element);
-						return elementNode === undefined ? fault(`${ownerStableId}: no element at sequencePosition ${oneParticle.element}`) : `${commentText(widenedList(elementNode.properties.precedingCommentList))}${declarationText({ declarationNode: elementNode, tag: 'element' })}`;
+						return elementNode === undefined ? fault(`${ownerStableId}: no element at sequencePosition ${oneParticle.element}`) : `${commentMarkupOf(widenedList(elementNode.properties.precedingCommentList))}${declarationText({ declarationNode: elementNode, tag: 'element' })}`;
 					}
 					if (oneParticle.groupRef !== undefined) {
 						const localName = localNameOf(oneParticle.groupRef);
@@ -454,12 +454,12 @@ const regenerateXsdTextByFileName = ({ nodes, edges, labelPrefix }) => {
 		if (strangePlacementComment !== undefined) {
 			fault(`${schemaFileNode.stableId}: fileCommentList entry ${JSON.stringify(strangePlacementComment)} has no place: placement is one of ${Object.values(COMMENT_PLACEMENT).join(', ')}, and a '${COMMENT_PLACEMENT.SCHEMA}' comment names a schema child index from 0 to ${placedList.length}`);
 		}
-		const schemaChildText = placedList.map((onePlaced, placedIndex) => `${commentText(commentTextListOf(COMMENT_PLACEMENT.SCHEMA, placedIndex))}${onePlaced.placedText}\n`).join('');
+		const schemaChildText = placedList.map((onePlaced, placedIndex) => `${commentMarkupOf(commentTextListOf(COMMENT_PLACEMENT.SCHEMA, placedIndex))}${onePlaced.placedText}\n`).join('');
 
 		const namespaceDeclarationText = Object.keys(prefixByNamespace).map((oneNamespace) => ` xmlns:${prefixByNamespace[oneNamespace]}="${xmlEscapedAttributeValue(oneNamespace)}"`).join('');
 		const writtenSchemaAttributeNameOf = (oneName) => (NAMESPACED_ATTRIBUTE_NAME_RE.test(oneName) ? `${prefixByNamespace[NAMESPACED_ATTRIBUTE_NAME_RE.exec(oneName)[1]]}:${NAMESPACED_ATTRIBUTE_NAME_RE.exec(oneName)[2]}` : oneName);
 		const schemaAttributeText = attributeText(Object.keys(schemaAttributeByName).map((oneName) => [writtenSchemaAttributeNameOf(oneName), schemaAttributeByName[oneName]]));
-		fileTextByName[fileName] = `<?xml version="1.0" encoding="UTF-8"?>\n${commentText(commentTextListOf(COMMENT_PLACEMENT.PROLOG))}<xs:schema${namespaceDeclarationText}${schemaAttributeText}>\n${schemaChildText}${commentText(commentTextListOf(COMMENT_PLACEMENT.SCHEMA, placedList.length))}</xs:schema>\n${commentText(commentTextListOf(COMMENT_PLACEMENT.EPILOG))}`;
+		fileTextByName[fileName] = `<?xml version="1.0" encoding="UTF-8"?>\n${commentMarkupOf(commentTextListOf(COMMENT_PLACEMENT.PROLOG))}<xs:schema${namespaceDeclarationText}${schemaAttributeText}>\n${schemaChildText}${commentMarkupOf(commentTextListOf(COMMENT_PLACEMENT.SCHEMA, placedList.length))}</xs:schema>\n${commentMarkupOf(commentTextListOf(COMMENT_PLACEMENT.EPILOG))}`;
 	});
 
 	if (faultText !== null) {
