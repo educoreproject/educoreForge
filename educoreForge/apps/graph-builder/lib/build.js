@@ -560,6 +560,10 @@ const frameworkFingerprintListFor = ({ decisionStore, pairKeyList }, callback) =
 // in-graph certificate declares the omissions instead of counting them bare. A ran standard without one is UNMEASURED.
 const ROUND_TRIP_TOTAL_FIELD_LIST = Object.freeze(['lostTotal', 'inventedTotal', 'explicitlyOmittedTotal']);
 const hasDeclarationText = (oneRow) => typeof oneRow.explicitOmissionDeclarationText === 'string' && oneRow.explicitOmissionDeclarationText.trim() !== '';
+// ⟪lane REFORGE, forgeClean R3, 2026-10-08⟫ the summary is named RELATIVE to the build's run directory. This row carries
+// :ForgedNode and so sits inside the determinism fingerprint (build-attestation-finisher S2); the absolute path carried the run
+// directory's name, which carries the build's start time, and was the one channel-A difference between two from-scratch builds.
+const ROUND_TRIP_SUMMARY_RELATIVE_PATH = `${require('./round-trip-stage').STAGE_SUBDIR_NAME}/${require('./round-trip-stage').STAGE_SUMMARY_FILE_NAME}`;
 const roundTripRowFor = (roundTripStageReport) => {
 	if (roundTripStageReport && roundTripStageReport.stageRan === false) {
 		return { gate: 'roundTrip', verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN, detail: `${roundTripStageReport.disposition || 'the runner reported no disposition'}` };
@@ -591,7 +595,7 @@ const roundTripRowFor = (roundTripStageReport) => {
 			`${ranRowList.length} standard(s) ran: clean ${cleanCount}/${ranRowList.length}, lost ${lostTotal}, invented ${inventedTotal}, ` +
 			`explicitly omitted ${explicitlyOmittedTotal}, declared per standard: ${explicitOmissionDeclarationList.join(' | ') || 'none'}` +
 			`${unmeasuredTokenList.length ? `; UNMEASURED (ran, reported no totals or no omission declaration): ${unmeasuredTokenList.join(', ')}` : ''}` +
-			`${failedTokenList.length ? `; FAILED: ${failedTokenList.join(', ')}` : ''}${ranRowList.length === 0 ? '; no standard ran, so nothing was certified' : ''}; summary ${roundTripStageReport.summaryFilePath}`,
+			`${failedTokenList.length ? `; FAILED: ${failedTokenList.join(', ')}` : ''}${ranRowList.length === 0 ? '; no standard ran, so nothing was certified' : ''}; summary ${ROUND_TRIP_SUMMARY_RELATIVE_PATH} in the build's run directory`,
 		roundTripClean: ranRowList.length > 0 && failedTokenList.length === 0,
 		inventedTotal,
 		lostTotal,
