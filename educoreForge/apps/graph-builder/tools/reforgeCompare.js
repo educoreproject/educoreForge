@@ -31,6 +31,7 @@ SYNOPSIS
      ${moduleName} -compareStores --storeFilePathListA=<a1,a2,...> --storeFilePathListB=<b1,b2,...> --reportFilePath=<out.json>
                                   [--detailLimit=<N>]
      ${moduleName} -summarize     --reforgeRunRefId=<name> --reportFilePathList=<r1,r2,...> --summaryFilePath=<out.json>
+                                  --buildTreePath=<the git tree the compared builds ran from>
      ${moduleName} -help
 
 DESCRIPTION
@@ -54,7 +55,7 @@ DESCRIPTION
      with no rule is REFUSED by name, never skipped: a table nobody registered is a table nobody compared.
 
      -summarize reads the named comparison reports and writes the evidence file for the reforgeDeterminism attestation:
-     the run's name, the code head the tool runs on (and whether its tree is clean), every report's path, sha256, kinds
+     the run's name, the code head of --buildTreePath, the tree the compared BUILDS ran from (and whether it was clean), every report's path, sha256, kinds
      and verdict, the manifest ids the compared stores composed, and one overall verdict (pass only when every report
      passed). graphBuilder -stampPromotion --reforgeEvidencePath=<it> records it in the graph.
 
@@ -76,7 +77,7 @@ EXAMPLES
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const { execFileSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 const TREE_ROOT = path.join(__dirname, '..', '..', '..');
 require(path.join(TREE_ROOT, 'test', 'testLib', 'testAppStartup'))({ moduleName, helpText });
@@ -142,10 +143,17 @@ const writeReport = ({ reportFilePath, report }) => {
 	xLog.result(`${moduleName}: wrote ${reportFilePath}\n`);
 };
 
-// codeHeadOf — the commit this tool runs on and whether its tree is clean; the attestation cites both
-const codeHeadOf = () => {
-	const runGit = (gitArgumentList) => execFileSync('git', ['-C', TREE_ROOT].concat(gitArgumentList), { encoding: 'utf8' }).trim();
-	return { codeHead: runGit(['rev-parse', 'HEAD']), dirtyPathCount: runGit(['status', '--porcelain']).split('\n').filter((oneLine) => oneLine.trim() !== '').length };
+// codeHeadOf — the commit of the tree the compared BUILDS ran from, and whether it was clean; the attestation cites both.
+// Named by --buildTreePath, never inferred from where this tool happens to run (a pinned run worktree and a dev worktree
+// can be at different commits, and only the build's head is the claim).
+const codeHeadOf = (buildTreePath) => {
+	const runGit = (gitArgumentList) => spawnSync('git', ['-C', buildTreePath].concat(gitArgumentList), { encoding: 'utf8' });
+	const headRun = runGit(['rev-parse', 'HEAD']);
+	const statusRun = runGit(['status', '--porcelain']);
+	if (headRun.status !== 0 || statusRun.status !== 0) {
+		return { error: `${moduleName}: REFUSED: --buildTreePath=${buildTreePath} is not inside a git tree (${`${headRun.stderr || statusRun.stderr}`.trim()}): the head of the builds cannot be read` };
+	}
+	return { codeHead: headRun.stdout.trim(), dirtyPathCount: statusRun.stdout.split('\n').filter((oneLine) => oneLine.trim() !== '').length };
 };
 
 // ===== -fingerprint =====================================================================================================
@@ -444,9 +452,14 @@ const compareStoresAction = (callback) => {
 
 // ===== -summarize =======================================================================================================
 const summarizeAction = (callback) => {
-	const refusal = requireFlags(['reforgeRunRefId', 'reportFilePathList', 'summaryFilePath']);
+	const refusal = requireFlags(['reforgeRunRefId', 'reportFilePathList', 'summaryFilePath', 'buildTreePath']);
 	if (refusal) {
 		callback(refusal);
+		return;
+	}
+	const buildHead = codeHeadOf(flagValueOf('buildTreePath'));
+	if (buildHead.error) {
+		callback(buildHead.error);
 		return;
 	}
 	const reportFilePathList = listFlagValueOf('reportFilePathList');
@@ -466,10 +479,11 @@ const summarizeAction = (callback) => {
 	}));
 	const manifestRefIdList = Array.from(new Set(readList.reduce((soFar, oneRead) => soFar.concat(oneRead.parsed.manifestRefIdListA || [], oneRead.parsed.manifestRefIdListB || []), []))).sort();
 	const failedList = reportRowList.filter((oneRow) => oneRow.verdict !== 'pass');
-	const { codeHead, dirtyPathCount } = codeHeadOf();
+	const { codeHead, dirtyPathCount } = buildHead;
 	const summary = {
 		summaryFormat: reforgeCompareLib.REFORGE_EVIDENCE_FORMAT,
 		reforgeRunRefId: flagValueOf('reforgeRunRefId'),
+		buildTreePath: flagValueOf('buildTreePath'),
 		codeHead,
 		dirtyPathCount,
 		verdict: failedList.length === 0 && reportRowList.length > 0 ? 'pass' : 'fail',

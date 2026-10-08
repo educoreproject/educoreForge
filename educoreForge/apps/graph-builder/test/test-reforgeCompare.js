@@ -18,6 +18,7 @@
 //   (i) an empty comparison list FAILS, never passes
 //   (k) -compareGraphs end to end over two RAW record files: a timestamp leak is named by node and property, edges stay
 //       identical, and equal files pass
+//   (l) -summarize records the BUILD tree's head (required, named), passes only when every report passed
 //   (j) -compareStores end to end: a LIST of stores compares every pair; a store holding NO table is refused; identical stores pass; a changed block text and an unregistered table are named; a
 //       block whose refId is not sha256(text) fails the content-address row
 // RED TWINS (in memory, a double of lib/reforge-compare.js): wrongLabelExcluded -> (d); listSortedAway -> (c);
@@ -196,16 +197,49 @@ const conjunctJudgeByRefId = {
 			fs.writeFileSync(path.join(workDirPath, fileName), rawNodeRecordList.concat([rawEdgeRecord, summary]).map((oneRecord) => JSON.stringify(oneRecord)).join('\n') + '\n');
 			return path.join(workDirPath, fileName);
 		};
-		const filePathA = writeRecordFile('a.jsonl', withProperty(2, 'builtAt', '2026-10-08T14:00:00Z'));
-		const filePathB = writeRecordFile('b.jsonl', withProperty(2, 'builtAt', '2026-10-08T14:31:07Z'));
-		const filePathC = writeRecordFile('c.jsonl', withProperty(2, 'builtAt', '2026-10-08T14:00:00Z'));
+		// the leak sits on a CONTENT node: GraphProvenance.builtAt is a declared volatile row (the passport's clock), and the
+		// shipped list must not hide a clock anywhere else
+		const filePathA = writeRecordFile('a.jsonl', withProperty(0, 'builtAt', '2026-10-08T14:00:00Z'));
+		const filePathB = writeRecordFile('b.jsonl', withProperty(0, 'builtAt', '2026-10-08T14:31:07Z'));
+		const filePathC = writeRecordFile('c.jsonl', withProperty(0, 'builtAt', '2026-10-08T14:00:00Z'));
 		const graphArgumentsFor = (filePathB2, reportName) => ['-compareGraphs', `--fingerprintFilePathA=${filePathA}`, `--fingerprintFilePathB=${filePathB2}`, `--reportFilePath=${path.join(workDirPath, reportName)}`];
 		runTool(graphArgumentsFor(filePathB, 'leak.json'), (leakRun) =>
 			runTool(graphArgumentsFor(filePathC, 'same.json'), (sameRun) => {
-				const pass = leakRun.exitCode === 1 && /changed GraphMeta:GraphProvenance\|graphProvenance: builtAt /.test(leakRun.outputText) && /IDENTICAL graph edges/.test(leakRun.outputText) && sameRun.exitCode === 0 && /PASS — 2 comparison\(s\) identical/.test(sameRun.outputText);
+				const pass = leakRun.exitCode === 1 && /changed DmeClass:ForgedNode\|toy:Person: builtAt /.test(leakRun.outputText) && /IDENTICAL graph edges/.test(leakRun.outputText) && sameRun.exitCode === 0 && /PASS — 2 comparison\(s\) identical/.test(sameRun.outputText);
 				fs.rmSync(workDirPath, { recursive: true, force: true });
 				done({ pass, detail: `leak exit ${leakRun.exitCode}; same exit ${sameRun.exitCode}${pass ? '' : `\n${leakRun.outputText.slice(0, 500)}\n---\n${sameRun.outputText.slice(0, 300)}`}` });
 			}),
+		);
+	},
+	l_summarizeNamesTheBuildHead: (mutationList, done) => {
+		if (mutationList.length) {
+			done({ pass: true, detail: 'not a twin target (the tool loads the real lib)' });
+			return;
+		}
+		const lib = libFor([]);
+		// -summarize: the head it records is the BUILD tree's (named, required), the verdict is pass only when every report
+		// passed, and the manifests the compared stores composed ride along
+		const workDirPath = fs.mkdtempSync(path.join(os.tmpdir(), 'reforgeSummary-'));
+		const reportPathFor = (fileName, verdict, extra) => {
+			fs.writeFileSync(path.join(workDirPath, fileName), JSON.stringify({ reportKind: 'compareStores', verdict: { verdict, detail: `${verdict} detail` }, comparisonList: [], manifestRefIdListA: ['d'.repeat(64)], manifestRefIdListB: ['d'.repeat(64)], ...extra }));
+			return path.join(workDirPath, fileName);
+		};
+		const passPath = reportPathFor('pass.json', 'pass');
+		const failPath = reportPathFor('fail.json', 'fail');
+		const buildTreePath = path.join(__dirname, '..', '..', '..');
+		const summaryArgumentsFor = (reportList, summaryName, withTree) => ['-summarize', '--reforgeRunRefId=toyRun', `--reportFilePathList=${reportList.join(',')}`, `--summaryFilePath=${path.join(workDirPath, summaryName)}`].concat(withTree ? [`--buildTreePath=${buildTreePath}`] : []);
+		const expectedHead = require('child_process').execFileSync('git', ['-C', buildTreePath, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+		runTool(summaryArgumentsFor([passPath, passPath], 'passSummary.json', true), (passRun) =>
+			runTool(summaryArgumentsFor([passPath, failPath], 'failSummary.json', true), (failRun) =>
+				runTool(summaryArgumentsFor([passPath], 'noTree.json', false), (noTreeRun) => {
+					const passSummary = passRun.exitCode === 0 ? JSON.parse(fs.readFileSync(path.join(workDirPath, 'passSummary.json'), 'utf8')) : {};
+					const pass = passRun.exitCode === 0 && passSummary.verdict === 'pass' && passSummary.codeHead === expectedHead && passSummary.summaryFormat === lib.REFORGE_EVIDENCE_FORMAT && passSummary.manifestRefIdList.join() === 'd'.repeat(64) &&
+						failRun.exitCode === 1 && /DIFFERENT: fail\.json/.test(failRun.outputText) &&
+						noTreeRun.exitCode === 1 && /--buildTreePath REQUIRED/.test(noTreeRun.outputText);
+					fs.rmSync(workDirPath, { recursive: true, force: true });
+					done({ pass, detail: `pass exit ${passRun.exitCode} head ${String(passSummary.codeHead).slice(0, 12)}; fail exit ${failRun.exitCode}; no tree exit ${noTreeRun.exitCode}${pass ? '' : `\n${passRun.outputText.slice(0, 300)}\n${noTreeRun.outputText.slice(0, 300)}`}` });
+				}),
+			),
 		);
 	},
 };
