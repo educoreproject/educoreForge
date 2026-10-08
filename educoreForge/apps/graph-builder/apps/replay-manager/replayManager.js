@@ -34,7 +34,9 @@
 // HARD SAFETY LINE (GNC-001): every container this module creates or deletes is DEV_*-named.
 // GOLD_* and gf_* are refused by name before any docker command runs.
 
+const fs = require('fs');
 const net = require('net');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { execFile } = require('child_process');
@@ -537,8 +539,75 @@ const defaultWaitForReadiness = ({ boltPort, boltUrl, password, deadline, readyT
 };
 
 // -----
+// THE PORT ALLOCATION LOCK ⟪forgeClean lane CLEAN, 2026-10-08; VIOLET_VALLEY ruling⟫. Choosing a free port pair and the
+// `docker run` that publishes it are two steps, and two builds in two processes (two lanes) can both choose the pair
+// before either publishes it: measured 2026-10-08, REFORGE debugA and CLEAN dev2 both provisioned on bolt 7811 within 27 s,
+// each then spoke to the other's container with the wrong credential, and both builds died. create() now holds this
+// lock from the port search through the post-run verification. It is a DIRECTORY (mkdir is atomic) at ONE machine-wide
+// path, not a path under the tree: worktrees sit at different depths, and a per-tree lock would exclude nobody. A lock
+// older than PORT_ALLOCATION_LOCK_STALE_MS (a holder that died between mkdir and release; a real hold lasts seconds) is
+// broken, and the break is logged by name.
+const PORT_ALLOCATION_LOCK_DIR_PATH = path.join(os.tmpdir(), 'educoreForge-replayManager-portAllocation.lock');
+const PORT_ALLOCATION_LOCK_OWNER_FILE_NAME = 'owner';
+const PORT_ALLOCATION_LOCK_POLL_MS = 250;
+const PORT_ALLOCATION_LOCK_STALE_MS = 120000;
+
+const acquirePortAllocationLock = ({ lockDirPath, deadline }, callback) => {
+	const attempt = () => {
+		fs.mkdir(lockDirPath, (mkdirErr) => {
+			if (!mkdirErr) {
+				fs.writeFile(path.join(lockDirPath, PORT_ALLOCATION_LOCK_OWNER_FILE_NAME), `pid ${process.pid} at ${new Date().toISOString()}`, (writeErr) =>
+					callback(writeErr ? `the port allocation lock ${lockDirPath} was taken but its owner could not be recorded: ${writeErr.message}` : ''),
+				);
+				return;
+			}
+			if (mkdirErr.code !== 'EEXIST') {
+				callback(`the port allocation lock ${lockDirPath} could not be created: ${mkdirErr.message}`);
+				return;
+			}
+			fs.stat(lockDirPath, (statErr, lockStat) => {
+				if (statErr) {
+					// released between our mkdir and our stat: take another turn at once
+					attempt();
+					return;
+				}
+				if (Date.now() - lockStat.mtimeMs > PORT_ALLOCATION_LOCK_STALE_MS) {
+					fs.readFile(path.join(lockDirPath, PORT_ALLOCATION_LOCK_OWNER_FILE_NAME), 'utf8', (readErr, ownerText) => {
+						process.global.xLog.status(`[replayManager] breaking a STALE port allocation lock ${lockDirPath} (${readErr ? 'owner unrecorded' : ownerText}; older than ${PORT_ALLOCATION_LOCK_STALE_MS / 1000}s)`);
+						fs.rm(lockDirPath, { recursive: true, force: true }, () => attempt());
+					});
+					return;
+				}
+				if (Date.now() > deadline) {
+					fs.readFile(path.join(lockDirPath, PORT_ALLOCATION_LOCK_OWNER_FILE_NAME), 'utf8', (readErr, ownerText) =>
+						callback(`the port allocation lock ${lockDirPath} was not released in time (held by ${readErr ? 'an unrecorded owner' : ownerText})`),
+					);
+					return;
+				}
+				setTimeout(attempt, PORT_ALLOCATION_LOCK_POLL_MS);
+			});
+		});
+	};
+	attempt();
+};
+const releasePortAllocationLock = ({ lockDirPath }, callback) => fs.rm(lockDirPath, { recursive: true, force: true }, (rmErr) => callback(rmErr ? `the port allocation lock ${lockDirPath} could not be released: ${rmErr.message}` : ''));
+
+// verifyOwnContainerPublished — after `docker run`, OUR container must be running and published on the bolt port we chose,
+// before readiness polls that port: a poll that reaches some other container would read its refusals as "not ready yet"
+const verifyOwnContainerPublished = ({ runDockerCommand, graphName, boltPort }, callback) => {
+	runDockerCommand(['inspect', '-f', '{{.State.Running}} {{(index (index .NetworkSettings.Ports "7687/tcp") 0).HostPort}}', graphName], (err, stdout, stderr) => {
+		const observedText = String(stdout || '').trim();
+		if (err || observedText !== `true ${boltPort}`) {
+			callback(`its own container is not running on bolt port ${boltPort}: docker inspect read '${observedText}'${err ? ` (${err.message}${stderr ? `: ${String(stderr).trim()}` : ''})` : ''}; refused before readiness could poll another container's port`);
+			return;
+		}
+		callback('');
+	});
+};
+
+// -----
 // port-pair allocation (carried from instance-lifecycle): a (bolt, http) consecutive pair that
-// is OS-bindable AND not already published by a running container.
+// is OS-bindable AND not already published by a running container. Called ONLY under the port allocation lock.
 const getDockerBoundPorts = (callback) => {
 	execFile('docker', ['ps', '--format', '{{.Ports}}'], { encoding: 'utf-8' }, (err, stdout) => {
 		if (err) {
@@ -683,6 +752,10 @@ const moduleFunction =
 	const runDockerCommand = deps.runDockerCommand || defaultRunDockerCommand;
 	const findPortPair = deps.findAvailablePortPair || findAvailablePortPair;
 	const waitForReadiness = deps.waitForReadiness || defaultWaitForReadiness;
+	// the port allocation lock: its directory, and (for the race gate's red twin only) its two operations
+	const portAllocationLockDirPath = deps.portAllocationLockDirPath || PORT_ALLOCATION_LOCK_DIR_PATH;
+	const acquirePortLock = deps.acquirePortAllocationLock || acquirePortAllocationLock;
+	const releasePortLock = deps.releasePortAllocationLock || releasePortAllocationLock;
 
 	// -----
 	// create — provision a throwaway DEV_* Neo4j container; hand back the graph handle. The
@@ -710,7 +783,16 @@ const moduleFunction =
 		const settings = resolveSettings();
 		const password = crypto.randomBytes(18).toString('base64url');
 		let containerLaunched = false;
+		let portLockHeld = false;
 		const taskList = new taskListPlus();
+
+		// the port search, the run and its verification happen under ONE cross-process lock (see the lock's header)
+		taskList.push((args, next) => {
+			acquirePortLock({ lockDirPath: portAllocationLockDirPath, deadline: Date.now() + settings.readyTimeoutMs }, (lockErr) => {
+				portLockHeld = !lockErr;
+				next(lockErr, args);
+			});
+		});
 
 		taskList.push((args, next) => {
 			findPortPair(settings, (err, ports) => next(err, { ...args, ...ports }));
@@ -746,6 +828,18 @@ const moduleFunction =
 		});
 
 		taskList.push((args, next) => {
+			verifyOwnContainerPublished({ runDockerCommand, graphName, boltPort: args.boltPort }, (verifyErr) => next(verifyErr, args));
+		});
+
+		// the pair is published by our running container now, so the next prober sees it: release the lock
+		taskList.push((args, next) => {
+			releasePortLock({ lockDirPath: portAllocationLockDirPath }, (releaseErr) => {
+				portLockHeld = !!releaseErr;
+				next(releaseErr, args);
+			});
+		});
+
+		taskList.push((args, next) => {
 			const deadline = Date.now() + settings.readyTimeoutMs;
 			const boltUrl = `bolt://localhost:${args.boltPort}`;
 			waitForReadiness(
@@ -754,7 +848,16 @@ const moduleFunction =
 			);
 		});
 
-		pipeRunner(taskList.getList(), {}, (err, args) => {
+		pipeRunner(taskList.getList(), {}, (pipeErr, args) => {
+			// a failure while the lock is held releases it first, so one failed provision never stalls every other process
+			if (pipeErr && portLockHeld) {
+				portLockHeld = false;
+				releasePortLock({ lockDirPath: portAllocationLockDirPath }, (releaseErr) => finishCreate(releaseErr ? `${pipeErr} — AND ${releaseErr}` : pipeErr, args));
+				return;
+			}
+			finishCreate(pipeErr, args);
+		});
+		const finishCreate = (err, args) => {
 			if (err) {
 				if (!containerLaunched) {
 					// nothing was started (port search or docker run itself failed) — nothing to dispose
@@ -786,7 +889,7 @@ const moduleFunction =
 				boltPort: args.boltPort,
 				httpPort: args.httpPort,
 			});
-		});
+		};
 	};
 
 	// -----
@@ -1349,6 +1452,12 @@ module.exports.schemaBlockTexts = schemaBlockTexts;
 module.exports.resolveSettings = resolveSettings;
 module.exports.resolveEmbeddingDims = resolveEmbeddingDims;
 module.exports.disposeScratchGraph = disposeScratchGraph;
+// ⟪forgeClean CLEAN⟫ the port race fix, exported so its gate drives the real lock, search and verification
+module.exports.acquirePortAllocationLock = acquirePortAllocationLock;
+module.exports.releasePortAllocationLock = releasePortAllocationLock;
+module.exports.verifyOwnContainerPublished = verifyOwnContainerPublished;
+module.exports.findAvailablePortPair = findAvailablePortPair;
+module.exports.PORT_ALLOCATION_LOCK_DIR_PATH = PORT_ALLOCATION_LOCK_DIR_PATH;
 module.exports.engineVersionsFor = engineVersionsFor;
 module.exports.NEO4J_CONTAINER_SECURITY_ENV_LIST = NEO4J_CONTAINER_SECURITY_ENV_LIST;
 // The declared conservation exemption, exported so a caller NAMES it rather than repeating a

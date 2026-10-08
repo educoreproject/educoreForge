@@ -807,7 +807,8 @@ const createDockerSpy = () => {
 		calls,
 		run: (args, cb) => {
 			calls.push(args);
-			cb(null, args[0] === 'run' ? 'containerId\n' : '', '');
+			// ⟪forgeClean CLEAN⟫ create now inspects its own container after the run: answer it running on the injected bolt port
+			cb(null, args[0] === 'run' ? 'containerId\n' : args[0] === 'inspect' ? 'true 17801\n' : '', '');
 		},
 	};
 };
