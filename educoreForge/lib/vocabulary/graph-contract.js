@@ -40,6 +40,8 @@ const LIST_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 	// PESC
 	'contextPathSampleList', 'occurrenceSectionList', 'reachableViaList', 'documentationValueList',
 	'derivationDocumentationValueList', 'librariesNamed', 'rootChangeLogLineList',
+	// PESC, forgeClean lane CLEAN (G20): the comments written immediately before an element; one comment is the common case
+	'precedingCommentList',
 	// SIF
 	'objectNameList', 'objectNameSampleList',
 	// store-side, on RecipeBlock (W-C-7)
@@ -60,6 +62,7 @@ const LIST_NAME_RULE_EXEMPTION_BY_NAME = Object.freeze({
 	importList: 'JSON string (pesc-release-forge walk.js)',
 	schemaAttributeList: 'JSON string (pesc-release-forge walk.js)',
 	fileAnnotationList: 'JSON string (pesc-release-forge walk.js)',
+	fileCommentList: 'JSON string (pesc-release-forge walk.js; forgeClean lane CLEAN, G20)',
 	standardsIncluded: 'a Cypher literal list on the passport, never through pgToStored',
 });
 
