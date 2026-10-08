@@ -184,7 +184,10 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21 omission declaration; pre-authorised by WORKORDER-G21) ═══ G-SEAM-UNTOUCHED postCampaignP4bGSeamUntouched-100726
 // -> postCampaignG21GSeamUntouched-100726, tag cut ON this commit. CENSUS at c049bc8 over the 7 seam files: 2 files, 17+/4- —
 // apps/graph-builder/lib/build.js 12 (roundTripRowFor) and apps/graph-builder/lib/round-trip-stage.js 9 (the summary row).
-const PRE_MIGRATION_REF = 'postCampaignG21GSeamUntouched-100726'; // re-anchored by BRONZE_SIGNAL, G21 (G-SEAM-UNTOUCHED); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (ONYX_SUMMIT; forgeClean lane REFORGE; pre-authorised by WORKORDER-REFORGE) ═══ G-SEAM-UNTOUCHED
+// postCampaignG21GSeamUntouched-100726 -> postForgeCleanReforgeGSeamUntouched-100826, tag cut ON this commit. CENSUS at d6fecdce over the 7
+// seam files: ONE file, apps/graph-builder/lib/build.js 73+/3- (--judgeCacheOnly; REFORGE fix 2, the roundTrip detail's relative summary path).
+const PRE_MIGRATION_REF = 'postForgeCleanReforgeGSeamUntouched-100826'; // re-anchored by ONYX_SUMMIT, forgeClean REFORGE (G-SEAM-UNTOUCHED); the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

@@ -158,7 +158,10 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // postCampaignG21VocabularyIi-100726, tag cut ON this commit. CENSUS at c049bc8 over this gate's own path: 2 files, both outside the
 // allowed list — graph-contract.js 3/0 (explicitOmissionDeclarationList in §1 and §4) and vocabulary-definitions.js 1/1 (the
 // BuildAttestation definition names it). Path list NOT widened.
-const POST_D1_BASE_TAG = 'postCampaignG21VocabularyIi-100726'; // re-anchored by BRONZE_SIGNAL, G21 ((ii)); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (ONYX_SUMMIT; forgeClean lane REFORGE; pre-authorised by WORKORDER-REFORGE) ═══ (ii) postCampaignG21VocabularyIi-100726 ->
+// postForgeCleanReforgeVocabularyIi-100826, tag cut ON this commit. CENSUS at d6fecdce over this gate's own path: ONE file, outside the
+// allowed list — graph-contract.js 3/1 (the promotionStamp gate list gains reforgeDeterminism, §4). Path list NOT widened.
+const POST_D1_BASE_TAG = 'postForgeCleanReforgeVocabularyIi-100826'; // re-anchored by ONYX_SUMMIT, forgeClean REFORGE ((ii)); the tag is cut ON the re-anchor commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -785,7 +788,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21b comment text; pre-authorised) ═══ seamDiffEmpty postCampaignG21SeamDiffEmpty-100726 ->
 // postCampaignG21bSeamDiffEmpty-100726, tag ON this commit. CENSUS at cce29e1: the same three forge-framework files (this gate's
 // paths); build.js, forger/, replay/ and replay-manager/ untouched by G21b.
-const PHASE3_ANCHOR_TAG = 'postCampaignG21bSeamDiffEmpty-100726'; // re-anchored by BRONZE_SIGNAL, G21b (seamDiffEmpty); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (ONYX_SUMMIT; forgeClean lane REFORGE; pre-authorised by WORKORDER-REFORGE) ═══ seamDiffEmpty
+// postCampaignG21bSeamDiffEmpty-100726 -> postForgeCleanReforgeSeamDiffEmpty-100826, tag cut ON this commit. CENSUS at d6fecdce: 3 files —
+// build.js (--judgeCacheOnly; the roundTrip attestation detail names its summary relative to the run directory, REFORGE fix 2),
+// replay-manager's promotion-stamp.js (stampable gates read from graph-contract) and its test-promotionStamp.js (conjunct h).
+const PHASE3_ANCHOR_TAG = 'postForgeCleanReforgeSeamDiffEmpty-100826'; // re-anchored by ONYX_SUMMIT, forgeClean REFORGE (seamDiffEmpty); the tag is cut ON the re-anchor commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
