@@ -199,6 +199,8 @@ const conjunctJudgeByRefId = {
 						done(report);
 						return;
 					}
+					// ... and the registry file the twin's child left with no watchdog to remove it
+					fs.rmSync(path.join(os.tmpdir(), `educoreForge-scratchContainers-${child.pid}.list`), { force: true });
 					execFile('docker', ['rm', '-f', '-v', ...leftContainerList], { encoding: 'utf8' }, () => execFile('docker', ['volume', 'rm', ...leftVolumeList], { encoding: 'utf8' }, () => done(report)));
 				}));
 				waitForCleanup();
