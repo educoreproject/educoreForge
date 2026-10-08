@@ -16,7 +16,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // ⟪campaign P4a, PLAN G5/G6⟫ the row also carries the two verdict checks of graph-structure-check.js, run in the same READ
 // session after the census: instanceStructure (every SIF Field / PESC occurrence has one declaration and one owner) and
 // codeListStructure (every option value has one owning set of its standard; counts per standard). Either failing fails the
-// row by name. The source-census half of codeListStructure is compared by tools/graphStructureCheck.js, which reads the
+// row by name. ⟪forgeClean lane CLEAN, R2, 2026-10-08⟫ rootOwnership joins them, a verdict now: every -build fails BY NAME
+// on a content node its standard's root does not reach (the orphans' stableIds in the detail). The source-census half of
+// codeListStructure is compared by tools/graphStructureCheck.js, which reads the
 // graph's StandardDefinitions; here the census map is {} and the detail says no standard was compared to one.
 //
 // A -replay forges nothing, so it has no expectation: notRun, said so. A forge result carrying no stats is notRun naming
@@ -34,7 +36,7 @@ const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabu
 const graphStructureCheck = require(path.join(__dirname, 'graph-structure-check'));
 
 const GATE_NAME = 'forgeCensus';
-const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure']);
+const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure', 'rootOwnership']);
 const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition']);
 const NODE_CENSUS_CYPHER = `
 	MATCH (n:ForgedNode) WHERE n._source = $standardName AND ${OUTSIDE_THE_KIT_LABEL_LIST.map((oneLabel) => `NOT n:\`${oneLabel}\``).join(' AND ')}

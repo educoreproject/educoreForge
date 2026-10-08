@@ -13,10 +13,13 @@
 //   (e) an option value without exactly one owning set -> fail naming the standard
 //   (f) a standard whose counts differ from its frozen source census -> fail naming the census file
 //   (g) a standard with no source census is NAMED as not compared (never passed as compared)
-//   (h) rootOwnership is a measurement: unreached nodes are counted by role and never fail
+//   (h) ⟪forgeClean R2⟫ rootOwnership is a VERDICT: a standard whose root reaches every content node passes; ONE planted
+//       orphan fails the row naming the standard, its role and the orphan's stableId
+//   (j) ⟪forgeClean R2⟫ the orphan names are the content stableIds the reached list lacks, sorted
 //   (i) the census loader refuses a declared census file that is absent, by name
 // RED TWINS (in memory, module double): ownerRuleIgnored -> (b); ownMatchEdgeIgnored -> (c); suffixGuessed -> (d);
-// valueOwnershipIgnored -> (e); censusMismatchIgnored -> (f); uncomparedHidden -> (g); absentCensusSkipped -> (i).
+// valueOwnershipIgnored -> (e); censusMismatchIgnored -> (f); uncomparedHidden -> (g); absentCensusSkipped -> (i);
+// orphanIgnored, orphanNotNamed -> (h); reachedListIgnored -> (j).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -88,9 +91,16 @@ const conjunctJudgeByRefId = {
 		const row = checkFor(mutationList).codeListStructureRowFor({ optionSetRowList: GOOD_OPTION_SET_ROWS, optionValueRowList: GOOD_OPTION_VALUE_ROWS, sourceCodeListCensusByStandard: SOURCE_CENSUS });
 		done({ pass: /not compared to a source census: HUBTOY/.test(row.detail) && row.measuredByStandard.HUBTOY.emptyOptionSetCount === 1, detail: row.detail });
 	},
-	h_rootOwnershipIsMeasured: (mutationList, done) => {
-		const row = checkFor(mutationList).rootOwnershipRowFor({ rootRoleRowList: [{ standardName: 'PESCTOY', role: 'DmeOptionSet', contentNodeCount: 10, reachedNodeCount: 4 }, { standardName: 'PESCTOY', role: 'DmeProperty', contentNodeCount: 5, reachedNodeCount: 5 }] });
-		done({ pass: row.verdict === 'measured' && row.measuredByStandard.PESCTOY.unreachedNodeCount === 6 && /PESCTOY 6 of 15 unreached \(DmeOptionSet 6\)/.test(row.detail), detail: `${row.verdict}: ${row.detail}` });
+	h_rootOwnershipIsAVerdict: (mutationList, done) => {
+		const check = checkFor(mutationList);
+		const cleanRow = check.rootOwnershipRowFor({ rootRoleRowList: [{ standardName: 'SIFTOY', role: 'DmeProperty', contentNodeCount: 5, reachedNodeCount: 5 }, { standardName: 'PESCTOY', role: 'DmeOptionSet', contentNodeCount: 10, reachedNodeCount: 10 }] });
+		// the red twin of R2: ONE orphan planted in PESCTOY
+		const orphanRow = check.rootOwnershipRowFor({ rootRoleRowList: [{ standardName: 'SIFTOY', role: 'DmeProperty', contentNodeCount: 5, reachedNodeCount: 5 }, { standardName: 'PESCTOY', role: 'DmeOptionSet', contentNodeCount: 11, reachedNodeCount: 10 }], unreachedStableIdListByStandard: { PESCTOY: ['pesctoy:codeList/plantedOrphan'] } });
+		done({ pass: cleanRow.verdict === 'pass' && orphanRow.verdict === 'fail' && /PESCTOY: 1 of 11 content node\(s\) unreached from its root \(DmeOptionSet 1\): pesctoy:codeList\/plantedOrphan/.test(orphanRow.detail) && !/SIFTOY:/.test(orphanRow.detail), detail: `${cleanRow.verdict}: ${cleanRow.detail} || ${orphanRow.verdict}: ${orphanRow.detail}` });
+	},
+	j_orphansAreTheUnreachedStableIds: (mutationList, done) => {
+		const orphanList = checkFor(mutationList).unreachedStableIdListFor({ reachedStableIdList: ['t:b', 't:a', 't:d'], contentStableIdList: ['t:d', 't:c', 't:a', 't:e', 't:b'] });
+		done({ pass: JSON.stringify(orphanList) === JSON.stringify(['t:c', 't:e']), detail: JSON.stringify(orphanList) });
 	},
 	i_absentCensusRefusedByName: (mutationList, done) => {
 		const scratchTreeRootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'graphStructureCheck-'));
@@ -110,6 +120,9 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'e_valueWithoutOneSetFails', twinName: 'valueOwnershipIgnored', find: '		if (oneRow.oneOptionSetValueCount !== oneRow.optionValueCount) {', replace: '		if (false) {' },
 	{ conjunctRefId: 'f_sourceCensusMismatchFails', twinName: 'censusMismatchIgnored', find: '		if (measured.optionSetCount !== sourceCensus.optionSetCount || measured.optionValueCount !== sourceCensus.optionValueCount) {', replace: '		if (false) {' },
 	{ conjunctRefId: 'g_uncomparedStandardNamed', twinName: 'uncomparedHidden', find: "${uncomparedList.length ? `; not compared to a source census: ${uncomparedList.join(', ')}` : ''}", replace: '' },
+	{ conjunctRefId: 'h_rootOwnershipIsAVerdict', twinName: 'orphanIgnored', find: "		.filter((standardName) => measuredByStandard[standardName].unreachedNodeCount > 0)", replace: '		.filter((standardName) => false)' },
+	{ conjunctRefId: 'h_rootOwnershipIsAVerdict', twinName: 'orphanNotNamed', find: "			const orphanList = orphanListByStandard[standardName] || [];", replace: '			const orphanList = [];' },
+	{ conjunctRefId: 'j_orphansAreTheUnreachedStableIds', twinName: 'reachedListIgnored', find: '	const reachedStableIdSet = new Set(reachedStableIdList);', replace: '	const reachedStableIdSet = new Set([]);' },
 	{ conjunctRefId: 'i_absentCensusRefusedByName', twinName: 'absentCensusSkipped', find: "			refusalList.push(`${sourceKey}: family ${standardFamily} declares a source census at ${censusFilePath}, which is absent`);", replace: '' },
 ];
 
