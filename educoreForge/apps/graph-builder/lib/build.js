@@ -832,7 +832,13 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 									// NOT deleted — this graph is the product. roundTripSummaryPath rides
 									// the result only when the stage wrote a summary (a -replay's visible
 									// non-run writes nothing), so the -goldEvalCheck evidence is findable
-									// from the build report itself.
+									// from the build report itself. ⟪forgeClean CLEAN⟫ RETAINED, so replayManager's exit
+									// watchdog leaves it: every other scratch graph of this run dies with the process.
+									replay.retain(goldEval, (retainError) => {
+									if (retainError) {
+										callback(`materialize failed: retaining the eval golden '${goldEval.graphName}': ${retainError}`);
+										return;
+									}
 									callback('', {
 										manifestId,
 										boltUrl: goldEval.boltUrl,
@@ -846,6 +852,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 										finishWriteCount: finishReport.writeCount,
 										finishXorVerified: finishReport.xorVerified,
 										finishApplied: finishReport.applied.map((oneEntry) => oneEntry.name),
+									});
 									});
 								},
 							);

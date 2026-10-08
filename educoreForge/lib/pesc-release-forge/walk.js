@@ -24,7 +24,24 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // a declaration whose code list is ANONYMOUS gets HAS_OPTION_SET to it, because the DME reaches an
 // option set only through that edge (QUIET_ORBIT ruling on DEVLOG-F2 §10, 2026-09-30, which moved
 // the work order's literals; the planner's model had counted local elements to named types only).
-// An anonymous complex type or data type stays its declaration's child (parentId) with no edge.
+// ⟪forgeClean lane CLEAN, G19 (b), 2026-10-08⟫ an anonymous complex type or data type is its declaration's child
+// (parentId) AND gets REFERENCES_TYPE from it, as an anonymous code list gets HAS_OPTION_SET: until then no edge reached
+// one, so 12-13 anonymous complex types, 24-25 anonymous data types and all they own sat unreachable from the root in
+// every release (R0, evidence/R0-classification.md).
+//
+// ROOT OWNERSHIP OF THE TOP-LEVEL DEFINITIONS ⟪lane CLEAN, G19⟫. The root owns the named complex types (HAS_CLASS) and
+// the groups (HAS_SUPPORT) directly. Every OTHER top-level definition (named code list, named data type, global element)
+// is owned by the schema file that declares it, by HAS_DEFINITION (SCHEMA_FILE_EDGE_BY_NODE_KIND), and the root reaches
+// the file by HAS_SUPPORT. So a library definition no element of the release uses is kept and honestly owned (TQ ruling,
+// 2026-10-08: keep them, through the library), the release's own document root element is reached at last, and the
+// root's own page is not flooded (data types left the root's HAS_SUPPORT for that reason, stand-down item 1). A node
+// kind owned by neither table, or by both, is refused by name.
+//
+// COMMENTS ⟪lane CLEAN, G20⟫. The schema file carries fileCommentList (every comment outside a definition, where it
+// stood: the change logs live there); an element carries precedingCommentList (the comments written immediately before it
+// in its compositor: the model notes); and the release record's rootChangeLogLineList is every comment of the release's
+// message file, in document order (it was 25 lines of the manifest entry's, which held 25 of College Transcript's 44).
+// None is a declared text: no vector moves, and the judge's view (its allow-list) does not change.
 //
 // A local element typed by a code list also CARRIES that list's codeListName (named lists only; an
 // anonymous list has none) and codeListDocumentation (absent when the list has none): the derived
@@ -74,6 +91,8 @@ const ATTRIBUTE_SEGMENT = 'attr';
 const ANONYMOUS_SEGMENT = 'anon';
 const CODE_SEGMENT = 'code';
 const RELEASE_RECORD_SEGMENT = 'release';
+// the namespace layer of a release's one message file (xsdParser.js reads it from urn:org:pesc:<layer>:...)
+const MESSAGE_LAYER = 'message';
 const SCHEMA_FILE_SEGMENT = 'file';
 const DOCUMENTATION_SOURCE = Object.freeze({ OWN: 'own', BORROWED: 'borrowed', TYPE: 'type' });
 const BRIDGING_PROPERTY_NAME_RE = /ceds/i;
@@ -104,6 +123,12 @@ const ROOT_EDGE_BY_NODE_KIND = Object.freeze({
 	group: EDGE_TYPES.HAS_SUPPORT,
 	type: EDGE_TYPES.HAS_CLASS,
 });
+// the top-level node kinds their schema file owns (G19): every kind the root does not; one table or the other, never both
+const SCHEMA_FILE_EDGE_BY_NODE_KIND = Object.freeze({
+	codeList: EDGE_TYPES.HAS_DEFINITION,
+	dataType: EDGE_TYPES.HAS_DEFINITION,
+	globalElement: EDGE_TYPES.HAS_DEFINITION,
+});
 
 const containerHasEnumeration = (container) => container.derivations.some((oneDerivation) => oneDerivation.enumerationValues.length > 0);
 
@@ -128,7 +153,8 @@ const CARRY_LIST_BY_NODE_KIND = Object.freeze({
 	// fileAnnotationList: every schema-level annotation with the documentPosition it follows (phase F6);
 	// schemaAttributeList names a namespaced attribute '{namespace}local' (phase F6: ePortfolio's
 	// vc:minVersion; the graph keeps no prefix bindings, so a prefixed name alone would be unbound)
-	schemaFile: Object.freeze(['sourceFileName', 'releaseIndependentId', 'sha256', 'byteCount', 'targetNamespace', 'layer', 'importList', 'schemaAttributeList', 'fileDocumentation', 'fileAnnotationList']),
+	// fileCommentList: every comment outside a definition, { placement, beforeSchemaChildIndex, text } (G20)
+	schemaFile: Object.freeze(['sourceFileName', 'releaseIndependentId', 'sha256', 'byteCount', 'targetNamespace', 'layer', 'importList', 'schemaAttributeList', 'fileDocumentation', 'fileAnnotationList', 'fileCommentList']),
 	// derivationDocumentationValueList: the derivation's own annotation (an xs:restriction or
 	// xs:extension may carry one apart from its type's; phase F6)
 	type: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'contentModelShape', 'baseTypeQName', 'derivationVariety', 'contentStyle', 'facets', 'derivationDocumentationValueList', 'abstractAsWritten'])),
@@ -139,10 +165,11 @@ const CARRY_LIST_BY_NODE_KIND = Object.freeze({
 	// documentationValueList on element-like declarations: every documentation string as written, an
 	// empty one and a second one included (phase F6; documentation stays the first non-blank one)
 	globalElement: Object.freeze(SOURCE_CARRY_LIST.concat(['targetNamespace', 'documentation', 'documentationValueList', 'typeQName', 'typeAsWritten', 'typeName', 'substitutionGroupQName', 'abstractAsWritten', 'nillableAsWritten'], PATH_CARRY_LIST)),
+	// precedingCommentList: the comments written immediately before the element in its compositor, verbatim (G20).
 	// codeListName and codeListDocumentation: the code list an element is typed by, carried onto the element
 	// because the derived bridge renders only the subject's own properties (QUIET_ORBIT, F6 first commit);
 	// not text-declared, and the round trip never reads them (the list is regenerated from its own node)
-	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'documentationValueList', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'formAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource', 'codeListName', 'codeListDocumentation', 'borrowedDocumentation', 'borrowedFrom'], PATH_CARRY_LIST)),
+	element: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'documentationValueList', 'typeQName', 'typeAsWritten', 'typeName', 'minOccursAsWritten', 'maxOccursAsWritten', 'nillableAsWritten', 'formAsWritten', 'defaultAsWritten', 'fixedAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource', 'codeListName', 'codeListDocumentation', 'borrowedDocumentation', 'borrowedFrom', 'precedingCommentList'], PATH_CARRY_LIST)),
 	attribute: Object.freeze(SOURCE_CARRY_LIST.concat(['documentation', 'documentationValueList', 'typeQName', 'typeAsWritten', 'typeName', 'useAsWritten', 'owningTypeName', 'effectiveDocumentation', 'documentationSource'])),
 	// a code whose value is the empty string carries no value (absent is absent, gate F7) and
 	// valueIsEmptyString true, so the round trip can write value="" without guessing (phase F4 ruling);
@@ -286,6 +313,12 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 	// ---- the release record and the schema files
 	const rootStableId = kit.rootStableId;
 	const releaseEntry = loadedManifestEntry.releaseEntry;
+	const schemaFileStableIdOf = (oneArtifact) => `${stableIdPrefix}${SCHEMA_FILE_SEGMENT}/${oneArtifact.targetNamespace}`;
+	// the release's change log is every comment of its one message-layer file (G20)
+	const messageArtifactList = artifacts.filter((oneArtifact) => oneArtifact.layer === MESSAGE_LAYER);
+	if (messageArtifactList.length !== 1) {
+		throw refuse.byName({ moduleName, what: `the release has ${messageArtifactList.length} files of layer '${MESSAGE_LAYER}' (${messageArtifactList.map((oneArtifact) => oneArtifact.filename).join(', ')})`, where: "a PESC release is one message file over its libraries; its change log is that file's comments" });
+	}
 	const releaseRecordStableId = `${stableIdPrefix}${RELEASE_RECORD_SEGMENT}`;
 	mintNode({
 		nodeKind: 'releaseRecord',
@@ -303,7 +336,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 			verdict: releaseEntry.verdict,
 			pinDecisionsApplied: JSON.stringify(releaseEntry.pinDecisionsApplied),
 			librariesNamed: releaseEntry.librariesNamed,
-			rootChangeLogLineList: releaseEntry.rootChangeLogLines,
+			rootChangeLogLineList: messageArtifactList[0].commentList.map((oneComment) => oneComment.text),
 			expanderManifestFormat: loadedManifestEntry.expanderManifestFormat,
 			sourceCorpusDigest: loadedManifestEntry.sourceCorpusDigest,
 		},
@@ -311,7 +344,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 	addEdge({ edgeType: EDGE_TYPES.HAS_SUPPORT, fromStableId: rootStableId, toStableId: releaseRecordStableId });
 
 	artifacts.forEach((oneArtifact) => {
-		const schemaFileStableId = `${stableIdPrefix}${SCHEMA_FILE_SEGMENT}/${oneArtifact.targetNamespace}`;
+		const schemaFileStableId = schemaFileStableIdOf(oneArtifact);
 		mintNode({
 			nodeKind: 'schemaFile',
 			stableId: schemaFileStableId,
@@ -328,6 +361,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 				schemaAttributeList: jsonOrAbsent(resolvedSchemaAttributesOf(oneArtifact)),
 				fileDocumentation: nonBlankOrNull(oneArtifact.documentation),
 				fileAnnotationList: jsonOrAbsent(oneArtifact.annotationList.map((oneAnnotation) => ({ afterDocumentPosition: oneAnnotation.afterDocumentPosition, documentationValueList: oneAnnotation.documentationValues }))),
+				fileCommentList: jsonOrAbsent(oneArtifact.commentList),
 			},
 		});
 		addEdge({ edgeType: EDGE_TYPES.HAS_SUPPORT, fromStableId: rootStableId, toStableId: schemaFileStableId });
@@ -460,6 +494,8 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 		if (nodeKind === 'codeList') {
 			emitCodes({ container: anonymousType.body, codeListStableId: anonymousStableId, artifact, reachableFromRoot });
 			addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET, fromStableId: ownerDeclarationStableId, toStableId: anonymousStableId });
+		} else {
+			addEdge({ edgeType: EDGE_TYPES.REFERENCES_TYPE, fromStableId: ownerDeclarationStableId, toStableId: anonymousStableId });
 		}
 		emitContainerContent({ container: anonymousType.body, ownerStableId: anonymousStableId, owningTypeName: null, ownerDefinition: null, artifact, ownerIsReachable: reachableFromRoot });
 		return anonymousStableId;
@@ -502,6 +538,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 						typeDocumentation: typeDocumentationOf({ target: typed.target, anonymousType: oneElement.anonymousType }),
 					}),
 					...codeListFactsOf({ target: typed.target, anonymousType: oneElement.anonymousType }),
+					precedingCommentList: oneElement.precedingCommentValues,
 					...declarationPathFactsOf(elementStableId),
 				},
 			});
@@ -555,12 +592,23 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 		}
 	};
 
+	// the one edge that owns a top-level definition: from the root, or from its schema file (G19)
+	const addTopLevelOwnershipEdge = ({ nodeKind, stableId, artifact }) => {
+		const rootEdgeType = ROOT_EDGE_BY_NODE_KIND[nodeKind];
+		const schemaFileEdgeType = SCHEMA_FILE_EDGE_BY_NODE_KIND[nodeKind];
+		if ((rootEdgeType === undefined) === (schemaFileEdgeType === undefined)) {
+			throw refuse.byName({ moduleName, what: `top-level ${nodeKind} ${stableId} is owned by ${rootEdgeType === undefined ? 'neither' : 'both'} ROOT_EDGE_BY_NODE_KIND and SCHEMA_FILE_EDGE_BY_NODE_KIND`, where: 'every top-level definition is reached from the root by exactly one owning edge (G19)' });
+		}
+		addEdge(rootEdgeType !== undefined ? { edgeType: rootEdgeType, fromStableId: rootStableId, toStableId: stableId } : { edgeType: schemaFileEdgeType, fromStableId: schemaFileStableIdOf(artifact), toStableId: stableId });
+	};
+
 	// ---- the top-level definitions, file by file, in document order
 	artifacts.forEach((oneArtifact) => {
 		const definitionStableIdList = [];
 		oneArtifact.definitions.forEach((oneDefinition) => {
 			const qualifiedName = resolutionTableLib.qualifiedNameFor({ targetNamespace: oneArtifact.targetNamespace, symbolSpace: SYMBOL_SPACE_BY_KIND[oneDefinition.kind], localName: oneDefinition.name });
 			const { nodeKind, stableId } = topLevelByQualifiedName[qualifiedName];
+			addTopLevelOwnershipEdge({ nodeKind, stableId, artifact: oneArtifact });
 			const reachableFromRoot = nodeKind === 'globalElement' ? declarationIsReachable(stableId) : reachableDefinitionStableIdSet.has(stableId);
 			const commonFacts = {
 				sourceFileName: oneArtifact.filename,
@@ -619,9 +667,6 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 					codeCount: nodeKind === 'codeList' ? container.derivations.reduce((soFar, oneDerivation) => soFar + oneDerivation.enumerationValues.length, 0) : null,
 				},
 			});
-			if (ROOT_EDGE_BY_NODE_KIND[nodeKind] !== undefined) {
-				addEdge({ edgeType: ROOT_EDGE_BY_NODE_KIND[nodeKind], fromStableId: rootStableId, toStableId: stableId });
-			}
 			if (nodeKind === 'codeList') {
 				emitCodes({ container, codeListStableId: stableId, artifact: oneArtifact, reachableFromRoot });
 			}

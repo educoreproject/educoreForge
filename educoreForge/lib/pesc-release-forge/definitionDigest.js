@@ -10,7 +10,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // library diffs ignores whitespace), and every 'documentPosition' left out, because a definition's
 // place in its file is not its content: CoreMain 1.17.0's NoteMessageType and the same type moved
 // down a page are one definition. Positions INSIDE a definition (sequencePosition, attributePosition,
-// the compositor tree's element pointers) are content and stay. Comments never reach the model.
+// the compositor tree's element pointers) are content and stay. Comments never reach the digest: since forgeClean
+// lane CLEAN (G20, 2026-10-08) the parser's model carries an element's precedingCommentValues, and they are left out
+// here by name, so carrying the comments moved no digest (the F21 digest literal, measured before G20, still holds).
 //
 // The caller decides what one digest covers. For an element, the walk hands { element, resolvedType }:
 // the declaration and its resolved type's own definition (one level, not the type's whole subtree),
@@ -18,7 +20,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const crypto = require('crypto');
 
-const OMITTED_PROPERTY_NAME_LIST = Object.freeze(['documentPosition']);
+const OMITTED_PROPERTY_NAME_LIST = Object.freeze(['documentPosition', 'precedingCommentValues']);
 
 const canonicalValueOf = (modelValue) => {
 	if (typeof modelValue === 'string') {

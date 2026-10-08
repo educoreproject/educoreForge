@@ -8,6 +8,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // original text, including its references to the 64-file corpus: a release folder is a
 // directory of .xsd files and is read the same way.
 //
+// COMMENTS ⟪forgeClean lane CLEAN, PLAN G20, 2026-10-08⟫, a third edit: comments are content now (xsdTree.js keeps
+// them). Every comment outside a definition (before xs:schema, among its children, after it) lands on the artifact's
+// commentList as { placement, beforeSchemaChildIndex (placement 'schema' only), text }; this is where PESC keeps its
+// change logs. A comment INSIDE a definition is taught in exactly one site, the one the corpus uses: in an xs:sequence
+// or xs:choice, immediately before an xs:element, whose precedingCommentValues it joins (the AgencyAssignedID
+// deprecation note, measured in all seven releases). A comment anywhere else inside a definition is REFUSED BY NAME:
+// dropping it would lose content silently, and guessing what it annotates would invent a fact.
+//
 // parser.js — the PESC260805 corpus directory -> a literal per-file model. SOURCE TIER ONLY.
 //
 // THE ONE RULE THIS MODULE SERVES (DESIGN-pescGraphModel-080526 §1): the graph's spine is the FILE.
@@ -141,6 +149,11 @@ const moduleFunction =
 	(unusedDeps = {}) => {
 		// ---- refusal helper — every refusal is a THROW carrying the offender's name; the corpus
 		// walk converts it to the callback error channel at the single boundary in parsePescCorpus.
+		// where a comment outside every definition stands; roundTripPair.js holds the same three words (it may require no
+		// reader of the forge) and refuses a placement it does not know
+		const COMMENT_PLACEMENT = Object.freeze({ PROLOG: 'prolog', SCHEMA: 'schema', EPILOG: 'epilog' });
+		const COMMENT_HOLDING_TAG_LIST = Object.freeze(['xs:sequence', 'xs:choice']);
+
 		const refuse = (message) => {
 			throw new Error(`pesc-release-forge xsdParser REFUSES: ${message}`);
 		};
@@ -332,7 +345,7 @@ const moduleFunction =
 					maxOccursAsWritten: optionalAttribute(compositorNode, 'maxOccurs'),
 					particles: [],
 				};
-				compositorNode.children.forEach((oneChild) => {
+				compositorNode.children.forEach((oneChild, childIndex) => {
 					if (oneChild.tag === 'xs:annotation') {
 						// compositor-level annotation: none in this corpus; carrying it would be
 						// untestable. Refuse so a future one arrives loudly.
@@ -342,6 +355,7 @@ const moduleFunction =
 					}
 					if (oneChild.tag === 'xs:element') {
 						const elementDecl = walkElementDecl(oneChild, container);
+						elementDecl.precedingCommentValues = compositorNode.commentList.filter((oneComment) => oneComment.beforeChildIndex === childIndex).map((oneComment) => oneComment.text);
 						shape.particles.push({ element: elementDecl.sequencePosition });
 						return;
 					}
@@ -413,6 +427,8 @@ const moduleFunction =
 					documentationValues: [],
 					sequencePosition: container.elements.length + 1,
 					anonymousType: null,
+					// the comments written immediately before this element in its compositor (set by walkCompositor)
+					precedingCommentValues: [],
 				};
 				let elementAnnotationRead = false;
 				elementNode.children.forEach((oneChild) => {
@@ -636,6 +652,26 @@ const moduleFunction =
 			if (schemaNode.tag !== 'xs:schema') {
 				refuse(`file '${filename}': root element is '${schemaNode.tag}', not xs:schema`);
 			}
+			// a comment inside a definition stands only in a compositor, before an element (the one taught site)
+			const refuseUntaughtCommentSite = (treeNode) => {
+				treeNode.commentList.forEach((oneComment) => {
+					const followingChild = treeNode.children[oneComment.beforeChildIndex];
+					if (COMMENT_HOLDING_TAG_LIST.indexOf(treeNode.tag) === -1 || followingChild === undefined || followingChild.tag !== 'xs:element') {
+						refuse(
+							`file '${filename}': comment '${oneComment.text}' inside ${treeNode.tag} (line ${treeNode.line}) stands ` +
+								`${followingChild === undefined ? 'last in its parent' : `before ${followingChild.tag} (line ${followingChild.line})`}. ` +
+								`The one taught site is an xs:sequence or xs:choice, immediately before an xs:element; teach this one deliberately.`,
+						);
+					}
+				});
+				treeNode.children.forEach(refuseUntaughtCommentSite);
+			};
+			schemaNode.children.forEach(refuseUntaughtCommentSite);
+			const commentList = [
+				...treeResult.prologCommentList.map((oneComment) => ({ placement: COMMENT_PLACEMENT.PROLOG, text: oneComment.text })),
+				...schemaNode.commentList.map((oneComment) => ({ placement: COMMENT_PLACEMENT.SCHEMA, beforeSchemaChildIndex: oneComment.beforeChildIndex, text: oneComment.text })),
+				...treeResult.epilogCommentList.map((oneComment) => ({ placement: COMMENT_PLACEMENT.EPILOG, text: oneComment.text })),
+			];
 			const untaughtAttribute = untaughtAttributeOf({ treeNode: schemaNode, parentTag: null });
 			if (untaughtAttribute !== null) {
 				refuse(
@@ -693,6 +729,8 @@ const moduleFunction =
 				// documentPosition is afterDocumentPosition (0: before the first). Phase F6: Document Request's
 				// and Document Response's annotations follow their imports, which a leading-only reading moved
 				annotationList: [],
+				// every comment outside a definition, in document order (G20): { placement, beforeSchemaChildIndex, text }
+				commentList,
 				imports: [],
 				definitions: [],
 			};

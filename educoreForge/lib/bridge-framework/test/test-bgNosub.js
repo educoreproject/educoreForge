@@ -158,7 +158,14 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // postCampaignG21VocabularyIi-100726, tag cut ON this commit. CENSUS at c049bc8 over this gate's own path: 2 files, both outside the
 // allowed list — graph-contract.js 3/0 (explicitOmissionDeclarationList in §1 and §4) and vocabulary-definitions.js 1/1 (the
 // BuildAttestation definition names it). Path list NOT widened.
-const POST_D1_BASE_TAG = 'postCampaignG21VocabularyIi-100726'; // re-anchored by BRONZE_SIGNAL, G21 ((ii)); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN, G19; pre-authorised by WORKORDER-CLEAN) ═══ (ii) postCampaignG21VocabularyIi-100726 ->
+// postForgeCleanVocabularyIi-100826, tag cut ON this commit. CENSUS at a094ec4 (lib/vocabulary/): 3 files, 9+/2- — vocabulary.js 3
+// (EDGE_TYPES.HAS_DEFINITION), vocabulary-definitions.js 3/1 (its definition; REFERENCES_TYPE widened to anonymous types) and
+// test/test-sifEdgeVocabulary.js 3/1 (the SchemaView ledger +1). Allowed-path list NOT widened; nothing excluded.
+// ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN, G20 contract declaration; pre-authorised) ═══ (ii) postForgeCleanVocabularyIi-100826 ->
+// postForgeCleanVocabularyIiB-100826, tag cut ON this commit. CENSUS at 189bbb1 (lib/vocabulary/): 2 files — graph-contract.js 4/0 (precedingCommentList
+// list-valued; fileCommentList exempt as a JSON string) and test/test-sifEdgeVocabulary.js 3/2 (the ledger +1). Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postForgeCleanVocabularyIiB-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN ((ii), second); the tag is cut ON the re-anchor commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -374,7 +381,10 @@ const POST_D1_BASE_TAG = 'postCampaignG21VocabularyIi-100726'; // re-anchored by
 // ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21b comment text; pre-authorised) ═══ (iii) postCampaignG21ForgeFrameworkIii-100726 -> postCampaignG21bForgeFrameworkIii-100726,
 // tag ON this commit. CENSUS at cce29e1 (lib/forge-framework/): 3 files, 30+/3- — verdictAssembler.js (text-bearing kinds),
 // test-gRt.js and toyRoundTripPair.js (the two new declaration members). Nothing excluded.
-const PHASE0_ANCHOR_TAG = 'postCampaignG21bForgeFrameworkIii-100726'; // re-anchored by BRONZE_SIGNAL, G21b ((iii)); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN; pre-authorised) ═══ (iii) postCampaignG21bForgeFrameworkIii-100726 ->
+// postForgeCleanForgeFrameworkIii-100826, tag ON this commit. CENSUS at 0440fe7 (lib/forge-framework/): ONE file, test/test-gSeamUntouched.js — its own
+// G-SEAM-UNTOUCHED re-anchor (12babd9). Framework SOURCE unchanged; nothing excluded.
+const PHASE0_ANCHOR_TAG = 'postForgeCleanForgeFrameworkIii-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN ((iii)); the tag is cut ON the re-anchor commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -785,7 +795,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21b comment text; pre-authorised) ═══ seamDiffEmpty postCampaignG21SeamDiffEmpty-100726 ->
 // postCampaignG21bSeamDiffEmpty-100726, tag ON this commit. CENSUS at cce29e1: the same three forge-framework files (this gate's
 // paths); build.js, forger/, replay/ and replay-manager/ untouched by G21b.
-const PHASE3_ANCHOR_TAG = 'postCampaignG21bSeamDiffEmpty-100726'; // re-anchored by BRONZE_SIGNAL, G21b (seamDiffEmpty); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN; pre-authorised) ═══ seamDiffEmpty (and its (i-live) companion, which reads the
+// same tag) postCampaignG21bSeamDiffEmpty-100726 -> postForgeCleanSeamDiffEmpty-100826, tag ON this commit. CENSUS at 12babd9 over this gate's paths:
+// 6 files, 595+/28- — replay-manager/replayManager.js 261 (port lock, post-run and liveness checks, rm -f -v, scratch registry, exit watchdog,
+// retain), its test/test-provisionPortRace.js 270 + testSupport/provisionPortRaceChild.js 53 (new) + test/test-replay-manager.js 14,
+// lib/build.js 9 (the deliverable retained), forger/test/integration-forge.js 16 (-keepGraph retains). (i-live): replayManager's shape gained
+// retain, declared in interfaces.js. Path list byte-identical; nothing excluded.
+const PHASE3_ANCHOR_TAG = 'postForgeCleanSeamDiffEmpty-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN (seamDiffEmpty); the tag is cut ON the re-anchor commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

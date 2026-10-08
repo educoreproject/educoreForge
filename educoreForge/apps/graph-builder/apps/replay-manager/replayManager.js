@@ -16,7 +16,15 @@
 //        spec = { inGraph, schemaBlocks }            RESTORATION — previously harvested blocks
 //        report = { nodesMerged, edgesMerged, danglingRefs, indexesBuilt } from EITHER payload
 //     harvest(spec, callback)     -> ('', schemaBlock)  spec = { inGraph, selectionLabels, edgeTypeList?, header }
-//     delete(handle, callback)    -> ('')           removes the container; DEV_* only
+//     delete(handle, callback)    -> ('')           removes the container AND its volumes; DEV_* only
+//     retain(handle, callback)    -> ('')           this graph outlives the process (a build's deliverable): the exit
+//                                                    watchdog leaves it; every other scratch graph dies with the process
+//
+// NO SCRATCH GRAPH OUTLIVES ITS PROCESS ⟪forgeClean lane CLEAN, 2026-10-08; TQ via VIOLET_VALLEY: "the process cleans up
+// after itself"⟫. Every container create names is written to this process's scratch registry file BEFORE docker run, and
+// leaves it when delete removes it or retain keeps it. A detached EXIT WATCHDOG (one per process, started with the first
+// create) waits for this process to end, however it ends — success, refusal, timeout, a crash, SIGTERM or SIGKILL — and then
+// removes every name still registered with `docker rm -f -v`. A signal handler could not do this: SIGKILL cannot be caught.
 //   }
 //
 // TODAY'S SCOPE: all four verbs are REAL. create/delete provision and destroy throwaway DEV_*
@@ -29,15 +37,18 @@
 // Provisioning mechanics (image, port-pair allocation, auth env, readiness = bolt TCP + an
 // authenticated cypher round-trip) are carried from the incumbent instance-lifecycle — MINUS
 // its forge-store credential registry and named volumes: a scratch graph's credential lives in
-// the returned handle and nowhere else, and its data dies with the container (`docker rm -f`).
+// the returned handle and nowhere else, and its data dies with the container (`docker rm -f -v`: the neo4j image declares
+// data volumes, so a plain `rm -f` left each one behind — 459 orphans, 408 GB, measured by REFORGE 2026-10-08).
 //
 // HARD SAFETY LINE (GNC-001): every container this module creates or deletes is DEV_*-named.
 // GOLD_* and gf_* are refused by name before any docker command runs.
 
+const fs = require('fs');
 const net = require('net');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
 // tree-root lib/ (five levels up: replay-manager -> apps -> graph-builder -> apps -> root)
@@ -514,11 +525,13 @@ const disposeScratchGraph = (
 		callback(refusal);
 		return;
 	}
-	runDockerCommand(['rm', '-f', graphName], (err, stdout, stderr) => {
+	// -v: the container AND its anonymous volumes (the image's declared data volume); our own DEV_* container only, by the guard above
+	runDockerCommand(['rm', '-f', '-v', graphName], (err, stdout, stderr) => {
 		if (err) {
-			callback(`docker rm -f '${graphName}' failed: ${err.message}${stderr ? `\n${stderr}` : ''}`);
+			callback(`docker rm -f -v '${graphName}' failed: ${err.message}${stderr ? `\n${stderr}` : ''}`);
 			return;
 		}
+		unregisterScratchContainer(graphName);
 		callback('');
 	});
 };
@@ -526,19 +539,154 @@ const disposeScratchGraph = (
 // -----
 // defaultWaitForReadiness — bolt TCP open, then an authenticated cypher round-trip. Injectable so a
 // create-failure test can force a readiness timeout without a real container.
-const defaultWaitForReadiness = ({ boltPort, boltUrl, password, deadline, readyTimeoutMs }, callback) => {
+// isCancelled (optional): create's liveness watch cancels a readiness poll whose container died, so a poller left running
+// cannot knock on the NEXT container published on the same port with this one's credential
+const defaultWaitForReadiness = ({ boltPort, boltUrl, password, deadline, readyTimeoutMs, isCancelled = () => false }, callback) => {
 	waitForBoltPort(boltPort, deadline, readyTimeoutMs, (portErr) => {
 		if (portErr) {
 			callback(portErr);
 			return;
 		}
-		waitForAuthenticatedCypher(boltUrl, password, deadline, readyTimeoutMs, callback);
+		waitForAuthenticatedCypher(boltUrl, password, deadline, readyTimeoutMs, callback, isCancelled);
+	}, isCancelled);
+};
+
+// watchContainerLiveness — ⟪forgeClean CLEAN; ONYX_SUMMIT's measurement 2026-10-08 13:21⟫ a scratch container on a port freed
+// seconds before started and DIED one second later (exit code 64), and readiness polled the dead port for the whole timeout.
+// While readiness polls, this asks docker every CONTAINER_LIVENESS_POLL_MS whether OUR container still runs; the first answer
+// that it does not refuses at once, by name, with its exit code. stop() ends the watch.
+const CONTAINER_LIVENESS_POLL_MS = 3000;
+const watchContainerLiveness = ({ runDockerCommand, graphName }, onDead) => {
+	let watchStopped = false;
+	const checkOnce = () => {
+		if (watchStopped) {
+			return;
+		}
+		runDockerCommand(['inspect', '-f', '{{.State.Running}} {{.State.ExitCode}}', graphName], (inspectErr, stdout) => {
+			if (watchStopped) {
+				return;
+			}
+			const [runningText, exitCodeText] = String(stdout || '').trim().split(' ');
+			if (inspectErr || runningText !== 'true') {
+				watchStopped = true;
+				onDead(`its own container stopped while neo4j was starting (running '${runningText || 'unknown'}', exit code ${exitCodeText || 'unknown'}${inspectErr ? `; ${inspectErr.message}` : ''}); refused at once rather than polling a dead port`);
+				return;
+			}
+			setTimeout(checkOnce, CONTAINER_LIVENESS_POLL_MS);
+		});
+	};
+	setTimeout(checkOnce, CONTAINER_LIVENESS_POLL_MS);
+	return { stop: () => { watchStopped = true; } };
+};
+
+// -----
+// THE SCRATCH REGISTRY AND THE EXIT WATCHDOG (see the header). The registry is this process's own file; the watchdog is a
+// detached shell that outlives the process, polls `kill -0 <pid>`, and on its end removes what the file still names.
+const SCRATCH_REGISTRY_FILE_PATH = path.join(os.tmpdir(), `educoreForge-scratchContainers-${process.pid}.list`);
+const EXIT_WATCHDOG_POLL_SECONDS = 2;
+const EXIT_WATCHDOG_SCRIPT_TEXT = [
+	'ownerPid="$1"; registryFilePath="$2"',
+	`while kill -0 "$ownerPid" 2>/dev/null; do sleep ${EXIT_WATCHDOG_POLL_SECONDS}; done`,
+	'if [ -f "$registryFilePath" ]; then',
+	'  while IFS= read -r containerName; do',
+	'    case "$containerName" in DEV_*) docker rm -f -v "$containerName" >/dev/null 2>&1 ;; esac',
+	'  done < "$registryFilePath"',
+	'  rm -f "$registryFilePath"',
+	'fi',
+].join('\n');
+const registeredScratchContainerNameSet = new Set();
+let exitWatchdogStarted = false;
+// written synchronously ON PURPOSE: the name must be on disk before `docker run`, or a kill between the two leaks the container
+const writeScratchRegistry = () => fs.writeFileSync(SCRATCH_REGISTRY_FILE_PATH, [...registeredScratchContainerNameSet].map((containerName) => `${containerName}\n`).join(''));
+const startExitWatchdog = () => {
+	if (exitWatchdogStarted) {
+		return;
+	}
+	exitWatchdogStarted = true;
+	spawn('/bin/sh', ['-c', EXIT_WATCHDOG_SCRIPT_TEXT, 'educoreForgeScratchWatchdog', String(process.pid), SCRATCH_REGISTRY_FILE_PATH], { detached: true, stdio: 'ignore' }).unref();
+};
+// startWatchdog is create's (injectable for the kill gate's red twin only, deps.startExitWatchdog)
+const registerScratchContainer = (containerName, startWatchdog) => {
+	registeredScratchContainerNameSet.add(containerName);
+	writeScratchRegistry();
+	startWatchdog();
+};
+const unregisterScratchContainer = (containerName) => {
+	if (registeredScratchContainerNameSet.delete(containerName)) {
+		writeScratchRegistry();
+	}
+};
+
+// -----
+// THE PORT ALLOCATION LOCK ⟪forgeClean lane CLEAN, 2026-10-08; VIOLET_VALLEY ruling⟫. Choosing a free port pair and the
+// `docker run` that publishes it are two steps, and two builds in two processes (two lanes) can both choose the pair
+// before either publishes it: measured 2026-10-08, REFORGE debugA and CLEAN dev2 both provisioned on bolt 7811 within 27 s,
+// each then spoke to the other's container with the wrong credential, and both builds died. create() now holds this
+// lock from the port search through the post-run verification. It is a DIRECTORY (mkdir is atomic) at ONE machine-wide
+// path, not a path under the tree: worktrees sit at different depths, and a per-tree lock would exclude nobody. A lock
+// older than PORT_ALLOCATION_LOCK_STALE_MS (a holder that died between mkdir and release; a real hold lasts seconds) is
+// broken, and the break is logged by name.
+const PORT_ALLOCATION_LOCK_DIR_PATH = path.join(os.tmpdir(), 'educoreForge-replayManager-portAllocation.lock');
+const PORT_ALLOCATION_LOCK_OWNER_FILE_NAME = 'owner';
+const PORT_ALLOCATION_LOCK_POLL_MS = 250;
+const PORT_ALLOCATION_LOCK_STALE_MS = 120000;
+
+const acquirePortAllocationLock = ({ lockDirPath, deadline }, callback) => {
+	const attempt = () => {
+		fs.mkdir(lockDirPath, (mkdirErr) => {
+			if (!mkdirErr) {
+				fs.writeFile(path.join(lockDirPath, PORT_ALLOCATION_LOCK_OWNER_FILE_NAME), `pid ${process.pid} at ${new Date().toISOString()}`, (writeErr) =>
+					callback(writeErr ? `the port allocation lock ${lockDirPath} was taken but its owner could not be recorded: ${writeErr.message}` : ''),
+				);
+				return;
+			}
+			if (mkdirErr.code !== 'EEXIST') {
+				callback(`the port allocation lock ${lockDirPath} could not be created: ${mkdirErr.message}`);
+				return;
+			}
+			fs.stat(lockDirPath, (statErr, lockStat) => {
+				if (statErr) {
+					// released between our mkdir and our stat: take another turn at once
+					attempt();
+					return;
+				}
+				if (Date.now() - lockStat.mtimeMs > PORT_ALLOCATION_LOCK_STALE_MS) {
+					fs.readFile(path.join(lockDirPath, PORT_ALLOCATION_LOCK_OWNER_FILE_NAME), 'utf8', (readErr, ownerText) => {
+						process.global.xLog.status(`[replayManager] breaking a STALE port allocation lock ${lockDirPath} (${readErr ? 'owner unrecorded' : ownerText}; older than ${PORT_ALLOCATION_LOCK_STALE_MS / 1000}s)`);
+						fs.rm(lockDirPath, { recursive: true, force: true }, () => attempt());
+					});
+					return;
+				}
+				if (Date.now() > deadline) {
+					fs.readFile(path.join(lockDirPath, PORT_ALLOCATION_LOCK_OWNER_FILE_NAME), 'utf8', (readErr, ownerText) =>
+						callback(`the port allocation lock ${lockDirPath} was not released in time (held by ${readErr ? 'an unrecorded owner' : ownerText})`),
+					);
+					return;
+				}
+				setTimeout(attempt, PORT_ALLOCATION_LOCK_POLL_MS);
+			});
+		});
+	};
+	attempt();
+};
+const releasePortAllocationLock = ({ lockDirPath }, callback) => fs.rm(lockDirPath, { recursive: true, force: true }, (rmErr) => callback(rmErr ? `the port allocation lock ${lockDirPath} could not be released: ${rmErr.message}` : ''));
+
+// verifyOwnContainerPublished — after `docker run`, OUR container must be running and published on the bolt port we chose,
+// before readiness polls that port: a poll that reaches some other container would read its refusals as "not ready yet"
+const verifyOwnContainerPublished = ({ runDockerCommand, graphName, boltPort }, callback) => {
+	runDockerCommand(['inspect', '-f', '{{.State.Running}} {{(index (index .NetworkSettings.Ports "7687/tcp") 0).HostPort}}', graphName], (err, stdout, stderr) => {
+		const observedText = String(stdout || '').trim();
+		if (err || observedText !== `true ${boltPort}`) {
+			callback(`its own container is not running on bolt port ${boltPort}: docker inspect read '${observedText}'${err ? ` (${err.message}${stderr ? `: ${String(stderr).trim()}` : ''})` : ''}; refused before readiness could poll another container's port`);
+			return;
+		}
+		callback('');
 	});
 };
 
 // -----
 // port-pair allocation (carried from instance-lifecycle): a (bolt, http) consecutive pair that
-// is OS-bindable AND not already published by a running container.
+// is OS-bindable AND not already published by a running container. Called ONLY under the port allocation lock.
 const getDockerBoundPorts = (callback) => {
 	execFile('docker', ['ps', '--format', '{{.Ports}}'], { encoding: 'utf-8' }, (err, stdout) => {
 		if (err) {
@@ -601,14 +749,18 @@ const findAvailablePortPair = ({ portSearchStart, portSearchSpan }, callback) =>
 // -----
 // readiness: bolt TCP open, then an authenticated cypher round-trip (a container accepts TCP
 // well before auth works; only the cypher proves it).
-const waitForBoltPort = (boltPort, deadline, readyTimeoutMs, callback) => {
+const waitForBoltPort = (boltPort, deadline, readyTimeoutMs, callback, isCancelled = () => false) => {
+	if (isCancelled()) {
+		callback(`readiness polling of bolt port ${boltPort} was cancelled`);
+		return;
+	}
 	if (Date.now() > deadline) {
 		callback(`bolt port ${boltPort} did not open within ${readyTimeoutMs / 1000}s`);
 		return;
 	}
 	const socket = new net.Socket();
 	const retry = () =>
-		setTimeout(() => waitForBoltPort(boltPort, deadline, readyTimeoutMs, callback), 1000);
+		setTimeout(() => waitForBoltPort(boltPort, deadline, readyTimeoutMs, callback, isCancelled), 1000);
 	socket.once('connect', () => {
 		socket.destroy();
 		callback('');
@@ -620,7 +772,7 @@ const waitForBoltPort = (boltPort, deadline, readyTimeoutMs, callback) => {
 	socket.connect(boltPort, 'localhost');
 };
 
-const waitForAuthenticatedCypher = (boltUrl, password, deadline, readyTimeoutMs, callback) => {
+const waitForAuthenticatedCypher = (boltUrl, password, deadline, readyTimeoutMs, callback, isCancelled = () => false) => {
 	const neo4j = require('neo4j-driver');
 	// LATENT BUG FIXED 2026-07-22: the success path used to invoke callback INSIDE the promise
 	// chain, so any exception thrown DOWNSTREAM of the callback — anywhere in the caller's entire
@@ -632,6 +784,11 @@ const waitForAuthenticatedCypher = (boltUrl, password, deadline, readyTimeoutMs,
 	let settled = false;
 	const attempt = () => {
 		if (settled) {
+			return;
+		}
+		if (isCancelled()) {
+			settled = true;
+			callback(`readiness polling of ${boltUrl} was cancelled`);
 			return;
 		}
 		if (Date.now() > deadline) {
@@ -683,6 +840,11 @@ const moduleFunction =
 	const runDockerCommand = deps.runDockerCommand || defaultRunDockerCommand;
 	const findPortPair = deps.findAvailablePortPair || findAvailablePortPair;
 	const waitForReadiness = deps.waitForReadiness || defaultWaitForReadiness;
+	// the port allocation lock: its directory, and (for the race gate's red twin only) its two operations
+	const portAllocationLockDirPath = deps.portAllocationLockDirPath || PORT_ALLOCATION_LOCK_DIR_PATH;
+	const acquirePortLock = deps.acquirePortAllocationLock || acquirePortAllocationLock;
+	const releasePortLock = deps.releasePortAllocationLock || releasePortAllocationLock;
+	const startWatchdogForCreate = deps.startExitWatchdog || startExitWatchdog;
 
 	// -----
 	// create — provision a throwaway DEV_* Neo4j container; hand back the graph handle. The
@@ -710,7 +872,16 @@ const moduleFunction =
 		const settings = resolveSettings();
 		const password = crypto.randomBytes(18).toString('base64url');
 		let containerLaunched = false;
+		let portLockHeld = false;
 		const taskList = new taskListPlus();
+
+		// the port search, the run and its verification happen under ONE cross-process lock (see the lock's header)
+		taskList.push((args, next) => {
+			acquirePortLock({ lockDirPath: portAllocationLockDirPath, deadline: Date.now() + settings.readyTimeoutMs }, (lockErr) => {
+				portLockHeld = !lockErr;
+				next(lockErr, args);
+			});
+		});
 
 		taskList.push((args, next) => {
 			findPortPair(settings, (err, ports) => next(err, { ...args, ...ports }));
@@ -734,8 +905,12 @@ const moduleFunction =
 			xLog.status(
 				`[replayManager] provisioning scratch graph '${graphName}' (bolt ${args.boltPort})...`,
 			);
+			// on the registry BEFORE the run: whatever happens next, the exit watchdog knows the name
+			registerScratchContainer(graphName, startWatchdogForCreate);
 			runDockerCommand(dockerArgs, (err, stdout, stderr) => {
 				if (err) {
+					// a failed run can leave a CREATED container behind (a port that would not bind): it is disposed below too
+					containerLaunched = true;
 					next(`docker run failed for '${graphName}': ${err.message}\n${stderr || ''}`);
 					return;
 				}
@@ -746,15 +921,47 @@ const moduleFunction =
 		});
 
 		taskList.push((args, next) => {
+			verifyOwnContainerPublished({ runDockerCommand, graphName, boltPort: args.boltPort }, (verifyErr) => next(verifyErr, args));
+		});
+
+		// the pair is published by our running container now, so the next prober sees it: release the lock
+		taskList.push((args, next) => {
+			releasePortLock({ lockDirPath: portAllocationLockDirPath }, (releaseErr) => {
+				portLockHeld = !!releaseErr;
+				next(releaseErr, args);
+			});
+		});
+
+		taskList.push((args, next) => {
 			const deadline = Date.now() + settings.readyTimeoutMs;
 			const boltUrl = `bolt://localhost:${args.boltPort}`;
+			// readiness and the liveness watch race; the first to finish decides, and the other is stopped (one next, ever)
+			let readinessSettled = false;
+			const settleReadiness = (readyErr) => {
+				if (readinessSettled) {
+					return;
+				}
+				readinessSettled = true;
+				livenessWatch.stop();
+				next(readyErr, { ...args, boltUrl });
+			};
+			const livenessWatch = watchContainerLiveness({ runDockerCommand, graphName }, settleReadiness);
 			waitForReadiness(
-				{ boltPort: args.boltPort, boltUrl, password, deadline, readyTimeoutMs: settings.readyTimeoutMs },
-				(readyErr) => next(readyErr, { ...args, boltUrl }),
+				{ boltPort: args.boltPort, boltUrl, password, deadline, readyTimeoutMs: settings.readyTimeoutMs, isCancelled: () => readinessSettled },
+				settleReadiness,
 			);
 		});
 
-		pipeRunner(taskList.getList(), {}, (err, args) => {
+		pipeRunner(taskList.getList(), {}, (pipeErr, args) => {
+			// a failure while the lock is held releases it first, so one failed provision never stalls every other process
+			if (pipeErr && portLockHeld) {
+				portLockHeld = false;
+				releasePortLock({ lockDirPath: portAllocationLockDirPath }, (releaseErr) => finishCreate(releaseErr ? `${pipeErr} — AND ${releaseErr}` : pipeErr, args));
+				return;
+			}
+			finishCreate(pipeErr, args);
+		});
+		const finishCreate = (err, args) => {
 			if (err) {
 				if (!containerLaunched) {
 					// nothing was started (port search or docker run itself failed) — nothing to dispose
@@ -786,7 +993,7 @@ const moduleFunction =
 				boltPort: args.boltPort,
 				httpPort: args.httpPort,
 			});
-		});
+		};
 	};
 
 	// -----
@@ -1337,7 +1544,21 @@ const moduleFunction =
 		});
 	};
 
-	return { create, init, harvest, finish, delete: deleteGraph };
+	// -----
+	// retain — this graph is the process's DELIVERABLE (build.js's materialized graph): it leaves the scratch registry, so the
+	// exit watchdog does not remove it. Every graph NOT retained and not deleted dies with the process.
+	const retain = (handle, callback) => {
+		const graphName = handle && (handle.containerName || handle.graphName);
+		const refusal = nameRefusal(graphName, 'retain');
+		if (refusal) {
+			callback(refusal);
+			return;
+		}
+		unregisterScratchContainer(graphName);
+		callback('');
+	};
+
+	return { create, init, harvest, finish, retain, delete: deleteGraph };
 };
 
 // END OF moduleFunction() ============================================================
@@ -1349,6 +1570,14 @@ module.exports.schemaBlockTexts = schemaBlockTexts;
 module.exports.resolveSettings = resolveSettings;
 module.exports.resolveEmbeddingDims = resolveEmbeddingDims;
 module.exports.disposeScratchGraph = disposeScratchGraph;
+// ⟪forgeClean CLEAN⟫ the port race fix, exported so its gate drives the real lock, search and verification
+module.exports.acquirePortAllocationLock = acquirePortAllocationLock;
+module.exports.releasePortAllocationLock = releasePortAllocationLock;
+module.exports.verifyOwnContainerPublished = verifyOwnContainerPublished;
+module.exports.watchContainerLiveness = watchContainerLiveness;
+module.exports.SCRATCH_REGISTRY_FILE_PATH = SCRATCH_REGISTRY_FILE_PATH;
+module.exports.findAvailablePortPair = findAvailablePortPair;
+module.exports.PORT_ALLOCATION_LOCK_DIR_PATH = PORT_ALLOCATION_LOCK_DIR_PATH;
 module.exports.engineVersionsFor = engineVersionsFor;
 module.exports.NEO4J_CONTAINER_SECURITY_ENV_LIST = NEO4J_CONTAINER_SECURITY_ENV_LIST;
 // The declared conservation exemption, exported so a caller NAMES it rather than repeating a

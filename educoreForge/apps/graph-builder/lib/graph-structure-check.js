@@ -14,16 +14,20 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //       Ed-Fi 46 are real), and every option value owned by exactly ONE option set of its own standard; where the
 //       standard's family declares a frozen SOURCE census (graphStructureRules.json; PESC's releaseCensus.json, counted
 //       from the release files by a tool separate from the walk), the graph's option set and value counts must equal it.
-//   rootOwnership (G5's other half, MEASURED, never a verdict) — per standard and role, the content nodes no directed
-//       path from the standard's root reaches (text nodes, hub cards and the hub definition are outside the question).
-//       W-C-1 made every SIF node reachable; PESC is measured here first (P3 docket 4).
+//   rootOwnership (G5's other half; a VERDICT since forgeClean lane CLEAN, R2, 2026-10-08, PLAN G19) — per standard and
+//       role, the content nodes no directed path (any edge type, depth ROOT_REACH_DEPTH) from the standard's root reaches
+//       (text nodes, hub cards and the hub definition are outside the question). FAIL when any standard has one, naming
+//       the standard, the roles and the orphans' stableIds (a capped sample, read by a second query only when a standard
+//       fails, so a clean graph pays for one walk). W-C-1 made every SIF node reachable; lane CLEAN made every PESC node
+//       reachable; until R2 the row was only a measurement, so nothing stopped a new orphan.
 //
-// The forgeCensus attestation (forge-census-gate.js) folds the two verdict checks into its row at every -build; the
+// The forgeCensus attestation (forge-census-gate.js) folds all three checks into its row at every -build; the
 // standalone tools/graphStructureCheck.js runs all three against a named container, read-only.
 //
 //   instanceStructureRowFor({ instanceRowList, declarationRowList }) -> row (pure)
 //   codeListStructureRowFor({ optionValueRowList, optionSetRowList, sourceCodeListCensusByStandard }) -> row (pure)
-//   rootOwnershipRowFor({ rootRoleRowList }) -> row (pure, verdict 'measured')
+//   rootOwnershipRowFor({ rootRoleRowList, unreachedStableIdListByStandard }) -> row (pure; the orphan names are optional)
+//   unreachedStableIdListFor({ reachedStableIdList, contentStableIdList }) -> the sorted orphans (pure)
 //   runGraphStructureCheck({ session, checkNameList, sourceCodeListCensusByStandard }, callback(err, checkRowList))
 //   sourceCodeListCensusFor({ treeRootPath, standardDefinitionRowList }) -> { sourceCodeListCensusByStandard, refusal }
 //
@@ -36,8 +40,8 @@ const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabu
 const GRAPH_STRUCTURE_RULES = Object.freeze(JSON.parse(fs.readFileSync(path.join(__dirname, 'graphStructureRules.json'), 'utf8')));
 const INSTANCE_OWNER_EDGE_TYPE_BY_LABEL_SUFFIX = Object.freeze({ ...GRAPH_STRUCTURE_RULES.instanceOwnerEdgeTypeByLabelSuffix });
 const CODE_LIST_SOURCE_CENSUS_RULE_BY_STANDARD_FAMILY = Object.freeze({ ...GRAPH_STRUCTURE_RULES.codeListSourceCensusRuleByStandardFamily });
-const MEASURED_VERDICT = 'measured';
-// the deepest directed path the root-ownership measurement follows (measured: 14 reaches every SIF and Ed-Fi node)
+// the deepest directed path the root-ownership check follows (measured: 14 reaches every SIF and Ed-Fi node, and every
+// PESC node since lane CLEAN). A node only deeper reads as an orphan: the verdict errs toward FAIL, never toward a pass.
 const ROOT_REACH_DEPTH = 14;
 const DETAIL_ITEM_CAP = 6;
 
@@ -83,6 +87,21 @@ const ROOT_OWNERSHIP_CYPHER = `
 	}
 	RETURN root._source AS standardName, role, contentNodeCount, size([reachedRole IN reachedRoleList WHERE reachedRole = role]) AS reachedNodeCount
 	ORDER BY standardName, role`;
+// the two stableId lists of ONE failing standard, diffed in JavaScript (a Set): the orphans' names for the verdict. Run
+// only for a standard the count query found short, because a membership test inside Cypher is quadratic (see above)
+const ROOT_OWNERSHIP_STABLE_ID_CYPHER = `
+	MATCH (root:ForgedNode) WHERE root.role = $standardRootRole AND root._source = $standardName
+	CALL {
+		WITH root
+		MATCH (root)-[*1..${ROOT_REACH_DEPTH}]->(reached:ForgedNode) WHERE reached._source = root._source AND NOT reached:HubReference AND NOT reached:HubDefinition
+		RETURN collect(DISTINCT reached.stableId) AS reachedStableIdList
+	}
+	CALL {
+		WITH root
+		MATCH (n:ForgedNode) WHERE n._source = root._source AND n <> root AND n.role <> $embedTextRole AND NOT n:HubReference AND NOT n:HubDefinition
+		RETURN collect(n.stableId) AS contentStableIdList
+	}
+	RETURN reachedStableIdList, contentStableIdList`;
 
 const labelSuffixOf = (labelList) => Object.keys(INSTANCE_OWNER_EDGE_TYPE_BY_LABEL_SUFFIX).filter((labelSuffix) => labelList.some((oneLabel) => oneLabel !== vocabulary.DME_ROLES.INSTANCE && oneLabel.endsWith(labelSuffix)));
 const cappedText = (itemList) => `${itemList.slice(0, DETAIL_ITEM_CAP).join('; ')}${itemList.length > DETAIL_ITEM_CAP ? `; +${itemList.length - DETAIL_ITEM_CAP} more` : ''}`;
@@ -170,8 +189,16 @@ const codeListStructureRowFor = ({ optionValueRowList, optionSetRowList, sourceC
 	};
 };
 
-// rootOwnershipRowFor — a MEASUREMENT: the content nodes of each standard no directed path from its root reaches
-const rootOwnershipRowFor = ({ rootRoleRowList }) => {
+// unreachedStableIdListFor — the content stableIds the reached list lacks, sorted (pure)
+const unreachedStableIdListFor = ({ reachedStableIdList, contentStableIdList }) => {
+	const reachedStableIdSet = new Set(reachedStableIdList);
+	return contentStableIdList.filter((stableId) => !reachedStableIdSet.has(stableId)).sort();
+};
+
+// rootOwnershipRowFor — a VERDICT (PLAN G19): FAIL when any standard's root fails to reach one of its content nodes, naming
+// the standard and its roles, and the orphans when unreachedStableIdListByStandard carries them
+const rootOwnershipRowFor = ({ rootRoleRowList, unreachedStableIdListByStandard }) => {
+	const orphanListByStandard = unreachedStableIdListByStandard || {};
 	const measuredByStandard = {};
 	rootRoleRowList.forEach((oneRow) => {
 		const standardMeasure = measuredByStandard[oneRow.standardName] = measuredByStandard[oneRow.standardName] || { contentNodeCount: 0, unreachedNodeCount: 0, unreachedNodeCountByRole: {} };
@@ -183,10 +210,21 @@ const rootOwnershipRowFor = ({ rootRoleRowList }) => {
 		}
 	});
 	const standardNameList = Object.keys(measuredByStandard).sort();
+	const failureList = standardNameList
+		.filter((standardName) => measuredByStandard[standardName].unreachedNodeCount > 0)
+		.map((standardName) => {
+			const measured = measuredByStandard[standardName];
+			const orphanList = orphanListByStandard[standardName] || [];
+			measured.unreachedStableIdSampleList = orphanList.slice(0, DETAIL_ITEM_CAP);
+			return `${standardName}: ${measured.unreachedNodeCount} of ${measured.contentNodeCount} content node(s) unreached from its root (${Object.keys(measured.unreachedNodeCountByRole).map((role) => `${role} ${measured.unreachedNodeCountByRole[role]}`).join(', ')})${orphanList.length ? `: ${cappedText(orphanList)}` : ''}`;
+		});
+	const countText = standardNameList.map((standardName) => `${standardName} ${measuredByStandard[standardName].unreachedNodeCount}/${measuredByStandard[standardName].contentNodeCount}`).join(', ');
 	return {
 		checkName: 'rootOwnership',
-		verdict: MEASURED_VERDICT,
-		detail: standardNameList.map((standardName) => `${standardName} ${measuredByStandard[standardName].unreachedNodeCount} of ${measuredByStandard[standardName].contentNodeCount} unreached${measuredByStandard[standardName].unreachedNodeCount ? ` (${Object.keys(measuredByStandard[standardName].unreachedNodeCountByRole).map((role) => `${role} ${measuredByStandard[standardName].unreachedNodeCountByRole[role]}`).join(', ')})` : ''}`).join('; '),
+		verdict: verdictOf(failureList),
+		detail: failureList.length === 0
+			? `every content node of ${standardNameList.length} standard(s) is reached from its root (unreached/content: ${countText})`
+			: `FAILED — ${failureList.join(' | ')}`,
 		measuredByStandard,
 	};
 };
@@ -213,10 +251,37 @@ const CYPHER_PARAMETERS = Object.freeze({
 });
 
 // each check: the Cyphers it reads (by the row-list name its row builder takes) and the builder
+// rootOwnership's second read: for each standard its row found short, the orphans' stableIds, so the verdict names them
+const unreachedStableIdListByStandardFor = ({ session, rowListByName }, callback) => {
+	const shortStandardNameList = [...new Set(rowListByName.rootRoleRowList.filter((oneRow) => oneRow.contentNodeCount > oneRow.reachedNodeCount).map((oneRow) => oneRow.standardName))].sort();
+	const unreachedStableIdListByStandard = {};
+	const nextStandard = (standardIndex) => {
+		if (standardIndex >= shortStandardNameList.length) {
+			callback('', { unreachedStableIdListByStandard });
+			return;
+		}
+		runCypher(session, ROOT_OWNERSHIP_STABLE_ID_CYPHER, { ...CYPHER_PARAMETERS, standardName: shortStandardNameList[standardIndex] }, (cypherError, rowList) => {
+			if (cypherError) {
+				callback(cypherError);
+				return;
+			}
+			if (rowList.length !== 1) {
+				callback(`${moduleName}: the orphan read for ${shortStandardNameList[standardIndex]} returned ${rowList.length} root row(s), not 1; its orphans are not named by guess`);
+				return;
+			}
+			unreachedStableIdListByStandard[shortStandardNameList[standardIndex]] = unreachedStableIdListFor(rowList[0]);
+			nextStandard(standardIndex + 1);
+		});
+	};
+	nextStandard(0);
+};
+
+// each check: the Cyphers it reads (by the row-list name its row builder takes), an optional second read whose result
+// joins the builder's arguments, and the builder
 const CHECK_BY_NAME = Object.freeze({
 	instanceStructure: { cypherByRowListName: { instanceRowList: INSTANCE_STRUCTURE_CYPHER, declarationRowList: DECLARATION_STRUCTURE_CYPHER }, rowFor: instanceStructureRowFor },
 	codeListStructure: { cypherByRowListName: { optionValueRowList: OPTION_VALUE_STRUCTURE_CYPHER, optionSetRowList: OPTION_SET_STRUCTURE_CYPHER }, rowFor: codeListStructureRowFor },
-	rootOwnership: { cypherByRowListName: { rootRoleRowList: ROOT_OWNERSHIP_CYPHER }, rowFor: rootOwnershipRowFor },
+	rootOwnership: { cypherByRowListName: { rootRoleRowList: ROOT_OWNERSHIP_CYPHER }, secondReadFor: unreachedStableIdListByStandardFor, rowFor: rootOwnershipRowFor },
 });
 
 const runGraphStructureCheck = ({ session, checkNameList, sourceCodeListCensusByStandard } = {}, callback) => {
@@ -235,13 +300,24 @@ const runGraphStructureCheck = ({ session, checkNameList, sourceCodeListCensusBy
 			callback('', checkRowList);
 			return;
 		}
-		const { cypherByRowListName, rowFor } = CHECK_BY_NAME[checkNameList[checkIndex]];
+		const { cypherByRowListName, secondReadFor, rowFor } = CHECK_BY_NAME[checkNameList[checkIndex]];
 		const rowListNameList = Object.keys(cypherByRowListName);
 		const rowListByName = {};
 		const nextCypher = (cypherIndex) => {
 			if (cypherIndex >= rowListNameList.length) {
-				checkRowList.push(rowFor({ ...rowListByName, sourceCodeListCensusByStandard }));
-				nextCheck(checkIndex + 1);
+				if (secondReadFor === undefined) {
+					checkRowList.push(rowFor({ ...rowListByName, sourceCodeListCensusByStandard }));
+					nextCheck(checkIndex + 1);
+					return;
+				}
+				secondReadFor({ session, rowListByName }, (secondReadError, secondReadResult) => {
+					if (secondReadError) {
+						callback(`${checkNameList[checkIndex]}: ${secondReadError}`);
+						return;
+					}
+					checkRowList.push(rowFor({ ...rowListByName, ...secondReadResult, sourceCodeListCensusByStandard }));
+					nextCheck(checkIndex + 1);
+				});
 				return;
 			}
 			runCypher(session, cypherByRowListName[rowListNameList[cypherIndex]], CYPHER_PARAMETERS, (cypherError, rowList) => {
@@ -289,7 +365,6 @@ const sourceCodeListCensusFor = ({ treeRootPath, standardDefinitionRowList }) =>
 
 module.exports = {
 	moduleName,
-	MEASURED_VERDICT,
 	PASS_VERDICT: vocabulary.BUILD_ATTESTATION_VERDICT.PASS,
 	INSTANCE_OWNER_EDGE_TYPE_BY_LABEL_SUFFIX,
 	CODE_LIST_SOURCE_CENSUS_RULE_BY_STANDARD_FAMILY,
@@ -298,9 +373,11 @@ module.exports = {
 	OPTION_VALUE_STRUCTURE_CYPHER,
 	OPTION_SET_STRUCTURE_CYPHER,
 	ROOT_OWNERSHIP_CYPHER,
+	ROOT_OWNERSHIP_STABLE_ID_CYPHER,
 	instanceStructureRowFor,
 	codeListStructureRowFor,
 	rootOwnershipRowFor,
+	unreachedStableIdListFor,
 	runGraphStructureCheck,
 	sourceCodeListCensusFor,
 };

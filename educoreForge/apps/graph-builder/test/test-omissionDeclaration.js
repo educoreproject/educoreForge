@@ -23,7 +23,9 @@
 //   (l) the roundTrip BuildAttestation row carries explicitOmissionDeclarationList (one line per standard) and its detail
 //       says the same; graph-contract §4 declares the field for the roundTrip gate (stringList) and §1 keeps it a list
 //   ⟪G21b, VIOLET_VALLEY 2026-10-07: "an omission declaration whose comment text cannot be read cannot be audited"⟫
-//   (m) a PESC comment entry carries its text; whitespace and processing-instruction entries carry none
+//   (m) ⟪forgeClean CLEAN, G20, 2026-10-08; replaces G21b's "a PESC comment entry carries its text"⟫ a PESC comment is
+//       never an omitted entry: it is a content statement carrying its text (a graph without it reads a content gap),
+//       and no PESC omitted kind bears text
 //   (n) an entry of a text-bearing kind without its text is REFUSED; (o) text on any other kind is REFUSED
 //   (p) a declaration whose textBearingKindList names a kind its kindList does not is REFUSED
 // RED TWINS (in memory): every conjunct is driven against a double of the module it judges, mutated to the pre-G21 rule.
@@ -169,8 +171,9 @@ const conjunctJudgeByRefId = {
 		const assembled = require(ASSEMBLER_PATH).assembleVerdict({ verdictVersion: 'g21-1', semanticValidationLimit: 'pesc', sourceStatements, graphStatements: new Map([...sourceStatements].filter(([, statement]) => statement.explicitlyOmitted !== true)), wallClockMs: 1, peakMemoryBytes: 1, omissionDeclaration: declaration });
 		const kindText = ((assembled.verdict || {}).explicitlyOmittedList || []).map((one) => `${one.kind}@${one.rule}`).sort().join(',');
 		done({
-			pass: declaration.rule === PESC_RULE && (declaration.kindList || []).slice().sort().join(',') === 'comment,processingInstruction,whitespace' && /comments may carry content \(PLAN G20\)/.test(declaration.caveatText || '') &&
-				kindText === `comment@${PESC_RULE},processingInstruction@${PESC_RULE},whitespace@${PESC_RULE},whitespace@${PESC_RULE}`,
+			// G20: comments left the kindList; the XSD's comment is a content statement, matched, so it is no entry
+			pass: declaration.rule === PESC_RULE && (declaration.kindList || []).slice().sort().join(',') === 'processingInstruction,whitespace' && /comments are carried and compared as content \(PLAN G20\)/.test(declaration.caveatText || '') &&
+				kindText === `processingInstruction@${PESC_RULE},whitespace@${PESC_RULE},whitespace@${PESC_RULE}` && [...sourceStatements.values()].some((one) => one.tag === '#comment' && one.text === ' Change # CR1 '),
 			detail: assembled.error || `declaration ${JSON.stringify(declaration)}; entries ${kindText}`,
 		});
 	},
@@ -196,16 +199,17 @@ const conjunctJudgeByRefId = {
 				detail: err || `text ${JSON.stringify(row.explicitOmissionDeclarationText)}; byKind ${JSON.stringify(row.explicitlyOmittedCountByKindList)}`,
 			});
 		}),
-	m_pescCommentEntryCarriesItsText: (mutationList, done) => {
-		const pescPairLib = require(PESC_PAIR_PATH);
+	m_pescCommentIsContentNeverOmitted: (mutationList, done) => {
+		const pescPairLib = doubleOrReal(PESC_PAIR_PATH, mutationList);
 		const declaration = pescPairLib.makeRoundTripPair({ labelPrefix: 'PescToy' }).omissionDeclaration;
 		const canonical = pescPairLib.canonicalStatementsOfXsdText({ fileName: 'toy.xsd', xsdText: '<?xml version="1.0"?>\n<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"><!-- Change # CR1 -->\n</xs:schema>', includeOmitted: true });
 		const sourceStatements = new Map(canonical.statementList || []);
-		const assembled = doubleOrReal(ASSEMBLER_PATH, mutationList).assembleVerdict({ verdictVersion: 'g21b-1', semanticValidationLimit: 'pesc', sourceStatements, graphStatements: new Map(), wallClockMs: 1, peakMemoryBytes: 1, omissionDeclaration: declaration });
-		const entryList = ((assembled.verdict || {}).explicitlyOmittedList || []);
-		const commentEntry = entryList.find((one) => one.kind === 'comment') || {};
-		const textlessOtherCount = entryList.filter((one) => one.kind !== 'comment' && one.text === undefined).length;
-		done({ pass: !assembled.error && commentEntry.text === ' Change # CR1 ' && textlessOtherCount === entryList.length - 1 && JSON.stringify(declaration.textBearingKindList) === '["comment"]', detail: assembled.error || `comment ${JSON.stringify(commentEntry)}; others without text ${textlessOtherCount}/${entryList.length - 1}` });
+		// the graph side is empty: a carried comment it lacks must read as a content gap, never as an omission
+		const assembled = require(ASSEMBLER_PATH).assembleVerdict({ verdictVersion: 'g20-1', semanticValidationLimit: 'pesc', sourceStatements, graphStatements: new Map(), wallClockMs: 1, peakMemoryBytes: 1, omissionDeclaration: declaration });
+		const verdict = assembled.verdict || {};
+		const omittedCommentCount = (verdict.explicitlyOmittedList || []).filter((one) => one.kind === 'comment').length;
+		const lostComment = (verdict.lostList || []).find((one) => one.statement && one.statement.tag === '#comment') || {};
+		done({ pass: !assembled.error && omittedCommentCount === 0 && lostComment.statement !== undefined && lostComment.statement.text === ' Change # CR1 ' && JSON.stringify(declaration.textBearingKindList) === '[]', detail: assembled.error || `omitted comments ${omittedCommentCount}; lost comment ${JSON.stringify(lostComment.statement || null)}; textBearingKindList ${JSON.stringify(declaration.textBearingKindList)}` });
 	},
 	n_textBearingEntryWithoutTextRefused: (mutationList, done) =>
 		done(refusedWith(mutationList, { ...WELL_FORMED, explicitlyOmittedList: [{ statementKey: 'omit0', kind: 'comment', rule: TOY_DECLARATION.rule }, omittedEntryFor(1, 'whitespace'), omittedEntryFor(2, 'whitespace')] }, /explicitly omitted item 0 \(omit0\) of text-bearing kind 'comment' carries no text/)),
@@ -240,11 +244,11 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'e_entryNeedsKindAndRule', twinName: 'entryFieldsUnchecked', modulePath: ASSEMBLER_PATH, find: 'const missingEntryMemberName = OMITTED_ENTRY_MEMBER_NAME_LIST.find(', replace: 'const missingEntryMemberName = [].find(' },
 	{ conjunctRefId: 'f_undeclaredKindRefused', twinName: 'kindNotHeldToDeclaration', modulePath: ASSEMBLER_PATH, find: 'if (declaration.kindList.indexOf(oneEntry.kind) === -1) {', replace: 'if (false) {' },
 	{ conjunctRefId: 'g_assemblerSplitsTheDiff', twinName: 'omittedLeftInLostList', modulePath: ASSEMBLER_PATH, find: '		lostList: partitioned.lostList,', replace: '		lostList: diff.lostList,' },
-	{ conjunctRefId: 'm_pescCommentEntryCarriesItsText', twinName: 'textNotCopied', modulePath: ASSEMBLER_PATH, find: 'const textMember = ', replace: 'const textMember = {} || ' },
+	{ conjunctRefId: 'm_pescCommentIsContentNeverOmitted', twinName: 'commentFiledAsOmittedAgain', modulePath: PESC_PAIR_PATH, find: '		if (frame !== undefined) {\n			frame.pendingCommentTextList.push(commentText);\n			return;\n		}', replace: "		if (frame !== undefined) {\n			omittedCountByKind.comment = (omittedCountByKind.comment || 0) + 1;\n			statementList.push([statementKeyOf(`comment#${omittedCountByKind.comment}`), { omittedKind: 'comment', omittedText: commentText, explicitlyOmitted: true }]);\n			return;\n		}" },
 	{ conjunctRefId: 'n_textBearingEntryWithoutTextRefused', twinName: 'missingTextUnchecked', modulePath: ASSEMBLER_PATH, find: 'if (isTextBearing && typeof oneEntry.text !== \'string\') {', replace: 'if (false) {' },
 	{ conjunctRefId: 'o_textOnOtherKindRefused', twinName: 'strayTextUnchecked', modulePath: ASSEMBLER_PATH, find: 'if (!isTextBearing && oneEntry.text !== undefined) {', replace: 'if (false) {' },
 	{ conjunctRefId: 'p_textBearingKindsAreDeclaredKinds', twinName: 'subsetUnchecked', modulePath: ASSEMBLER_PATH, find: 'const undeclaredTextKind = declaration.textBearingKindList.find(', replace: 'const undeclaredTextKind = [].find(' },
-	{ conjunctRefId: 'h_pescPairDeclaresItsKinds', twinName: 'pescCaveatDropped', modulePath: PESC_PAIR_PATH, find: "	caveatText: 'comments may carry content (PLAN G20)',", replace: "	caveatText: '',"},
+	{ conjunctRefId: 'h_pescPairDeclaresItsKinds', twinName: 'pescCaveatDropped', modulePath: PESC_PAIR_PATH, find: "	caveatText: 'formatting only: comments are carried and compared as content (PLAN G20), never omitted',", replace: "	caveatText: '',"},
 	{ conjunctRefId: 'i_sifPairDeclaresContainer', twinName: 'sifKindUnstamped', modulePath: SIF_PAIR_PATH, find: 'kindList: Object.freeze([STATEMENT_KIND.CONTAINER])', replace: 'kindList: Object.freeze([])' },
 	...['ceds', 'edfi', 'sif'].map((oneValidatorName) => ({ conjunctRefId: `j${oneValidatorName.charAt(0).toUpperCase()}${oneValidatorName.slice(1)}_emptyOmittedList`, twinName: `${oneValidatorName}PartWithoutOmittedList`, modulePath: VALIDATOR_PATH_BY_NAME[oneValidatorName], find: 'explicitlyOmittedList: partitioned.explicitlyOmittedList,', replace: '' })),
 	{ conjunctRefId: 'k_stageSummaryByKindWithRule', twinName: 'summaryWithoutDeclaration', modulePath: STAGE_PATH, find: '					explicitOmissionDeclarationText: omissionDeclarationText,', replace: '' },

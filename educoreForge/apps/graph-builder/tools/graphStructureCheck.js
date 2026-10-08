@@ -5,8 +5,9 @@
 // every query under a server-side transaction timeout. Runs lib/graph-structure-check.js's three checks:
 //   instanceStructure (verdict)  every SIF Field and PESC occurrence has one declaration and one owner
 //   codeListStructure (verdict)  every option value has one owning set; counts per standard; frozen source censuses equal
-//   rootOwnership     (measured) per standard and role, the content nodes no directed path from the root reaches
-// The two verdict checks also run inside the forgeCensus attestation at every -build (forge-census-gate.js); this tool
+//   rootOwnership     (verdict)  every content node of every standard reached from its root (forgeClean R2; a
+//                                measurement until 2026-10-08), the orphans named
+// All three also run inside the forgeCensus attestation at every -build (forge-census-gate.js); this tool
 // is how a graph built BEFORE that (the gold GOLD_EVAL_261006_jevContract, P3) is checked without a rebuild.
 //
 // Run: node apps/graph-builder/tools/graphStructureCheck.js --containerName=<container> [--outputFilePath=<json>]
@@ -14,7 +15,7 @@
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = `
 NAME
-     ${moduleName} -- the instance-structure and code-list checks (PLAN G5, G6) and the root-ownership measurement, read-only
+     ${moduleName} -- the instance-structure, code-list and root-ownership checks (PLAN G5, G6, G19), read-only
 
 SYNOPSIS
      ${moduleName} --containerName=<a running graph container> [--outputFilePath=<json>] [-help]
@@ -25,7 +26,7 @@ DESCRIPTION
      are read from the forge tree for every standard whose family graphStructureRules.json names.
 
 EXIT STATUS
-     0 both verdict checks pass (rootOwnership is a measurement and never fails the run);  1 a check failed, or refused.
+     0 all three checks pass;  1 a check failed (rootOwnership included, since forgeClean R2), or refused.
 
 FILES
      apps/graph-builder/lib/graphStructureRules.json   the owner edge per instance label suffix; the source census rules
@@ -92,7 +93,7 @@ pipeRunner(taskList.getList(), {}, (pipeError, args) => {
 			fs.writeFileSync(outputFilePath, JSON.stringify({ containerName, checkedAt: new Date().toISOString(), checkRowList: args.checkRowList }, null, 2));
 			xLog.result(`${moduleName}: wrote ${outputFilePath}\n`);
 		}
-		const failedRowList = args.checkRowList.filter((oneRow) => oneRow.verdict !== structureCheck.MEASURED_VERDICT && oneRow.verdict !== structureCheck.PASS_VERDICT);
+		const failedRowList = args.checkRowList.filter((oneRow) => oneRow.verdict !== structureCheck.PASS_VERDICT);
 		process.exit(failedRowList.length === 0 ? 0 : 1);
 	});
 });

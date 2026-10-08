@@ -83,7 +83,10 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // twice, as a dmeRole member and as a DME role nodeLabel member (the role labels W-A-6 projected).
 // ⟪G21, 2026-10-07 (BRONZE_SIGNAL)⟫ +2 more, unrelated to V1: the roundTrip attestation's explicitOmissionDeclarationList,
 // projected as an attestation-field member and as a list-valued-name member (graph-contract §4 and §1).
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2;
+// ⟪forgeClean lane CLEAN, G19, 2026-10-08 (PRISM_CASCADE)⟫ +1 more, unrelated to V1: EDGE_TYPES.HAS_DEFINITION (schema file to a
+// top-level definition no other edge owns), projected as one edgeType member; +1 more, the PESC list-valued name
+// precedingCommentList (graph-contract §1, G20), projected as one list-valued-name member.
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1;
 // ⟪campaign P3, W-C-2⟫ rows RETIRED from V1's own five: the real registry is AFTER_V1 + added − retired, and the pre-V1
 // reading (the remaining V1 rows removed) is BEFORE_V1 + added, unchanged.
 const SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1 = RETIRED_V1_EDGE_TYPE_NAME_LIST.length;

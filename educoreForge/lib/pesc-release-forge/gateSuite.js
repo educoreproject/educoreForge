@@ -884,7 +884,8 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 					const structuralEdgeList = forged.edges.filter((oneEdge) => oneEdge.type !== 'EMBEDS_TEXT_OF');
 					const measured = {
 						edgeCountByType: countBy(structuralEdgeList, (oneEdge) => oneEdge.type),
-						referencesTypeCountByTarget: countBy(structuralEdgeList.filter((oneEdge) => oneEdge.type === 'REFERENCES_TYPE'), (oneEdge) => stableIdKindOf(oneEdge.toRef.id)),
+						// an anonymous target is counted as such (forgeClean G19), not by its owner's kind
+						referencesTypeCountByTarget: countBy(structuralEdgeList.filter((oneEdge) => oneEdge.type === 'REFERENCES_TYPE'), (oneEdge) => (oneEdge.toRef.id.endsWith('/anon') ? 'anonymous' : stableIdKindOf(oneEdge.toRef.id))),
 						subclassOfCountByVariety: countBy(structuralEdgeList.filter((oneEdge) => oneEdge.type === 'SUBCLASS_OF'), (oneEdge) => oneEdge.properties.derivationVariety),
 						referencesCountByTarget: countBy(structuralEdgeList.filter((oneEdge) => oneEdge.type === 'REFERENCES'), (oneEdge) => stableIdKindOf(oneEdge.toRef.id)),
 					};
@@ -913,8 +914,8 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	];
 	edgesConjunctList.push({
 		conjunctId: 'everyDeclarationHasItsTypeEdge',
-		title: "every element-like declaration (element, attribute, global element) typed by a named type has exactly one REFERENCES_TYPE or HAS_OPTION_SET edge to that type, every declaration with an anonymous code list has HAS_OPTION_SET to it (QUIET_ORBIT ruling), and the counts by declaration kind EQUAL the frozen literal",
-		twinNameList: ['attributeTypeEdgesDropped', 'anonymousOptionSetEdgeDropped'],
+		title: "every element-like declaration (element, attribute, global element) typed by a named type has exactly one REFERENCES_TYPE or HAS_OPTION_SET edge to that type, every declaration with an anonymous code list has HAS_OPTION_SET to it (QUIET_ORBIT ruling) and with any other anonymous type REFERENCES_TYPE to it (forgeClean G19), and the counts by declaration kind EQUAL the frozen literal",
+		twinNameList: ['attributeTypeEdgesDropped', 'anonymousOptionSetEdgeDropped', 'anonymousTypeEdgeDropped'],
 		evaluate: (subject, callback) => {
 			if (walkLiteralSet === undefined || walkLiteralSet.typeEdgeCountByDeclaration === undefined) {
 				callback('', missingLiteralResult('typeEdgeCountByDeclaration'));
@@ -946,7 +947,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 					.forEach((oneNode) => {
 						const namedType = topLevelTypeByQName[oneNode.properties.typeQName];
 						const anonymousNode = nodeByStableId[`${oneNode.stableId}/anon`];
-						const expectedTarget = namedType !== undefined ? namedType.stableId : anonymousNode !== undefined && labelSuffixOf(anonymousNode) === 'CodeList' ? anonymousNode.stableId : undefined;
+						const expectedTarget = namedType !== undefined ? namedType.stableId : anonymousNode !== undefined ? anonymousNode.stableId : undefined;
 						const actualTargetList = typeEdgeTargetListByDeclaration[oneNode.stableId] || [];
 						if (expectedTarget === undefined ? actualTargetList.length !== 0 : actualTargetList.length !== 1 || actualTargetList[0] !== expectedTarget) {
 							wrongList.push(`${oneNode.stableId} → [${actualTargetList.join(', ')}]`);
@@ -963,6 +964,9 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	);
 	registerWalkTwin(EDGES_GATE_ID, 'everyDeclarationHasItsTypeEdge', 'anonymousOptionSetEdgeDropped', 'productionMutation', (subject) =>
 		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '			addEdge({ edgeType: EDGE_TYPES.HAS_OPTION_SET, fromStableId: ownerDeclarationStableId, toStableId: anonymousStableId });\n', replace: '' }),
+	);
+	registerWalkTwin(EDGES_GATE_ID, 'everyDeclarationHasItsTypeEdge', 'anonymousTypeEdgeDropped', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '		} else {\n			addEdge({ edgeType: EDGE_TYPES.REFERENCES_TYPE, fromStableId: ownerDeclarationStableId, toStableId: anonymousStableId });\n		}', replace: '		}' }),
 	);
 	registerWalkTwin(EDGES_GATE_ID, 'edgeCountsEqualLiterals', 'dataTypeSupportRestored', 'productionMutation', (subject) =>
 		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '	group: EDGE_TYPES.HAS_SUPPORT,\n	type: EDGE_TYPES.HAS_CLASS,', replace: '	group: EDGE_TYPES.HAS_SUPPORT,\n	dataType: EDGE_TYPES.HAS_SUPPORT,\n	type: EDGE_TYPES.HAS_CLASS,' }),
@@ -1217,6 +1221,98 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		},
 	}));
 
+	// ---- G19-ROOT-OWNERSHIP ⟪forgeClean lane CLEAN, 2026-10-08⟫ every node of the forge's output, text nodes aside (they
+	// point AT what they describe), is reached from the release root by directed edges. R0 measured 671 to 1,149 nodes per
+	// release unreached on the gold graph: anonymous types with no edge, unused library definitions owned by nothing, and
+	// the release's own document root element (evidence/R0-classification.md).
+	const ROOT_OWNERSHIP_GATE_ID = 'G19-ROOT-OWNERSHIP';
+	const unreachedNodeListOf = (forged) => {
+		const targetListBySource = {};
+		forged.edges.forEach((oneEdge) => {
+			(targetListBySource[oneEdge.fromRef.id] = targetListBySource[oneEdge.fromRef.id] || []).push(oneEdge.toRef.id);
+		});
+		const rootNode = forged.nodes.find((oneNode) => oneNode.role === DME_ROLES.STANDARD_ROOT);
+		const reachedStableIdSet = new Set([rootNode.stableId]);
+		const frontierList = [rootNode.stableId];
+		while (frontierList.length > 0) {
+			(targetListBySource[frontierList.pop()] || []).forEach((targetStableId) => {
+				if (!reachedStableIdSet.has(targetStableId)) {
+					reachedStableIdSet.add(targetStableId);
+					frontierList.push(targetStableId);
+				}
+			});
+		}
+		return forged.nodes.filter((oneNode) => oneNode.role !== DME_ROLES.EMBED_TEXT && !reachedStableIdSet.has(oneNode.stableId));
+	};
+	const rootOwnershipConjunctList = [
+		{
+			conjunctId: 'everyNodeReachedFromRoot',
+			title: 'every node but the text nodes is reached from the release root by directed edges: the anonymous types through REFERENCES_TYPE (or HAS_OPTION_SET) from their declaration, every named code list, data type and global element through HAS_DEFINITION from its schema file',
+			twinNameList: ['anonymousTypeEdgeDropped', 'schemaFileOwnershipDropped'],
+			evaluate: (subject, callback) => {
+				forgeOrFail({ subject }, callback, (forged) => {
+					const unreachedNodeList = unreachedNodeListOf(forged);
+					const unreachedCountBySuffix = countOf(unreachedNodeList, labelSuffixOf);
+					callback('', { pass: unreachedNodeList.length === 0, detail: `${forged.nodes.length} nodes; unreached ${unreachedNodeList.length} ${sortedCountText(unreachedCountBySuffix)}${unreachedNodeList.length ? `; first ${unreachedNodeList.slice(0, 3).map((oneNode) => oneNode.stableId).join(', ')}` : ''}` });
+				});
+			},
+		},
+	];
+	const ANONYMOUS_TYPE_EDGE_MUTATION = Object.freeze({ modulePath: WALK_PATH, find: '		} else {\n			addEdge({ edgeType: EDGE_TYPES.REFERENCES_TYPE, fromStableId: ownerDeclarationStableId, toStableId: anonymousStableId });\n		}', replace: '		}' });
+	registerWalkTwin(ROOT_OWNERSHIP_GATE_ID, 'everyNodeReachedFromRoot', 'anonymousTypeEdgeDropped', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', ANONYMOUS_TYPE_EDGE_MUTATION));
+	registerWalkTwin(ROOT_OWNERSHIP_GATE_ID, 'everyNodeReachedFromRoot', 'schemaFileOwnershipDropped', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '		addEdge(rootEdgeType !== undefined ? { edgeType: rootEdgeType, fromStableId: rootStableId, toStableId: stableId } : { edgeType: schemaFileEdgeType, fromStableId: schemaFileStableIdOf(artifact), toStableId: stableId });', replace: '		if (rootEdgeType !== undefined) {\n			addEdge({ edgeType: rootEdgeType, fromStableId: rootStableId, toStableId: stableId });\n		}' }),
+	);
+
+	// ---- G20-COMMENTS ⟪lane CLEAN⟫ every comment of the release's files is carried, verbatim: those outside a definition on
+	// their schema file (fileCommentList), those inside one on the element they stand before (precedingCommentList); and the
+	// release record's rootChangeLogLineList is every comment of the message file, in order. Counted here by an independent
+	// sax reading of the snapshot (the donor folder is not the release), never by the forge's own tree.
+	const COMMENTS_GATE_ID = 'G20-COMMENTS';
+	const sourceCommentTextListByFileOf = (snapshotDirPath) => xsdFileNameList.reduce((soFar, fileName) => {
+		const commentTextList = [];
+		const commentParser = sax.parser(true, { trim: false, normalize: false });
+		commentParser.oncomment = (commentText) => commentTextList.push(commentText);
+		commentParser.write(fs.readFileSync(path.join(snapshotDirPath, fileName), 'utf8')).close();
+		return { ...soFar, [fileName]: commentTextList };
+	}, {});
+	const commentsConjunctList = [
+		{
+			conjunctId: 'everyCommentCarried',
+			title: "every comment of every release file is carried verbatim (fileCommentList on its schema file, precedingCommentList on the element it stands before), the multiset of carried texts EQUALS the source's, the release record's rootChangeLogLineList is the message file's comments in order, and the counts EQUAL the frozen literal",
+			twinNameList: ['precedingCommentsDropped', 'fileCommentsDropped', 'changeLogLastLineDropped'],
+			evaluate: (subject, callback) => {
+				if (walkLiteralSet === undefined || walkLiteralSet.commentCarry === undefined) {
+					callback('', missingLiteralResult('commentCarry'));
+					return;
+				}
+				forgeOrFail({ subject }, callback, (forged) => {
+					const sourceCommentTextListByFile = sourceCommentTextListByFileOf(subject.snapshotDirPath);
+					const sourceCommentTextList = Object.keys(sourceCommentTextListByFile).reduce((soFar, fileName) => soFar.concat(sourceCommentTextListByFile[fileName]), []);
+					const schemaFileNodeList = forged.nodes.filter((oneNode) => labelSuffixOf(oneNode) === 'SchemaFile');
+					const fileCommentTextList = schemaFileNodeList.reduce((soFar, oneNode) => soFar.concat((oneNode.properties.fileCommentList === undefined ? [] : JSON.parse(oneNode.properties.fileCommentList)).map((oneComment) => oneComment.text)), []);
+					const commentedElementList = forged.nodes.filter((oneNode) => labelSuffixOf(oneNode) === 'Element' && oneNode.properties.precedingCommentList !== undefined);
+					const precedingCommentTextList = commentedElementList.reduce((soFar, oneNode) => soFar.concat(widened(oneNode.properties.precedingCommentList)), []);
+					const carriedTextList = fileCommentTextList.concat(precedingCommentTextList);
+					const messageFileNode = schemaFileNodeList.find((oneNode) => oneNode.properties.layer === 'message');
+					const releaseNode = forged.nodes.find((oneNode) => labelSuffixOf(oneNode) === 'Release');
+					const changeLogLineList = widened(releaseNode.properties.rootChangeLogLineList);
+					const messageCommentTextList = sourceCommentTextListByFile[messageFileNode.properties.sourceFileName];
+					const sameMultiset = JSON.stringify(carriedTextList.slice().sort()) === JSON.stringify(sourceCommentTextList.slice().sort());
+					const changeLogIsMessageComments = JSON.stringify(changeLogLineList) === JSON.stringify(messageCommentTextList);
+					const measured = { sourceCommentCount: sourceCommentTextList.length, fileCommentCount: fileCommentTextList.length, precedingCommentCount: precedingCommentTextList.length, commentedElementCount: commentedElementList.length, rootChangeLogLineCount: changeLogLineList.length };
+					const literalMatches = sortedCountText(measured) === sortedCountText(walkLiteralSet.commentCarry);
+					callback('', { pass: sameMultiset && changeLogIsMessageComments && literalMatches, detail: `${sortedCountText(measured)}; carried texts equal the source's ${sameMultiset}; change log is the message file's ${messageCommentTextList.length} comments ${changeLogIsMessageComments}; literal ${literalMatches ? 'equal' : `DIFFERS ${sortedCountText(walkLiteralSet.commentCarry)}`}; commented elements ${commentedElementList.slice(0, 3).map((oneNode) => oneNode.properties.name).join(', ') || 'none'}` });
+				});
+			},
+		},
+	];
+	registerWalkTwin(COMMENTS_GATE_ID, 'everyCommentCarried', 'precedingCommentsDropped', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '					precedingCommentList: oneElement.precedingCommentValues,\n', replace: '' }));
+	registerWalkTwin(COMMENTS_GATE_ID, 'everyCommentCarried', 'fileCommentsDropped', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '				fileCommentList: jsonOrAbsent(oneArtifact.commentList),\n', replace: '' }));
+	// the change log one line short (the old reading took the manifest entry's 25 of College Transcript's 44; Learning
+	// Record's manifest line IS its one comment, so a twin that reads the manifest would not turn that release red)
+	registerWalkTwin(COMMENTS_GATE_ID, 'everyCommentCarried', 'changeLogLastLineDropped', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '			rootChangeLogLineList: messageArtifactList[0].commentList.map((oneComment) => oneComment.text),', replace: '			rootChangeLogLineList: messageArtifactList[0].commentList.slice(0, -1).map((oneComment) => oneComment.text),' }));
+
 	const walkGateDeclarationList = [
 		{ gateId: IDENTITY_GATE_ID, title: 'F6 identity: unique, patterned, deterministic', conjunctList: identityConjunctList },
 		{ gateId: ABSENT_GATE_ID, title: 'F7 absent is absent', conjunctList: absentConjunctList },
@@ -1227,6 +1323,8 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		{ gateId: SEQUENCE_GATE_ID, title: 'F22 sequence', conjunctList: sequenceConjunctList },
 		{ gateId: DECLARATIONS_GATE_ID, title: 'F2 declarations (extra): one node per declaration', conjunctList: declarationsConjunctList },
 		{ gateId: CODE_LIST_FACTS_GATE_ID, title: 'F2 code-list facts (extra): the list an element is typed by, on the element', conjunctList: codeListFactsConjunctList },
+		{ gateId: ROOT_OWNERSHIP_GATE_ID, title: 'G19 root ownership (forgeClean): every node reached from the release root', conjunctList: rootOwnershipConjunctList },
+		{ gateId: COMMENTS_GATE_ID, title: 'G20 comments (forgeClean): change logs and model notes carried, verbatim', conjunctList: commentsConjunctList },
 	];
 	const makeWalkSubject = () => ({ ...makeSubject(), secondReleaseStandardName: SECOND_RELEASE_STANDARD_NAME });
 
@@ -1775,7 +1873,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	const roundTripConjunctList = [
 		{
 			conjunctId: 'hermeticRoundTripClean',
-			title: "the bundle's round-trip validator over the graph double: inventedTotal 0, contentGapTotal 0, roundTripClean, and explicitlyOmittedTotal EQUALS the literal and the canonicalizer's own count of comments, whitespace runs and processing instructions; the verdict file is written",
+			title: "the bundle's round-trip validator over the graph double: inventedTotal 0, contentGapTotal 0, roundTripClean, and explicitlyOmittedTotal EQUALS the literal and the canonicalizer's own count of whitespace runs and processing instructions (comments are content since G20); the verdict file is written",
 			twinNameList: ['oneCodeDeletedFromDouble', 'oneCodeInjectedIntoDouble'],
 			evaluate: (subject, callback) => {
 				if (roundTripLiteralSet === undefined) {
@@ -1796,6 +1894,26 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 						const firstLost = verdict.lostList.find((oneLost) => oneLost.lostCategory === 'contentGap');
 						callback('', { pass, detail: `invented ${verdict.inventedTotal}; contentGap ${verdict.contentGapTotal}; explicitlyOmitted ${verdict.explicitlyOmittedTotal} ${sortedCountText(omittedCountByKind)}; clean ${verdict.roundTripClean}; verdict written ${verdictWritten}${verdict.inventedList.length ? `; first invented ${verdict.inventedList[0].statementKey}` : ''}${firstLost ? `; first gap ${firstLost.statementKey}` : ''}` });
 					});
+				});
+			},
+		},
+		{
+			// ⟪forgeClean lane CLEAN, G20⟫ a comment that is carried must not ALSO be declared omitted
+			conjunctId: 'commentsAreContentNeverOmitted',
+			title: "every source comment is a content statement (tag '#comment') matched by an equal statement from the graph, the count EQUALS the literal, none is flagged explicitlyOmitted, and the pair's omission declaration names no comment kind (G20: carried, so never also omitted)",
+			twinNameList: ['commentsFiledAsOmittedAgain', 'emitterDropsComments'],
+			evaluate: (subject, callback) => {
+				if (roundTripLiteralSet === undefined || roundTripLiteralSet.commentStatementCount === undefined) {
+					callback('', { pass: false, detail: `expectedReleaseLiterals.json has no roundTrip.commentStatementCount for ${releaseName}` });
+					return;
+				}
+				sideStatementsOf({ subject }, callback, ({ pair, sourceStatements, graphStatements }) => {
+					const sourceCommentEntryList = [...sourceStatements.entries()].filter((oneEntry) => oneEntry[1].tag === '#comment');
+					const omittedCommentCount = [...sourceStatements.values()].filter((oneStatement) => oneStatement.explicitlyOmitted === true && oneStatement.omittedKind === 'comment').length;
+					const unmatchedEntryList = sourceCommentEntryList.filter((oneEntry) => !sameStatement(oneEntry[1], graphStatements.get(oneEntry[0])));
+					const declarationNamesComment = pair.omissionDeclaration.kindList.indexOf('comment') !== -1;
+					const pass = sourceCommentEntryList.length === roundTripLiteralSet.commentStatementCount && unmatchedEntryList.length === 0 && omittedCommentCount === 0 && !declarationNamesComment;
+					callback('', { pass, detail: `comment statements ${sourceCommentEntryList.length} (literal ${roundTripLiteralSet.commentStatementCount}); unmatched ${unmatchedEntryList.length}${unmatchedEntryList.length ? ` (first ${unmatchedEntryList[0][0]})` : ''}; flagged omitted ${omittedCommentCount}; declaration kinds [${pair.omissionDeclaration.kindList.join(', ')}]` });
 				});
 			},
 		},
@@ -1960,6 +2078,12 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 
 	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'hermeticRoundTripClean', 'oneCodeDeletedFromDouble', 'inputFault', (subject) => ({ ...subject, doubleFaultName: 'oneCodeDeleted' }));
 	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'hermeticRoundTripClean', 'oneCodeInjectedIntoDouble', 'inputFault', (subject) => ({ ...subject, doubleFaultName: 'oneCodeInjected' }));
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'commentsAreContentNeverOmitted', 'commentsFiledAsOmittedAgain', 'productionMutation', (subject) =>
+		addMutation(subject, 'roundTripMutationList', { modulePath: ROUND_TRIP_PAIR_PATH, find: '		if (frame !== undefined) {\n			frame.pendingCommentTextList.push(commentText);\n			return;\n		}', replace: "		if (frame !== undefined) {\n			omittedCountByKind.comment = (omittedCountByKind.comment || 0) + 1;\n			statementList.push([statementKeyOf(`comment#${omittedCountByKind.comment}`), { omittedKind: 'comment', omittedText: commentText, explicitlyOmitted: true }]);\n			return;\n		}" }),
+	);
+	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'commentsAreContentNeverOmitted', 'emitterDropsComments', 'productionMutation', (subject) =>
+		addMutation(subject, 'roundTripMutationList', { modulePath: ROUND_TRIP_PAIR_PATH, find: "		const commentMarkupOf = (textList) => textList.map((oneText) => `<!--${oneText}-->`).join('');", replace: "		const commentMarkupOf = (textList) => '';" }),
+	);
 	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'canonicalizerIsNotTheParser', 'canonicalizerRequiresTheParser', 'productionMutation', (subject) => addMutation(subject, 'roundTripMutationList', { modulePath: ROUND_TRIP_PAIR_PATH, find: "const sax = require('sax');", replace: "const sax = require('sax');\nconst forgeTreeReader = require('./xsdTree');" }));
 	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'nestedChoiceRebuilt', 'nestedChoiceFlattenedToSequence', 'productionMutation', (subject) => addMutation(subject, 'roundTripMutationList', { modulePath: ROUND_TRIP_PAIR_PATH, find: '						return compositorText({ shape: oneParticle, ownerStableId });', replace: "						return compositorText({ shape: { ...oneParticle, compositor: 'sequence' }, ownerStableId });" }));
 	registerRoundTripTwin(ROUND_TRIP_GATE_ID, 'rulingLossesRegenerated', 'formDroppedByWalk', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '					formAsWritten: oneElement.formAsWritten,', replace: '					formAsWritten: null,' }));
@@ -2298,13 +2422,13 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		{ harness, familyName: `${standardKey} release gates (phase F1)`, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 17, expectedTwinCount: 17 },
 		() => {
 			runGateFamily(
-				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 16, expectedTwinCount: 19 },
+				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 18, expectedTwinCount: 25 }, // forgeClean CLEAN: +G19 and +G20 conjuncts; +6 twins (G19 2, G20 3, anonymous type edge 1)
 				() => {
 					runGateFamily(
 						{ harness, familyName: `${standardKey} reachability gates (phase F3)`, gateDeclarationList: reachabilityGateDeclarationList, twinRegistry: reachabilityTwinRegistry, makeSubject: makeReachabilitySubject, cloneSubject: cloneReachabilitySubject, expectedConjunctCount: 12, expectedTwinCount: 14 },
 						() => {
 							runGateFamily(
-								{ harness, familyName: `${standardKey} round-trip gates (phase F4)`, gateDeclarationList: roundTripGateDeclarationList, twinRegistry: roundTripTwinRegistry, makeSubject: makeRoundTripSubject, cloneSubject: cloneRoundTripSubject, expectedConjunctCount: 9, expectedTwinCount: 14 },
+								{ harness, familyName: `${standardKey} round-trip gates (phase F4)`, gateDeclarationList: roundTripGateDeclarationList, twinRegistry: roundTripTwinRegistry, makeSubject: makeRoundTripSubject, cloneSubject: cloneRoundTripSubject, expectedConjunctCount: 10, expectedTwinCount: 16 }, // forgeClean CLEAN: +commentsAreContentNeverOmitted and its 2 twins
 								() => {
 									runGateFamily(
 										{ harness, familyName: `${standardKey} borrowed-text gates (phase F-B)`, gateDeclarationList: borrowedGateDeclarationList, twinRegistry: borrowedTwinRegistry, makeSubject: makeRoundTripSubject, cloneSubject: cloneRoundTripSubject, expectedConjunctCount: borrowedConjunctList.length, expectedTwinCount: releaseHasDonors ? 5 : 3 },
