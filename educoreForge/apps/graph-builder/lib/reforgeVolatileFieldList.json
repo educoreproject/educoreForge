@@ -1,8 +1,62 @@
 [
-	{ "scope": "storeRow", "subjectName": "blocks", "propertyName": "createdAt", "reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run, not content; the block's identity is its refId = sha256(text)" },
-	{ "scope": "storeRow", "subjectName": "manifests", "propertyName": "createdAt", "reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run; the manifest's identity is the hash of its membership" },
-	{ "scope": "storeRow", "subjectName": "decisionBlocks", "propertyName": "createdAt", "reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run; the block's identity is decisionBlockHash" },
-	{ "scope": "storeRow", "subjectName": "decisionBlocks", "propertyName": "seq", "reason": "AUTOINCREMENT append order: which pair's block was frozen first depends on scheduling, not content; the block's identity is decisionBlockHash" },
-	{ "scope": "storeRow", "subjectName": "judgmentCacheEntries", "propertyName": "createdAt", "reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run" },
-	{ "scope": "storeRow", "subjectName": "judgmentCacheEntries", "propertyName": "seq", "reason": "AUTOINCREMENT append order under concurrent judging: scheduling, not content; the row's identity is (promptHash, model, rendererVersion)" }
+	{
+		"scope": "storeRow",
+		"subjectName": "blocks",
+		"propertyName": "createdAt",
+		"reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run, not content; the block's identity is its refId = sha256(text)"
+	},
+	{
+		"scope": "storeRow",
+		"subjectName": "manifests",
+		"propertyName": "createdAt",
+		"reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run; the manifest's identity is the hash of its membership"
+	},
+	{
+		"scope": "storeRow",
+		"subjectName": "decisionBlocks",
+		"propertyName": "createdAt",
+		"reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run; the block's identity is decisionBlockHash"
+	},
+	{
+		"scope": "storeRow",
+		"subjectName": "decisionBlocks",
+		"propertyName": "seq",
+		"reason": "AUTOINCREMENT append order: which pair's block was frozen first depends on scheduling, not content; the block's identity is decisionBlockHash"
+	},
+	{
+		"scope": "storeRow",
+		"subjectName": "judgmentCacheEntries",
+		"propertyName": "createdAt",
+		"reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run"
+	},
+	{
+		"scope": "storeRow",
+		"subjectName": "judgmentCacheEntries",
+		"propertyName": "seq",
+		"reason": "AUTOINCREMENT append order under concurrent judging: scheduling, not content; the row's identity is (promptHash, model, rendererVersion)"
+	},
+	{
+		"scope": "graphNode",
+		"subjectName": "GraphProvenance",
+		"propertyName": "builtAt",
+		"reason": "the passport's wall-clock build time; the passport is outside :ForgedNode (the fingerprint scope) by construction because it carries a clock (found plainA vs plainB, 2026-10-08)"
+	},
+	{
+		"scope": "graphNode",
+		"subjectName": "GraphProvenance",
+		"propertyName": "graphName",
+		"reason": "the scratch container's name, minted DEV_gb_materialize_<pid>_<seq> per run and rewritten at promotion by -stampPromotion: a container name, not content (found plainA vs plainB)"
+	},
+	{
+		"scope": "graphNode",
+		"subjectName": "GraphProvenance",
+		"propertyName": "vectorIndexNameList",
+		"reason": "the vector index names are <graphName>_vector and <graphName>_embedText_vector (graph-contract §10 vectorIndexNameFor), derived from the per-run container name above (found plainA vs plainB)"
+	},
+	{
+		"scope": "graphNode",
+		"subjectName": "ManifestRecipe",
+		"propertyName": "createdAt",
+		"reason": "manifests.createdAt copied into the graph: the sqlite CURRENT_TIMESTAMP at which THIS run inserted the manifest row, a build timestamp; the manifest's identity is its manifestRefId, which matched (found plainA vs plainB). DOCKET: ManifestRecipe carries :ForgedNode yet holds a clock"
+	}
 ]
