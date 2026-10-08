@@ -16,6 +16,8 @@
 //       type changes is reported as an edge
 //   (h) the comparison is a MULTISET: two identical nodes against one is a difference
 //   (i) an empty comparison list FAILS, never passes
+//   (k) -compareGraphs end to end over two RAW record files: a timestamp leak is named by node and property, edges stay
+//       identical, and equal files pass
 //   (j) -compareStores end to end: a LIST of stores compares every pair; a store holding NO table is refused; identical stores pass; a changed block text and an unregistered table are named; a
 //       block whose refId is not sha256(text) fails the content-address row
 // RED TWINS (in memory, a double of lib/reforge-compare.js): wrongLabelExcluded -> (d); listSortedAway -> (c);
@@ -56,9 +58,9 @@ const compareNodes = (lib, nodeListA, nodeListB, volatileFieldList) => lib.compa
 const withProperty = (nodeIndex, propertyName, propertyValue) => NODE_LIST.map((oneNode, index) => (index === nodeIndex ? { ...oneNode, propertyByName: { ...oneNode.propertyByName, [propertyName]: propertyValue } } : oneNode));
 // edges named through the node records exactly as the tool names them
 const edgeRecordListOf = (lib, nodeList, edgeList) => {
-	const nodeRecordList = nodeRecordListOf(lib, nodeList, []);
-	const identityCountByText = nodeRecordList.reduce((soFar, oneRecord) => soFar.set(oneRecord.identityText, (soFar.get(oneRecord.identityText) || 0) + 1), new Map());
-	return edgeList.map((oneEdge) => lib.edgeRecordFor({ edgeType: oneEdge.edgeType, startEndpointName: lib.endpointNameFor({ nodeRecord: nodeRecordList[oneEdge.startIndex], identityCountByText }), endEndpointName: lib.endpointNameFor({ nodeRecord: nodeRecordList[oneEdge.endIndex], identityCountByText }), propertyByName: oneEdge.propertyByName || {}, volatileFieldList: [] }));
+	const rawNodeRecordList = nodeList.map((oneNode) => lib.rawNodeRecordFor(oneNode));
+	const identityCountByText = rawNodeRecordList.reduce((soFar, oneRecord) => soFar.set(oneRecord.identityText, (soFar.get(oneRecord.identityText) || 0) + 1), new Map());
+	return edgeList.map((oneEdge) => lib.edgeRecordFor({ edgeType: oneEdge.edgeType, startEndpointName: lib.endpointNameFor({ rawNodeRecord: rawNodeRecordList[oneEdge.startIndex], identityCountByText }), endEndpointName: lib.endpointNameFor({ rawNodeRecord: rawNodeRecordList[oneEdge.endIndex], identityCountByText }), propertyByName: oneEdge.propertyByName || {}, volatileFieldList: [] }));
 };
 const EDGE_LIST = [{ edgeType: 'HAS_PROPERTY', startIndex: 0, endIndex: 1 }];
 
@@ -177,6 +179,35 @@ const conjunctJudgeByRefId = {
 			),
 		)));
 	},
+	k_compareGraphsEndToEnd: (mutationList, done) => {
+		if (mutationList.length) {
+			done({ pass: true, detail: 'not a twin target (the tool loads the real lib)' });
+			return;
+		}
+		// two RAW record files written exactly as -fingerprint writes them, then -compareGraphs: the volatile list is applied at
+		// compare time, and a property the list does not name (a timestamp leak, here) is reported by node and property
+		const lib = libFor([]);
+		const workDirPath = fs.mkdtempSync(path.join(os.tmpdir(), 'reforgeGraphs-'));
+		const writeRecordFile = (fileName, nodeList) => {
+			const rawNodeRecordList = nodeList.map((oneNode) => lib.rawNodeRecordFor(oneNode));
+			const identityCountByText = rawNodeRecordList.reduce((soFar, oneRecord) => soFar.set(oneRecord.identityText, (soFar.get(oneRecord.identityText) || 0) + 1), new Map());
+			const rawEdgeRecord = lib.rawEdgeRecordFor({ edgeType: 'HAS_PROPERTY', startEndpointName: lib.endpointNameFor({ rawNodeRecord: rawNodeRecordList[0], identityCountByText }), endEndpointName: lib.endpointNameFor({ rawNodeRecord: rawNodeRecordList[1], identityCountByText }), propertyByName: {} });
+			const summary = { recordKind: 'summary', fingerprintFormat: lib.FINGERPRINT_FORMAT, nodeCount: rawNodeRecordList.length, edgeCount: 1 };
+			fs.writeFileSync(path.join(workDirPath, fileName), rawNodeRecordList.concat([rawEdgeRecord, summary]).map((oneRecord) => JSON.stringify(oneRecord)).join('\n') + '\n');
+			return path.join(workDirPath, fileName);
+		};
+		const filePathA = writeRecordFile('a.jsonl', withProperty(2, 'builtAt', '2026-10-08T14:00:00Z'));
+		const filePathB = writeRecordFile('b.jsonl', withProperty(2, 'builtAt', '2026-10-08T14:31:07Z'));
+		const filePathC = writeRecordFile('c.jsonl', withProperty(2, 'builtAt', '2026-10-08T14:00:00Z'));
+		const graphArgumentsFor = (filePathB2, reportName) => ['-compareGraphs', `--fingerprintFilePathA=${filePathA}`, `--fingerprintFilePathB=${filePathB2}`, `--reportFilePath=${path.join(workDirPath, reportName)}`];
+		runTool(graphArgumentsFor(filePathB, 'leak.json'), (leakRun) =>
+			runTool(graphArgumentsFor(filePathC, 'same.json'), (sameRun) => {
+				const pass = leakRun.exitCode === 1 && /changed GraphMeta:GraphProvenance\|graphProvenance: builtAt /.test(leakRun.outputText) && /IDENTICAL graph edges/.test(leakRun.outputText) && sameRun.exitCode === 0 && /PASS — 2 comparison\(s\) identical/.test(sameRun.outputText);
+				fs.rmSync(workDirPath, { recursive: true, force: true });
+				done({ pass, detail: `leak exit ${leakRun.exitCode}; same exit ${sameRun.exitCode}${pass ? '' : `\n${leakRun.outputText.slice(0, 500)}\n---\n${sameRun.outputText.slice(0, 300)}`}` });
+			}),
+		);
+	},
 };
 const TWIN_LIST = [
 	{ conjunctRefId: 'd_namedVolatileRowExcludesExactly', twinName: 'wrongLabelExcluded', find: 'oneRow.scope === scope && subjectNameList.indexOf(oneRow.subjectName) !== -1', replace: 'oneRow.scope === scope' },
@@ -184,7 +215,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'f_integerIsNotFloat', twinName: 'integerReadAsFloat', find: "typeof oneValue.toNumber === 'function') {\n\t\treturn ['int', oneValue.toString()];", replace: "typeof oneValue.toNumber === 'function') {\n\t\treturn ['float', oneValue.toString()];" },
 	{ conjunctRefId: 'e_patternAndReasonlessRefused', twinName: 'patternAdmitted', find: 'const FIELD_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;', replace: 'const FIELD_NAME_RE = /^.+$/;' },
 	{ conjunctRefId: 'i_emptyComparisonFails', twinName: 'emptyListPasses', find: "return { verdict: 'fail', detail: `${moduleName}: no comparison ran", replace: "return { verdict: 'pass', detail: `${moduleName}: no comparison ran" },
-	{ conjunctRefId: 'g_changedNodeReportedOnce', twinName: 'endpointByHashAlways', find: "(identityCountByText.get(nodeRecord.identityText) === 1 ? nodeRecord.identityText :", replace: "(false ? nodeRecord.identityText :" },
+	{ conjunctRefId: 'g_changedNodeReportedOnce', twinName: 'endpointByHashAlways', find: "(identityCountByText.get(rawNodeRecord.identityText) === 1 ? rawNodeRecord.identityText :", replace: "(false ? rawNodeRecord.identityText :" },
 	{ conjunctRefId: 'h_multisetNotSet', twinName: 'multisetCollapsed', find: 'countByHash.set(oneHash, (countByHash.get(oneHash) || 0) + 1)', replace: 'countByHash.set(oneHash, 1)' },
 	{ conjunctRefId: 'a_readOrderCannotMove', twinName: 'orderSensitiveDigest', find: "sha256Of(hashList.slice().sort().join('\\n'))", replace: "sha256Of(hashList.slice().join('\\n'))" },
 ];

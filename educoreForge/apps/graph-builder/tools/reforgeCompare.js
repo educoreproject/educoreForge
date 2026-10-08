@@ -35,14 +35,16 @@ SYNOPSIS
 
 DESCRIPTION
      -fingerprint reads the bolt port and credential from the container (docker inspect), opens ONE READ session and
-     streams every node (labels, properties) and then every edge (type, properties, endpoints). Each becomes a record:
-     a sha256 over its canonical, type-tagged content with the volatile properties removed, its identity text (sorted
-     labels + stableId; an edge names its endpoints by identity when that identity is unique in the graph, else by the
-     endpoint's content hash), and a short digest per property so a difference can be named down to the property. The
-     record file ends with a summary line: counts, the node-set and edge-set digests (sha256 over the SORTED record
-     hashes, so the read order cannot move them) and how often each volatile property was removed. READ-ONLY.
+     streams every node (labels, properties) and then every edge (type, properties, endpoints). Each becomes a RAW
+     record: its kind, its subjects (sorted labels, or the edge type), its identity text (sorted labels + stableId; an
+     edge names its endpoints by identity when that identity is unique in the graph, else by the endpoint's content
+     hash) and a digest of EVERY property's canonical, type-tagged value. Nothing is excluded here: the graph may be
+     removed after it is fingerprinted, and a volatile row learned from the comparison must not demand a rebuild. The
+     record file ends with a summary line: counts and the raw node-set and edge-set digests (sha256 over the SORTED
+     hashes, so the read order cannot move them). READ-ONLY.
 
-     -compareGraphs compares the two record files as MULTISETS of hashes, per kind (nodes, edges). A surplus record whose
+     -compareGraphs applies the volatile list to both record files alike (each report counts how often each row was
+     used), then compares them as MULTISETS of hashes, per kind (nodes, edges). A surplus record whose
      identity has a surplus twin on the other side is reported as CHANGED with the properties that differ; the rest as
      only-A / only-B. Totals are complete; the samples are the first --detailLimit (default 20) per kind.
 
@@ -158,9 +160,8 @@ const streamCypher = ({ session, cypherText, onRecord }, callback) => {
 
 const fingerprintAction = (callback) => {
 	const refusal = requireFlags(['containerName', 'fingerprintFilePath']);
-	const { volatileFieldList, refusal: volatileRefusal } = loadVolatileFieldList();
-	if (refusal || volatileRefusal) {
-		callback(refusal || volatileRefusal);
+	if (refusal) {
+		callback(refusal);
 		return;
 	}
 	const neo4j = require('neo4j-driver');
@@ -177,36 +178,33 @@ const fingerprintAction = (callback) => {
 		const nodeByElementRefId = new Map();
 		const identityCountByText = new Map();
 		const nodeHashList = [];
-		const excludedCountByName = {};
 		streamCypher(
 			{
 				session: args.session,
 				cypherText: NODE_CYPHER,
 				onRecord: (oneRecord) => {
-					const nodeRecord = reforgeCompareLib.nodeRecordFor({ labelList: oneRecord.get('labelList'), propertyByName: oneRecord.get('propertyByName'), volatileFieldList });
-					nodeByElementRefId.set(oneRecord.get('elementRefId'), { identityText: nodeRecord.identityText, nodeHash: nodeRecord.nodeHash });
-					identityCountByText.set(nodeRecord.identityText, (identityCountByText.get(nodeRecord.identityText) || 0) + 1);
-					nodeHashList.push(nodeRecord.nodeHash);
-					nodeRecord.excludedPropertyNameList.forEach((oneName) => { excludedCountByName[`graphNode.${oneName}`] = (excludedCountByName[`graphNode.${oneName}`] || 0) + 1; });
-					args.recordStream.write(`${JSON.stringify({ recordKind: 'node', hash: nodeRecord.nodeHash, identityText: nodeRecord.identityText, propertyDigestByName: nodeRecord.propertyDigestByName })}\n`);
+					const rawNodeRecord = reforgeCompareLib.rawNodeRecordFor({ labelList: oneRecord.get('labelList'), propertyByName: oneRecord.get('propertyByName') });
+					nodeByElementRefId.set(oneRecord.get('elementRefId'), { identityText: rawNodeRecord.identityText, contentHash: rawNodeRecord.contentHash });
+					identityCountByText.set(rawNodeRecord.identityText, (identityCountByText.get(rawNodeRecord.identityText) || 0) + 1);
+					nodeHashList.push(rawNodeRecord.contentHash);
+					args.recordStream.write(`${JSON.stringify(rawNodeRecord)}\n`);
 				},
 			},
-			(streamError) => next(streamError, { ...args, nodeByElementRefId, identityCountByText, nodeHashList, excludedCountByName }),
+			(streamError) => next(streamError, { ...args, nodeByElementRefId, identityCountByText, nodeHashList }),
 		);
 	});
 	// pass 2: edges, their endpoints named through the node pass
 	taskList.push((args, next) => {
 		const edgeHashList = [];
-		const endpointNameOf = (elementRefId) => reforgeCompareLib.endpointNameFor({ nodeRecord: args.nodeByElementRefId.get(elementRefId), identityCountByText: args.identityCountByText });
+		const endpointNameOf = (elementRefId) => reforgeCompareLib.endpointNameFor({ rawNodeRecord: args.nodeByElementRefId.get(elementRefId), identityCountByText: args.identityCountByText });
 		streamCypher(
 			{
 				session: args.session,
 				cypherText: EDGE_CYPHER,
 				onRecord: (oneRecord) => {
-					const edgeRecord = reforgeCompareLib.edgeRecordFor({ edgeType: oneRecord.get('edgeType'), startEndpointName: endpointNameOf(oneRecord.get('startElementRefId')), endEndpointName: endpointNameOf(oneRecord.get('endElementRefId')), propertyByName: oneRecord.get('propertyByName'), volatileFieldList });
-					edgeHashList.push(edgeRecord.edgeHash);
-					edgeRecord.excludedPropertyNameList.forEach((oneName) => { args.excludedCountByName[`graphEdge.${oneName}`] = (args.excludedCountByName[`graphEdge.${oneName}`] || 0) + 1; });
-					args.recordStream.write(`${JSON.stringify({ recordKind: 'edge', hash: edgeRecord.edgeHash, identityText: edgeRecord.identityText, propertyDigestByName: edgeRecord.propertyDigestByName })}\n`);
+					const rawEdgeRecord = reforgeCompareLib.rawEdgeRecordFor({ edgeType: oneRecord.get('edgeType'), startEndpointName: endpointNameOf(oneRecord.get('startElementRefId')), endEndpointName: endpointNameOf(oneRecord.get('endElementRefId')), propertyByName: oneRecord.get('propertyByName') });
+					edgeHashList.push(reforgeCompareLib.sha256Of(JSON.stringify(rawEdgeRecord)));
+					args.recordStream.write(`${JSON.stringify(rawEdgeRecord)}\n`);
 				},
 			},
 			(streamError) => next(streamError, { ...args, edgeHashList }),
@@ -223,8 +221,7 @@ const fingerprintAction = (callback) => {
 			edgeSetDigest: reforgeCompareLib.setDigestOf(args.edgeHashList),
 			graphFingerprint: reforgeCompareLib.sha256Of(`${reforgeCompareLib.setDigestOf(args.nodeHashList)}\n${reforgeCompareLib.setDigestOf(args.edgeHashList)}`),
 			duplicateIdentityCount: Array.from(args.identityCountByText.values()).filter((oneCount) => oneCount > 1).length,
-			excludedCountByName: args.excludedCountByName,
-			volatileFieldListSha256: reforgeCompareLib.sha256Of(fs.readFileSync(VOLATILE_FIELD_LIST_FILE_PATH, 'utf8')),
+			recordsAre: 'RAW: every property digested, no volatile row applied (the comparison applies the list)',
 		};
 		args.recordStream.end(`${JSON.stringify(summary)}\n`, () => next('', { ...args, summary }));
 	});
@@ -236,7 +233,7 @@ const fingerprintAction = (callback) => {
 				return;
 			}
 			const { summary } = args;
-			xLog.result(`${moduleName}: ${containerName}: ${summary.nodeCount} node(s), ${summary.edgeCount} edge(s); graphFingerprint ${summary.graphFingerprint}; excluded ${JSON.stringify(summary.excludedCountByName)}; wrote ${fingerprintFilePath}\n`);
+			xLog.result(`${moduleName}: ${containerName}: ${summary.nodeCount} node(s), ${summary.edgeCount} edge(s); raw graphFingerprint ${summary.graphFingerprint}; duplicate identities ${summary.duplicateIdentityCount}; wrote ${fingerprintFilePath}\n`);
 			callback('', 0);
 		});
 	});
@@ -295,8 +292,9 @@ const readRecordFile = (filePath, callback) => {
 const compareGraphsAction = (callback) => {
 	const refusal = requireFlags(['fingerprintFilePathA', 'fingerprintFilePathB', 'reportFilePath']);
 	const { detailLimit, refusal: detailRefusal } = detailLimitOf();
-	if (refusal || detailRefusal) {
-		callback(refusal || detailRefusal);
+	const { volatileFieldList, refusal: volatileRefusal } = loadVolatileFieldList();
+	if (refusal || detailRefusal || volatileRefusal) {
+		callback(refusal || detailRefusal || volatileRefusal);
 		return;
 	}
 	readRecordFile(flagValueOf('fingerprintFilePathA'), (errorA, readA) => {
@@ -309,11 +307,13 @@ const compareGraphsAction = (callback) => {
 				callback(errorB);
 				return;
 			}
-			if (readA.summary.volatileFieldListSha256 !== readB.summary.volatileFieldListSha256) {
-				callback(`${moduleName}: REFUSED: the two fingerprints were taken under DIFFERENT volatile lists (${readA.summary.volatileFieldListSha256.slice(0, 12)} vs ${readB.summary.volatileFieldListSha256.slice(0, 12)}) — re-take both under one list`);
-				return;
-			}
-			const comparisonList = ['node', 'edge'].map((oneKind) => reforgeCompareLib.compareRecordSets({ kindName: `graph ${oneKind}s`, recordListA: readA.recordListByKind[oneKind], recordListB: readB.recordListByKind[oneKind], hashFieldName: 'hash', detailLimit }));
+			// the volatile list is applied HERE, to both sides alike, so a row learned from this comparison needs no rebuild
+			const comparableListOf = (rawRecordList) => rawRecordList.map((rawRecord) => reforgeCompareLib.comparableRecordFor({ rawRecord, volatileFieldList }));
+			const comparisonList = ['node', 'edge'].map((oneKind) => {
+				const recordListA = comparableListOf(readA.recordListByKind[oneKind]);
+				const recordListB = comparableListOf(readB.recordListByKind[oneKind]);
+				return { ...reforgeCompareLib.compareRecordSets({ kindName: `graph ${oneKind}s`, recordListA, recordListB, hashFieldName: 'hash', detailLimit }), excludedCountByName: reforgeCompareLib.excludedCensusOf(recordListA.concat(recordListB)) };
+			});
 			const verdict = reforgeCompareLib.verdictFor(comparisonList);
 			const report = {
 				reportKind: 'compareGraphs',
@@ -321,6 +321,7 @@ const compareGraphsAction = (callback) => {
 				comparisonList,
 				fingerprintA: { filePath: flagValueOf('fingerprintFilePathA'), ...readA.summary },
 				fingerprintB: { filePath: flagValueOf('fingerprintFilePathB'), ...readB.summary },
+				volatileFieldListSha256: reforgeCompareLib.sha256Of(fs.readFileSync(VOLATILE_FIELD_LIST_FILE_PATH, 'utf8')),
 			};
 			writeReport({ reportFilePath: flagValueOf('reportFilePath'), report });
 			callback('', verdict.verdict === 'pass' ? 0 : 1);

@@ -18,7 +18,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // and its two endpoints, each named by the endpoint's IDENTITY (labels + stableId) when that identity is unique in the
 // graph and by the endpoint's content hash when it is not — so one changed node is reported once, as a node, rather than
 // once more for every edge that touches it. The graph fingerprint is sha256 over the sorted node hashes and the sorted
-// edge hashes: the read order of the query cannot move it.
+// edge hashes: the read order of the query cannot move it. Records are written RAW and the volatile list is applied when
+// they are compared (see 'TWO STAGES' below).
 //
 // Async style: none needed — every function here is synchronous and pure.
 
@@ -28,7 +29,7 @@ const VOLATILE_SCOPE_LIST = Object.freeze(['graphNode', 'graphEdge', 'storeRow']
 // a field name is an identifier: anything else (*, ?, [, |, ., ^, $ ...) would read as a pattern and is refused
 const FIELD_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const SUBJECT_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
-const FINGERPRINT_FORMAT = 'reforgeFingerprint-v1';
+const FINGERPRINT_FORMAT = 'reforgeFingerprint-v2';
 // the evidence file -summarize writes and -stampPromotion reads (promotion-evidence.js): one name, both sides
 const REFORGE_EVIDENCE_FORMAT = 'reforgeEvidence-v1';
 const NO_STABLE_ID_MARK = '(no stableId)';
@@ -135,34 +136,63 @@ const recordOf = ({ propertyByName, excludedNameSet }) => {
 };
 
 // ----- graph records ----------------------------------------------------------------------------------------------------
-// nodeRecordFor({ labelList, propertyByName, volatileFieldList }) → { nodeHash, identityText, propertyDigestByName, excludedPropertyNameList }
-const nodeRecordFor = ({ labelList, propertyByName, volatileFieldList }) => {
+// TWO STAGES, AND WHY. A fingerprint is taken from a running graph, and the graph is then REMOVED (disk). The volatile list,
+// though, is learned FROM the comparison: a row added after the first compare must not demand a rebuild. So -fingerprint
+// writes RAW records (every property's digest, nothing excluded) and the comparison applies the list (comparableRecordFor).
+// rawNodeRecordFor({ labelList, propertyByName }) → { recordKind, subjectNameList (sorted labels), identityText,
+//   propertyDigestByName (EVERY property), contentHash (over every property; used only to name a non-unique endpoint) }
+const rawNodeRecordFor = ({ labelList, propertyByName }) => {
 	const sortedLabelList = labelList.slice().sort();
-	const excludedNameSet = volatileNameSetFor({ volatileFieldList, scope: 'graphNode', subjectNameList: sortedLabelList });
-	const record = recordOf({ propertyByName, excludedNameSet });
-	const stableIdText = propertyByName && typeof propertyByName.stableId === 'string' && !excludedNameSet.has('stableId') ? propertyByName.stableId : NO_STABLE_ID_MARK;
+	const record = recordOf({ propertyByName, excludedNameSet: new Set() });
+	const stableIdText = propertyByName && typeof propertyByName.stableId === 'string' ? propertyByName.stableId : NO_STABLE_ID_MARK;
 	return {
-		nodeHash: sha256Of(`node\n${JSON.stringify(sortedLabelList)}\n${record.canonicalPropertyText}`),
+		recordKind: 'node',
+		subjectNameList: sortedLabelList,
 		identityText: `${sortedLabelList.join(':')}|${stableIdText}`,
 		propertyDigestByName: record.propertyDigestByName,
-		excludedPropertyNameList: record.excludedPropertyNameList,
+		contentHash: sha256Of(`node\n${JSON.stringify(sortedLabelList)}\n${record.canonicalPropertyText}`),
 	};
 };
 
-// endpointNameFor — an endpoint's identity when unique in its graph, else its content hash (see the header)
-const endpointNameFor = ({ nodeRecord, identityCountByText }) => (identityCountByText.get(nodeRecord.identityText) === 1 ? nodeRecord.identityText : `${nodeRecord.identityText}#${nodeRecord.nodeHash.slice(0, 16)}`);
+// endpointNameFor — an endpoint's identity when unique in its graph, else identity + its RAW content hash (see the header).
+// The raw hash is taken before the volatile list applies, so a volatile property on a node whose identity is NOT unique
+// still separates that node's edges; with stableIds unique (as forged), the identity is used and the case does not arise.
+const endpointNameFor = ({ rawNodeRecord, identityCountByText }) => (identityCountByText.get(rawNodeRecord.identityText) === 1 ? rawNodeRecord.identityText : `${rawNodeRecord.identityText}#${rawNodeRecord.contentHash.slice(0, 16)}`);
 
-// edgeRecordFor({ edgeType, startEndpointName, endEndpointName, propertyByName, volatileFieldList }) → { edgeHash, identityText, propertyDigestByName, excludedPropertyNameList }
-const edgeRecordFor = ({ edgeType, startEndpointName, endEndpointName, propertyByName, volatileFieldList }) => {
-	const excludedNameSet = volatileNameSetFor({ volatileFieldList, scope: 'graphEdge', subjectNameList: [edgeType] });
-	const record = recordOf({ propertyByName, excludedNameSet });
-	const identityText = `${startEndpointName} -[${edgeType}]-> ${endEndpointName}`;
+// rawEdgeRecordFor({ edgeType, startEndpointName, endEndpointName, propertyByName }) → { recordKind, subjectNameList ([type]),
+//   identityText, propertyDigestByName (EVERY property) }
+const rawEdgeRecordFor = ({ edgeType, startEndpointName, endEndpointName, propertyByName }) => ({
+	recordKind: 'edge',
+	subjectNameList: [edgeType],
+	identityText: `${startEndpointName} -[${edgeType}]-> ${endEndpointName}`,
+	propertyDigestByName: recordOf({ propertyByName, excludedNameSet: new Set() }).propertyDigestByName,
+});
+
+// comparableRecordFor({ rawRecord, volatileFieldList }) → { hash, identityText, propertyDigestByName (kept), excludedPropertyNameList }
+//   the volatile list applied: a property is dropped only when a row names this record's scope, one of its subjects (a
+//   label, or the edge type) and the property itself
+const SCOPE_BY_RECORD_KIND = Object.freeze({ node: 'graphNode', edge: 'graphEdge' });
+const comparableRecordFor = ({ rawRecord, volatileFieldList }) => {
+	const excludedNameSet = volatileNameSetFor({ volatileFieldList, scope: SCOPE_BY_RECORD_KIND[rawRecord.recordKind], subjectNameList: rawRecord.subjectNameList });
+	const nameList = Object.keys(rawRecord.propertyDigestByName).sort();
+	const keptNameList = nameList.filter((oneName) => !excludedNameSet.has(oneName));
+	const propertyDigestByName = keptNameList.reduce((soFar, oneName) => Object.assign(soFar, { [oneName]: rawRecord.propertyDigestByName[oneName] }), {});
 	return {
-		edgeHash: sha256Of(`edge\n${identityText}\n${record.canonicalPropertyText}`),
-		identityText,
-		propertyDigestByName: record.propertyDigestByName,
-		excludedPropertyNameList: record.excludedPropertyNameList,
+		hash: sha256Of(JSON.stringify([rawRecord.recordKind, rawRecord.subjectNameList, rawRecord.identityText, keptNameList.map((oneName) => [oneName, propertyDigestByName[oneName]])])),
+		identityText: rawRecord.identityText,
+		propertyDigestByName,
+		excludedPropertyNameList: nameList.filter((oneName) => excludedNameSet.has(oneName)),
 	};
+};
+
+// nodeRecordFor / edgeRecordFor — the two stages composed, for a caller holding the whole graph in hand
+const nodeRecordFor = ({ labelList, propertyByName, volatileFieldList }) => {
+	const comparable = comparableRecordFor({ rawRecord: rawNodeRecordFor({ labelList, propertyByName }), volatileFieldList });
+	return { nodeHash: comparable.hash, identityText: comparable.identityText, propertyDigestByName: comparable.propertyDigestByName, excludedPropertyNameList: comparable.excludedPropertyNameList };
+};
+const edgeRecordFor = ({ edgeType, startEndpointName, endEndpointName, propertyByName, volatileFieldList }) => {
+	const comparable = comparableRecordFor({ rawRecord: rawEdgeRecordFor({ edgeType, startEndpointName, endEndpointName, propertyByName }), volatileFieldList });
+	return { edgeHash: comparable.hash, identityText: comparable.identityText, propertyDigestByName: comparable.propertyDigestByName, excludedPropertyNameList: comparable.excludedPropertyNameList };
 };
 
 // storeRowRecordFor({ tableName, identityText, rowByColumnName, volatileFieldList }) → { rowHash, identityText, propertyDigestByName, excludedPropertyNameList }
@@ -299,6 +329,9 @@ module.exports = {
 	storeTableRuleByNameFrom,
 	canonicalValueOf,
 	canonicalValueTextOf,
+	rawNodeRecordFor,
+	rawEdgeRecordFor,
+	comparableRecordFor,
 	nodeRecordFor,
 	endpointNameFor,
 	edgeRecordFor,
