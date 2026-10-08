@@ -1124,6 +1124,54 @@ const resolveSourceWindow = (deps, injectedCommandLineParameters) => {
 	return { value: { limit: limitCheck.value, offset: offsetCheck.value, subjectStableIdList } };
 };
 
+// ⟪lane REFORGE, forgeClean R3/R4, 2026-10-08⟫ resolveJudgeCacheOnly — --judgeCacheOnly=true|false, read like --vectorize
+// (documented default false; 'true'/'false' only; deps.judgeCacheOnly wins). TRUE means a rebridge may answer a judgment
+// ONLY from the judgment cache: a MISS is refused by name instead of being asked of the live judge, so a rebuild meant
+// to cost nothing cannot quietly spend, and the first miss it meets is named. Returns { value } or { error }.
+const resolveJudgeCacheOnly = (deps, injectedCommandLineParameters) => {
+	if (deps.judgeCacheOnly !== undefined) {
+		if (typeof deps.judgeCacheOnly !== 'boolean') {
+			return { error: `graphBuilder build: deps.judgeCacheOnly must be a boolean when supplied, got ${typeof deps.judgeCacheOnly} (${JSON.stringify(deps.judgeCacheOnly)}). It was NOT corrected to a default.` };
+		}
+		return { value: deps.judgeCacheOnly };
+	}
+	const commandLineParameters = injectedCommandLineParameters || (process.global && process.global.commandLineParameters) || { values: {}, switches: {} };
+	return readOptionalBooleanValue({
+		name: 'judgeCacheOnly',
+		commandLineParameters,
+		moduleName: 'graphBuilder -build',
+		whatItControls: 'whether a judgment-cache MISS is refused by name instead of asked of the live judge (a zero-spend rebridge)',
+		defaultValue: false,
+	});
+};
+
+// judgeCacheOnlyRefusalFor — '' when the guard may run; else why it may not. Both refusals are the idle-flag shape this
+// tree refuses (resolveInferenceConfig's --useDebugJudge refusals): a guard that can never fire must not look like one.
+const judgeCacheOnlyRefusalFor = ({ judgeCacheOnly, rebridgeScope, debugJudgeRule }) => {
+	if (!judgeCacheOnly) {
+		return '';
+	}
+	if (!rebridgeScopeIsActive(rebridgeScope)) {
+		return `graphBuilder build: --judgeCacheOnly=true was given but no --rebridge scope is active, so NO JUDGMENT IS ASKED and the guard would never fire. A plain build materializes frozen decision blocks and reads no judgment cache. Name what to rebridge, or drop the flag.`;
+	}
+	if (debugJudgeRule) {
+		return `graphBuilder build: --judgeCacheOnly=true was given with --useDebugJudge='${debugJudgeRule}': the debug judge never reads or writes the judgment cache, so there is no cache to hold the run to. Pass one or the other.`;
+	}
+	return '';
+};
+
+// cacheOnlyJudgeClientFor — the constructed judge with rerank replaced by a refusal. judgeComponent.judgeOne calls rerank
+// ONLY on a cache miss (a hit is served from the cache and re-verified without it), so the refusal fires exactly on a miss
+// and never touches the network. model and every other field ride through unchanged: the cache key and the stamped
+// identity are the real judge's.
+const JUDGE_CACHE_ONLY_MISS_TAG = 'JUDGE CACHE MISS under --judgeCacheOnly=true';
+const cacheOnlyJudgeClientFor = (judgeClient) =>
+	Object.freeze({
+		...judgeClient,
+		rerank: (rerankRequest, rerankCallback) =>
+			rerankCallback(`${JUDGE_CACHE_ONLY_MISS_TAG}: the judgment cache holds no answer for this question, so ${judgeClient.model} would have been asked live; refused by name, nothing spent`),
+	});
+
 // resolveInferenceConfig — assemble the inferred producer's run config, SELECTING the judge provider with
 // the same §6 discipline as vectorize/rebridge. This is the real-vs-stub seam:
 //   1. deps.inferenceConfig.llmClient present -> used AS-IS, and it WINS OVER THE CONFIG KEY SILENTLY.
@@ -1156,6 +1204,19 @@ const resolveSourceWindow = (deps, injectedCommandLineParameters) => {
 const resolveInferenceConfig = (deps, rebridgeScope, debugJudgeRule, callback) => {
 	const base = deps.inferenceConfig || {};
 	const scopeIsActive = rebridgeScopeIsActive(rebridgeScope);
+	// ⟪lane REFORGE⟫ --judgeCacheOnly: resolved and refused HERE, beside the --useDebugJudge refusals it mirrors, and applied
+	// to whichever client this function hands back (an injected one included), so no path reaches the framework unguarded
+	const judgeCacheOnlyResolution = resolveJudgeCacheOnly(deps, deps.commandLineParameters);
+	if (judgeCacheOnlyResolution.error) {
+		callback(judgeCacheOnlyResolution.error);
+		return;
+	}
+	const judgeCacheOnlyRefusal = judgeCacheOnlyRefusalFor({ judgeCacheOnly: judgeCacheOnlyResolution.value, rebridgeScope, debugJudgeRule });
+	if (judgeCacheOnlyRefusal) {
+		callback(judgeCacheOnlyRefusal);
+		return;
+	}
+	const guarded = (inferenceConfig) => (judgeCacheOnlyResolution.value ? { ...inferenceConfig, llmClient: cacheOnlyJudgeClientFor(inferenceConfig.llmClient) } : inferenceConfig);
 
 	if (debugJudgeRule && !scopeIsActive) {
 		callback(
@@ -1175,7 +1236,7 @@ const resolveInferenceConfig = (deps, rebridgeScope, debugJudgeRule, callback) =
 		return;
 	}
 	if (base.llmClient || !scopeIsActive) {
-		callback('', base);
+		callback('', base.llmClient ? guarded(base) : base);
 		return;
 	}
 
@@ -1219,7 +1280,7 @@ const resolveInferenceConfig = (deps, rebridgeScope, debugJudgeRule, callback) =
 				);
 				return;
 			}
-			callback('', { ...base, llmClient: judgeProvider });
+			callback('', guarded({ ...base, llmClient: judgeProvider }));
 		},
 	);
 };
@@ -2716,6 +2777,11 @@ module.exports.resolveInferenceConfig = resolveInferenceConfig;
 // ⟪skipAI⟫ exported for its hermetic gate — the rule resolution is refuse-by-name logic worth
 // exercising directly rather than only through a full build.
 module.exports.resolveDebugJudge = resolveDebugJudge;
+// ⟪lane REFORGE⟫ the --judgeCacheOnly resolution, its refusals and its wrapper, gated directly (test-judgeCacheOnly)
+module.exports.resolveJudgeCacheOnly = resolveJudgeCacheOnly;
+module.exports.judgeCacheOnlyRefusalFor = judgeCacheOnlyRefusalFor;
+module.exports.cacheOnlyJudgeClientFor = cacheOnlyJudgeClientFor;
+module.exports.JUDGE_CACHE_ONLY_MISS_TAG = JUDGE_CACHE_ONLY_MISS_TAG;
 module.exports.resolveSourceWindow = resolveSourceWindow;
 module.exports.resolveReuseForgedBlocks = resolveReuseForgedBlocks;
 // ⟪P2-review S-2⟫ the heap gate, exported as a static so its refusal is provable with an

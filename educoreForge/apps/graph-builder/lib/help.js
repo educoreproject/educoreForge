@@ -267,6 +267,18 @@ OPTIONS
                            IT DOES NOT AFFECT VECTORIZATION. Embedding still happens per --vectorize
                            (default true), so a debug run over never-embedded text still spends Voyage
                            credit; over already-embedded text the shared cache makes it free.
+     --judgeCacheOnly=true|false
+                           A rebridge that may answer judgments ONLY FROM THE JUDGMENT CACHE. OPTIONAL,
+                           DEFAULTS TO false. With true, a cache MISS is REFUSED BY NAME ("JUDGE CACHE
+                           MISS under --judgeCacheOnly=true ... refused by name, nothing spent") instead
+                           of being asked of the live judge, and the run stops at the first one: use it
+                           for a rebuild that is meant to cost nothing (lane REFORGE, 2026-10-08), and to
+                           learn BEFORE spending whether a run would spend. PROVIDER-NEUTRAL: it wraps
+                           whichever judge [judgeProvider] selects; the cache key and the judge identity
+                           are that judge's own. A hit is served and re-verified exactly as without it.
+                           REFUSED without an active --rebridge scope (nothing would be judged) and with
+                           --useDebugJudge (the debug judge never reads the cache). Only 'true' and
+                           'false' are accepted.
      --subjectListFilePath=<absolute path>
                            THE NAMED SUBJECT SET -- judge EXACTLY the subjects named in a JSON file
                            (a flat array of stableId strings), and nothing else. Where --limit/--offset
