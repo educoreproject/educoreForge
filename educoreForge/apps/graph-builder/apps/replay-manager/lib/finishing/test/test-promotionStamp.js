@@ -13,6 +13,9 @@
 //   (f) a VECTOR index on an undeclared slot (:UserContent(embedding)) is REFUSED by name, before any index is dropped
 //   (g) ⟪W-A-4 / V1-C17⟫ each stamped row MERGEs on (:BuildAttestation {gate}) — never a label-less {stableId} — carries
 //       the token writtenOnChannel 'promotionStamp', and REMOVEs :ForgedNode (a post-build fact leaves fingerprint scope)
+//   (h) ⟪lane REFORGE, forgeClean R3⟫ the stampable gates are graph-contract §4's promotionStamp list, read from the contract:
+//       a reforgeDeterminism verdict is stamped beside goldEvalCheck and replay, and a gate the contract does not name is
+//       REFUSED by name before anything is written
 // RED TWINS, each observed in memory: (a) the scratch name not kept; (b) the census comparison removed; (c) the evidence
 // check removed; (d) the passport singleton check removed; (e) the drop+create step never planned; (f) the label check
 // removed (the slot then matches by property name alone).
@@ -133,6 +136,15 @@ const conjunctJudgeByRefId = {
 			const pass = !err && rowStatementList.length === 2 && rowStatementList.every((oneStatement) => /MERGE \(a:`BuildAttestation` \{gate: "(goldEvalCheck|replay)"\}\)/.test(oneStatement) && /REMOVE a:`ForgedNode`/.test(oneStatement) && /a\.writtenOnChannel = "promotionStamp"/.test(oneStatement));
 			done({ pass, detail: err || `${rowStatementList.length} row statement(s); first: ${(rowStatementList[0] || '').replace(/\s+/g, ' ').slice(0, 220)}` });
 		}),
+	h_contractNamesTheStampableGates: (mutationList, done) => {
+		const reforgeVerdictList = goodVerdictList().concat([{ gate: 'reforgeDeterminism', verdict: 'pass', detail: 'reforgeCompare run toyRun on head 0123456789ab: 4 of 4 comparison report(s) identical', evidencePath: '/tmp/reforgeEvidence.json', evidenceSha256: SHA }]);
+		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: reforgeVerdictList }, ({ err, stamped, statementList }) =>
+			runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: goodVerdictList().concat([{ ...reforgeVerdictList[2], gate: 'madeUpGate' }]) }, ({ err: unknownError, statementList: unknownStatementList }) => {
+				const pass = !err && stamped.stampedGateList.join(',') === 'goldEvalCheck,replay,reforgeDeterminism' && statementList.some((oneStatement) => /MERGE \(a:`BuildAttestation` \{gate: "reforgeDeterminism"\}\)/.test(oneStatement)) &&
+					/gate "madeUpGate" is not one of goldEvalCheck, replay, reforgeDeterminism/.test(String(unknownError)) && unknownStatementList.length === 0;
+				done({ pass, detail: `${err || stamped.stampedGateList.join(',')} | unknown gate: ${String(unknownError || 'STAMPED').slice(0, 160)}` });
+			}));
+	},
 	d_passportSingletonRequired: (mutationList, done) =>
 		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], passportCount: 2, gateVerdictList: goodVerdictList() }, ({ err }) =>
 			done({ pass: /REFUSED: the graph does not hold exactly one GraphProvenance passport/.test(String(err)), detail: String(err || 'stamped a graph holding two passports').slice(0, 160) })),
@@ -145,6 +157,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'd_passportSingletonRequired', twinName: 'passportSingletonUnguarded', find: '\t\t\t\t\tWHERE size(passportList) = 1', replace: '\t\t\t\t\tWHERE size(passportList) >= 1' },
 	{ conjunctRefId: 'g_stampRowHasTheDeclaredIdentityAndLabels', twinName: 'labelLessMergeOnStableId', find: '						MERGE (a:\\`${attestationLabel}\\` {gate: ${cypherString(oneVerdict.gate)}})', replace: '						MERGE (a {stableId: ${cypherString(stableId)}})' },
 	{ conjunctRefId: 'e_vectorIndexesRenamedToThePromotedName', twinName: 'dropCreateNeverPlanned', find: '\t\t\t\tplan.dropCreateList.push({', replace: '\t\t\t\tvoid ({' },
+	{ conjunctRefId: 'h_contractNamesTheStampableGates', twinName: 'gateListRestatedLocally', find: 'const STAMPABLE_GATE_LIST = ATTESTATION_GATE_LIST_BY_CHANNEL[STAMP_CHANNEL_NAME];', replace: "const STAMPABLE_GATE_LIST = Object.freeze(['goldEvalCheck', 'replay']);" },
 	{ conjunctRefId: 'f_undeclaredVectorIndexRefused', twinName: 'labelCheckRemoved', find: "if (!slot || (oneRow.labelsOrTypes || [])[0] !== slot.label) {", replace: 'if (!slot) {' },
 ];
 

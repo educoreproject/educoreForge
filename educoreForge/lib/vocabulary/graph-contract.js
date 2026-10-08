@@ -158,7 +158,9 @@ const ATTESTATION_LABEL_SET_BY_CHANNEL = Object.freeze({
 const ATTESTATION_GATE_LIST_BY_CHANNEL = Object.freeze({
 	channelA: Object.freeze(['fidelity', 'roundTrip', 'goldEvalCheck', 'embeddingCoverage', 'forgeCensus']),
 	channelB: Object.freeze(['usagePatternVerification']),
-	promotionStamp: Object.freeze(['goldEvalCheck', 'replay']),
+	// reforgeDeterminism (lane REFORGE, forgeClean R3, 2026-10-08): two from-scratch builds compared by apps/graph-builder/tools/
+	// reforgeCompare.js; stamped from its -summarize evidence, which names the run and the code head it ran on
+	promotionStamp: Object.freeze(['goldEvalCheck', 'replay', 'reforgeDeterminism']),
 });
 
 // §5 SELF_DOC field lists (W-A-5). Types and required flags were read off the live acceptance graph

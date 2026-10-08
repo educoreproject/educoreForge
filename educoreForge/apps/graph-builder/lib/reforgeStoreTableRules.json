@@ -1,0 +1,15 @@
+{
+	"_comment": "reforgeCompare's store-table registry (lane REFORGE, forgeClean R3, 2026-10-08). One row per table a build's stores may hold. identityColumnNameList names a row for the report (it pairs an A row with its B twin); digestColumnNameList are large columns compared by sha256 rather than carried; contentAddressColumnName, when present, names the column that MUST equal sha256 of the first digest column (the store's own content-address rule, re-verified on both sides). A table found in a store and absent here is REFUSED by name: a table nobody registered is a table nobody compared.",
+	"tableRuleList": [
+		{ "tableName": "blocks", "identityColumnNameList": ["kind", "subject"], "digestColumnNameList": ["text"], "contentAddressColumnName": "refId" },
+		{ "tableName": "manifests", "identityColumnNameList": ["recipeName", "name"], "digestColumnNameList": [] },
+		{ "tableName": "manifestBlocks", "identityColumnNameList": ["position"], "digestColumnNameList": [] },
+		{ "tableName": "vectors", "identityColumnNameList": ["vectorId"], "digestColumnNameList": ["inputText", "vector"] },
+		{ "tableName": "decisionBlocks", "identityColumnNameList": ["pairKey"], "digestColumnNameList": ["frozenText"], "contentAddressColumnName": "decisionBlockHash" },
+		{ "tableName": "judgmentCacheEntries", "identityColumnNameList": ["promptHash", "model", "rendererVersion"], "digestColumnNameList": ["judgmentJson"] },
+		{ "tableName": "standardsDatabaseOps", "identityColumnNameList": ["refId"], "digestColumnNameList": [] },
+		{ "tableName": "vectorStoreOps", "identityColumnNameList": ["refId"], "digestColumnNameList": [] },
+		{ "tableName": "decisionStoreOps", "identityColumnNameList": ["refId"], "digestColumnNameList": [] },
+		{ "tableName": "judgmentCacheOps", "identityColumnNameList": ["refId"], "digestColumnNameList": [] }
+	]
+}

@@ -165,7 +165,13 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN, G20 contract declaration; pre-authorised) ═══ (ii) postForgeCleanVocabularyIi-100826 ->
 // postForgeCleanVocabularyIiB-100826, tag cut ON this commit. CENSUS at 189bbb1 (lib/vocabulary/): 2 files — graph-contract.js 4/0 (precedingCommentList
 // list-valued; fileCommentList exempt as a JSON string) and test/test-sifEdgeVocabulary.js 3/2 (the ledger +1). Allowed-path list NOT widened.
-const POST_D1_BASE_TAG = 'postForgeCleanVocabularyIiB-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN ((ii), second); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (ONYX_SUMMIT; forgeClean lane REFORGE; pre-authorised by WORKORDER-REFORGE) ═══ (ii) postCampaignG21VocabularyIi-100726 ->
+// postForgeCleanReforgeVocabularyIi-100826, tag cut ON this commit. CENSUS at d6fecdce over this gate's own path: ONE file, outside the
+// allowed list — graph-contract.js 3/1 (the promotionStamp gate list gains reforgeDeterminism, §4). Path list NOT widened.
+// ═══ RE-ANCHOR AT THE MERGE, 2026-10-08 (PRISM_CASCADE; forgeClean R4 merge of lanes CLEAN d2aa1ab8 and REFORGE 89b25f55; pre-authorised by
+// WORKORDER-R4) ═══ (ii): both lanes' anchors above -> postForgeCleanMergeVocabularyIi-100826, tag cut ON the merge commit. CENSUS: the union of the two lanes'
+// censuses above, and nothing else (the merge resolved only these anchor conflicts). Path list byte-identical; nothing excluded.
+const POST_D1_BASE_TAG = 'postForgeCleanMergeVocabularyIi-100826'; // re-anchored at the forgeClean merge by PRISM_CASCADE; the tag is cut ON the merge commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -384,7 +390,13 @@ const POST_D1_BASE_TAG = 'postForgeCleanVocabularyIiB-100826'; // re-anchored by
 // ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN; pre-authorised) ═══ (iii) postCampaignG21bForgeFrameworkIii-100726 ->
 // postForgeCleanForgeFrameworkIii-100826, tag ON this commit. CENSUS at 0440fe7 (lib/forge-framework/): ONE file, test/test-gSeamUntouched.js — its own
 // G-SEAM-UNTOUCHED re-anchor (12babd9). Framework SOURCE unchanged; nothing excluded.
-const PHASE0_ANCHOR_TAG = 'postForgeCleanForgeFrameworkIii-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN ((iii)); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (ONYX_SUMMIT; forgeClean lane REFORGE; pre-authorised) ═══ (iii) postCampaignG21bForgeFrameworkIii-100726 ->
+// postForgeCleanReforgeForgeFrameworkIii-100826, tag cut ON this commit. CENSUS at 39669479: ONE file, lib/forge-framework/test/test-gSeamUntouched.js
+// 4/1 (REFORGE's own G-SEAM-UNTOUCHED re-anchor comment and tag constant). No forge-framework source touched.
+// ═══ RE-ANCHOR AT THE MERGE, 2026-10-08 (PRISM_CASCADE; forgeClean R4 merge of lanes CLEAN d2aa1ab8 and REFORGE 89b25f55; pre-authorised by
+// WORKORDER-R4) ═══ (iii): both lanes' anchors above -> postForgeCleanMergeForgeFrameworkIii-100826, tag cut ON the merge commit. CENSUS: the union of the two lanes'
+// censuses above, and nothing else (the merge resolved only these anchor conflicts). Path list byte-identical; nothing excluded.
+const PHASE0_ANCHOR_TAG = 'postForgeCleanMergeForgeFrameworkIii-100826'; // re-anchored at the forgeClean merge by PRISM_CASCADE; the tag is cut ON the merge commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -801,7 +813,14 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // retain), its test/test-provisionPortRace.js 270 + testSupport/provisionPortRaceChild.js 53 (new) + test/test-replay-manager.js 14,
 // lib/build.js 9 (the deliverable retained), forger/test/integration-forge.js 16 (-keepGraph retains). (i-live): replayManager's shape gained
 // retain, declared in interfaces.js. Path list byte-identical; nothing excluded.
-const PHASE3_ANCHOR_TAG = 'postForgeCleanSeamDiffEmpty-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN (seamDiffEmpty); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (ONYX_SUMMIT; forgeClean lane REFORGE; pre-authorised by WORKORDER-REFORGE) ═══ seamDiffEmpty
+// postCampaignG21bSeamDiffEmpty-100726 -> postForgeCleanReforgeSeamDiffEmpty-100826, tag cut ON this commit. CENSUS at d6fecdce: 3 files —
+// build.js (--judgeCacheOnly; the roundTrip attestation detail names its summary relative to the run directory, REFORGE fix 2),
+// replay-manager's promotion-stamp.js (stampable gates read from graph-contract) and its test-promotionStamp.js (conjunct h).
+// ═══ RE-ANCHOR AT THE MERGE, 2026-10-08 (PRISM_CASCADE; forgeClean R4 merge of lanes CLEAN d2aa1ab8 and REFORGE 89b25f55; pre-authorised by
+// WORKORDER-R4) ═══ seamDiffEmpty (and its (i-live) companion): both lanes' anchors above -> postForgeCleanMergeSeamDiffEmpty-100826, tag cut ON the merge commit. CENSUS: the union of the two lanes'
+// censuses above, and nothing else (the merge resolved only these anchor conflicts). Path list byte-identical; nothing excluded.
+const PHASE3_ANCHOR_TAG = 'postForgeCleanMergeSeamDiffEmpty-100826'; // re-anchored at the forgeClean merge by PRISM_CASCADE; the tag is cut ON the merge commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

@@ -189,7 +189,13 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // replay-manager/replayManager.js 261 (the port allocation lock, the post-run and liveness checks, rm -f -v, the scratch registry, the
 // exit watchdog and the retain verb: VIOLET_VALLEY / TQ rulings 2026-10-08) and lib/build.js 9 (the deliverable is retained).
 // SEAM_FILE_LIST byte-identical; nothing excluded.
-const PRE_MIGRATION_REF = 'postForgeCleanGSeamUntouched-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN (G-SEAM-UNTOUCHED); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (ONYX_SUMMIT; forgeClean lane REFORGE; pre-authorised by WORKORDER-REFORGE) ═══ G-SEAM-UNTOUCHED
+// postCampaignG21GSeamUntouched-100726 -> postForgeCleanReforgeGSeamUntouched-100826, tag cut ON this commit. CENSUS at d6fecdce over the 7
+// seam files: ONE file, apps/graph-builder/lib/build.js 73+/3- (--judgeCacheOnly; REFORGE fix 2, the roundTrip detail's relative summary path).
+// ═══ RE-ANCHOR AT THE MERGE, 2026-10-08 (PRISM_CASCADE; forgeClean R4 merge of lanes CLEAN d2aa1ab8 and REFORGE 89b25f55; pre-authorised by
+// WORKORDER-R4) ═══ G-SEAM-UNTOUCHED: both lanes' anchors above -> postForgeCleanMergeGSeamUntouched-100826, tag cut ON the merge commit. CENSUS: the union of the two lanes'
+// censuses above, and nothing else (the merge resolved only these anchor conflicts). Path list byte-identical; nothing excluded.
+const PRE_MIGRATION_REF = 'postForgeCleanMergeGSeamUntouched-100826'; // re-anchored at the forgeClean merge by PRISM_CASCADE; the tag is cut ON the merge commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

@@ -1682,11 +1682,15 @@ const promotionKindRefusal = ({ containerName, recipeName, recipesDirPath = path
 const stampPromotionAction = (callback) => {
 	const { xLog, commandLineParameters } = process.global;
 	const containerName = firstValue(commandLineParameters, 'containerName');
-	const evidencePathByGate = { goldEvalCheck: firstValue(commandLineParameters, 'goldEvalCheckLogPath'), replay: firstValue(commandLineParameters, 'replayBuildLogPath') };
+	// ⟪lane REFORGE, forgeClean R3⟫ reforgeDeterminism joined the stamp: its evidence is reforgeCompare's -summarize file, REQUIRED
+	// for the same reason as the other two (a stamp that recorded some verdicts would leave the rest reading notRun beside a
+	// claim of promotion)
+	const evidencePathByGate = { goldEvalCheck: firstValue(commandLineParameters, 'goldEvalCheckLogPath'), replay: firstValue(commandLineParameters, 'replayBuildLogPath'), reforgeDeterminism: firstValue(commandLineParameters, 'reforgeEvidencePath') };
 	const missingParameterList = []
 		.concat(containerName ? [] : ['--containerName=<the PROMOTED container name>'])
 		.concat(evidencePathByGate.goldEvalCheck ? [] : ['--goldEvalCheckLogPath=<the saved -goldEvalCheck output>'])
-		.concat(evidencePathByGate.replay ? [] : ['--replayBuildLogPath=<the zero-judge replay build log>']);
+		.concat(evidencePathByGate.replay ? [] : ['--replayBuildLogPath=<the zero-judge replay build log>'])
+		.concat(evidencePathByGate.reforgeDeterminism ? [] : ['--reforgeEvidencePath=<the reforgeCompare -summarize evidence file>']);
 	if (missingParameterList.length) {
 		callback(`graphBuilder -stampPromotion: ${missingParameterList.join(', ')} REQUIRED, with no default — the stamp records evidence, and evidence must be named`);
 		return;

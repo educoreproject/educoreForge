@@ -822,7 +822,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // lib/bridge-framework/test/test-bgNosub.js 7/1 (its seamDiffEmpty re-anchor). Bridge-framework SOURCE unchanged. Path list byte-identical.
 // RE-ANCHOR 2026-10-08 (PRISM_CASCADE, forgeClean CLEAN, BG-COMPOSE-PESC, fourth; pre-authorised): postForgeCleanPescComposeC-100826 ->
 // postForgeCleanPescComposeD-100826, tag ON this commit. CENSUS: ONE path, lib/bridge-framework/test/test-bgNosub.js 4/1 (its (iii) re-anchor).
-const P1_BASELINE_COMMIT = 'postForgeCleanPescComposeD-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN (BG-COMPOSE-PESC, fourth); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (ONYX_SUMMIT; forgeClean lane REFORGE; pre-authorised) ═══ BG-COMPOSE-PESC postCampaignG21bPescCompose-100726 ->
+// postForgeCleanReforgePescCompose-100826, tag cut ON this commit. CENSUS at 39669479: 5 paths, all REFORGE's — build.js 73/3 (--judgeCacheOnly;
+// fix 2), bridge-framework.js 5/1 (fix 1: the no-block branch reports the empty loaded-conservation summary), test-bgReplay.js 17/2 (its gate,
+// conjunct e2), test-bgNosub.js (the re-anchors) and graph-contract.js 3/1 (the reforgeDeterminism gate). No PESC plugin or seam path.
+// ═══ RE-ANCHOR AT THE MERGE, 2026-10-08 (PRISM_CASCADE; forgeClean R4 merge of lanes CLEAN d2aa1ab8 and REFORGE 89b25f55; pre-authorised by
+// WORKORDER-R4) ═══ BG-COMPOSE-PESC: both lanes' anchors above -> postForgeCleanMergePescCompose-100826, tag cut ON the merge commit. CENSUS: the union of the two lanes'
+// censuses above, and nothing else (the merge resolved only these anchor conflicts). Path list byte-identical; nothing excluded.
+const P1_BASELINE_COMMIT = 'postForgeCleanMergePescCompose-100826'; // re-anchored at the forgeClean merge by PRISM_CASCADE; the tag is cut ON the merge commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
