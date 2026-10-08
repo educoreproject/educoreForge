@@ -29,16 +29,25 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // QNames resolved to '{namespace}local', and a prefixed attribute NAME resolved the same way);
 // documentation adds its text, verbatim. One statement
 // '<file>|schemaChildOrder' lists xs:schema's children in order.
-// Source only, each flagged explicitlyOmitted (the verdict's explicitlyOmittedTotal): every XML
-// comment, every whitespace-only text run outside documentation, every processing instruction (the
-// XML declaration). Non-whitespace text outside documentation would be a content statement.
+// COMMENTS ARE CONTENT ⟪forgeClean lane CLEAN, PLAN G20, 2026-10-08⟫: PESC keeps its change logs and its model notes
+// ("AgencyAssignedID should be indicated as deprecated ...") in comments and nowhere else, so the graph carries every one
+// and the proof compares every one. A comment inside an element is '<parentPath>/comment#<k>' (k-th in that parent),
+// value { tag '#comment', text verbatim, beforeSegment: the segment of the element child that follows it, or '#end' };
+// one outside xs:schema is 'prologComment#<k>' or 'epilogComment#<k>', value { tag, text }. So a comment moved, dropped,
+// reworded or reattached to another element is a content gap.
+// Source only, each flagged explicitlyOmitted (the verdict's explicitlyOmittedTotal): every whitespace-only text run
+// outside documentation and every processing instruction (the XML declaration): formatting, and nothing else. A comment
+// is never omitted: its kind is not on OMISSION_DECLARATION's kindList, so the verdict assembler refuses one filed as
+// omitted. Non-whitespace text outside documentation would be a content statement.
 //
 // THE EMITTER classifies every node by GRAPH_LABEL_SUFFIX_DISPOSITION_TABLE and reads only the SOURCE
 // kinds; Root, Release, Occurrence and EmbedText are DERIVED_STRUCTURE and are never read (gate F20).
 // A node with no classified label, or two, is an emission FAULT. It writes, per schema file, the
 // schema element (schemaAttributeList; a '{namespace}local' attribute under a prefix the emitter binds),
 // then imports, definitions and schema-level annotations in document order (an annotation after the
-// documentPosition it follows, fileAnnotationList); inside a definition its annotation (every
+// documentPosition it follows, fileAnnotationList) and its comments (fileCommentList: the prolog's after the XML
+// declaration, the schema's before the schema child whose index they name, the epilog's after it); an element's
+// precedingCommentList right before the element; inside a definition its annotation (every
 // documentationValueList entry), its derivation (contentStyle wrapper, base from baseTypeQName, the
 // derivation's own annotation, facets, codes in codePosition order),
 // its compositor tree from contentModelShape (elements by sequencePosition, group references
@@ -74,20 +83,25 @@ const NAMESPACED_ATTRIBUTE_NAME_RE = /^\{([^}]+)\}(.+)$/;
 const FACET_TAG_LIST = Object.freeze(['length', 'minLength', 'maxLength', 'pattern', 'whiteSpace', 'maxInclusive', 'maxExclusive', 'minInclusive', 'minExclusive', 'totalDigits', 'fractionDigits']);
 // annotations after one position are placed at position + k / divisor, before the next whole position
 const FILE_ANNOTATION_POSITION_DIVISOR = 1000;
-const OMITTED_KIND = Object.freeze({ COMMENT: 'comment', WHITESPACE: 'whitespace', PROCESSING_INSTRUCTION: 'processingInstruction' });
+// ⟪G20⟫ a comment is no omitted kind: it is content (COMMENT_STATEMENT_TAG)
+const OMITTED_KIND = Object.freeze({ WHITESPACE: 'whitespace', PROCESSING_INSTRUCTION: 'processingInstruction' });
+const COMMENT_STATEMENT_TAG = '#comment';
+const END_OF_PARENT_SEGMENT = '#end';
+// where a comment outside every definition stands on a SchemaFile's fileCommentList; xsdParser.js writes the same three
+// words (this module may require no reader of the forge), and the emitter refuses a placement it does not know
+const COMMENT_PLACEMENT = Object.freeze({ PROLOG: 'prolog', SCHEMA: 'schema', EPILOG: 'epilog' });
 const LOST_REASON = Object.freeze({ ABSENT_FROM_GRAPH: 'absentFromGraph', VALUE_DIFFERS: 'valueDiffers' });
-// ⟪G21⟫ the declaration the verdict carries: THIS module is the rule, the three OMITTED_KIND words are the only kinds it
-// may omit, and the caveat says what the one kind with prose in it can hold. Comments are mostly rulers and banners, but
-// some carry content the graph does not (change-log lines, a deprecation notice on AgencyAssignedID): PLAN G20.
+// ⟪G21⟫ the declaration the verdict carries: THIS module is the rule, and the OMITTED_KIND words are the only kinds it may
+// omit. ⟪G21b⟫ made a comment entry carry its text because comments held content the graph did not (PLAN G20). ⟪G20,
+// forgeClean lane CLEAN⟫ the graph now carries every comment, so 'comment' left the kindList and no omitted kind bears
+// text: whitespace runs and the XML declaration are formatting, and the caveat says where the comments went.
 const OMISSION_DECLARATION = Object.freeze({
 	rule: 'lib/pesc-release-forge/roundTripPair.js',
 	kindPropertyName: 'omittedKind',
 	kindList: Object.freeze(Object.values(OMITTED_KIND)),
-	// ⟪G21b⟫ a comment entry carries its text (the auditable part: change logs, the AgencyAssignedID deprecation notice, G20);
-	// whitespace runs and the XML declaration carry none
-	textBearingKindList: Object.freeze([OMITTED_KIND.COMMENT]),
-	textPropertyName: 'omittedText',
-	caveatText: 'comments may carry content (PLAN G20)',
+	textBearingKindList: Object.freeze([]),
+	textPropertyName: '',
+	caveatText: 'formatting only: comments are carried and compared as content (PLAN G20), never omitted',
 });
 const DONOR_FOLDER_NAME = 'donorLibraries';
 const DONOR_RELATIVE_PATH_RE = new RegExp(`^${DONOR_FOLDER_NAME}[\\\\/]`);
@@ -118,9 +132,10 @@ const SEMANTIC_VALIDATION_LIMIT =
 	'every local element, attribute, group reference and wildcard in its compositor position, nested compositors ' +
 	'included, with every attribute as written; every derivation with its base, facets and enumeration values in ' +
 	'order; every documentation string, verbatim; the schema element\'s attributes. QName-valued attributes (type, base, ' +
-	'ref, substitutionGroup) are compared RESOLVED to {namespace}local, so a prefix is not content. NOT modelled, listed ' +
-	'from the source as explicitlyOmitted: XML comments (PESC\'s change logs; the release record carries the root\'s), ' +
-	'whitespace runs between elements, and processing instructions (the XML declaration). Not modelled and not listed: ' +
+	'ref, substitutionGroup) are compared RESOLVED to {namespace}local, so a prefix is not content; every XML comment, ' +
+	'verbatim and in its place (the schema file\'s fileCommentList, an element\'s precedingCommentList; PLAN G20). NOT ' +
+	'modelled, listed from the source as explicitlyOmitted: whitespace runs between elements and processing instructions ' +
+	'(the XML declaration). Not modelled and not listed: ' +
 	'the xmlns prefix declarations (the regenerated files bind their own prefixes) and the order of facets inside one ' +
 	'restriction (not significant to XSD). Occurrences, HAS_INSTANCE, HAS_CHILD, the release record, text nodes and the ' +
 	'stamped ordinals are derived structure, proved by the reachability, identity and sequence gates, not here.';
@@ -135,7 +150,7 @@ const compareStrings = (leftText, rightText) => (leftText < rightText ? -1 : lef
 
 const canonicalStatementsOfXsdText = ({ fileName, xsdText, includeOmitted }) => {
 	const statementList = [];
-	const omittedCountByKind = { [OMITTED_KIND.COMMENT]: 0, [OMITTED_KIND.WHITESPACE]: 0, [OMITTED_KIND.PROCESSING_INSTRUCTION]: 0 };
+	const omittedCountByKind = { [OMITTED_KIND.WHITESPACE]: 0, [OMITTED_KIND.PROCESSING_INSTRUCTION]: 0 };
 	const statementKeyOf = (pathText) => `${fileName}${STATEMENT_SEPARATOR}${pathText}`;
 	const addOmitted = (omittedKind, omittedText) => {
 		omittedCountByKind[omittedKind]++;
@@ -147,6 +162,15 @@ const canonicalStatementsOfXsdText = ({ fileName, xsdText, includeOmitted }) => 
 	const schemaChildSegmentList = [];
 	let contentTextCount = 0;
 	let faultText = null;
+	let rootElementOpened = false;
+	const outsideCommentCountByPlacement = { prolog: 0, epilog: 0 };
+	// a frame's comments wait for the element child that follows them (or the frame's end) to learn their beforeSegment
+	const flushPendingComments = (frame, beforeSegment) => {
+		frame.pendingCommentTextList.forEach((commentText) => {
+			statementList.push([statementKeyOf(`${frame.pathText}/comment#${++frame.commentCount}`), { tag: COMMENT_STATEMENT_TAG, text: commentText, beforeSegment }]);
+		});
+		frame.pendingCommentTextList = [];
+	};
 
 	const resolvedQNameOf = (writtenValue, bindingByPrefix) => {
 		const colonIndex = writtenValue.indexOf(':');
@@ -161,7 +185,15 @@ const canonicalStatementsOfXsdText = ({ fileName, xsdText, includeOmitted }) => 
 		parser.resume();
 	};
 	parser.onprocessinginstruction = (instruction) => addOmitted(OMITTED_KIND.PROCESSING_INSTRUCTION, `${instruction.name} ${instruction.body}`);
-	parser.oncomment = (commentText) => addOmitted(OMITTED_KIND.COMMENT, commentText);
+	parser.oncomment = (commentText) => {
+		const frame = frameStack[frameStack.length - 1];
+		if (frame !== undefined) {
+			frame.pendingCommentTextList.push(commentText);
+			return;
+		}
+		const placementName = rootElementOpened ? 'epilog' : 'prolog';
+		statementList.push([statementKeyOf(`${placementName}Comment#${++outsideCommentCountByPlacement[placementName]}`), { tag: COMMENT_STATEMENT_TAG, text: commentText }]);
+	};
 	const onText = (textValue) => {
 		const frame = frameStack[frameStack.length - 1];
 		if (frame !== undefined && frame.tag === 'documentation') {
@@ -215,10 +247,15 @@ const canonicalStatementsOfXsdText = ({ fileName, xsdText, includeOmitted }) => 
 			segment = `${++parentFrame.ordinalCount}:${tag}`;
 		}
 		const pathText = parentFrame === undefined ? segment : `${parentFrame.pathText}${PATH_SEPARATOR}${segment}`;
-		frameStack.push({ tag, pathText, attributeList, bindingByPrefix, ordinalCount: 0, documentationCount: 0, enumerationCount: 0, textPartList: [], depthFromRoot: frameStack.length });
+		if (parentFrame !== undefined) {
+			flushPendingComments(parentFrame, segment);
+		}
+		rootElementOpened = true;
+		frameStack.push({ tag, pathText, attributeList, bindingByPrefix, ordinalCount: 0, documentationCount: 0, enumerationCount: 0, textPartList: [], depthFromRoot: frameStack.length, pendingCommentTextList: [], commentCount: 0 });
 	};
 	parser.onclosetag = () => {
 		const frame = frameStack.pop();
+		flushPendingComments(frame, END_OF_PARENT_SEGMENT);
 		statementList.push([statementKeyOf(frame.pathText), frame.tag === 'documentation' ? { tag: frame.tag, attributeList: frame.attributeList, text: frame.textPartList.join('') } : { tag: frame.tag, attributeList: frame.attributeList }]);
 	};
 
@@ -298,13 +335,15 @@ const regenerateXsdTextByFileName = ({ nodes, edges, labelPrefix }) => {
 		};
 		const attributeText = (attributePairList) => attributePairList.filter((onePair) => onePair[1] !== undefined && onePair[1] !== null).map((onePair) => ` ${onePair[0]}="${xmlEscapedAttributeValue(onePair[1])}"`).join('');
 		const annotationText = (documentationList) => (documentationList.length === 0 ? '' : `<xs:annotation>${documentationList.map((oneText) => `<xs:documentation>${xmlEscapedText(oneText)}</xs:documentation>`).join('')}</xs:annotation>`);
+		// a comment's text is written verbatim: the source parsed, so it holds no '--'
+		const commentText = (textList) => textList.map((oneText) => `<!--${oneText}-->`).join('');
 
 		const compositorText = ({ shape, ownerStableId }) => {
 			const particleText = shape.particles
 				.map((oneParticle) => {
 					if (oneParticle.element !== undefined) {
 						const elementNode = childrenOfKind(ownerStableId, 'Element').find((oneNode) => oneNode.properties.sequencePosition === oneParticle.element);
-						return elementNode === undefined ? fault(`${ownerStableId}: no element at sequencePosition ${oneParticle.element}`) : declarationText({ declarationNode: elementNode, tag: 'element' });
+						return elementNode === undefined ? fault(`${ownerStableId}: no element at sequencePosition ${oneParticle.element}`) : `${commentText(widenedList(elementNode.properties.precedingCommentList))}${declarationText({ declarationNode: elementNode, tag: 'element' })}`;
 					}
 					if (oneParticle.groupRef !== undefined) {
 						const localName = localNameOf(oneParticle.groupRef);
@@ -408,11 +447,19 @@ const regenerateXsdTextByFileName = ({ nodes, edges, labelPrefix }) => {
 			placedList.push({ documentPosition: oneAnnotation.afterDocumentPosition + (annotationIndex + 1) / FILE_ANNOTATION_POSITION_DIVISOR, placedText: annotationText(widenedList(oneAnnotation.documentationValueList)) });
 		});
 		placedList.sort((left, right) => left.documentPosition - right.documentPosition);
+		// every comment outside a definition, where it stood (G20); an unknown placement is a fault, never a guess
+		const fileCommentList = parsedJsonOrNull(schemaFileNode.properties.fileCommentList) || [];
+		const commentTextListOf = (placementName, beforeSchemaChildIndex) => fileCommentList.filter((oneComment) => oneComment.placement === placementName && (beforeSchemaChildIndex === undefined || oneComment.beforeSchemaChildIndex === beforeSchemaChildIndex)).map((oneComment) => oneComment.text);
+		const strangePlacementComment = fileCommentList.find((oneComment) => Object.values(COMMENT_PLACEMENT).indexOf(oneComment.placement) === -1 || (oneComment.placement === COMMENT_PLACEMENT.SCHEMA && !(Number.isInteger(oneComment.beforeSchemaChildIndex) && oneComment.beforeSchemaChildIndex >= 0 && oneComment.beforeSchemaChildIndex <= placedList.length)));
+		if (strangePlacementComment !== undefined) {
+			fault(`${schemaFileNode.stableId}: fileCommentList entry ${JSON.stringify(strangePlacementComment)} has no place: placement is one of ${Object.values(COMMENT_PLACEMENT).join(', ')}, and a '${COMMENT_PLACEMENT.SCHEMA}' comment names a schema child index from 0 to ${placedList.length}`);
+		}
+		const schemaChildText = placedList.map((onePlaced, placedIndex) => `${commentText(commentTextListOf(COMMENT_PLACEMENT.SCHEMA, placedIndex))}${onePlaced.placedText}\n`).join('');
 
 		const namespaceDeclarationText = Object.keys(prefixByNamespace).map((oneNamespace) => ` xmlns:${prefixByNamespace[oneNamespace]}="${xmlEscapedAttributeValue(oneNamespace)}"`).join('');
 		const writtenSchemaAttributeNameOf = (oneName) => (NAMESPACED_ATTRIBUTE_NAME_RE.test(oneName) ? `${prefixByNamespace[NAMESPACED_ATTRIBUTE_NAME_RE.exec(oneName)[1]]}:${NAMESPACED_ATTRIBUTE_NAME_RE.exec(oneName)[2]}` : oneName);
 		const schemaAttributeText = attributeText(Object.keys(schemaAttributeByName).map((oneName) => [writtenSchemaAttributeNameOf(oneName), schemaAttributeByName[oneName]]));
-		fileTextByName[fileName] = `<?xml version="1.0" encoding="UTF-8"?>\n<xs:schema${namespaceDeclarationText}${schemaAttributeText}>\n${placedList.map((onePlaced) => `${onePlaced.placedText}\n`).join('')}</xs:schema>\n`;
+		fileTextByName[fileName] = `<?xml version="1.0" encoding="UTF-8"?>\n${commentText(commentTextListOf(COMMENT_PLACEMENT.PROLOG))}<xs:schema${namespaceDeclarationText}${schemaAttributeText}>\n${schemaChildText}${commentText(commentTextListOf(COMMENT_PLACEMENT.SCHEMA, placedList.length))}</xs:schema>\n${commentText(commentTextListOf(COMMENT_PLACEMENT.EPILOG))}`;
 	});
 
 	if (faultText !== null) {
@@ -539,6 +586,8 @@ module.exports = {
 	GRAPH_LABEL_SUFFIX_DISPOSITION_TABLE,
 	NODE_DISPOSITION,
 	OMITTED_KIND,
+	COMMENT_STATEMENT_TAG,
+	COMMENT_PLACEMENT,
 	OMISSION_DECLARATION,
 	LOST_REASON,
 	SEMANTIC_VALIDATION_LIMIT,

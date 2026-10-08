@@ -26,20 +26,22 @@
 				"inReleaseReferenceCount": 1272
 			},
 			"walk": {
-				"literalSource": "WORKORDER section 3 F2 (edge counts, NoteMessage, text ceiling); evidence/graphModelSummary.json; the NoteMessage total ruled 103 = 50 + 52 + 1 by QUIET_ORBIT 2026-09-30 (the work order's 102 omitted the root file). textNodeCount, documentationSourceCountByLabelSuffix beyond the 1,220 own-text elements, and sequenceCountByOrderSemantics were first measured by phase F2 (MARBLE_BRIDGE, 2026-09-30). MOVED by QUIET_ORBIT's ruling on DEVLOG-F2 §10 (2026-09-30): every element-like declaration gets its type edge, and a declaration with an anonymous code list gets HAS_OPTION_SET to it. Before the move: REFERENCES_TYPE 961 (type 322, dataType 639), HAS_OPTION_SET 160. After, measured by phase F2: REFERENCES_TYPE 974 (type 332, dataType 642), HAS_OPTION_SET 177; the per-declaration split is typeEdgeCountByDeclaration. MOVED by phase F3 (AMBER_PORTAL, 2026-10-01), by design (NOTES-supervisor item 9): edgeCountByType gains HAS_INSTANCE 1,367 and HAS_CHILD 1,367 (WORKORDER F3); textNodeCount 2,203 -> 2,578, because contextText (a declared DmeProperty text) is now stamped on the 375 reachable element declarations and the root global element (+375 distinct texts, measured).",
+				"literalSource": "WORKORDER section 3 F2 (edge counts, NoteMessage, text ceiling); evidence/graphModelSummary.json; the NoteMessage total ruled 103 = 50 + 52 + 1 by QUIET_ORBIT 2026-09-30 (the work order's 102 omitted the root file). textNodeCount, documentationSourceCountByLabelSuffix beyond the 1,220 own-text elements, and sequenceCountByOrderSemantics were first measured by phase F2 (MARBLE_BRIDGE, 2026-09-30). MOVED by QUIET_ORBIT's ruling on DEVLOG-F2 §10 (2026-09-30): every element-like declaration gets its type edge, and a declaration with an anonymous code list gets HAS_OPTION_SET to it. Before the move: REFERENCES_TYPE 961 (type 322, dataType 639), HAS_OPTION_SET 160. After, measured by phase F2: REFERENCES_TYPE 974 (type 332, dataType 642), HAS_OPTION_SET 177; the per-declaration split is typeEdgeCountByDeclaration. MOVED by phase F3 (AMBER_PORTAL, 2026-10-01), by design (NOTES-supervisor item 9): edgeCountByType gains HAS_INSTANCE 1,367 and HAS_CHILD 1,367 (WORKORDER F3); textNodeCount 2,203 -> 2,578, because contextText (a declared DmeProperty text) is now stamped on the 375 reachable element declarations and the root global element (+375 distinct texts, measured). MOVED by forgeClean lane CLEAN (PRISM_CASCADE, 2026-10-08; G19, G20), by design: HAS_DEFINITION (schema file to every named code list, named data type and global element), REFERENCES_TYPE to every anonymous complex and data type (referencesTypeCountByTarget now names an anonymous target as such), and commentCarry (every source comment carried: fileCommentList, precedingCommentList, rootChangeLogLineList), all measured by evidence/R1/measureReleaseLiterals.js.",
 				"edgeCountByType": {
 					"HAS_CHILD": 1367,
 					"HAS_CLASS": 222,
+					"HAS_DEFINITION": 789,
 					"HAS_INSTANCE": 1367,
 					"HAS_OPTION_SET": 177,
 					"HAS_PROPERTY": 1230,
 					"HAS_SUPPORT": 14,
 					"HAS_VALUE": 2741,
 					"REFERENCES": 28,
-					"REFERENCES_TYPE": 974,
+					"REFERENCES_TYPE": 1012,
 					"SUBCLASS_OF": 110
 				},
 				"referencesTypeCountByTarget": {
+					"anonymous": 38,
 					"dataType": 642,
 					"type": 332
 				},
@@ -76,9 +78,13 @@
 					"HAS_OPTION_SET Element -> CodeList": 160,
 					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
 					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Attribute -> anonymous DataType": 2,
 					"REFERENCES_TYPE Element -> DataType": 639,
 					"REFERENCES_TYPE Element -> Type": 322,
-					"REFERENCES_TYPE GlobalElement -> Type": 10
+					"REFERENCES_TYPE Element -> anonymous AnonymousType": 12,
+					"REFERENCES_TYPE Element -> anonymous DataType": 23,
+					"REFERENCES_TYPE GlobalElement -> Type": 10,
+					"REFERENCES_TYPE GlobalElement -> anonymous AnonymousType": 1
 				},
 				"textNodeCountBeforePhaseF3": 2203,
 				"codeListFactCountNote": "ADDED by phase F6's first commit (QUIET_CIPHER, 2026-10-01, on QUIET_ORBIT's directive): codeListName and codeListDocumentation stamped on every element with HAS_OPTION_SET. First measured here: 160 elements typed by a named code list carry both (every named list in this release is documented); the 17 typed by an anonymous list carry neither, because an anonymous list has no name and none of the 17 carries documentation. No other literal moved: neither property is a declared text, the round trip does not read them, and node and edge counts are unchanged (8,997 / 11,932).",
@@ -86,6 +92,13 @@
 					"anonymousCodeList": 17,
 					"namedCodeList": 160,
 					"withCodeListDocumentation": 160
+				},
+				"commentCarry": {
+					"sourceCommentCount": 907,
+					"fileCommentCount": 906,
+					"precedingCommentCount": 1,
+					"commentedElementCount": 1,
+					"rootChangeLogLineCount": 44
 				}
 			},
 			"reachability": {
@@ -243,13 +256,12 @@
 				}
 			},
 			"roundTrip": {
-				"literalSource": "WORKORDER section 3 F4 (invented 0, contentGap 0, xmllint exit 3 with a probe); every other figure first measured by phase F4 (AMBER_PORTAL, 2026-10-01) over the graph double, after QUIET_ORBIT's ruling closed the three losses the first measurement found (contentGap 7 before: one form attribute, two empty enumeration values with their empty documentation). explicitlyOmittedTotal is the canonicalizer's comment, whitespace-run and processing-instruction count.",
+				"literalSource": "WORKORDER section 3 F4 (invented 0, contentGap 0, xmllint exit 3 with a probe); every other figure first measured by phase F4 (AMBER_PORTAL, 2026-10-01) over the graph double, after QUIET_ORBIT's ruling closed the three losses the first measurement found (contentGap 7 before: one form attribute, two empty enumeration values with their empty documentation). explicitlyOmittedTotal is the canonicalizer's comment, whitespace-run and processing-instruction count. MOVED by forgeClean lane CLEAN (G20, 2026-10-08): comments are content, so explicitlyOmittedTotal counts whitespace runs and processing instructions only, and commentStatementCount is the source comment statements every one of which the graph must give back.",
 				"inventedTotal": 0,
 				"contentGapTotal": 0,
 				"contentGapTotalBeforeRuling": 7,
-				"explicitlyOmittedTotal": 29339,
+				"explicitlyOmittedTotal": 28432,
 				"explicitlyOmittedCountByKind": {
-					"comment": 907,
 					"processingInstruction": 4,
 					"whitespace": 28428
 				},
@@ -265,7 +277,8 @@
 					"fileAnnotationNotFirstCount": 0
 				},
 				"namespacedSchemaAttributeCount": 0,
-				"documentationShapeCountNote": "ADDED by phase F6 (QUIET_CIPHER, 2026-10-01): the first round trips of the six other releases found element documentation lists (an empty and a second documentation), a derivation's own annotation and a schema-level annotation after the imports lost (NOTES-supervisor item 16); the fix carries all three. College Transcript 1.8.0 has none of the three shapes (measured 0, 0, 0) and no namespaced schema attribute."
+				"documentationShapeCountNote": "ADDED by phase F6 (QUIET_CIPHER, 2026-10-01): the first round trips of the six other releases found element documentation lists (an empty and a second documentation), a derivation's own annotation and a schema-level annotation after the imports lost (NOTES-supervisor item 16); the fix carries all three. College Transcript 1.8.0 has none of the three shapes (measured 0, 0, 0) and no namespaced schema attribute.",
+				"commentStatementCount": 907
 			}
 		},
 		"HighSchoolTranscript_v1.6.0": {
@@ -296,16 +309,18 @@
 				"edgeCountByType": {
 					"HAS_CHILD": 1099,
 					"HAS_CLASS": 210,
+					"HAS_DEFINITION": 783,
 					"HAS_INSTANCE": 1099,
 					"HAS_OPTION_SET": 170,
 					"HAS_PROPERTY": 1174,
 					"HAS_SUPPORT": 14,
 					"HAS_VALUE": 2721,
 					"REFERENCES": 28,
-					"REFERENCES_TYPE": 931,
+					"REFERENCES_TYPE": 968,
 					"SUBCLASS_OF": 108
 				},
 				"referencesTypeCountByTarget": {
+					"anonymous": 37,
 					"dataType": 627,
 					"type": 304
 				},
@@ -342,15 +357,27 @@
 					"HAS_OPTION_SET Element -> CodeList": 153,
 					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
 					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Attribute -> anonymous DataType": 2,
 					"REFERENCES_TYPE Element -> DataType": 624,
 					"REFERENCES_TYPE Element -> Type": 294,
-					"REFERENCES_TYPE GlobalElement -> Type": 10
+					"REFERENCES_TYPE Element -> anonymous AnonymousType": 12,
+					"REFERENCES_TYPE Element -> anonymous DataType": 22,
+					"REFERENCES_TYPE GlobalElement -> Type": 10,
+					"REFERENCES_TYPE GlobalElement -> anonymous AnonymousType": 1
 				},
 				"codeListFactCount": {
 					"anonymousCodeList": 17,
 					"namedCodeList": 153,
 					"withCodeListDocumentation": 153
-				}
+				},
+				"commentCarry": {
+					"sourceCommentCount": 835,
+					"fileCommentCount": 834,
+					"precedingCommentCount": 1,
+					"commentedElementCount": 1,
+					"rootChangeLogLineCount": 28
+				},
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (PRISM_CASCADE, 2026-10-08; G19, G20), by design: HAS_DEFINITION (schema file to every named code list, named data type and global element), REFERENCES_TYPE to every anonymous complex and data type (referencesTypeCountByTarget now names an anonymous target as such), and commentCarry (every source comment carried: fileCommentList, precedingCommentList, rootChangeLogLineList), all measured by evidence/R1/measureReleaseLiterals.js."
 			},
 			"reachability": {
 				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
@@ -503,9 +530,8 @@
 				"inventedTotal": 0,
 				"contentGapTotal": 0,
 				"contentGapTotalBeforePhaseF6Fix": 6,
-				"explicitlyOmittedTotal": 28671,
+				"explicitlyOmittedTotal": 27836,
 				"explicitlyOmittedCountByKind": {
-					"comment": 835,
 					"processingInstruction": 4,
 					"whitespace": 27832
 				},
@@ -520,7 +546,9 @@
 					"derivationAnnotationCount": 0,
 					"fileAnnotationNotFirstCount": 0
 				},
-				"namespacedSchemaAttributeCount": 0
+				"namespacedSchemaAttributeCount": 0,
+				"commentStatementCount": 835,
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (G20, 2026-10-08): comments are content, so explicitlyOmittedTotal counts whitespace runs and processing instructions only, and commentStatementCount is the source comment statements every one of which the graph must give back."
 			}
 		},
 		"TestScoreReport_v1.1.0": {
@@ -551,16 +579,18 @@
 				"edgeCountByType": {
 					"HAS_CHILD": 1355,
 					"HAS_CLASS": 210,
+					"HAS_DEFINITION": 783,
 					"HAS_INSTANCE": 1355,
 					"HAS_OPTION_SET": 170,
 					"HAS_PROPERTY": 1170,
 					"HAS_SUPPORT": 14,
 					"HAS_VALUE": 2721,
 					"REFERENCES": 28,
-					"REFERENCES_TYPE": 928,
+					"REFERENCES_TYPE": 964,
 					"SUBCLASS_OF": 108
 				},
 				"referencesTypeCountByTarget": {
+					"anonymous": 36,
 					"dataType": 626,
 					"type": 302
 				},
@@ -595,15 +625,26 @@
 					"HAS_OPTION_SET Element -> CodeList": 153,
 					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
 					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Attribute -> anonymous DataType": 2,
 					"REFERENCES_TYPE Element -> DataType": 623,
 					"REFERENCES_TYPE Element -> Type": 291,
+					"REFERENCES_TYPE Element -> anonymous AnonymousType": 12,
+					"REFERENCES_TYPE Element -> anonymous DataType": 22,
 					"REFERENCES_TYPE GlobalElement -> Type": 11
 				},
 				"codeListFactCount": {
 					"anonymousCodeList": 17,
 					"namedCodeList": 153,
 					"withCodeListDocumentation": 153
-				}
+				},
+				"commentCarry": {
+					"sourceCommentCount": 820,
+					"fileCommentCount": 819,
+					"precedingCommentCount": 1,
+					"commentedElementCount": 1,
+					"rootChangeLogLineCount": 13
+				},
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (PRISM_CASCADE, 2026-10-08; G19, G20), by design: HAS_DEFINITION (schema file to every named code list, named data type and global element), REFERENCES_TYPE to every anonymous complex and data type (referencesTypeCountByTarget now names an anonymous target as such), and commentCarry (every source comment carried: fileCommentList, precedingCommentList, rootChangeLogLineList), all measured by evidence/R1/measureReleaseLiterals.js."
 			},
 			"reachability": {
 				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
@@ -772,9 +813,8 @@
 				"inventedTotal": 0,
 				"contentGapTotal": 0,
 				"contentGapTotalBeforePhaseF6Fix": 6,
-				"explicitlyOmittedTotal": 28635,
+				"explicitlyOmittedTotal": 27815,
 				"explicitlyOmittedCountByKind": {
-					"comment": 820,
 					"processingInstruction": 4,
 					"whitespace": 27811
 				},
@@ -789,7 +829,9 @@
 					"derivationAnnotationCount": 0,
 					"fileAnnotationNotFirstCount": 0
 				},
-				"namespacedSchemaAttributeCount": 0
+				"namespacedSchemaAttributeCount": 0,
+				"commentStatementCount": 820,
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (G20, 2026-10-08): comments are content, so explicitlyOmittedTotal counts whitespace runs and processing instructions only, and commentStatementCount is the source comment statements every one of which the graph must give back."
 			}
 		},
 		"DocumentRequest_v1.0.0": {
@@ -820,16 +862,18 @@
 				"edgeCountByType": {
 					"HAS_CHILD": 733,
 					"HAS_CLASS": 226,
+					"HAS_DEFINITION": 789,
 					"HAS_INSTANCE": 733,
 					"HAS_OPTION_SET": 184,
 					"HAS_PROPERTY": 1271,
 					"HAS_SUPPORT": 14,
 					"HAS_VALUE": 2741,
 					"REFERENCES": 28,
-					"REFERENCES_TYPE": 1006,
+					"REFERENCES_TYPE": 1044,
 					"SUBCLASS_OF": 110
 				},
 				"referencesTypeCountByTarget": {
+					"anonymous": 38,
 					"dataType": 658,
 					"type": 348
 				},
@@ -865,15 +909,27 @@
 					"HAS_OPTION_SET Element -> CodeList": 167,
 					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
 					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Attribute -> anonymous DataType": 2,
 					"REFERENCES_TYPE Element -> DataType": 655,
 					"REFERENCES_TYPE Element -> Type": 338,
-					"REFERENCES_TYPE GlobalElement -> Type": 10
+					"REFERENCES_TYPE Element -> anonymous AnonymousType": 12,
+					"REFERENCES_TYPE Element -> anonymous DataType": 23,
+					"REFERENCES_TYPE GlobalElement -> Type": 10,
+					"REFERENCES_TYPE GlobalElement -> anonymous AnonymousType": 1
 				},
 				"codeListFactCount": {
 					"anonymousCodeList": 17,
 					"namedCodeList": 167,
 					"withCodeListDocumentation": 167
-				}
+				},
+				"commentCarry": {
+					"sourceCommentCount": 884,
+					"fileCommentCount": 883,
+					"precedingCommentCount": 1,
+					"commentedElementCount": 1,
+					"rootChangeLogLineCount": 7
+				},
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (PRISM_CASCADE, 2026-10-08; G19, G20), by design: HAS_DEFINITION (schema file to every named code list, named data type and global element), REFERENCES_TYPE to every anonymous complex and data type (referencesTypeCountByTarget now names an anonymous target as such), and commentCarry (every source comment carried: fileCommentList, precedingCommentList, rootChangeLogLineList), all measured by evidence/R1/measureReleaseLiterals.js."
 			},
 			"reachability": {
 				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
@@ -1029,9 +1085,8 @@
 				"inventedTotal": 0,
 				"contentGapTotal": 0,
 				"contentGapTotalBeforePhaseF6Fix": 3,
-				"explicitlyOmittedTotal": 29403,
+				"explicitlyOmittedTotal": 28519,
 				"explicitlyOmittedCountByKind": {
-					"comment": 884,
 					"processingInstruction": 4,
 					"whitespace": 28515
 				},
@@ -1046,7 +1101,9 @@
 					"derivationAnnotationCount": 0,
 					"fileAnnotationNotFirstCount": 1
 				},
-				"namespacedSchemaAttributeCount": 0
+				"namespacedSchemaAttributeCount": 0,
+				"commentStatementCount": 884,
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (G20, 2026-10-08): comments are content, so explicitlyOmittedTotal counts whitespace runs and processing instructions only, and commentStatementCount is the source comment statements every one of which the graph must give back."
 			}
 		},
 		"DocumentResponse_v1.0.0": {
@@ -1077,16 +1134,18 @@
 				"edgeCountByType": {
 					"HAS_CHILD": 546,
 					"HAS_CLASS": 226,
+					"HAS_DEFINITION": 789,
 					"HAS_INSTANCE": 546,
 					"HAS_OPTION_SET": 184,
 					"HAS_PROPERTY": 1271,
 					"HAS_SUPPORT": 14,
 					"HAS_VALUE": 2741,
 					"REFERENCES": 28,
-					"REFERENCES_TYPE": 1006,
+					"REFERENCES_TYPE": 1044,
 					"SUBCLASS_OF": 110
 				},
 				"referencesTypeCountByTarget": {
+					"anonymous": 38,
 					"dataType": 658,
 					"type": 348
 				},
@@ -1122,15 +1181,27 @@
 					"HAS_OPTION_SET Element -> CodeList": 167,
 					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
 					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Attribute -> anonymous DataType": 2,
 					"REFERENCES_TYPE Element -> DataType": 655,
 					"REFERENCES_TYPE Element -> Type": 338,
-					"REFERENCES_TYPE GlobalElement -> Type": 10
+					"REFERENCES_TYPE Element -> anonymous AnonymousType": 12,
+					"REFERENCES_TYPE Element -> anonymous DataType": 23,
+					"REFERENCES_TYPE GlobalElement -> Type": 10,
+					"REFERENCES_TYPE GlobalElement -> anonymous AnonymousType": 1
 				},
 				"codeListFactCount": {
 					"anonymousCodeList": 17,
 					"namedCodeList": 167,
 					"withCodeListDocumentation": 167
-				}
+				},
+				"commentCarry": {
+					"sourceCommentCount": 887,
+					"fileCommentCount": 886,
+					"precedingCommentCount": 1,
+					"commentedElementCount": 1,
+					"rootChangeLogLineCount": 10
+				},
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (PRISM_CASCADE, 2026-10-08; G19, G20), by design: HAS_DEFINITION (schema file to every named code list, named data type and global element), REFERENCES_TYPE to every anonymous complex and data type (referencesTypeCountByTarget now names an anonymous target as such), and commentCarry (every source comment carried: fileCommentList, precedingCommentList, rootChangeLogLineList), all measured by evidence/R1/measureReleaseLiterals.js."
 			},
 			"reachability": {
 				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
@@ -1317,9 +1388,8 @@
 				"inventedTotal": 0,
 				"contentGapTotal": 0,
 				"contentGapTotalBeforePhaseF6Fix": 3,
-				"explicitlyOmittedTotal": 29409,
+				"explicitlyOmittedTotal": 28522,
 				"explicitlyOmittedCountByKind": {
-					"comment": 887,
 					"processingInstruction": 4,
 					"whitespace": 28518
 				},
@@ -1334,7 +1404,9 @@
 					"derivationAnnotationCount": 0,
 					"fileAnnotationNotFirstCount": 1
 				},
-				"namespacedSchemaAttributeCount": 0
+				"namespacedSchemaAttributeCount": 0,
+				"commentStatementCount": 887,
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (G20, 2026-10-08): comments are content, so explicitlyOmittedTotal counts whitespace runs and processing instructions only, and commentStatementCount is the source comment statements every one of which the graph must give back."
 			}
 		},
 		"LearningRecord_v1.0.0": {
@@ -1365,16 +1437,18 @@
 				"edgeCountByType": {
 					"HAS_CHILD": 1249,
 					"HAS_CLASS": 222,
+					"HAS_DEFINITION": 788,
 					"HAS_INSTANCE": 1249,
 					"HAS_OPTION_SET": 177,
 					"HAS_PROPERTY": 1224,
 					"HAS_SUPPORT": 14,
 					"HAS_VALUE": 2739,
 					"REFERENCES": 28,
-					"REFERENCES_TYPE": 970,
+					"REFERENCES_TYPE": 1007,
 					"SUBCLASS_OF": 110
 				},
 				"referencesTypeCountByTarget": {
+					"anonymous": 37,
 					"dataType": 637,
 					"type": 333
 				},
@@ -1409,15 +1483,26 @@
 					"HAS_OPTION_SET Element -> CodeList": 160,
 					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
 					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Attribute -> anonymous DataType": 2,
 					"REFERENCES_TYPE Element -> DataType": 634,
 					"REFERENCES_TYPE Element -> Type": 322,
+					"REFERENCES_TYPE Element -> anonymous AnonymousType": 12,
+					"REFERENCES_TYPE Element -> anonymous DataType": 23,
 					"REFERENCES_TYPE GlobalElement -> Type": 11
 				},
 				"codeListFactCount": {
 					"anonymousCodeList": 17,
 					"namedCodeList": 160,
 					"withCodeListDocumentation": 160
-				}
+				},
+				"commentCarry": {
+					"sourceCommentCount": 842,
+					"fileCommentCount": 841,
+					"precedingCommentCount": 1,
+					"commentedElementCount": 1,
+					"rootChangeLogLineCount": 1
+				},
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (PRISM_CASCADE, 2026-10-08; G19, G20), by design: HAS_DEFINITION (schema file to every named code list, named data type and global element), REFERENCES_TYPE to every anonymous complex and data type (referencesTypeCountByTarget now names an anonymous target as such), and commentCarry (every source comment carried: fileCommentList, precedingCommentList, rootChangeLogLineList), all measured by evidence/R1/measureReleaseLiterals.js."
 			},
 			"reachability": {
 				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
@@ -1587,9 +1672,8 @@
 				"inventedTotal": 0,
 				"contentGapTotal": 0,
 				"contentGapTotalBeforePhaseF6Fix": 0,
-				"explicitlyOmittedTotal": 29174,
+				"explicitlyOmittedTotal": 28332,
 				"explicitlyOmittedCountByKind": {
-					"comment": 842,
 					"processingInstruction": 4,
 					"whitespace": 28328
 				},
@@ -1604,7 +1688,9 @@
 					"derivationAnnotationCount": 0,
 					"fileAnnotationNotFirstCount": 0
 				},
-				"namespacedSchemaAttributeCount": 0
+				"namespacedSchemaAttributeCount": 0,
+				"commentStatementCount": 842,
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (G20, 2026-10-08): comments are content, so explicitlyOmittedTotal counts whitespace runs and processing instructions only, and commentStatementCount is the source comment statements every one of which the graph must give back."
 			}
 		},
 		"AcademicEportfolio_v1.0.0": {
@@ -1635,16 +1721,18 @@
 				"edgeCountByType": {
 					"HAS_CHILD": 6742,
 					"HAS_CLASS": 325,
+					"HAS_DEFINITION": 794,
 					"HAS_INSTANCE": 6742,
 					"HAS_OPTION_SET": 296,
 					"HAS_PROPERTY": 1922,
 					"HAS_SUPPORT": 14,
 					"HAS_VALUE": 2749,
 					"REFERENCES": 32,
-					"REFERENCES_TYPE": 1478,
+					"REFERENCES_TYPE": 1514,
 					"SUBCLASS_OF": 108
 				},
 				"referencesTypeCountByTarget": {
+					"anonymous": 36,
 					"dataType": 908,
 					"type": 570
 				},
@@ -1683,15 +1771,26 @@
 					"HAS_OPTION_SET Element -> CodeList": 279,
 					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
 					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Attribute -> anonymous DataType": 2,
 					"REFERENCES_TYPE Element -> DataType": 905,
 					"REFERENCES_TYPE Element -> Type": 559,
+					"REFERENCES_TYPE Element -> anonymous AnonymousType": 12,
+					"REFERENCES_TYPE Element -> anonymous DataType": 22,
 					"REFERENCES_TYPE GlobalElement -> Type": 11
 				},
 				"codeListFactCount": {
 					"anonymousCodeList": 17,
 					"namedCodeList": 279,
 					"withCodeListDocumentation": 198
-				}
+				},
+				"commentCarry": {
+					"sourceCommentCount": 872,
+					"fileCommentCount": 867,
+					"precedingCommentCount": 5,
+					"commentedElementCount": 5,
+					"rootChangeLogLineCount": 11
+				},
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (PRISM_CASCADE, 2026-10-08; G19, G20), by design: HAS_DEFINITION (schema file to every named code list, named data type and global element), REFERENCES_TYPE to every anonymous complex and data type (referencesTypeCountByTarget now names an anonymous target as such), and commentCarry (every source comment carried: fileCommentList, precedingCommentList, rootChangeLogLineList), all measured by evidence/R1/measureReleaseLiterals.js."
 			},
 			"reachability": {
 				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
@@ -2192,9 +2291,8 @@
 				"inventedTotal": 0,
 				"contentGapTotal": 0,
 				"contentGapTotalBeforePhaseF6Fix": 2,
-				"explicitlyOmittedTotal": 15950,
+				"explicitlyOmittedTotal": 15078,
 				"explicitlyOmittedCountByKind": {
-					"comment": 872,
 					"processingInstruction": 4,
 					"whitespace": 15074
 				},
@@ -2209,7 +2307,9 @@
 					"derivationAnnotationCount": 1,
 					"fileAnnotationNotFirstCount": 0
 				},
-				"namespacedSchemaAttributeCount": 1
+				"namespacedSchemaAttributeCount": 1,
+				"commentStatementCount": 872,
+				"literalSource": "undefined MOVED by forgeClean lane CLEAN (G20, 2026-10-08): comments are content, so explicitlyOmittedTotal counts whitespace runs and processing instructions only, and commentStatementCount is the source comment statements every one of which the graph must give back."
 			},
 			"borrowing": {
 				"literalSource": "Phase F-B (DAWN_CHORUS, 2026-10-01), re-frozen side by side with the pre-borrowing values. BEFORE (F6, main e83212f): walk.textNodeCount 3789; Element documentationSource none 713, own 303, type 900; reachable contentAndBase none 455, own 283, type 624 (DESIGN-pescForge 2.7: 1,079 reachable without own text). AFTER: textNodeCount 4285; Element borrowed 1026, none 330, own 303, type 257; reachable borrowed 508 (the design's measured 508 structural matches, exactly), none 321, own 283, type 250. The rule borrows on every local element of a named complex type, reachable or not (the design states no reachability condition): 1026 in all, 508 reachable. definitionDigestSetSha256 is the sha256 of the sorted (stableId, definitionDigest) list measured at main e83212f BEFORE borrowing (5852 nodes); it must not move. Per family, reachable elements of named complex types without own text and how many borrow: CoreMain 191/191, AcademicRecord 332/317, AdmissionsRecord 510/0 (no text in any edition, REPORT 4).",

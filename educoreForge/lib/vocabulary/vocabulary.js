@@ -120,6 +120,9 @@ const EDGE_TYPES = {
 	// Object, from a RefId field to the object it names. FROM THE FIELD, not from its object, so two
 	// references between the same pair of objects through different fields stay two distinct triples.
 	REFERENCES_OBJECT: 'REFERENCES_OBJECT',
+	// ⟪forgeClean lane CLEAN, G19, 2026-10-08⟫ schema file to a top-level definition it declares that no other edge owns
+	// (PESC: named code lists, named data types, global elements), so every definition is reachable from the root
+	HAS_DEFINITION: 'HAS_DEFINITION',
 };
 
 // ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE ⟪campaign P3, W-C-1 (V1-C28, G5)⟫ — the table a forge reads a root-parented node's ownership

@@ -63,7 +63,9 @@ const TERM_DEFINITIONS = {
 			'A reference field to the object it names: a field whose value is another object\'s identifier, linked to that object. It runs from the FIELD, which is the "via" of the reference, so one object referring to another through several fields keeps one edge per field. Introduced for the sif260928 forge (a RefId Field to an Object); SPEC §9 A24 admits only a curated-map resolution or an exact <Object>RefId name match, and gives an unresolved field no edge.',
 		REFERENCES: 'Generic intra-standard reference between structural nodes.',
 		HAS_SUPPORT: 'Node to producer-specific supporting material (documentation fragments, examples).',
-		REFERENCES_TYPE: 'Property/field to the named type it references within its own standard.',
+		REFERENCES_TYPE: 'Property/field to the type it references within its own standard: a named type, or (PESC, since forgeClean lane CLEAN G19) the anonymous complex or simple type written inside the declaration, which it owns.',
+		HAS_DEFINITION:
+			'Schema file to a top-level definition it declares that no other edge owns: PESC writes it from each SchemaFile to its named code lists, named data types and global elements (the root owns named complex types by HAS_CLASS and groups by HAS_SUPPORT, and reaches every file by HAS_SUPPORT). So a library definition no element of the release uses is still owned and reachable from the root, and the release\'s own document root element is reached. Introduced by forgeClean lane CLEAN (G19, TQ ruling 2026-10-08: keep unused library definitions, attached through the library).',
 		SPECIFIED_MAPPING: 'RETIRED prior-generation bridge edge (authored mapping). Named for history; zero instances in pure-model graphs.',
 		IMPLIED_MAPPING: 'RETIRED prior-generation bridge edge (inferred mapping). Named for history; zero instances in pure-model graphs.',
 		DERIVED_MAPPING: 'RETIRED prior-generation bridge edge (composed mapping). Named for history; zero instances in pure-model graphs; equivalence is now computed at query time through shared hubs.',
