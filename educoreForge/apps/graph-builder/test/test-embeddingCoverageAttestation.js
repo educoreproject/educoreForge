@@ -43,6 +43,7 @@ const runMaterialize = (mutationList, embeddingCoverageGateRunner, done) => {
 	const replayDouble = {
 		create: (spec, callback) => callback('', { graphName: 'DEV_embeddingCoverageDouble', boltUrl: 'bolt://double:1' }),
 		init: (spec, callback) => callback('', { legacyStringIntegerTotal: 0, legacyStringIntegerCountBySource: {} }), // ⟪P3, ruling B⟫ the replay report's legacy count
+		retain: (graphHandle, callback) => callback(''), // forgeClean CLEAN: the deliverable verb
 		delete: (graphHandle, callback) => callback(''),
 		finish: (spec, callback) => {
 			finishCallList.push(spec);

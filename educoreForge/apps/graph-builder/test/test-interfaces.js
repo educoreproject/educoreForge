@@ -548,6 +548,7 @@ const phase2DriftedComponents = () => {
 			// create's bolt-url string, not in which methods exist.
 			finish: (spec, callback) =>
 				callback('', { applied: [], passportElementId: 'stub:passport', xorVerified: true }),
+			retain: (graphHandle, callback) => callback(''), // forgeClean CLEAN: the deliverable verb
 			delete: (boltUrl, callback) => callback(''),
 		}),
 		manifestEditor: () => ({

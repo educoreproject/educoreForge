@@ -111,6 +111,10 @@
  *           wrote; a base block passes none and takes every edge between its labelled nodes. Returns { blockText, blockId, nodeCount,
  *           edgeCount, stableIdCoverage }; it PERSISTS nothing (manifestEditor owns storing).
  * @property {function(GraphHandle, function(string): void): void} delete
+ *           removes the container AND its volumes (docker rm -f -v).
+ * @property {function(GraphHandle, function(string): void): void} retain
+ *           ⟪forgeClean CLEAN⟫ the graph is the process's deliverable and outlives it. Every scratch graph neither deleted nor
+ *           retained is removed by the exit watchdog when the process ends, however it ends.
  */
 
 /**
@@ -634,6 +638,8 @@ const COMPONENT_SHAPES = {
 		},
 		// takes a GraphHandle positionally, by contract — no argument object to declare keys of.
 		delete: { arity: 2, argKeys: null, resultKeys: null },
+		// ⟪forgeClean CLEAN⟫ the deliverable verb: a GraphHandle positionally, like delete
+		retain: { arity: 2, argKeys: null, resultKeys: null },
 	},
 	bridgeMaker: {
 		// THE BRIDGE FRAMEWORK SEAM (B2 interfaces commit, 2026-08-16; SPEC-bridgeFramework-v1.md §5.9,

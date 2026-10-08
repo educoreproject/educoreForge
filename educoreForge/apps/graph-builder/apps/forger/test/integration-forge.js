@@ -138,11 +138,17 @@ const finish = (handle, exitCode) => {
 		done();
 		return;
 	}
-	if (keepGraph || exitCode !== 0) {
-		xLog.status(
-			`[${moduleName}] scratch graph KEPT for inspection: '${handle.graphName}' at ${handle.boltUrl} (docker rm -f ${handle.graphName} when done)`,
-		);
-		done();
+	// ⟪forgeClean CLEAN⟫ only an explicit -keepGraph keeps the graph, and it must be RETAINED or replayManager's exit watchdog
+	// removes it when this process ends; a failed run no longer leaves its graph behind (TQ: the process cleans up after itself)
+	if (keepGraph) {
+		replayManager.retain(handle, (retainErr) => {
+			xLog.status(
+				retainErr
+					? `[${moduleName}] -keepGraph: retaining '${handle.graphName}' was REFUSED (${retainErr}); it will be removed at exit`
+					: `[${moduleName}] scratch graph KEPT for inspection: '${handle.graphName}' at ${handle.boltUrl} (docker rm -f -v ${handle.graphName} when done)`,
+			);
+			done();
+		});
 		return;
 	}
 	replayManager.delete(handle, (err) => {

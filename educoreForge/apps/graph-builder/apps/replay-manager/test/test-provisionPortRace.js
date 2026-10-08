@@ -21,8 +21,11 @@
 //   (f) ⟪VIOLET_VALLEY 2026-10-08: REFORGE measured 459 orphan neo4j data volumes, 408 GB⟫ LIVE: create then delete a scratch
 //       graph, and every volume the container mounted is GONE (its own volumes, named from docker inspect, so another
 //       lane's volumes cannot confuse the count)
+//   (g) ⟪TQ via VIOLET_VALLEY: "the process cleans up after itself", every exit path⟫ LIVE: a provisioning process SIGKILLed
+//       while its scratch graph comes up leaves NO container and NO volume: the exit watchdog removes them (SIGKILL cannot be
+//       caught, so no handler inside the process could)
 // RED TWINS: (a) checkAccepted (the check passes anything); (b) lockNotExclusive (mkdir's refusal ignored); (c)
-// staleNeverBroken; (f) volumesKept (dispose back to a plain rm -f; the twin removes the volume it leaked); (e) livenessUnwatched (create waits on readiness alone); (d) withoutPortLock — the two children run with the lock replaced by one always granted (the code
+// staleNeverBroken; (g) withoutExitWatchdog (the child starts none; the twin removes the orphan it observed); (f) volumesKept (dispose back to a plain rm -f; the twin removes the volume it leaked); (e) livenessUnwatched (create waits on readiness alone); (d) withoutPortLock — the two children run with the lock replaced by one always granted (the code
 // before the fix): they choose the same pair, and they do not both succeed on distinct ports.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -42,7 +45,7 @@ const harness = require('../../../../../test/testLib/harness')(moduleName);
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 // loadBuildJsDouble, not moduleDouble: replayManager.js's `new require(...)` and its .json-reaching requires need a real module
 const { loadBuildJsDouble } = require('../../../../../lib/bridge-framework/test/testSupport/bridgeTwinFactories');
 
@@ -163,11 +166,51 @@ const conjunctJudgeByRefId = {
 			});
 		});
 	},
+	g_killedProvisionLeavesNothing: (mutationList, done) => {
+		const withoutExitWatchdog = mutationList.some((oneMutation) => oneMutation.childWithoutExitWatchdog === true);
+		const child = spawn(process.execPath, [CHILD_PATH, '--pauseAfterSearchMs=0', '--purpose=killCheck', ...(withoutExitWatchdog ? ['--withoutExitWatchdog=true'] : []), '-quiet'], { stdio: 'ignore' });
+		const namePrefix = `DEV_gb_killCheck_${child.pid}_`;
+		const containerNamesNow = (callback) => execFile('docker', ['ps', '-a', '--format', '{{.Names}}', '--filter', `name=${namePrefix}`], { encoding: 'utf8' }, (listErr, listText) => callback(String(listText || '').split('\n').filter((oneName) => oneName.startsWith(namePrefix))));
+		const volumesNow = (callback) => execFile('docker', ['volume', 'ls', '-q'], { encoding: 'utf8' }, (listErr, listText) => callback(String(listText || '').split('\n').filter(Boolean)));
+		const giveUpAt = Date.now() + 60000;
+		const waitForContainer = () => containerNamesNow((nameList) => {
+			if (nameList.length === 0) {
+				if (Date.now() > giveUpAt) {
+					child.kill('SIGKILL');
+					done({ pass: false, detail: 'the child never provisioned a container to kill' });
+					return;
+				}
+				setTimeout(waitForContainer, 200);
+				return;
+			}
+			execFile('docker', ['inspect', '-f', '{{range .Mounts}}{{if eq .Type "volume"}}{{.Name}} {{end}}{{end}}', nameList[0]], { encoding: 'utf8' }, (inspectErr, mountText) => {
+				const volumeNameList = String(mountText || '').trim().split(/\s+/).filter(Boolean);
+				child.kill('SIGKILL');
+				const killedAt = Date.now();
+				const waitForCleanup = () => containerNamesNow((leftContainerList) => volumesNow((volumeList) => {
+					const leftVolumeList = volumeNameList.filter((volumeName) => volumeList.indexOf(volumeName) !== -1);
+					if ((leftContainerList.length > 0 || leftVolumeList.length > 0) && Date.now() - killedAt < 30000) {
+						setTimeout(waitForCleanup, 1000);
+						return;
+					}
+					const report = { pass: leftContainerList.length === 0 && leftVolumeList.length === 0 && volumeNameList.length > 0, detail: `killed '${nameList[0]}' mid-provision (${volumeNameList.length} volume(s)); after ${Math.round((Date.now() - killedAt) / 1000)} s: containers left ${leftContainerList.length}, volumes left ${leftVolumeList.length}` };
+					// a twin's orphan is removed here, by name, so the red observation leaves nothing behind
+					if (leftContainerList.length === 0 && leftVolumeList.length === 0) {
+						done(report);
+						return;
+					}
+					execFile('docker', ['rm', '-f', '-v', ...leftContainerList], { encoding: 'utf8' }, () => execFile('docker', ['volume', 'rm', ...leftVolumeList], { encoding: 'utf8' }, () => done(report)));
+				}));
+				waitForCleanup();
+			});
+		});
+		waitForContainer();
+	},
 	d_twoProcessesTwoPorts: (mutationList, done) => {
 		const withoutPortLock = mutationList.some((oneMutation) => oneMutation.childWithoutPortLock === true);
 		const resultList = [];
 		const runChild = (childDone) => {
-			execFile(process.execPath, [CHILD_PATH, `--pauseAfterSearchMs=${PAUSE_AFTER_SEARCH_MS}`, ...(withoutPortLock ? ['--withoutPortLock=true'] : []), '-quiet'], { encoding: 'utf8', timeout: 300000 }, (execErr, stdoutText) => {
+			execFile(process.execPath, [CHILD_PATH, `--pauseAfterSearchMs=${PAUSE_AFTER_SEARCH_MS}`, '--purpose=portRace', ...(withoutPortLock ? ['--withoutPortLock=true'] : []), '-quiet'], { encoding: 'utf8', timeout: 300000 }, (execErr, stdoutText) => {
 				const jsonLine = String(stdoutText || '').split('\n').filter((oneLine) => oneLine.startsWith('{')).pop();
 				resultList.push(jsonLine ? JSON.parse(jsonLine) : { boltPort: null, error: `the child printed no result${execErr ? ` (${execErr.message})` : ''}` });
 				childDone();
@@ -194,6 +237,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'c_staleLockBroken', twinName: 'staleNeverBroken', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: '				if (Date.now() - lockStat.mtimeMs > PORT_ALLOCATION_LOCK_STALE_MS) {', replace: '				if (false) {' }] },
 	{ conjunctRefId: 'e_deadContainerRefusedAtOnce', twinName: 'livenessUnwatched', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: '			const livenessWatch = watchContainerLiveness({ runDockerCommand, graphName }, settleReadiness);', replace: '			const livenessWatch = { stop: () => {} };' }] },
 	{ conjunctRefId: 'f_destroyRemovesItsVolumes', twinName: 'volumesKept', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: "	runDockerCommand(['rm', '-f', '-v', graphName], (err, stdout, stderr) => {", replace: "	runDockerCommand(['rm', '-f', graphName], (err, stdout, stderr) => {" }] },
+	{ conjunctRefId: 'g_killedProvisionLeavesNothing', twinName: 'withoutExitWatchdog', mutationList: [{ childWithoutExitWatchdog: true }] },
 	{ conjunctRefId: 'd_twoProcessesTwoPorts', twinName: 'withoutPortLock', mutationList: [{ childWithoutPortLock: true }] },
 ];
 

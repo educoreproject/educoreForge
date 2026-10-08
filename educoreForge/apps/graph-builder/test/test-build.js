@@ -335,6 +335,7 @@ const workingReplayManager = (overrides) => () => {
 					conservationRecord: doubleConservationRecord({ blockId: doubleBlockId, header, loadedNodeCount: 1, loadedEdgeCount: 0, harvestedNodeCount: 1, harvestedEdgeCount: 0 }).record,
 				});
 			},
+			retain: (graphHandle, callback) => callback(''), // forgeClean CLEAN: the deliverable verb
 			delete: (handle, cb) => {
 				if (!handle || typeof handle !== 'object' || !handle.graphName) {
 					cb(`replayManager.delete: a GraphHandle is required, got ${typeof handle}`);
@@ -717,6 +718,7 @@ const replayFailingDeleteFor = (purpose, message) => {
 	const working = workingReplayManager()();
 	return () =>
 		Object.assign({}, working, {
+			retain: (graphHandle, callback) => callback(''), // forgeClean CLEAN: the deliverable verb
 			delete: (handle, cb) =>
 				String(handle.graphName).includes(purpose) ? cb(message) : working.delete(handle, cb),
 		});
@@ -2115,6 +2117,7 @@ const stageDisposeOnFailure = () => {
 				}),
 			// fail the standardBase harvest — a failure AFTER create, BEFORE the trailing delete task
 			harvest: (spec, cb) => cb('harvest returned nothing'),
+			retain: (graphHandle, callback) => callback(''), // forgeClean CLEAN: the deliverable verb
 			delete: (handle, cb) => {
 				deleted.push(handle && handle.graphName);
 				cb('');

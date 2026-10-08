@@ -211,6 +211,7 @@ const seedReplayManager = () => () => {
 				xorVerified: true,
 			});
 		},
+		retain: (graphHandle, callback) => callback(''), // forgeClean CLEAN: the deliverable verb
 		delete: (handle, cb) => cb(''),
 	};
 };
@@ -291,6 +292,7 @@ const makeReplaySpy = () => {
 				xorVerified: true,
 			});
 		},
+		retain: (graphHandle, callback) => callback(''), // forgeClean CLEAN: the deliverable verb
 		delete: (handle, cb) => {
 			calls.deleted.push(handle && handle.graphName);
 			cb('');

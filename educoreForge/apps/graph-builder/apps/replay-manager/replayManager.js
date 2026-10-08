@@ -16,7 +16,15 @@
 //        spec = { inGraph, schemaBlocks }            RESTORATION — previously harvested blocks
 //        report = { nodesMerged, edgesMerged, danglingRefs, indexesBuilt } from EITHER payload
 //     harvest(spec, callback)     -> ('', schemaBlock)  spec = { inGraph, selectionLabels, edgeTypeList?, header }
-//     delete(handle, callback)    -> ('')           removes the container; DEV_* only
+//     delete(handle, callback)    -> ('')           removes the container AND its volumes; DEV_* only
+//     retain(handle, callback)    -> ('')           this graph outlives the process (a build's deliverable): the exit
+//                                                    watchdog leaves it; every other scratch graph dies with the process
+//
+// NO SCRATCH GRAPH OUTLIVES ITS PROCESS ⟪forgeClean lane CLEAN, 2026-10-08; TQ via VIOLET_VALLEY: "the process cleans up
+// after itself"⟫. Every container create names is written to this process's scratch registry file BEFORE docker run, and
+// leaves it when delete removes it or retain keeps it. A detached EXIT WATCHDOG (one per process, started with the first
+// create) waits for this process to end, however it ends — success, refusal, timeout, a crash, SIGTERM or SIGKILL — and then
+// removes every name still registered with `docker rm -f -v`. A signal handler could not do this: SIGKILL cannot be caught.
 //   }
 //
 // TODAY'S SCOPE: all four verbs are REAL. create/delete provision and destroy throwaway DEV_*
@@ -40,7 +48,7 @@ const net = require('net');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
 // tree-root lib/ (five levels up: replay-manager -> apps -> graph-builder -> apps -> root)
@@ -523,6 +531,7 @@ const disposeScratchGraph = (
 			callback(`docker rm -f -v '${graphName}' failed: ${err.message}${stderr ? `\n${stderr}` : ''}`);
 			return;
 		}
+		unregisterScratchContainer(graphName);
 		callback('');
 	});
 };
@@ -568,6 +577,44 @@ const watchContainerLiveness = ({ runDockerCommand, graphName }, onDead) => {
 	};
 	setTimeout(checkOnce, CONTAINER_LIVENESS_POLL_MS);
 	return { stop: () => { watchStopped = true; } };
+};
+
+// -----
+// THE SCRATCH REGISTRY AND THE EXIT WATCHDOG (see the header). The registry is this process's own file; the watchdog is a
+// detached shell that outlives the process, polls `kill -0 <pid>`, and on its end removes what the file still names.
+const SCRATCH_REGISTRY_FILE_PATH = path.join(os.tmpdir(), `educoreForge-scratchContainers-${process.pid}.list`);
+const EXIT_WATCHDOG_POLL_SECONDS = 2;
+const EXIT_WATCHDOG_SCRIPT_TEXT = [
+	'ownerPid="$1"; registryFilePath="$2"',
+	`while kill -0 "$ownerPid" 2>/dev/null; do sleep ${EXIT_WATCHDOG_POLL_SECONDS}; done`,
+	'if [ -f "$registryFilePath" ]; then',
+	'  while IFS= read -r containerName; do',
+	'    case "$containerName" in DEV_*) docker rm -f -v "$containerName" >/dev/null 2>&1 ;; esac',
+	'  done < "$registryFilePath"',
+	'  rm -f "$registryFilePath"',
+	'fi',
+].join('\n');
+const registeredScratchContainerNameSet = new Set();
+let exitWatchdogStarted = false;
+// written synchronously ON PURPOSE: the name must be on disk before `docker run`, or a kill between the two leaks the container
+const writeScratchRegistry = () => fs.writeFileSync(SCRATCH_REGISTRY_FILE_PATH, [...registeredScratchContainerNameSet].map((containerName) => `${containerName}\n`).join(''));
+const startExitWatchdog = () => {
+	if (exitWatchdogStarted) {
+		return;
+	}
+	exitWatchdogStarted = true;
+	spawn('/bin/sh', ['-c', EXIT_WATCHDOG_SCRIPT_TEXT, 'educoreForgeScratchWatchdog', String(process.pid), SCRATCH_REGISTRY_FILE_PATH], { detached: true, stdio: 'ignore' }).unref();
+};
+// startWatchdog is create's (injectable for the kill gate's red twin only, deps.startExitWatchdog)
+const registerScratchContainer = (containerName, startWatchdog) => {
+	registeredScratchContainerNameSet.add(containerName);
+	writeScratchRegistry();
+	startWatchdog();
+};
+const unregisterScratchContainer = (containerName) => {
+	if (registeredScratchContainerNameSet.delete(containerName)) {
+		writeScratchRegistry();
+	}
 };
 
 // -----
@@ -797,6 +844,7 @@ const moduleFunction =
 	const portAllocationLockDirPath = deps.portAllocationLockDirPath || PORT_ALLOCATION_LOCK_DIR_PATH;
 	const acquirePortLock = deps.acquirePortAllocationLock || acquirePortAllocationLock;
 	const releasePortLock = deps.releasePortAllocationLock || releasePortAllocationLock;
+	const startWatchdogForCreate = deps.startExitWatchdog || startExitWatchdog;
 
 	// -----
 	// create — provision a throwaway DEV_* Neo4j container; hand back the graph handle. The
@@ -857,8 +905,12 @@ const moduleFunction =
 			xLog.status(
 				`[replayManager] provisioning scratch graph '${graphName}' (bolt ${args.boltPort})...`,
 			);
+			// on the registry BEFORE the run: whatever happens next, the exit watchdog knows the name
+			registerScratchContainer(graphName, startWatchdogForCreate);
 			runDockerCommand(dockerArgs, (err, stdout, stderr) => {
 				if (err) {
+					// a failed run can leave a CREATED container behind (a port that would not bind): it is disposed below too
+					containerLaunched = true;
 					next(`docker run failed for '${graphName}': ${err.message}\n${stderr || ''}`);
 					return;
 				}
@@ -1492,7 +1544,21 @@ const moduleFunction =
 		});
 	};
 
-	return { create, init, harvest, finish, delete: deleteGraph };
+	// -----
+	// retain — this graph is the process's DELIVERABLE (build.js's materialized graph): it leaves the scratch registry, so the
+	// exit watchdog does not remove it. Every graph NOT retained and not deleted dies with the process.
+	const retain = (handle, callback) => {
+		const graphName = handle && (handle.containerName || handle.graphName);
+		const refusal = nameRefusal(graphName, 'retain');
+		if (refusal) {
+			callback(refusal);
+			return;
+		}
+		unregisterScratchContainer(graphName);
+		callback('');
+	};
+
+	return { create, init, harvest, finish, retain, delete: deleteGraph };
 };
 
 // END OF moduleFunction() ============================================================
@@ -1509,6 +1575,7 @@ module.exports.acquirePortAllocationLock = acquirePortAllocationLock;
 module.exports.releasePortAllocationLock = releasePortAllocationLock;
 module.exports.verifyOwnContainerPublished = verifyOwnContainerPublished;
 module.exports.watchContainerLiveness = watchContainerLiveness;
+module.exports.SCRATCH_REGISTRY_FILE_PATH = SCRATCH_REGISTRY_FILE_PATH;
 module.exports.findAvailablePortPair = findAvailablePortPair;
 module.exports.PORT_ALLOCATION_LOCK_DIR_PATH = PORT_ALLOCATION_LOCK_DIR_PATH;
 module.exports.engineVersionsFor = engineVersionsFor;
