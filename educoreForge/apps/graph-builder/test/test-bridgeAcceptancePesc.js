@@ -808,7 +808,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21b comment text; pre-authorised) ═══ BG-COMPOSE-PESC postCampaignG21PescCompose-100726 ->
 // postCampaignG21bPescCompose-100726, tag ON this commit. CENSUS: ONE path, lib/bridge-framework/test/test-bgNosub.js (its own
 // G21b (iii) and seamDiffEmpty re-anchors). Bridge-framework SOURCE unchanged.
-const P1_BASELINE_COMMIT = 'postCampaignG21bPescCompose-100726'; // re-anchored by BRONZE_SIGNAL, G21b (BG-COMPOSE-PESC); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN, G19; pre-authorised by WORKORDER-CLEAN) ═══ BG-COMPOSE-PESC postCampaignG21bPescCompose-100726 ->
+// postForgeCleanPescCompose-100826, tag ON this commit. CENSUS at 8d6de25 over this gate's paths: 4 files — lib/vocabulary/vocabulary.js 3/0 and
+// vocabulary-definitions.js 3/1 (HAS_DEFINITION), lib/vocabulary/test/test-sifEdgeVocabulary.js 3/1 (ledger), lib/bridge-framework/test/test-bgNosub.js
+// 5/1 (its own (ii) re-anchor). Bridge-framework SOURCE unchanged. Path list byte-identical; nothing excluded.
+const P1_BASELINE_COMMIT = 'postForgeCleanPescCompose-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN (BG-COMPOSE-PESC); the tag is cut ON the re-anchor commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
