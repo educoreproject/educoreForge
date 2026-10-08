@@ -1,0 +1,8 @@
+[
+	{ "scope": "storeRow", "subjectName": "blocks", "propertyName": "createdAt", "reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run, not content; the block's identity is its refId = sha256(text)" },
+	{ "scope": "storeRow", "subjectName": "manifests", "propertyName": "createdAt", "reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run; the manifest's identity is the hash of its membership" },
+	{ "scope": "storeRow", "subjectName": "decisionBlocks", "propertyName": "createdAt", "reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run; the block's identity is decisionBlockHash" },
+	{ "scope": "storeRow", "subjectName": "decisionBlocks", "propertyName": "seq", "reason": "AUTOINCREMENT append order: which pair's block was frozen first depends on scheduling, not content; the block's identity is decisionBlockHash" },
+	{ "scope": "storeRow", "subjectName": "judgmentCacheEntries", "propertyName": "createdAt", "reason": "sqlite CURRENT_TIMESTAMP at insert: the wall clock of the run" },
+	{ "scope": "storeRow", "subjectName": "judgmentCacheEntries", "propertyName": "seq", "reason": "AUTOINCREMENT append order under concurrent judging: scheduling, not content; the row's identity is (promptHash, model, rendererVersion)" }
+]
