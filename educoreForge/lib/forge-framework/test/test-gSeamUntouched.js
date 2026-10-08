@@ -184,7 +184,12 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // ═══ RE-ANCHOR, 2026-10-07 (BRONZE_SIGNAL; G21 omission declaration; pre-authorised by WORKORDER-G21) ═══ G-SEAM-UNTOUCHED postCampaignP4bGSeamUntouched-100726
 // -> postCampaignG21GSeamUntouched-100726, tag cut ON this commit. CENSUS at c049bc8 over the 7 seam files: 2 files, 17+/4- —
 // apps/graph-builder/lib/build.js 12 (roundTripRowFor) and apps/graph-builder/lib/round-trip-stage.js 9 (the summary row).
-const PRE_MIGRATION_REF = 'postCampaignG21GSeamUntouched-100726'; // re-anchored by BRONZE_SIGNAL, G21 (G-SEAM-UNTOUCHED); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN; pre-authorised) ═══ G-SEAM-UNTOUCHED postCampaignG21GSeamUntouched-100726 ->
+// postForgeCleanGSeamUntouched-100826, tag cut ON this commit. CENSUS at 33ef74e over the 7 seam files: 2 files, 253+/17- —
+// replay-manager/replayManager.js 261 (the port allocation lock, the post-run and liveness checks, rm -f -v, the scratch registry, the
+// exit watchdog and the retain verb: VIOLET_VALLEY / TQ rulings 2026-10-08) and lib/build.js 9 (the deliverable is retained).
+// SEAM_FILE_LIST byte-identical; nothing excluded.
+const PRE_MIGRATION_REF = 'postForgeCleanGSeamUntouched-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN (G-SEAM-UNTOUCHED); the tag is cut ON the re-anchor commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
