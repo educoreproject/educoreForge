@@ -162,7 +162,10 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // postForgeCleanVocabularyIi-100826, tag cut ON this commit. CENSUS at a094ec4 (lib/vocabulary/): 3 files, 9+/2- — vocabulary.js 3
 // (EDGE_TYPES.HAS_DEFINITION), vocabulary-definitions.js 3/1 (its definition; REFERENCES_TYPE widened to anonymous types) and
 // test/test-sifEdgeVocabulary.js 3/1 (the SchemaView ledger +1). Allowed-path list NOT widened; nothing excluded.
-const POST_D1_BASE_TAG = 'postForgeCleanVocabularyIi-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN ((ii)); the tag is cut ON the re-anchor commit
+// ═══ RE-ANCHOR, 2026-10-08 (PRISM_CASCADE; forgeClean lane CLEAN, G20 contract declaration; pre-authorised) ═══ (ii) postForgeCleanVocabularyIi-100826 ->
+// postForgeCleanVocabularyIiB-100826, tag cut ON this commit. CENSUS at 189bbb1 (lib/vocabulary/): 2 files — graph-contract.js 4/0 (precedingCommentList
+// list-valued; fileCommentList exempt as a JSON string) and test/test-sifEdgeVocabulary.js 3/2 (the ledger +1). Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postForgeCleanVocabularyIiB-100826'; // re-anchored by PRISM_CASCADE, forgeClean CLEAN ((ii), second); the tag is cut ON the re-anchor commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
