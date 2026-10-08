@@ -31,7 +31,7 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabulary, passportWriter } = {}) => {
-		const { NODE_LABELS, SELF_DOC, GRAPH_META, vectorIndexSlotTable, vectorIndexNameFor, ATTESTATION_LABEL_SET_BY_CHANNEL } = vocabulary;
+		const { NODE_LABELS, SELF_DOC, GRAPH_META, vectorIndexSlotTable, vectorIndexNameFor, ATTESTATION_LABEL_SET_BY_CHANNEL, ATTESTATION_GATE_LIST_BY_CHANNEL } = vocabulary;
 		// the passport's singleton key is the passport writer's, read from it, never restated here
 		if (!passportWriter || typeof passportWriter.PASSPORT_KEY_PROPERTY !== 'string' || typeof passportWriter.PASSPORT_SINGLETON_VALUE !== 'string') {
 			throw new Error(`${moduleName} REFUSED: a constructed passportWriter is required (its PASSPORT_KEY_PROPERTY and PASSPORT_SINGLETON_VALUE find the passport)`);
@@ -47,8 +47,9 @@ const moduleFunction =
 		const stampLabelClause = ATTESTATION_LABEL_SET_BY_CHANNEL[STAMP_CHANNEL_NAME].filter((oneLabel) => oneLabel !== attestationLabel).map((oneLabel) => `a:\`${oneLabel}\``).join(', ');
 		const forgedLabel = NODE_LABELS.FORGED_NODE;
 
-		// the gates whose verdicts exist only after the build, and the verdicts a stamp may record
-		const STAMPABLE_GATE_LIST = Object.freeze(['goldEvalCheck', 'replay']);
+		// the gates whose verdicts exist only after the build — graph-contract §4's promotionStamp list, READ from the contract
+		// rather than restated (⟪lane REFORGE⟫ reforgeDeterminism joined it) — and the verdicts a stamp may record
+		const STAMPABLE_GATE_LIST = ATTESTATION_GATE_LIST_BY_CHANNEL[STAMP_CHANNEL_NAME];
 		const STAMPABLE_VERDICT_LIST = Object.freeze(['pass', 'fail']);
 
 		const cypherString = (text) => JSON.stringify(String(text));

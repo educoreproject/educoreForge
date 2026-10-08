@@ -34,6 +34,7 @@ SYNOPSIS
                                    [--judgedBy=<toolId>[,<toolId>...]]   (COMMA-SEPARATED; one per judge present)
      graphBuilder   -stampPromotion --containerName=<the PROMOTED name> --goldEvalCheckLogPath=<its saved output>
                                    --replayBuildLogPath=<the zero-judge replay build log>
+                                   --reforgeEvidencePath=<reforgeCompare -summarize output>
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -380,7 +381,13 @@ OPTIONS
                   file its run wrote and tied to the graph by the manifestRefId its passport carries;
                   evidence for another manifest is REFUSED. Each row records the evidence path and its
                   sha256. Writes no content node or edge, and proves it: the content census is taken
-                  before and after and any difference is refused. All three parameters are REQUIRED.
+                  before and after and any difference is refused. All four parameters are REQUIRED.
+                  THE reforgeDeterminism ROW (lane REFORGE, 2026-10-08) is read from the evidence file
+                  apps/graph-builder/tools/reforgeCompare.js -summarize writes: two from-scratch builds
+                  (and two replays) compared store by store and graph by graph. It is the ONE row NOT
+                  refused for another manifest: the run attests the forge CODE at the head it names,
+                  which a later build of that head inherits; its detail says whether this graph's
+                  manifest is one the run composed, and names the run and the head.
                   The bolt port and credential are read from the container ('docker inspect').
 
      -goldEvalCheck
