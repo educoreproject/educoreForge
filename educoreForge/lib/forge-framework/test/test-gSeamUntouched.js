@@ -195,7 +195,10 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // ═══ RE-ANCHOR AT THE MERGE, 2026-10-08 (PRISM_CASCADE; forgeClean R4 merge of lanes CLEAN d2aa1ab8 and REFORGE 89b25f55; pre-authorised by
 // WORKORDER-R4) ═══ G-SEAM-UNTOUCHED: both lanes' anchors above -> postForgeCleanMergeGSeamUntouched-100826, tag cut ON the merge commit. CENSUS: the union of the two lanes'
 // censuses above, and nothing else (the merge resolved only these anchor conflicts). Path list byte-identical; nothing excluded.
-const PRE_MIGRATION_REF = 'postForgeCleanMergeGSeamUntouched-100826'; // re-anchored at the forgeClean merge by PRISM_CASCADE; the tag is cut ON the merge commit
+// ═══ RE-ANCHOR, 2026-10-09 (PRISM_SHARD; forgeClean lane FIX; pre-authorised by the work order) ═══ G-SEAM-UNTOUCHED
+// postForgeCleanMergeGSeamUntouched-100826 -> postFixReplayStampExit64GSeamUntouched-100926, tag cut ON this commit. CENSUS over the 7
+// seam files: 2 files, replayManager.js and replay-engine.js — lane FIX's own commits 12abd25a..d037e35e on fix/replayStampExit64 from main 2fbbca10: replayManager.js (hex scratch credential, logs read before dispose, restore conservation), replay-engine.js (loaded summary from replay), interfaces.js (restore conservation declared), graph-contract.js (DME_TEXT_FIELD_RULE, StandardDefinition.descriptionSource), vocabulary.js (STANDARD_ROOT descriptionSource), forgeDeclarationContract.js + rootNode.js (descriptionSource), standard-definition-finisher.js, the forge declarations, and their tests and re-pinned literals.
+const PRE_MIGRATION_REF = 'postFixReplayStampExit64GSeamUntouched-100926'; // re-anchored by PRISM_SHARD (lane FIX); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

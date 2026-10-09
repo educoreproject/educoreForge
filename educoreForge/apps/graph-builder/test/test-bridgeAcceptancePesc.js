@@ -833,7 +833,10 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postForgeCleanMergePescCompose-100826 -> postForgeCleanCT17PescCompose-100926, tag cut ON 33b3a340. CENSUS over this gate's paths, measured with
 // its own command: 3 files, all test literals under lib/bridge-framework/test/ — test-bgDecl.js 3/1 (shipped declaring plugins 11 -> 12),
 // test-bgJudgeSlot.js 2/0 (the College Transcript 1.7.0 plugin row) and test-bgNosub.js 5/1 (the seamDiffEmpty re-anchor). No framework source.
-const P1_BASELINE_COMMIT = 'postForgeCleanCT17PescCompose-100926'; // re-anchored by ONYX_DANCE (lane CT17); the tag is cut ON 33b3a340
+// ═══ RE-ANCHOR, 2026-10-09 (PRISM_SHARD; forgeClean lane FIX; pre-authorised) ═══ BG-COMPOSE-PESC postForgeCleanCT17PescCompose-100926 ->
+// postFixReplayStampExit64PescCompose-100926, tag cut ON this commit. CENSUS over this gate's paths: interfaces.js, graph-contract.js,
+// test-sifEdgeVocabulary.js, test-sifVocabularyInvariance.js, vocabulary.js and test-bgNosub.js (its re-anchors) — no bridge-framework source.
+const P1_BASELINE_COMMIT = 'postFixReplayStampExit64PescCompose-100926'; // re-anchored by PRISM_SHARD (lane FIX); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
