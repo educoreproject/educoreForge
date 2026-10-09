@@ -102,6 +102,10 @@
  *           time and stamping more would make the block and the graph restored from it disagree.
  *           Both payloads reach replay-engine.writeShapedGraph — creation directly, restoration
  *           through replay() — so the guards cannot diverge between them.
+ *           RESTORATION is CONSERVED (lane FIX, 2026-10-09): right after the write, the graph must hold
+ *           exactly the blocks' distinct nodes and distinct edges with none dangling, or init REFUSES
+ *           ('RESTORE CONSERVATION FAILED'); on success it logs 'restore conservation PASS', the line
+ *           -stampPromotion's --replayLogPath reader requires.
  * @property {function({inGraph: GraphHandle, selectionLabels: string[], edgeTypeList?: string[], header: Object},
  *           function(string, Object=): void): void} harvest
  *           THE ONLY PLACE A SCHEMA BLOCK IS BORN. Selection is POSITIVE and by label — the same
