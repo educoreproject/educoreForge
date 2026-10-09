@@ -1,0 +1,23 @@
+{
+  // pesccollegetranscript1v7v0Derived — the PESC College Transcript 1.7.0 bridge build: the release's forge beside the
+  // CEDS hub, PLUS the PESC → CEDS derived plugin (pescCollegeTranscript1v7v0CedsDerivedPlugin). The
+  // pesccollegetranscript1v8v0Derived shape, written by forgeClean lane CT17 (ONYX_DANCE, 2026-10-09).
+  //
+  // A plain -build REPLAYS the pair's frozen block (zero judge calls); --rebridge=pesccollegetranscript1v7v0 FREEZES a
+  // new one. --useDebugJudge for every free run. Builds go to scratch DEV_ graphs only.
+  "schemaVersion": "1.0.0",
+  "recipeName": "pesccollegetranscript1v7v0Derived",
+  "kind": "dev",
+  "description": "The PESC College Transcript v1.7.0 forge beside the CEDS hub, PLUS the PESC -> CEDS derived bridge plugin (pescCollegeTranscript1v7v0CedsDerivedPlugin).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "pesccollegetranscript1v7v0", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "pesccollegetranscript1v7v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v7v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v7v0", "ceds"] }
+  ],
+  "roundTripStage": true
+}

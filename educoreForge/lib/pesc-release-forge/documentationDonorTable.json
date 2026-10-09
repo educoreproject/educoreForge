@@ -5,6 +5,10 @@
 			"donorReason": "none: CoreMain 1.19.0 and AcademicRecord 1.13.0 postdate PESC's 2016 documentation pass",
 			"donorFileList": []
 		},
+		"CollegeTranscript_v1.7.0": {
+			"donorReason": "none: CoreMain 1.17.0 and AcademicRecord 1.11.0 postdate PESC's 2016 documentation pass (the same two editions as High School Transcript 1.6.0; row added by forgeClean lane CT17, 2026-10-09)",
+			"donorFileList": []
+		},
 		"HighSchoolTranscript_v1.6.0": {
 			"donorReason": "none: CoreMain 1.17.0 and AcademicRecord 1.11.0 postdate PESC's 2016 documentation pass",
 			"donorFileList": []

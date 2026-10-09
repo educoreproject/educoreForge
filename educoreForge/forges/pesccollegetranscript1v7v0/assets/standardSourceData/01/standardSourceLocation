@@ -1,0 +1,5 @@
+standard: forge-pesccollegetranscript1v7v0
+publishedVersion: 1.7.0
+publishedVersionEvidence: the version of PESC release CollegeTranscript_v1.7.0 as pescReleaseExpander's manifest entry states it (releaseEntry.version, copied into releaseManifestEntry.json beside this file); it is also the version token of the root schema's targetNamespace urn:org:pesc:message:CollegeTranscript:v1.7.0. Written by the scaffold tool. Keep the publishedVersion line bare: deriveVersionStamp takes the whole rest of that line as the version.
+upstreamUrl: unknown (publisher: Postsecondary Electronic Standards Council, https://www.pesc.org; a release is our closure of PESC files, never a PESC artifact, and has no URL of its own)
+copiedFrom: see README_PROVENANCE.md

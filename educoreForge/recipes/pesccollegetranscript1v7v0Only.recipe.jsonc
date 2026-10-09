@@ -1,0 +1,17 @@
+{
+	// pesccollegetranscript1v7v0Only — the PESC College Transcript v1.7.0 release alone, with the RT-13
+	// round-trip stage on: the release's CERTIFICATION recipe (DESIGN-pescForge.md §4.3), the
+	// pesccollegetranscript1v8v0Only shape. Written by forgeClean lane CT17 (ONYX_DANCE, 2026-10-09): TQ reversed
+	// the 09-30 Q1 ruling for the dev/eval graph only, to demonstrate the version carry between two releases of
+	// one standard (DESIGN-pescBridge.md "Version replay").
+	//
+	// GNC-001: any container built from this is DEV_pescCollegeTranscript1v7v0[_label] and stays one.
+	"schemaVersion": "1.0.0",
+	"recipeName": "pesccollegetranscript1v7v0Only",
+	"kind": "dev",
+	"description": "Forge the PESC College Transcript v1.7.0 release alone and round-trip-validate the materialized product (RT-13 stage, certification).",
+	"roundTripStage": true,
+	"standards": [ { "token": "pesccollegetranscript1v7v0", "version": "current" } ],
+	"hubs": [],
+	"bridges": []
+}

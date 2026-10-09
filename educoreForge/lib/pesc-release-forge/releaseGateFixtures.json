@@ -19,6 +19,24 @@
 				"baseQNameText": "core:AcademicProgramType"
 			}
 		},
+		"CollegeTranscript_v1.7.0": {
+			"noteMessageRemoval": {
+				"fileName": "CollegeTranscript_v1.7.0.xsd",
+				"anchorText": "<xs:schema ",
+				"elementOpenText": "<xs:element name=\"NoteMessage\" type=\"core:NoteMessageType\""
+			},
+			"replacedFileName": "iso_3166-1_v1.0.0.xsd",
+			"documentationBlanking": {
+				"fileName": "AcademicRecord_v1.11.0.xsd",
+				"ownerTypeName": "PersonType",
+				"elementName": "HighSchool"
+			},
+			"extensionRewrite": {
+				"fileName": "AcademicRecord_v1.11.0.xsd",
+				"typeName": "PhoneType",
+				"baseQNameText": "core:PhoneType"
+			}
+		},
 		"HighSchoolTranscript_v1.6.0": {
 			"noteMessageRemoval": {
 				"fileName": "HighSchoolTranscript_v1.6.0.xsd",

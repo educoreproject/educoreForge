@@ -1,0 +1,42 @@
+{
+  // goldJevCt17 — goldJevAcceptance2 PLUS PESC College Transcript 1.7.0 (forgeClean lane CT17, ONYX_DANCE, 2026-10-09).
+  // TQ: "I think including 1.7 would be very interesting (though we probably won't when we move to production)." This
+  // reverses his 09-30 Q1 ruling (seven releases) for the DEV/eval graph ONLY. goldJevAcceptance2 is deliberately left
+  // untouched so GOLD_EVAL_261008_forgeClean, the production candidate, stays exactly reproducible from main. Same members
+  // otherwise, same order, with 1.7.0 standing after 1.8.0. kind 'golden' so -stampPromotion may name its graph GOLD_EVAL_*.
+  // Its first build (GOLD_EVAL_261009_ct17) reused the forgeClean R4 judgment cache by copy: every 1.7.0 unit whose prompt
+  // renders identically to a 1.8.0 unit is a cache hit (the version carry, DESIGN-pescBridge.md "Version replay").
+  "schemaVersion": "1.0.0",
+  "recipeName": "goldJevCt17",
+  "kind": "golden",
+  "description": "Pure-Jev gold graph: CEDS hub, Ed-Fi (crosswalk excluded), SIF 260928 and all seven PESC releases plus College Transcript 1.7.0 (College Transcript 1.8.0, College Transcript 1.7.0, High School Transcript 1.6.0, Test Score Report 1.1.0, Learning Record 1.0.0, Document Request 1.0.0, Document Response 1.0.0, Academic ePortfolio 1.0.0), every standard re-forged on fresh stores and every derived bridge judged by Jev through a COPY of the forgeClean R4 judgment cache, so a unit whose prompt is unchanged is a cache hit and only new prompts are judged.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sif260928", "version": "current" },
+    { "token": "pesccollegetranscript1v8v0", "version": "current" },
+    { "token": "pesccollegetranscript1v7v0", "version": "current" },
+    { "token": "peschighschooltranscript1v6v0", "version": "current" },
+    { "token": "pesctestscorereport1v1v0", "version": "current" },
+    { "token": "pesclearningrecord1v0v0", "version": "current" },
+    { "token": "pescdocumentrequest1v0v0", "version": "current" },
+    { "token": "pescdocumentresponse1v0v0", "version": "current" },
+    { "token": "pescacademiceportfolio1v0v0", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] },
+    { "source": "sif260928", "hub": "ceds", "bridge": "sif260928CedsDerivedPlugin", "dependencies": ["sif260928", "ceds"] },
+    { "source": "pesccollegetranscript1v8v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v8v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v8v0", "ceds"] },
+    { "source": "pesccollegetranscript1v7v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v7v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v7v0", "ceds"] },
+    { "source": "peschighschooltranscript1v6v0", "hub": "ceds", "bridge": "pescHighSchoolTranscript1v6v0CedsDerivedPlugin", "dependencies": ["peschighschooltranscript1v6v0", "ceds"] },
+    { "source": "pesctestscorereport1v1v0", "hub": "ceds", "bridge": "pescTestScoreReport1v1v0CedsDerivedPlugin", "dependencies": ["pesctestscorereport1v1v0", "ceds"] },
+    { "source": "pesclearningrecord1v0v0", "hub": "ceds", "bridge": "pescLearningRecord1v0v0CedsDerivedPlugin", "dependencies": ["pesclearningrecord1v0v0", "ceds"] },
+    { "source": "pescdocumentrequest1v0v0", "hub": "ceds", "bridge": "pescDocumentRequest1v0v0CedsDerivedPlugin", "dependencies": ["pescdocumentrequest1v0v0", "ceds"] },
+    { "source": "pescdocumentresponse1v0v0", "hub": "ceds", "bridge": "pescDocumentResponse1v0v0CedsDerivedPlugin", "dependencies": ["pescdocumentresponse1v0v0", "ceds"] },
+    { "source": "pescacademiceportfolio1v0v0", "hub": "ceds", "bridge": "pescAcademicEportfolio1v0v0CedsDerivedPlugin", "dependencies": ["pescacademiceportfolio1v0v0", "ceds"] }
+  ],
+  "roundTripStage": true
+}

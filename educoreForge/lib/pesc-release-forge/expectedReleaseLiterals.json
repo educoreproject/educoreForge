@@ -281,6 +281,276 @@
 				"commentStatementCount": 907
 			}
 		},
+		"CollegeTranscript_v1.7.0": {
+			"literalSource": "forgeClean lane CT17 (ONYX_DANCE, 2026-10-09; TQ reversed the 09-30 Q1 ruling for the dev/eval graph only). census: measured by the scaffold tool (lib/releaseCensus.json) and equal, field by field, to the planner evidence/census.json CollegeTranscript_v1.7.0 row quoted in DESIGN-pescForge.md 1.3 (1,002 definitions, 1,168 element declarations, 6 attributes, 2,721 codes) and to releaseManifest.json releaseReferenceCheck (2,016 references). reachability: equal, field by field, to the planner q4SectionSpan/sectionCensus.json CollegeTranscript_v1.7.0 entry (339 reachable, 1,097 occurrences, 22 sections, 62 spanning, 491 units, the sections-per-declaration histogram and all 22 section rows) and to the DESIGN-pescBridge.md 1.7.0 row. Every other walk and roundTrip figure first measured by this lane from a forge of the release (the gate suite's own measurement), literals from then on. Same CoreMain 1.17.0 and AcademicRecord 1.11.0 as High School Transcript 1.6.0, so many library-driven figures coincide with that release's; each was measured, not copied.",
+			"census": {
+				"fileCount": 4,
+				"importCount": 4,
+				"definitionCount": 1002,
+				"complexTypeCount": 210,
+				"namedCodeListCount": 200,
+				"namedDataTypeCount": 572,
+				"groupCount": 9,
+				"globalElementCount": 11,
+				"elementDeclarationCount": 1168,
+				"attributeDeclarationCount": 6,
+				"anonymousComplexTypeCount": 13,
+				"anonymousCodeListCount": 17,
+				"anonymousDataTypeCount": 24,
+				"codeCount": 2721,
+				"facetCount": 652,
+				"groupReferenceCount": 20,
+				"anyWildcardCount": 2,
+				"referenceCount": 2016,
+				"builtinReferenceCount": 796,
+				"inReleaseReferenceCount": 1220
+			},
+			"walk": {
+				"edgeCountByType": {
+					"HAS_CHILD": 1097,
+					"HAS_CLASS": 210,
+					"HAS_DEFINITION": 783,
+					"HAS_INSTANCE": 1097,
+					"HAS_OPTION_SET": 170,
+					"HAS_PROPERTY": 1174,
+					"HAS_SUPPORT": 14,
+					"HAS_VALUE": 2721,
+					"REFERENCES": 28,
+					"REFERENCES_TYPE": 968,
+					"SUBCLASS_OF": 108
+				},
+				"referencesTypeCountByTarget": {
+					"anonymous": 37,
+					"dataType": 627,
+					"type": 304
+				},
+				"subclassOfCountByVariety": {
+					"extension": 50,
+					"restriction": 58
+				},
+				"referencesCountByTarget": {
+					"element": 8,
+					"group": 20
+				},
+				"textNodeCount": 2447,
+				"documentationSourceCountByLabelSuffix": {
+					"Attribute": {
+						"none": 3,
+						"type": 3
+					},
+					"Element": {
+						"none": 3,
+						"own": 1161,
+						"type": 4
+					}
+				},
+				"sequenceCountByOrderSemantics": {
+					"document": 3748,
+					"normative": 1143
+				},
+				"noteMessageDeclarationCountByFile": {
+					"AcademicRecord_v1.11.0.xsd": 47,
+					"CollegeTranscript_v1.7.0.xsd": 1,
+					"CoreMain_v1.17.0.xsd": 52
+				},
+				"typeEdgeCountByDeclaration": {
+					"HAS_OPTION_SET Element -> CodeList": 153,
+					"HAS_OPTION_SET Element -> anonymous CodeList": 17,
+					"REFERENCES_TYPE Attribute -> DataType": 3,
+					"REFERENCES_TYPE Attribute -> anonymous DataType": 2,
+					"REFERENCES_TYPE Element -> DataType": 624,
+					"REFERENCES_TYPE Element -> Type": 294,
+					"REFERENCES_TYPE Element -> anonymous AnonymousType": 12,
+					"REFERENCES_TYPE Element -> anonymous DataType": 22,
+					"REFERENCES_TYPE GlobalElement -> Type": 10,
+					"REFERENCES_TYPE GlobalElement -> anonymous AnonymousType": 1
+				},
+				"codeListFactCount": {
+					"anonymousCodeList": 17,
+					"namedCodeList": 153,
+					"withCodeListDocumentation": 153
+				},
+				"commentCarry": {
+					"sourceCommentCount": 846,
+					"fileCommentCount": 845,
+					"precedingCommentCount": 1,
+					"commentedElementCount": 1,
+					"rootChangeLogLineCount": 39
+				},
+				"literalSource": "forgeClean lane CT17 (2026-10-09): every figure measured by the gate suite from a forge of the release at main 648d018a (G19/G20 shapes included: HAS_DEFINITION, anonymous REFERENCES_TYPE targets, commentCarry)."
+			},
+			"reachability": {
+				"substitutableSubtypeRuleName": "subtypesNotReachedByContent",
+				"substitutedSubtypeCount": 0,
+				"contentAndBaseDeclarationCount": 339,
+				"xsiTypeOnlyDeclarationCount": 0,
+				"reachableDeclarationCount": 339,
+				"contentAndBaseOccurrenceCount": 1097,
+				"xsiTypeOccurrenceCount": 0,
+				"occurrenceCount": 1097,
+				"contentAndBaseDefinitionCount": 247,
+				"reachableDefinitionCount": 247,
+				"deepestContentAndBaseDocumentDepth": 9,
+				"deepestDocumentDepth": 9,
+				"frameworkDepthMinusDocumentDepth": 1,
+				"sectionCount": 22,
+				"spanningDeclarationCount": 62,
+				"judgmentUnitCount": 491,
+				"pathReachedByTwoDeclarationsCount": 7,
+				"pathReachedByTwoDeclarationsSuffix": "/Contacts/Address/PostalCode",
+				"declarationReachingOnePathTwiceCount": 0,
+				"perSectionSampleListMaxLength": 8,
+				"sectionsPerDeclarationHistogram": {
+					"1": 277,
+					"2": 16,
+					"3": 2,
+					"4": 44
+				},
+				"occurrenceCountByDocumentDepth": {
+					"1": 4,
+					"2": 18,
+					"3": 43,
+					"4": 235,
+					"5": 313,
+					"6": 266,
+					"7": 150,
+					"8": 62,
+					"9": 6
+				},
+				"occurrenceAndUnitCountBySection": {
+					"CollegeTranscript/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/Student": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/Student/AcademicRecord": {
+						"occurrences": 804,
+						"units": 228
+					},
+					"CollegeTranscript/Student/Health": {
+						"occurrences": 7,
+						"units": 7
+					},
+					"CollegeTranscript/Student/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/Student/Person": {
+						"occurrences": 119,
+						"units": 103
+					},
+					"CollegeTranscript/Student/Tests": {
+						"occurrences": 23,
+						"units": 23
+					},
+					"CollegeTranscript/Student/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/CreatedDateTime": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/Destination": {
+						"occurrences": 64,
+						"units": 57
+					},
+					"CollegeTranscript/TransmissionData/DocumentCompleteCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/DocumentID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/DocumentOfficialCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/DocumentProcessCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/DocumentTypeCode": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/NoteMessage": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/RequestTrackingID": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/Source": {
+						"occurrences": 64,
+						"units": 57
+					},
+					"CollegeTranscript/TransmissionData/TransmissionType": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/TransmissionData/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					},
+					"CollegeTranscript/UserDefinedExtensions": {
+						"occurrences": 1,
+						"units": 1
+					}
+				},
+				"postalCodeOccurrenceCount": 14,
+				"spanningExample": {
+					"declarationReleaseIndependentId": "type/urn:org:pesc:sector:AcademicRecord:v1.11.0#ContactsType/el/1:Address",
+					"occurrenceCount": 7,
+					"occurrenceSectionList": [
+						"CollegeTranscript/Student/AcademicRecord",
+						"CollegeTranscript/Student/Person",
+						"CollegeTranscript/TransmissionData/Destination",
+						"CollegeTranscript/TransmissionData/Source"
+					],
+					"contextPathSampleListLength": 5
+				},
+				"reachableDocumentationSourceCount": {
+					"contentAndBase": {
+						"own": 335,
+						"type": 4
+					}
+				},
+				"literalSource": "forgeClean lane CT17 (2026-10-09): the planner q4SectionSpan/sectionCensus.json CollegeTranscript_v1.7.0 entry (no xsi:type substitution in this release: derivedTypes [], so xsiType counts are 0), confirmed equal by the gate suite's measurement; reachableDefinitionCount, the depth figures, the depth histogram, the shared-path figures, the spanning example and reachableDocumentationSourceCount first measured here."
+			},
+			"roundTrip": {
+				"inventedTotal": 0,
+				"contentGapTotal": 0,
+				"explicitlyOmittedTotal": 27847,
+				"explicitlyOmittedCountByKind": {
+					"processingInstruction": 4,
+					"whitespace": 27843
+				},
+				"nestedChoiceCount": 14,
+				"formElementCount": 1,
+				"emptyEnumerationValueCount": 2,
+				"emptyDocumentationCount": 5,
+				"xmllintProbeExitCode": 3,
+				"xmllintDefinitionDroppedExitCode": 5,
+				"documentationShapeCount": {
+					"declarationDocumentationShapeCount": 3,
+					"derivationAnnotationCount": 0,
+					"fileAnnotationNotFirstCount": 0
+				},
+				"namespacedSchemaAttributeCount": 0,
+				"commentStatementCount": 846,
+				"literalSource": "forgeClean lane CT17 (2026-10-09): invented 0, contentGap 0 and the xmllint exits as WORKORDER F4 requires of every release; every other figure measured by the gate suite over the graph double (comments are content since G20)."
+			}
+		},
 		"HighSchoolTranscript_v1.6.0": {
 			"literalSource": "WORKORDER section 3 F6 (339 reachable / 1099 occurrences / 22 sections); evidence/census.json, graphModelSummary.json and q4SectionSpan/sectionCensus.json HighSchoolTranscript_v1.6.0 (every census, edge, reachability, section and documentation-source figure they hold, compared field by field before this block was written, all equal); releaseManifest.json releaseReferenceCheck (2016 references). First measured by phase F6 (QUIET_CIPHER, 2026-10-01), literals from then on: the built-in / in-release reference split, textNodeCount, the attribute and type-documentation counts, sequenceCountByOrderSemantics, noteMessageDeclarationCountByFile, typeEdgeCountByDeclaration's attribute and global-element rows and anonymous code-list row, codeListFactCount, reachableDefinitionCount, the deepest depths, pathReachedByTwoDeclarationsSuffix, postalCodeOccurrenceCount, spanningExample, every roundTrip figure but invented 0, contentGap 0 and the xmllint exits (WORKORDER F4).",
 			"census": {
