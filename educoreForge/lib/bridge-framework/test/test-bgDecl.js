@@ -311,7 +311,9 @@ const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 // Report 1.1.0 and Learning Record 1.0.0 derived plugins (forges/<release>/bridges/) declare it too, one each.
 // goldJev/next MERGE of pescBridges/B1x (2026-10-02, ELECTRIC_MEADOW, lane I; NOTES 21): B1x's 8 starts from 5 too, so the
 // union is 5 + 2 (B2x) + 1 (E) + 3 (B1x) = 11.
-const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 11;
+// forgeClean lane CT17 (2026-10-09, ONYX_DANCE; roster literals pre-authorised as seam re-anchors in WORKORDER-CT17): 11 → 12,
+// the PESC College Transcript 1.7.0 derived plugin (forges/pesccollegetranscript1v7v0/bridges/) declares it too.
+const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 12;
 const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 	method: 'embedTextVote-v1',
 	hitsPerText: 20,
