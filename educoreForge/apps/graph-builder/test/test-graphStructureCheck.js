@@ -17,9 +17,13 @@
 //       orphan fails the row naming the standard, its role and the orphan's stableId
 //   (j) ⟪forgeClean R2⟫ the orphan names are the content stableIds the reached list lacks, sorted
 //   (i) the census loader refuses a declared census file that is absent, by name
+//   (k) ⟪lane FIX, Fix 3⟫ dmeTextField is a VERDICT (graph-contract DME_TEXT_FIELD_RULE): the rows MEASURED on
+//       GOLD_EVAL_261009_ct17 (PESC CollegeTranscript 1.8.0: 0 of 1,476 declarations described, 1,452 documentation texts
+//       without description) FAIL naming PESC and not CEDS; a standard with some description but one text left only in
+//       documentation fails; a standard with declarations and no description at all fails; the fixed rows pass
 // RED TWINS (in memory, module double): ownerRuleIgnored -> (b); ownMatchEdgeIgnored -> (c); suffixGuessed -> (d);
 // valueOwnershipIgnored -> (e); censusMismatchIgnored -> (f); uncomparedHidden -> (g); absentCensusSkipped -> (i);
-// orphanIgnored, orphanNotNamed -> (h); reachedListIgnored -> (j).
+// orphanIgnored, orphanNotNamed -> (h); reachedListIgnored -> (j); undescribedStandardIgnored, sourceTextOnlyIgnored -> (k).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -102,6 +106,21 @@ const conjunctJudgeByRefId = {
 		const orphanList = checkFor(mutationList).unreachedStableIdListFor({ reachedStableIdList: ['t:b', 't:a', 't:d'], contentStableIdList: ['t:d', 't:c', 't:a', 't:e', 't:b'] });
 		done({ pass: JSON.stringify(orphanList) === JSON.stringify(['t:c', 't:e']), detail: JSON.stringify(orphanList) });
 	},
+	k_dmeTextFieldIsAVerdict: (mutationList, done) => {
+		const check = checkFor(mutationList);
+		const CEDS_ROW = { standardName: 'CEDS', declarationNodeCount: 2726, describedDeclarationCount: 2725, sourceTextWithoutDmeTextCount: 0 };
+		const goldRow = check.dmeTextFieldRowFor({ dmeTextRowList: [CEDS_ROW, { standardName: 'PESC-CollegeTranscript-1.8.0', declarationNodeCount: 1476, describedDeclarationCount: 0, sourceTextWithoutDmeTextCount: 1452 }] });
+		const oneLeftRow = check.dmeTextFieldRowFor({ dmeTextRowList: [CEDS_ROW, { standardName: 'PESCTOY', declarationNodeCount: 10, describedDeclarationCount: 9, sourceTextWithoutDmeTextCount: 1 }] });
+		const silentRow = check.dmeTextFieldRowFor({ dmeTextRowList: [CEDS_ROW, { standardName: 'SILENTTOY', declarationNodeCount: 10, describedDeclarationCount: 0, sourceTextWithoutDmeTextCount: 0 }] });
+		const fixedRow = check.dmeTextFieldRowFor({ dmeTextRowList: [CEDS_ROW, { standardName: 'PESC-CollegeTranscript-1.8.0', declarationNodeCount: 1476, describedDeclarationCount: 1452, sourceTextWithoutDmeTextCount: 0 }] });
+		done({
+			pass: goldRow.verdict === 'fail' && /PESC-CollegeTranscript-1\.8\.0: 0 of 1476 declaration node\(s\) carry description; 1452 node\(s\) carry documentation without description/.test(goldRow.detail) && !/CEDS:/.test(goldRow.detail)
+				&& oneLeftRow.verdict === 'fail' && /PESCTOY: 9 of 10/.test(oneLeftRow.detail)
+				&& silentRow.verdict === 'fail' && /SILENTTOY: 0 of 10/.test(silentRow.detail)
+				&& fixedRow.verdict === 'pass',
+			detail: `${goldRow.verdict}: ${goldRow.detail} || ${oneLeftRow.verdict} || ${silentRow.verdict} || ${fixedRow.verdict}: ${fixedRow.detail}`,
+		});
+	},
 	i_absentCensusRefusedByName: (mutationList, done) => {
 		const scratchTreeRootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'graphStructureCheck-'));
 		fs.mkdirSync(path.join(scratchTreeRootPath, 'forges', 'pesctoy', 'lib'), { recursive: true });
@@ -123,6 +142,8 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'h_rootOwnershipIsAVerdict', twinName: 'orphanIgnored', find: "		.filter((standardName) => measuredByStandard[standardName].unreachedNodeCount > 0)", replace: '		.filter((standardName) => false)' },
 	{ conjunctRefId: 'h_rootOwnershipIsAVerdict', twinName: 'orphanNotNamed', find: "			const orphanList = orphanListByStandard[standardName] || [];", replace: '			const orphanList = [];' },
 	{ conjunctRefId: 'j_orphansAreTheUnreachedStableIds', twinName: 'reachedListIgnored', find: '	const reachedStableIdSet = new Set(reachedStableIdList);', replace: '	const reachedStableIdSet = new Set([]);' },
+	{ conjunctRefId: 'k_dmeTextFieldIsAVerdict', twinName: 'undescribedStandardIgnored', find: '.filter((oneRow) => (oneRow.declarationNodeCount > 0 && oneRow.describedDeclarationCount === 0) || oneRow.sourceTextWithoutDmeTextCount > 0)', replace: '.filter((oneRow) => oneRow.sourceTextWithoutDmeTextCount > 0)' },
+	{ conjunctRefId: 'k_dmeTextFieldIsAVerdict', twinName: 'sourceTextOnlyIgnored', find: '.filter((oneRow) => (oneRow.declarationNodeCount > 0 && oneRow.describedDeclarationCount === 0) || oneRow.sourceTextWithoutDmeTextCount > 0)', replace: '.filter((oneRow) => oneRow.declarationNodeCount > 0 && oneRow.describedDeclarationCount === 0)' },
 	{ conjunctRefId: 'i_absentCensusRefusedByName', twinName: 'absentCensusSkipped', find: "			refusalList.push(`${sourceKey}: family ${standardFamily} declares a source census at ${censusFilePath}, which is absent`);", replace: '' },
 ];
 

@@ -758,6 +758,24 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 			},
 		},
 	];
+	// ⟪lane FIX, Fix 3, 2026-10-09; TQ report: askMilo saw no PESC text⟫ the DME reads description (graph-contract
+	// DME_TEXT_FIELD_RULE): every node with its own documentation carries it as description, byte for byte, and no node
+	// carries a description it has no documentation for
+	absentConjunctList.push({
+		conjunctId: 'descriptionIsOwnDocumentation',
+		title: 'every node with its own documentation carries it as description (the DME-facing text field), and no node carries a description without documentation',
+		twinNameList: ['descriptionNotWritten'],
+		evaluate: (subject, callback) => {
+			forgeOrFail({ subject }, callback, (forged) => {
+				const documentedNodeList = forged.nodes.filter((oneNode) => oneNode.properties.documentation !== undefined);
+				const mismatchList = forged.nodes.filter((oneNode) => oneNode.properties.description !== oneNode.properties.documentation).map((oneNode) => oneNode.stableId);
+				callback('', { pass: documentedNodeList.length > 0 && mismatchList.length === 0, detail: `${documentedNodeList.length} documented node(s); description differing from documentation on ${mismatchList.length}${mismatchList.length ? ` (${mismatchList.slice(0, 3).join(', ')})` : ''}` });
+			});
+		},
+	});
+	registerWalkTwin(ABSENT_GATE_ID, 'descriptionIsOwnDocumentation', 'descriptionNotWritten', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '			...(isAbsent(facts.documentation) ? {} : { description: facts.documentation }),', replace: '' }),
+	);
 	registerWalkTwin(ABSENT_GATE_ID, 'noEmptyStringOrEmptyList', 'noteMessageNameForcedEmpty', 'productionMutation', (subject) =>
 		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '			...(isAbsent(name) ? {} : { name }),', replace: "			...(isAbsent(name) ? {} : { name: name === 'NoteMessage' ? '' : name })," }),
 	);
@@ -2422,7 +2440,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 		{ harness, familyName: `${standardKey} release gates (phase F1)`, gateDeclarationList, twinRegistry, makeSubject, cloneSubject, expectedConjunctCount: 17, expectedTwinCount: 17 },
 		() => {
 			runGateFamily(
-				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 18, expectedTwinCount: 25 }, // forgeClean CLEAN: +G19 and +G20 conjuncts; +6 twins (G19 2, G20 3, anonymous type edge 1)
+				{ harness, familyName: `${standardKey} walk gates (phase F2)`, gateDeclarationList: walkGateDeclarationList, twinRegistry: walkTwinRegistry, makeSubject: makeWalkSubject, cloneSubject, expectedConjunctCount: 19, expectedTwinCount: 26 }, // forgeClean CLEAN: +G19 and +G20 conjuncts; +6 twins (G19 2, G20 3, anonymous type edge 1). lane FIX Fix 3: +descriptionIsOwnDocumentation and its twin
 				() => {
 					runGateFamily(
 						{ harness, familyName: `${standardKey} reachability gates (phase F3)`, gateDeclarationList: reachabilityGateDeclarationList, twinRegistry: reachabilityTwinRegistry, makeSubject: makeReachabilitySubject, cloneSubject: cloneReachabilitySubject, expectedConjunctCount: 12, expectedTwinCount: 14 },

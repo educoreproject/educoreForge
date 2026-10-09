@@ -79,7 +79,7 @@ const conjunctJudgeByRefId = {
 	},
 	g_runnerRunsEveryVerdictCheck: (mutationList, done) => {
 		const gate = gateFor(mutationList);
-		done({ pass: JSON.stringify(gate.STRUCTURE_CHECK_NAME_LIST) === JSON.stringify(['instanceStructure', 'codeListStructure', 'rootOwnership']), detail: JSON.stringify(gate.STRUCTURE_CHECK_NAME_LIST) });
+		done({ pass: JSON.stringify(gate.STRUCTURE_CHECK_NAME_LIST) === JSON.stringify(['instanceStructure', 'codeListStructure', 'rootOwnership', 'dmeTextField']), detail: JSON.stringify(gate.STRUCTURE_CHECK_NAME_LIST) });
 	},
 };
 const TWIN_LIST = [
@@ -89,7 +89,7 @@ const TWIN_LIST = [
 	// the P2 list: text nodes excluded although the kit counts them
 	{ conjunctRefId: 'e_kitOutsidersExcluded', twinName: 'textNodesExcludedAgain', find: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition']);", replace: "const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition', vocabulary.EMBED_TEXT_VECTOR.label]);" },
 	{ conjunctRefId: 'f_structureFailureFailsRow', twinName: 'structureFailureIgnored', find: "	const failedStructureRowList = structureCheckRowList.filter((oneRow) => oneRow.verdict !== vocabulary.BUILD_ATTESTATION_VERDICT.PASS);", replace: '	const failedStructureRowList = [];' },
-	{ conjunctRefId: 'g_runnerRunsEveryVerdictCheck', twinName: 'structureCheckDropped', find: "const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure', 'rootOwnership']);", replace: "const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure']);" },
+	{ conjunctRefId: 'g_runnerRunsEveryVerdictCheck', twinName: 'structureCheckDropped', find: "const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure', 'rootOwnership', 'dmeTextField']);", replace: "const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure', 'rootOwnership']);" },
 ];
 
 const refIdList = Object.keys(conjunctJudgeByRefId);

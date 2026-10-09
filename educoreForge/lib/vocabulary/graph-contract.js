@@ -303,6 +303,19 @@ const USER_EDGE_RULE = Object.freeze({
 // a user write produces no vector and the write path holds no embedding model
 const USER_EMBEDDING_RULE = Object.freeze({ userVectorPolicy: 'textOnly' });
 
+// §15 DME_TEXT_FIELD_RULE (lane FIX, Fix 3, 2026-10-09; TQ report). The DME reads ONE text field for a content node,
+// description (dataModelExplorerSearch.js), and every standard writes it there: CEDS, Ed-Fi, SIF and, since Fix 3, PESC.
+// MEASURED on GOLD_EVAL_261009_ct17 before the fix: PESC's DmeProperty and DmeClass carried 0 descriptions and 10,472
+// documentation texts, so askMilo told TQ PESC had no text. The rule, checked on every build (graph-structure-check
+// dmeTextField, inside the forgeCensus attestation): (1) every standard with DmeProperty or DmeClass nodes carries
+// description on at least one of them; (2) no content node carries a text in sourceTextPropertyNameList without also
+// carrying description (a standard's raw text field may stay, as PESC's documentation does, but never as the only one).
+const DME_TEXT_FIELD_RULE = Object.freeze({
+	textPropertyName: 'description',
+	declarationRoleList: Object.freeze(['DmeClass', 'DmeProperty']),
+	sourceTextPropertyNameList: Object.freeze(['documentation']),
+});
+
 // ---------------------------------------------------------------------
 // THE JSON DOCUMENT, ITS CANONICAL TEXT AND ITS SHA
 // ---------------------------------------------------------------------
@@ -339,6 +352,7 @@ const graphContractDocument = () => {
 		userEdgeStampFieldList: USER_EDGE_STAMP_FIELD_LIST,
 		userEdgeRule: USER_EDGE_RULE,
 		userEmbeddingRule: USER_EMBEDDING_RULE,
+		dmeTextFieldRule: DME_TEXT_FIELD_RULE,
 	};
 };
 
@@ -389,6 +403,7 @@ module.exports = Object.freeze({
 	USER_EDGE_STAMP_FIELD_LIST,
 	USER_EDGE_RULE,
 	USER_EMBEDDING_RULE,
+	DME_TEXT_FIELD_RULE,
 	graphContractDocument,
 	canonicalJsonText,
 	graphContractSha256,

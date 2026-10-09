@@ -20,14 +20,19 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //       the standard, the roles and the orphans' stableIds (a capped sample, read by a second query only when a standard
 //       fails, so a clean graph pays for one walk). W-C-1 made every SIF node reachable; lane CLEAN made every PESC node
 //       reachable; until R2 the row was only a measurement, so nothing stopped a new orphan.
+//   dmeTextField (lane FIX, Fix 3, 2026-10-09; a VERDICT) — graph-contract DME_TEXT_FIELD_RULE: the DME reads one text
+//       field, description. FAIL when a standard has DmeClass/DmeProperty nodes and none carries description, or when any
+//       content node carries a source text (PESC's documentation) without description. GOLD_EVAL_261009_ct17 fails it: its
+//       eight PESC releases carried 0 descriptions beside 10,472 documentation texts, which is how askMilo saw no PESC text.
 //
-// The forgeCensus attestation (forge-census-gate.js) folds all three checks into its row at every -build; the
+// The forgeCensus attestation (forge-census-gate.js) folds all four checks into its row at every -build; the
 // standalone tools/graphStructureCheck.js runs all three against a named container, read-only.
 //
 //   instanceStructureRowFor({ instanceRowList, declarationRowList }) -> row (pure)
 //   codeListStructureRowFor({ optionValueRowList, optionSetRowList, sourceCodeListCensusByStandard }) -> row (pure)
 //   rootOwnershipRowFor({ rootRoleRowList, unreachedStableIdListByStandard }) -> row (pure; the orphan names are optional)
 //   unreachedStableIdListFor({ reachedStableIdList, contentStableIdList }) -> the sorted orphans (pure)
+//   dmeTextFieldRowFor({ dmeTextRowList }) -> row (pure)
 //   runGraphStructureCheck({ session, checkNameList, sourceCodeListCensusByStandard }, callback(err, checkRowList))
 //   sourceCodeListCensusFor({ treeRootPath, standardDefinitionRowList }) -> { sourceCodeListCensusByStandard, refusal }
 //
@@ -229,6 +234,36 @@ const rootOwnershipRowFor = ({ rootRoleRowList, unreachedStableIdListByStandard 
 	};
 };
 
+// DME_TEXT_FIELD_CYPHER — per standard: its declaration nodes (graph-contract DME_TEXT_FIELD_RULE.declarationRoleList, as
+// labels), how many carry the DME text field, and how many content nodes carry a source text without it
+const DME_TEXT_FIELD_CYPHER = `
+	MATCH (n:ForgedNode) WHERE n._source IS NOT NULL
+	WITH n, any(oneLabel IN labels(n) WHERE oneLabel IN $dmeTextDeclarationRoleList) AS isDeclaration,
+	     any(onePropertyName IN $dmeSourceTextPropertyNameList WHERE n[onePropertyName] IS NOT NULL) AS carriesSourceText,
+	     n[$dmeTextPropertyName] IS NOT NULL AS carriesDmeText
+	WHERE isDeclaration OR carriesSourceText
+	RETURN n._source AS standardName,
+	       count(CASE WHEN isDeclaration THEN 1 END) AS declarationNodeCount,
+	       count(CASE WHEN isDeclaration AND carriesDmeText THEN 1 END) AS describedDeclarationCount,
+	       count(CASE WHEN carriesSourceText AND NOT carriesDmeText THEN 1 END) AS sourceTextWithoutDmeTextCount
+	ORDER BY standardName`;
+
+const dmeTextFieldRowFor = ({ dmeTextRowList }) => {
+	const textPropertyName = vocabulary.DME_TEXT_FIELD_RULE.textPropertyName;
+	const failureList = dmeTextRowList
+		.filter((oneRow) => (oneRow.declarationNodeCount > 0 && oneRow.describedDeclarationCount === 0) || oneRow.sourceTextWithoutDmeTextCount > 0)
+		.map((oneRow) => `${oneRow.standardName}: ${oneRow.describedDeclarationCount} of ${oneRow.declarationNodeCount} declaration node(s) carry ${textPropertyName}; ${oneRow.sourceTextWithoutDmeTextCount} node(s) carry ${vocabulary.DME_TEXT_FIELD_RULE.sourceTextPropertyNameList.join('/')} without ${textPropertyName}`);
+	const countText = dmeTextRowList.map((oneRow) => `${oneRow.standardName} ${oneRow.describedDeclarationCount}/${oneRow.declarationNodeCount}`).join(', ');
+	return {
+		checkName: 'dmeTextField',
+		verdict: verdictOf(failureList),
+		detail: failureList.length === 0
+			? `every standard's text is in ${textPropertyName}, the field the DME reads (described/declaration nodes: ${countText})`
+			: `FAILED — the DME reads ${textPropertyName} and would see no text: ${cappedText(failureList)}`,
+		measuredByStandard: dmeTextRowList.reduce((soFar, oneRow) => ({ ...soFar, [oneRow.standardName]: { declarationNodeCount: oneRow.declarationNodeCount, describedDeclarationCount: oneRow.describedDeclarationCount, sourceTextWithoutDmeTextCount: oneRow.sourceTextWithoutDmeTextCount } }), {}),
+	};
+};
+
 // the neo4j-driver promise is met in exactly this one place; rows come back as plain objects with integers as numbers
 const runCypher = (session, cypherText, cypherParameters, callback) => {
 	session.run(cypherText, cypherParameters).then(
@@ -248,6 +283,9 @@ const CYPHER_PARAMETERS = Object.freeze({
 	standardRootRole: vocabulary.DME_ROLES.STANDARD_ROOT,
 	embedTextRole: vocabulary.DME_ROLES.EMBED_TEXT,
 	ownerEdgeTypeList: Object.values(INSTANCE_OWNER_EDGE_TYPE_BY_LABEL_SUFFIX),
+	dmeTextPropertyName: vocabulary.DME_TEXT_FIELD_RULE.textPropertyName,
+	dmeTextDeclarationRoleList: vocabulary.DME_TEXT_FIELD_RULE.declarationRoleList.slice(),
+	dmeSourceTextPropertyNameList: vocabulary.DME_TEXT_FIELD_RULE.sourceTextPropertyNameList.slice(),
 });
 
 // each check: the Cyphers it reads (by the row-list name its row builder takes) and the builder
@@ -282,6 +320,7 @@ const CHECK_BY_NAME = Object.freeze({
 	instanceStructure: { cypherByRowListName: { instanceRowList: INSTANCE_STRUCTURE_CYPHER, declarationRowList: DECLARATION_STRUCTURE_CYPHER }, rowFor: instanceStructureRowFor },
 	codeListStructure: { cypherByRowListName: { optionValueRowList: OPTION_VALUE_STRUCTURE_CYPHER, optionSetRowList: OPTION_SET_STRUCTURE_CYPHER }, rowFor: codeListStructureRowFor },
 	rootOwnership: { cypherByRowListName: { rootRoleRowList: ROOT_OWNERSHIP_CYPHER }, secondReadFor: unreachedStableIdListByStandardFor, rowFor: rootOwnershipRowFor },
+	dmeTextField: { cypherByRowListName: { dmeTextRowList: DME_TEXT_FIELD_CYPHER }, rowFor: dmeTextFieldRowFor },
 });
 
 const runGraphStructureCheck = ({ session, checkNameList, sourceCodeListCensusByStandard } = {}, callback) => {
@@ -374,10 +413,12 @@ module.exports = {
 	OPTION_SET_STRUCTURE_CYPHER,
 	ROOT_OWNERSHIP_CYPHER,
 	ROOT_OWNERSHIP_STABLE_ID_CYPHER,
+	DME_TEXT_FIELD_CYPHER,
 	instanceStructureRowFor,
 	codeListStructureRowFor,
 	rootOwnershipRowFor,
 	unreachedStableIdListFor,
+	dmeTextFieldRowFor,
 	runGraphStructureCheck,
 	sourceCodeListCensusFor,
 };

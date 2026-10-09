@@ -249,6 +249,11 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 		kit.addEdge({ edgeType, fromStableId, toStableId, edgeContext: `${edgeType} ${fromStableId} → ${toStableId}`, ...(edgeProperties === undefined ? {} : { edgeProperties }) });
 		edgeCountByType[edgeType] = (edgeCountByType[edgeType] || 0) + 1;
 	};
+	// ⟪lane FIX, Fix 3, 2026-10-09; TQ report⟫ THE DME-FACING TEXT. The DME reads ONE text field, description (graph-contract
+	// DME_TEXT_FIELD_RULE), as every other standard writes it; PESC wrote its text only to documentation, so askMilo saw none.
+	// A node with its OWN documentation text now also carries it as description; documentation and documentationValueList
+	// stay the raw record. No judge or vector reads description here (the derived plugins' renderingAllowList and the
+	// embedTextDeclaration name documentation / effectiveDocumentation), so no prompt and no vector moves.
 	const mintNode = ({ nodeKind, stableId, name, parentId, facts, owningName }) => {
 		const kindRow = nodeKindTable[nodeKind];
 		kit.makeNode({
@@ -256,6 +261,7 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 			perStandardLabel: kindRow.perStandardLabel,
 			stableId,
 			...(isAbsent(name) ? {} : { name }),
+			...(isAbsent(facts.documentation) ? {} : { description: facts.documentation }),
 			structural: { parentId, path: releaseIndependentIdOf(stableId), ...(owningName === undefined ? {} : { owningName }) },
 			carriedProperties: kit.carriedProperties({ parsedObject: presentFactsOf(facts), carryList: CARRY_LIST_BY_NODE_KIND[nodeKind] }),
 			origin: `${nodeKind} ${stableId}`,
