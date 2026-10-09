@@ -33,7 +33,7 @@ SYNOPSIS
                                    --manifestRefId=<the manifest -build printed> [--standardsDatabaseFilePath=<its store>]
                                    [--judgedBy=<toolId>[,<toolId>...]]   (COMMA-SEPARATED; one per judge present)
      graphBuilder   -stampPromotion --containerName=<the PROMOTED name> --goldEvalCheckLogPath=<its saved output>
-                                   --replayBuildLogPath=<the zero-judge replay build log>
+                                   --replayLogPath=<the -replay run log>  | --replayBuildLogPath=<a replay build log>
                                    --reforgeEvidencePath=<reforgeCompare -summarize output>
      graphBuilder   -help
 
@@ -381,13 +381,24 @@ OPTIONS
                   file its run wrote and tied to the graph by the manifestRefId its passport carries;
                   evidence for another manifest is REFUSED. Each row records the evidence path and its
                   sha256. Writes no content node or edge, and proves it: the content census is taken
-                  before and after and any difference is refused. All four parameters are REQUIRED.
+                  before and after and any difference is refused. All four parameters are REQUIRED
+                  (the replay evidence in either of its two forms).
                   THE reforgeDeterminism ROW (lane REFORGE, 2026-10-08) is read from the evidence file
                   apps/graph-builder/tools/reforgeCompare.js -summarize writes: two from-scratch builds
                   (and two replays) compared store by store and graph by graph. It is the ONE row NOT
                   refused for another manifest: the run attests the forge CODE at the head it names,
                   which a later build of that head inherits; its detail says whether this graph's
                   manifest is one the run composed, and names the run and the head.
+                  THE replay ROW (lane FIX, 2026-10-09) takes EXACTLY ONE of two evidence kinds:
+                    --replayLogPath       the saved output of 'graphBuilder -replay --manifestRefId=<this
+                                          graph's manifest>' (about ten minutes). It must name THIS
+                                          manifest, carry one 'restore conservation PASS' line and the
+                                          run's result with finishXorVerified true; a -replay of another
+                                          manifest, a failed replay and a missing log are each REFUSED.
+                    --replayBuildLogPath  a replay BUILD log: a plain -build on store copies (about
+                                          twenty-five minutes) that composes this manifest with 0
+                                          judge calls; it also proves the decision blocks rebuild it.
+                  Naming both is refused.
                   The bolt port and credential are read from the container ('docker inspect').
 
      -goldEvalCheck

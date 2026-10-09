@@ -1858,7 +1858,15 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 				callback(err);
 				return;
 			}
-			callback('', result);
+			// ⟪lane FIX, 2026-10-09⟫ THE LOADED SIDE OF THE RESTORE CONSERVATION, from the blocks in hand (the same summary the
+			// creation door returns from init): replayManager.restore compares it with what the graph then holds
+			callback('', {
+				...result,
+				loadedConservationSummary: conservationSummaryFor({
+					nodes: groups.flatMap((oneGroup) => oneGroup.nodes),
+					edges: groups.flatMap((oneGroup) => oneGroup.edges),
+				}),
+			});
 		},
 	);
 };

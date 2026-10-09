@@ -16,7 +16,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 require('../../../../../../test/testLib/testAppStartup')({ moduleName, helpText: `${moduleName} --pauseAfterSearchMs=<ms> [--withoutPortLock=true]` });
 const { commandLineParameters } = process.global;
 
-const replayManagerModule = require('../../replayManager');
+const crypto = require('crypto');
 
 const valueOf = (valueName) => {
 	const rawValue = commandLineParameters.values[valueName];
@@ -29,6 +29,9 @@ if (!Number.isInteger(pauseAfterSearchMs) || pauseAfterSearchMs < 0) {
 }
 const withoutPortLock = valueOf('withoutPortLock') === 'true';
 const withoutExitWatchdog = valueOf('withoutExitWatchdog') === 'true';
+const leadingDashPassword = valueOf('leadingDashPassword') === 'true';
+const replayManagerPath = valueOf('replayManagerPath');
+const replayManagerModule = require(replayManagerPath === undefined ? '../../replayManager' : replayManagerPath);
 const purpose = valueOf('purpose');
 if (typeof purpose !== 'string' || !/^[a-zA-Z]+$/.test(purpose)) {
 	process.stdout.write(`${JSON.stringify({ boltPort: null, error: `${moduleName}: --purpose=<letters> is REQUIRED` })}\n`);
@@ -39,6 +42,7 @@ const manager = replayManagerModule({
 	findAvailablePortPair: (settings, callback) => replayManagerModule.findAvailablePortPair(settings, (searchErr, ports) => setTimeout(() => callback(searchErr, ports), pauseAfterSearchMs)),
 	...(withoutPortLock ? { acquirePortAllocationLock: (lockSpec, callback) => callback(''), releasePortAllocationLock: (lockSpec, callback) => callback('') } : {}),
 	...(withoutExitWatchdog ? { startExitWatchdog: () => {} } : {}),
+	...(leadingDashPassword ? { generateScratchPassword: () => `-${crypto.randomBytes(18).toString('hex')}` } : {}),
 });
 manager.create({ purpose }, (createErr, handle) => {
 	const result = { boltPort: handle ? handle.boltPort : null, error: createErr || '' };

@@ -24,7 +24,15 @@
 //   (g) ⟪TQ via VIOLET_VALLEY: "the process cleans up after itself", every exit path⟫ LIVE: a provisioning process SIGKILLed
 //       while its scratch graph comes up leaves NO container and NO volume: the exit watchdog removes them (SIGKILL cannot be
 //       caught, so no handler inside the process could)
-// RED TWINS: (a) checkAccepted (the check passes anything); (b) lockNotExclusive (mkdir's refusal ignored); (c)
+//   (h) ⟪lane FIX, 2026-10-09: the exit-64 cause⟫ the scratch credential never begins with '-' (100,000 draws): the image's
+//       entrypoint passes it to neo4j-admin as an argument, which reads a leading '-' as an option and exits 64 (pure)
+//   (i) ⟪lane FIX⟫ LIVE: a container that dies at start is refused naming its exit code AND carrying neo4j's own words, read
+//       from `docker logs` BEFORE the dispose destroys them; nothing is left (a leading-dash credential, injected, makes it die)
+//   (j) ⟪lane FIX⟫ LIVE STRESS: 3 rounds of 6 concurrent provisions in 6 processes all come up, and docker's own 'die' events
+//       over the run show no container dying with any exit code but the 137 of our own removal (testSupport/provisionStress.js)
+// RED TWINS: (h) base64urlPassword (the generator before the fix); (i) logsNotRead (the dispose reads nothing first, as before);
+// (j) oneLeadingDashPerRound (one child per round launched with the old failure's credential shape);
+// (a) checkAccepted (the check passes anything); (b) lockNotExclusive (mkdir's refusal ignored); (c)
 // staleNeverBroken; (g) withoutExitWatchdog (the child starts none; the twin removes the orphan it observed); (f) volumesKept (dispose back to a plain rm -f; the twin removes the volume it leaked); (e) livenessUnwatched (create waits on readiness alone); (d) withoutPortLock — the two children run with the lock replaced by one always granted (the code
 // before the fix): they choose the same pair, and they do not both succeed on distinct ports.
 
@@ -51,6 +59,11 @@ const { loadBuildJsDouble } = require('../../../../../lib/bridge-framework/test/
 
 const REPLAY_MANAGER_PATH = path.join(__dirname, '..', 'replayManager.js');
 const CHILD_PATH = path.join(__dirname, 'testSupport', 'provisionPortRaceChild.js');
+const { runProvisionStress } = require('./testSupport/provisionStress');
+const crypto = require('crypto');
+const PASSWORD_DRAW_COUNT = 100000;
+const STRESS_ROUND_COUNT = 3;
+const STRESS_CONCURRENCY = 6;
 // long enough that the second child's search lands inside the first's pause, short beside a neo4j start
 const PAUSE_AFTER_SEARCH_MS = 4000;
 const managerModuleFor = (mutationList) => (mutationList.length === 0 ? require(REPLAY_MANAGER_PATH) : loadBuildJsDouble({ buildJsPath: REPLAY_MANAGER_PATH, mutationList }));
@@ -208,6 +221,44 @@ const conjunctJudgeByRefId = {
 		});
 		waitForContainer();
 	},
+	h_passwordNeverOptionLike: (mutationList, done) => {
+		const { generateScratchPassword } = managerModuleFor(mutationList);
+		const drawList = Array.from({ length: PASSWORD_DRAW_COUNT }, () => generateScratchPassword());
+		const leadingDashCount = drawList.filter((onePassword) => onePassword.startsWith('-')).length;
+		const shortestLength = Math.min(...drawList.map((onePassword) => onePassword.length));
+		done({ pass: leadingDashCount === 0 && shortestLength >= 24, detail: `${leadingDashCount} of ${PASSWORD_DRAW_COUNT} draws begin with '-'; shortest ${shortestLength} characters` });
+	},
+	i_deathEvidenceReadBeforeDispose: (mutationList, done) => {
+		const manager = managerModuleFor(mutationList)({ generateScratchPassword: () => `-${crypto.randomBytes(18).toString('hex')}` });
+		manager.create({ purpose: 'deathEvidence' }, (createErr, handle) => {
+			if (handle) {
+				manager.delete(handle, () => done({ pass: false, detail: `a leading-dash credential came up (${handle.graphName}): the gate's premise is wrong` }));
+				return;
+			}
+			const graphName = (/'(DEV_gb_deathEvidence_[0-9_]+)'/.exec(String(createErr)) || [])[1];
+			execFile('docker', ['ps', '-a', '-q', '--filter', `name=^${graphName}$`], { encoding: 'utf8' }, (listErr, listText) => {
+				const leftCount = String(listText || '').split('\n').filter(Boolean).length;
+				done({ pass: /exit code 64/.test(createErr) && /read before dispose:[\s\S]*Missing required parameter: '<password>'/.test(createErr) && /was disposed/.test(createErr) && Boolean(graphName) && leftCount === 0, detail: `${String(createErr).replace(/\s+/g, ' ').slice(0, 420)}; containers left ${leftCount}` });
+			});
+		});
+	},
+	j_concurrentProvisionsNoDeath: (mutationList, done) => {
+		const oneLeadingDashPerRound = mutationList.some((oneMutation) => oneMutation.childLeadingDashPassword === true);
+		runProvisionStress(
+			{ roundCount: STRESS_ROUND_COUNT, concurrency: STRESS_CONCURRENCY, purpose: 'stressGate', childArgListFor: (roundIndex, childIndex) => (oneLeadingDashPerRound && childIndex === 0 ? ['--leadingDashPassword=true'] : []) },
+			(stressErr, report) => {
+				if (stressErr) {
+					done({ pass: false, detail: stressErr });
+					return;
+				}
+				const expectedCount = STRESS_ROUND_COUNT * STRESS_CONCURRENCY;
+				done({
+					pass: report.provisionCount === expectedCount && report.failedResultList.length === 0 && report.deathEventList.length === 0 && report.dieCount === expectedCount,
+					detail: `${report.provisionCount} provision(s), ${report.failedResultList.length} failed, ${report.dieCount} die event(s), ${report.deathEventList.length} death(s) at start${report.deathEventList.length ? ` (${report.deathEventList.map((oneDie) => `${oneDie.containerName} exit ${oneDie.exitCode}`).join(', ')})` : ''}; ${report.roundSummaryList.join('; ')}${report.failedResultList.length ? `; first failure: ${String(report.failedResultList[0].error).replace(/\s+/g, ' ').slice(0, 300)}` : ''}`,
+				});
+			},
+		);
+	},
 	d_twoProcessesTwoPorts: (mutationList, done) => {
 		const withoutPortLock = mutationList.some((oneMutation) => oneMutation.childWithoutPortLock === true);
 		const resultList = [];
@@ -241,6 +292,9 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'f_destroyRemovesItsVolumes', twinName: 'volumesKept', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: "	runDockerCommand(['rm', '-f', '-v', graphName], (err, stdout, stderr) => {", replace: "	runDockerCommand(['rm', '-f', graphName], (err, stdout, stderr) => {" }] },
 	{ conjunctRefId: 'g_killedProvisionLeavesNothing', twinName: 'withoutExitWatchdog', mutationList: [{ childWithoutExitWatchdog: true }] },
 	{ conjunctRefId: 'd_twoProcessesTwoPorts', twinName: 'withoutPortLock', mutationList: [{ childWithoutPortLock: true }] },
+	{ conjunctRefId: 'h_passwordNeverOptionLike', twinName: 'base64urlPassword', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: "crypto.randomBytes(SCRATCH_PASSWORD_BYTE_COUNT).toString('hex')", replace: "crypto.randomBytes(SCRATCH_PASSWORD_BYTE_COUNT).toString('base64url')" }] },
+	{ conjunctRefId: 'i_deathEvidenceReadBeforeDispose', twinName: 'logsNotRead', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: 'const readContainerLogTail = ({ runDockerCommand, graphName }, callback) => {', replace: "const readContainerLogTail = ({ runDockerCommand, graphName }, callback) => { callback('docker logs were not read'); return;" }] },
+	{ conjunctRefId: 'j_concurrentProvisionsNoDeath', twinName: 'oneLeadingDashPerRound', mutationList: [{ childLeadingDashPassword: true }] },
 ];
 
 const refIdList = Object.keys(conjunctJudgeByRefId);

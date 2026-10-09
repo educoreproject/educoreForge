@@ -1663,6 +1663,8 @@ const goldEvalCheckAction = (callback) => {
 // promotionKindRefusal — ⟪campaign P2, W-C-10⟫ '' when the stamp may proceed, else the refusal. Only a GOLD_EVAL_* target is
 // gated; its recipe must be locatable by name and its kind must permit promotion (recipe.js RECIPE_KIND_RULE).
 const PROMOTION_GATED_NAME_PATTERN = /^GOLD_EVAL_/;
+// ⟪lane FIX⟫ which evidence reader (promotion-evidence.js) reads the replay row's evidence, by the parameter that names it
+const STAMP_REPLAY_EVIDENCE_READER_BY_PARAMETER_NAME = Object.freeze({ replayLogPath: 'replayRun', replayBuildLogPath: 'replayBuild' });
 const promotionKindRefusal = ({ containerName, recipeName, recipesDirPath = path.join(__dirname, '..', '..', '..', 'recipes') }) => {
 	if (!PROMOTION_GATED_NAME_PATTERN.test(`${containerName}`)) {
 		return '';
@@ -1685,14 +1687,25 @@ const stampPromotionAction = (callback) => {
 	// ⟪lane REFORGE, forgeClean R3⟫ reforgeDeterminism joined the stamp: its evidence is reforgeCompare's -summarize file, REQUIRED
 	// for the same reason as the other two (a stamp that recorded some verdicts would leave the rest reading notRun beside a
 	// claim of promotion)
-	const evidencePathByGate = { goldEvalCheck: firstValue(commandLineParameters, 'goldEvalCheckLogPath'), replay: firstValue(commandLineParameters, 'replayBuildLogPath'), reforgeDeterminism: firstValue(commandLineParameters, 'reforgeEvidencePath') };
+	// ⟪lane FIX, 2026-10-09⟫ the replay row's evidence is EITHER a true -replay run log (--replayLogPath, ~10 min) OR a replay
+	// build log (--replayBuildLogPath, ~25 min): exactly one is named, and the evidence reader is the one for the kind named
+	const replayEvidenceReaderNameList = Object.keys(STAMP_REPLAY_EVIDENCE_READER_BY_PARAMETER_NAME).filter((parameterName) => firstValue(commandLineParameters, parameterName));
+	const evidenceList = [
+		{ evidenceReaderName: 'goldEvalCheck', evidencePath: firstValue(commandLineParameters, 'goldEvalCheckLogPath') },
+		...replayEvidenceReaderNameList.map((parameterName) => ({ evidenceReaderName: STAMP_REPLAY_EVIDENCE_READER_BY_PARAMETER_NAME[parameterName], evidencePath: firstValue(commandLineParameters, parameterName) })),
+		{ evidenceReaderName: 'reforgeDeterminism', evidencePath: firstValue(commandLineParameters, 'reforgeEvidencePath') },
+	];
 	const missingParameterList = []
 		.concat(containerName ? [] : ['--containerName=<the PROMOTED container name>'])
-		.concat(evidencePathByGate.goldEvalCheck ? [] : ['--goldEvalCheckLogPath=<the saved -goldEvalCheck output>'])
-		.concat(evidencePathByGate.replay ? [] : ['--replayBuildLogPath=<the zero-judge replay build log>'])
-		.concat(evidencePathByGate.reforgeDeterminism ? [] : ['--reforgeEvidencePath=<the reforgeCompare -summarize evidence file>']);
+		.concat(evidenceList[0].evidencePath ? [] : ['--goldEvalCheckLogPath=<the saved -goldEvalCheck output>'])
+		.concat(replayEvidenceReaderNameList.length ? [] : ['ONE of --replayLogPath=<the -replay run log of this manifest> or --replayBuildLogPath=<the zero-judge replay build log>'])
+		.concat(evidenceList[evidenceList.length - 1].evidencePath ? [] : ['--reforgeEvidencePath=<the reforgeCompare -summarize evidence file>']);
 	if (missingParameterList.length) {
 		callback(`graphBuilder -stampPromotion: ${missingParameterList.join(', ')} REQUIRED, with no default — the stamp records evidence, and evidence must be named`);
+		return;
+	}
+	if (replayEvidenceReaderNameList.length > 1) {
+		callback(`graphBuilder -stampPromotion: REFUSED — ${replayEvidenceReaderNameList.map((parameterName) => `--${parameterName}`).join(' and ')} are both named; the replay row records ONE piece of evidence, so name one`);
 		return;
 	}
 	const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
@@ -1739,7 +1752,7 @@ const stampPromotionAction = (callback) => {
 		next('', args);
 	});
 	taskList.push((args, next) => {
-		const readList = Object.keys(evidencePathByGate).map((oneGate) => promotionEvidenceLib.gateVerdictFor({ gate: oneGate, evidencePath: evidencePathByGate[oneGate], manifestRefId: args.manifestRefId }));
+		const readList = evidenceList.map((oneEvidence) => promotionEvidenceLib.gateVerdictFor({ ...oneEvidence, manifestRefId: args.manifestRefId }));
 		const refusedRead = readList.find((oneRead) => oneRead.error);
 		if (refusedRead) {
 			next(`graphBuilder -stampPromotion: ${refusedRead.error}`);

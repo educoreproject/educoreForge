@@ -551,6 +551,32 @@ const defaultWaitForReadiness = ({ boltPort, boltUrl, password, deadline, readyT
 	}, isCancelled);
 };
 
+// generateScratchPassword — ⟪lane FIX, 2026-10-09: THE EXIT-64 CAUSE⟫ the credential a scratch container is launched with.
+// It was crypto.randomBytes(18).toString('base64url'), and the base64url alphabet holds '-'. The image's entrypoint hands the
+// NEO4J_AUTH password to `neo4j-admin dbms set-initial-password <password>` as a bare argument, so a password whose FIRST
+// character is '-' is read as an OPTION: neo4j-admin prints "Missing required parameter: '<password>'" and its usage text,
+// exits 64 (EX_USAGE), and the entrypoint (bash -eu) exits with it, about a second after start. 1 draw in 64 began with '-'
+// (measured 3,144 of 200,000), so a build's ~20 provisions met it about one build in four, with or without load beside it;
+// load was coincidence (evidence/FIX in forgeClean-100826). Hex has no '-' and no character an argument parser reads as
+// syntax; 18 bytes keep the 144 bits. Injectable (deps.generateScratchPassword) for the gates' red twins only.
+const SCRATCH_PASSWORD_BYTE_COUNT = 18;
+const generateScratchPassword = () => crypto.randomBytes(SCRATCH_PASSWORD_BYTE_COUNT).toString('hex');
+
+// readContainerLogTail — ⟪lane FIX⟫ a launched container that failed is DISPOSED, and its `docker logs` die with it, so the
+// evidence of why it failed is read FIRST, here, and carried in the refusal (the exit-64 cause sat unread for four deaths
+// because the dispose ran before anyone looked). Never fails the caller: an unreadable log says so in the text it returns.
+const CONTAINER_LOG_TAIL_LINE_COUNT = 30;
+const readContainerLogTail = ({ runDockerCommand, graphName }, callback) => {
+	runDockerCommand(['logs', '--tail', String(CONTAINER_LOG_TAIL_LINE_COUNT), graphName], (logsErr, stdout, stderr) => {
+		const logLineList = `${stdout || ''}${stderr || ''}`.split('\n').map((oneLine) => oneLine.trimEnd()).filter(Boolean);
+		if (logsErr && logLineList.length === 0) {
+			callback(`docker logs could not be read before dispose: ${logsErr.message}`);
+			return;
+		}
+		callback(`docker logs, last ${logLineList.length} line(s), read before dispose:\n${logLineList.map((oneLine) => `      | ${oneLine}`).join('\n')}`);
+	});
+};
+
 // watchContainerLiveness — ⟪forgeClean CLEAN; ONYX_SUMMIT's measurement 2026-10-08 13:21⟫ a scratch container on a port freed
 // seconds before started and DIED one second later (exit code 64), and readiness polled the dead port for the whole timeout.
 // While readiness polls, this asks docker every CONTAINER_LIVENESS_POLL_MS whether OUR container still runs; the first answer
@@ -577,6 +603,26 @@ const watchContainerLiveness = ({ runDockerCommand, graphName }, onDead) => {
 	};
 	setTimeout(checkOnce, CONTAINER_LIVENESS_POLL_MS);
 	return { stop: () => { watchStopped = true; } };
+};
+
+// compareRestoreConservation — ⟪lane FIX, 2026-10-09; work order "the replay run must ... pass its conservation"⟫ THE RESTORE
+// SIDE of conservation. A build's conservation compares what a forge loaded with what its harvest read back; a RESTORE (every
+// -replay, and every build's final materialize) had no comparison at all, and the engine's dangling edges were returned and
+// never read. So: right after the restore, before anything else is written, the graph holds EXACTLY the blocks' distinct
+// nodes (merged on stableId) and distinct edges (merged on their full identity map, which is the conservation identity), and
+// no edge was left dangling. Counts suffice because the container is fresh (nothing else is in it) and every node and edge
+// enters by MERGE on the identity the sets are built from. Pure: '' when conserved, else the refusal naming every number.
+const compareRestoreConservation = ({ graphName, loadedConservationSummary, graphNodeCount, graphEdgeCount, danglingRefCount }) => {
+	if (!loadedConservationSummary || !loadedConservationSummary.nodeIdentitySet || !loadedConservationSummary.edgeIdentitySet || !Number.isInteger(graphNodeCount) || !Number.isInteger(graphEdgeCount) || !Number.isInteger(danglingRefCount)) {
+		return { error: `replayManager.init '${graphName}': REFUSED — the restore conservation has no loaded summary or no graph counts to compare; an unmade comparison must not read as a conserved restore` };
+	}
+	const blockNodeCount = loadedConservationSummary.nodeIdentitySet.size;
+	const blockEdgeCount = loadedConservationSummary.edgeIdentitySet.size;
+	const countText = `the blocks hold ${blockNodeCount} distinct node(s) (${loadedConservationSummary.nodeTotal} emitted) and ${blockEdgeCount} distinct edge(s) (${loadedConservationSummary.edgeTotal} emitted); the graph holds ${graphNodeCount} node(s) and ${graphEdgeCount} edge(s); ${danglingRefCount} edge(s) dangling`;
+	if (graphNodeCount !== blockNodeCount || graphEdgeCount !== blockEdgeCount || danglingRefCount !== 0) {
+		return { error: `replayManager.init '${graphName}': REFUSED — RESTORE CONSERVATION FAILED: ${countText}. The graph is not the manifest's blocks.` };
+	}
+	return { error: '', statusText: `restore conservation PASS: '${graphName}': ${countText}` };
 };
 
 // -----
@@ -845,6 +891,7 @@ const moduleFunction =
 	const acquirePortLock = deps.acquirePortAllocationLock || acquirePortAllocationLock;
 	const releasePortLock = deps.releasePortAllocationLock || releasePortAllocationLock;
 	const startWatchdogForCreate = deps.startExitWatchdog || startExitWatchdog;
+	const generatePasswordForCreate = deps.generateScratchPassword || generateScratchPassword;
 
 	// -----
 	// create — provision a throwaway DEV_* Neo4j container; hand back the graph handle. The
@@ -870,7 +917,7 @@ const moduleFunction =
 		}
 
 		const settings = resolveSettings();
-		const password = crypto.randomBytes(18).toString('base64url');
+		const password = generatePasswordForCreate();
 		let containerLaunched = false;
 		let portLockHeld = false;
 		const taskList = new taskListPlus();
@@ -968,15 +1015,17 @@ const moduleFunction =
 					callback(`replayManager.create '${graphName}': ${err}`);
 					return;
 				}
-				// a container WAS started and then something failed — dispose it before reporting, so a
-				// failed provision does not leak the DEV_* container it just launched.
-				disposeScratchGraph({ graphName, verb: 'create', runDockerCommand }, (disposeErr) => {
-					callback(
-						disposeErr
-							? `replayManager.create '${graphName}': ${err} — AND the container it launched could ` +
-									`NOT be disposed (it is leaking): ${disposeErr}`
-							: `replayManager.create '${graphName}': ${err} (the container it launched was disposed)`,
-					);
+				// a container WAS started and then something failed — its logs are read FIRST (the dispose destroys them), then it
+				// is disposed before reporting, so a failed provision does not leak the DEV_* container it just launched.
+				readContainerLogTail({ runDockerCommand, graphName }, (logTailText) => {
+					disposeScratchGraph({ graphName, verb: 'create', runDockerCommand }, (disposeErr) => {
+						callback(
+							disposeErr
+								? `replayManager.create '${graphName}': ${err} — AND the container it launched could ` +
+										`NOT be disposed (it is leaking): ${disposeErr}\n    ${logTailText}`
+								: `replayManager.create '${graphName}': ${err} (the container it launched was disposed)\n    ${logTailText}`,
+						);
+					});
 				});
 				return;
 			}
@@ -1066,7 +1115,34 @@ const moduleFunction =
 					callback(`replayManager.init '${graphName}': ${err}`);
 					return;
 				}
-				callback('', result);
+				// ⟪lane FIX⟫ the restore conservation (compareRestoreConservation), read from the graph BEFORE anything else is
+				// written into it: a fresh container holds nothing but what this restore merged
+				const driver = require('neo4j-driver').driver(inGraph.boltUrl, require('neo4j-driver').auth.basic(NEO4J_USER, inGraph.password));
+				const session = driver.session({ defaultAccessMode: 'READ' });
+				const closeAll = (afterClose) => session.close().then(() => driver.close()).then(afterClose, afterClose);
+				session
+					.run('MATCH (n) WITH count(n) AS graphNodeCount OPTIONAL MATCH ()-[r]->() RETURN graphNodeCount, count(r) AS graphEdgeCount')
+					.then(
+						(countResult) => {
+							const countRecord = countResult.records[0];
+							const verdict = compareRestoreConservation({
+								graphName,
+								loadedConservationSummary: result.loadedConservationSummary,
+								graphNodeCount: countRecord.get('graphNodeCount').toNumber(),
+								graphEdgeCount: countRecord.get('graphEdgeCount').toNumber(),
+								danglingRefCount: (result.danglingRefs || []).length,
+							});
+							closeAll(() => {
+								if (verdict.error) {
+									callback(verdict.error);
+									return;
+								}
+								xLog.status(`[replayManager] ${verdict.statusText}`);
+								callback('', result);
+							});
+						},
+						(countError) => closeAll(() => callback(`replayManager.init '${graphName}': the restore conservation could not count the graph: ${countError.message}`)),
+					);
 			},
 		);
 	}
@@ -1575,6 +1651,9 @@ module.exports.acquirePortAllocationLock = acquirePortAllocationLock;
 module.exports.releasePortAllocationLock = releasePortAllocationLock;
 module.exports.verifyOwnContainerPublished = verifyOwnContainerPublished;
 module.exports.watchContainerLiveness = watchContainerLiveness;
+// ⟪lane FIX⟫ the exit-64 fix and the death evidence, exported so their gate drives the real generator and log read
+module.exports.generateScratchPassword = generateScratchPassword;
+module.exports.readContainerLogTail = readContainerLogTail;
 module.exports.SCRATCH_REGISTRY_FILE_PATH = SCRATCH_REGISTRY_FILE_PATH;
 module.exports.findAvailablePortPair = findAvailablePortPair;
 module.exports.PORT_ALLOCATION_LOCK_DIR_PATH = PORT_ALLOCATION_LOCK_DIR_PATH;
@@ -1586,3 +1665,4 @@ module.exports.CONSERVATION_NOT_LOADED_THROUGH_INIT = CONSERVATION_NOT_LOADED_TH
 // Exported so a discovered suite can assert the gate's refusal LITERALS without a container.
 // The exact text is the contract: a caller reading a refusal must be told what to pass instead.
 module.exports.compareConservation = compareConservation;
+module.exports.compareRestoreConservation = compareRestoreConservation;
