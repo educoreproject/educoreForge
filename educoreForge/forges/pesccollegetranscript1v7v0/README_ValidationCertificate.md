@@ -10,7 +10,7 @@ an independent XML reader. Nothing was missed and nothing was invented. The rege
 |---|---|
 | standard | PESC College Transcript 1.7.0 (bundle `pesccollegetranscript1v7v0`, `_source` `PESC-CollegeTranscript-1.7.0`, DME title `PESC College Transcript v1.7.0`) |
 | source | `assets/standardSourceData/01/`: `AcademicRecord_v1.11.0.xsd`, `CollegeTranscript_v1.7.0.xsd`, `CoreMain_v1.17.0.xsd`, `iso_3166-1_v1.0.0.xsd` (CoreMain `f4b05efd…`), and the expander's `releaseManifestEntry.json`, every file checked against `SHA256SUMS` at every build. Provenance: `README_PROVENANCE.md` |
-| graph | `DEV_forgeCleanCT17_certify1` (a scratch graph; bolt 7813; STOPPED after these checks, `docker start` it to look), 2026-10-09 |
+| graph | `DEV_forgeCleanCT17_certify1` (a scratch graph; bolt 7813; REMOVED after these checks, with its volume, because the promoted gold GOLD_EVAL_261009_ct17 now holds bolt 7813; rebuild it with `evidence/CT17/runCt17Build.sh <label> certify`), 2026-10-09 |
 | build | recipe `recipes/pesccollegetranscript1v7v0Only.recipe.jsonc` (the release alone, `roundTripStage: true`), manifest `4682645b…c37e5fe8`, standardBase block **`5c0ac76f58c928ff64229ca73292ab326222fe05d694529e30f4bfcc89097c34`** |
 | reproduced | the same block and manifest from **two** builds of the recipe (`certify1` at head `c4ee5efd`, `certify2` at head `c4ee5efd`, the second's graph `DEV_forgeCleanCT17_certify2`, removed after the comparison); the certifying build is the first |
 | certification | `graphBuilder -goldEvalCheck` on `certify1`'s run directory: **PASS** (1 declared validator, inventedTotal 0; no bridge, no judged edge) |
