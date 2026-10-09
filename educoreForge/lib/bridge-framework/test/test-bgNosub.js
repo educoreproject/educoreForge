@@ -820,7 +820,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // ═══ RE-ANCHOR AT THE MERGE, 2026-10-08 (PRISM_CASCADE; forgeClean R4 merge of lanes CLEAN d2aa1ab8 and REFORGE 89b25f55; pre-authorised by
 // WORKORDER-R4) ═══ seamDiffEmpty (and its (i-live) companion): both lanes' anchors above -> postForgeCleanMergeSeamDiffEmpty-100826, tag cut ON the merge commit. CENSUS: the union of the two lanes'
 // censuses above, and nothing else (the merge resolved only these anchor conflicts). Path list byte-identical; nothing excluded.
-const PHASE3_ANCHOR_TAG = 'postForgeCleanMergeSeamDiffEmpty-100826'; // re-anchored at the forgeClean merge by PRISM_CASCADE; the tag is cut ON the merge commit
+// ═══ RE-ANCHOR, 2026-10-09 (ONYX_DANCE; forgeClean lane CT17; pre-authorised by WORKORDER-CT17) ═══ seamDiffEmpty (and its (i-live)
+// companion): postForgeCleanMergeSeamDiffEmpty-100826 -> postForgeCleanCT17SeamDiffEmpty-100926, tag cut ON 428c5247. CENSUS over this gate's
+// paths, measured with its own command: ONE file, forges/pesccollegetranscript1v7v0/forgePescCollegeTranscript1v7v0.js 28/0 — the scaffold
+// tool's entry module for the new College Transcript 1.7.0 bundle (a forge entry file, so in scope by name). Path list byte-identical; nothing excluded.
+const PHASE3_ANCHOR_TAG = 'postForgeCleanCT17SeamDiffEmpty-100926'; // re-anchored by ONYX_DANCE (lane CT17); the tag is cut ON 428c5247
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
