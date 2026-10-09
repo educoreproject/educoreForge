@@ -221,6 +221,7 @@ const STANDARD_DEFINITION_FIELD_LIST = Object.freeze([
 	{ name: 'standardUsageTips', type: 'string', required: false, meaning: 'how to read the standard in this graph, as its forge declares; absent when the forge declares null (forgeDeclarationContract allows it: sif, pesc260805)' },
 	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
 	{ name: 'releaseLabel', type: 'string', required: true, meaning: 'which member of its family the standard is, version-free (CollegeTranscript, not CollegeTranscript-1.8.0); a one-member family repeats the family name' },
+	{ name: 'descriptionSource', type: 'string', required: true, meaning: 'where in the standard\'s SOURCE its description text is read from (PESC xs:documentation, CEDS dc:description, ...), declared by its forge (lane FIX, Fix 3)' },
 ].map((oneRow) => Object.freeze(oneRow)));
 const USAGE_PATTERN_FIELD_LIST = Object.freeze([
 	{ name: 'patternName', type: 'string', required: true, meaning: 'the exemplar\'s name' },

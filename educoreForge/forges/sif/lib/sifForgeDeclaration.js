@@ -43,6 +43,7 @@ const sifForgeDeclaration = Object.freeze({
 	// ⟪campaign P3, W-C-4⟫ the family and which member of it, version-free (CONTRACTS §7)
 	standardFamily: STANDARD_FAMILY.SIF,
 	releaseLabel: 'sif',
+	descriptionSource: "the 'Description' column of the SIF Implementation Specification's element tables",
 	standardUsageTips: null,
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// the REAL predicate, verbatim from normalize.js:63 SIF_STABLE_ID_RE, as data (FR6).

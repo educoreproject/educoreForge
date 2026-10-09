@@ -19,6 +19,7 @@ const toyForgeDeclaration = Object.freeze({
 	// ⟪campaign P3, W-C-4⟫ the family and which member of it, version-free (CONTRACTS §7)
 	standardFamily: STANDARD_FAMILY.TOY,
 	releaseLabel: 'Toy',
+	descriptionSource: 'the toy source\'s description field',
 	standardUsageTips: 'Toy usage tips.',
 	stableUriPropertyName: 'toyStableId',
 	stableIdPattern: Object.freeze({ pattern: '^toy:[A-Za-z]+(/.+)?$', trimmed: true }),

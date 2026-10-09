@@ -61,6 +61,7 @@ const pescForgeDeclaration = Object.freeze({
 	// ⟪campaign P3, W-C-4⟫ the family and which member of it, version-free (CONTRACTS §7)
 	standardFamily: STANDARD_FAMILY.PESC,
 	releaseLabel: 'pesc260805',
+	descriptionSource: 'xs:documentation: the xs:annotation/xs:documentation text of each schema component',
 	standardUsageTips: null,
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// THE SHARED PERMISSIVE PATTERN, and the choice is MEASURED rather than defensive. PESC's

@@ -47,7 +47,7 @@ const PROBE_PATH = path.join(__dirname, 'testSupport', 'pureProxyFingerprintProb
 // proxyFingerprintByStandard; DEVLOG-G0 deliverable 2), measured at 97feee9. Never edited to match a
 // measurement.
 const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
-	ceds: 'd167724b10cf391f5ab0225fed717e131023242bb2205ea2d8e16c0caeab15b6',
+	ceds: '61273989294f0b95b94561558e23a270d85fbe54744195f91368ecb4f8650f5a',
 	// edfi RE-PINNED 2026-10-02 (PRISM_LATTICE, goldJev lane F): G0's 814ce961570c… -> 04abc77b…. NOT edited to match a
 	// measurement: a RULED base move. TQ excluded the CEDS-authored crosswalk from every graph (2026-09-10, 2026-10-01), so the
 	// Ed-Fi forge no longer stamps its CEDS ids (3,045 nodes) and its root no longer names it; expectedFingerprints.json
@@ -64,9 +64,14 @@ const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
 	// move. G14 b1 CEDS mappingInstruction includeInImplied false / impliedTargets [] (root mappingInstruction string); G14 c1 Ed-Fi root sourceUrl filled, E6 retired ceds 264e995d… -> b24ad4d6…, edfi 1aa1a1a9… -> eeeefa88…, sif 6d808b95… -> 6d808b95…, pesc260805 4cc1c778… -> 4cc1c778….
 	// ALL FOUR RE-PINNED 2026-10-06 (CARDINAL_HORIZON, campaign P3 W-C-17): NOT edited to match a measurement: a RULED base
 	// move. CEDS count facets (maxLength, minLength, decimalPlaces) typed INTEGER at the parser; pesc260805 integer-declared facets (minLength, maxLength, totalDigits) likewise. ceds b24ad4d6… -> d167724b…, edfi eeeefa88… -> eeeefa88…, sif 6d808b95… -> 6d808b95…, pesc260805 4cc1c778… -> cc1ab741….
-	edfi: 'eeeefa88f56b14bc2d07e86150ab83a704a44e8602260ddc2054838b9ad23ea7',
-	sif: '6d808b95326d4e251cc96d5803a33fc22beb8d4722bad532bf096a90cc42c04d',
-	pesc260805: 'cc1ab74134541c77b503f1483cfbe7def8344ace6571b4626af4d961caf6956e',
+	// ALL FOUR RE-PINNED 2026-10-09 (PRISM_SHARD, forgeClean lane FIX, Fix 3): NOT edited to match a measurement: a RULED base
+	// move. TQ: each forge declares descriptionSource (the provenance of its description text) and the framework stamps it on
+	// every root. At 9617c66d (this branch without descriptionSource) this suite measured all four EQUAL to the previous literals
+	// (8/8); expectedFingerprints.json carries the same move. ceds d167724b… -> 61273989…, edfi eeeefa88… -> aee80fdc…, sif
+	// 6d808b95… -> dbb78746…, pesc260805 cc1ab741… -> afe8a0ec….
+	edfi: 'aee80fdcc2d23548fc7492564fdb76309b11e563ca2383c94de6e9e3f4cd7a26',
+	sif: 'dbb7874641bd8b0de0e642a6a2ab1d62440b2f6dc0b69d39e58074c06d78dc5c',
+	pesc260805: 'afe8a0ec9ab3bb2e18967735ba5286c577e76eead7301b4d3778a46d9f0ed8ed',
 });
 const STANDARD_TOKEN_LIST = Object.keys(G0_PROXY_FINGERPRINT_BY_STANDARD);
 

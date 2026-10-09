@@ -884,6 +884,8 @@ const REQUIRED_PROPERTIES = {
 		// ⟪campaign P3, W-C-4⟫ the family and which member of it (forge-declared; CONTRACTS §7)
 		'standardFamily',
 		'releaseLabel',
+		// ⟪lane FIX, Fix 3⟫ the provenance of the description text (forge-declared)
+		'descriptionSource',
 	],
 	// every NON-mapping edge carries a provenance tier (replay-engine GUARD 3); a mapping edge (a SKOS_EDGE_TYPES type)
 	// carries mappingKind instead and must NOT carry provenanceTier (lane P, 2026-10-04)

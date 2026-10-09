@@ -13,6 +13,8 @@
 //   (e) a card whose ROOT carries standardKind and standardUsageTips (declared by the standard's forge; lane R, 2026-10-05)
 //       carries exactly those; a card whose root carries neither carries NEITHER (never invented text)
 //   (f) the derivation cypher reads standardKind and standardUsageTips FROM THE ROOT (not from a side file)
+//   (h) ⟪lane FIX, Fix 3⟫ a root with no forge-declared descriptionSource is REFUSED by name; (h') a root's descriptionSource
+//       is carried to its card
 //   (the declaration's own refusals — missing kind, kind outside STANDARD_KIND_LIST, empty tips — are gated in
 //   lib/forge-framework/test/test-gStandardMetadata.js)
 // RED TWINS, each observed: the relation-type rule restored (a red); the sort removed (b red); the refusal removed (c red);
@@ -43,7 +45,7 @@ const finisherFor = (mutationList) => (mutationList.length === 0 ? realFinisherF
 
 // a root row as the derivation query returns it; the counts are what the conjunct varies
 // ⟪campaign P3, W-C-4⟫ a root row carries the forge-declared family and release label (the finisher refuses a root without them)
-const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, unkindedMappingEdgeCount = 0, standardKind = null, standardUsageTips = null, standardFamily = 'Toy', releaseLabel = 'Toy' }) => ({
+const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, unkindedMappingEdgeCount = 0, standardKind = null, standardUsageTips = null, standardFamily = 'Toy', releaseLabel = 'Toy', descriptionSource = 'the toy source description field' }) => ({
 	sourceKey: 'Toy',
 	standardKey: 'toy',
 	standardName: 'Toy',
@@ -62,6 +64,7 @@ const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, un
 	standardUsageTips,
 	standardFamily,
 	releaseLabel,
+	descriptionSource,
 });
 const readQueryOver = (rowList) => (queryArguments, callback) => callback('', { records: rowList.map((oneRow) => ({ get: (fieldName) => oneRow[fieldName] })) });
 
@@ -96,6 +99,17 @@ const conjunctJudgeByRefId = {
 			done({ pass: !emitError && properties.standardFamily === 'PESC' && properties.releaseLabel === 'CollegeTranscript', detail: emitError || `card standardFamily ${JSON.stringify(properties.standardFamily)}, releaseLabel ${JSON.stringify(properties.releaseLabel)}` });
 		});
 	},
+	h_unsourcedRootRefusedByName: (finisher, done) => {
+		finisher.emit({ readQuery: readQueryOver([rootRow({ exactMappedProperties: 1, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'], descriptionSource: null })]) }, (emitError) => {
+			done({ pass: typeof emitError === 'string' && /REFUSED: Toy carry no forge-declared descriptionSource on their root/.test(emitError), detail: emitError ? emitError.slice(0, 200) : 'emitted without refusing' });
+		});
+	},
+	hPrime_descriptionSourceCarriedToTheCard: (finisher, done) => {
+		finisher.emit({ readQuery: readQueryOver([rootRow({ exactMappedProperties: 1, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'], descriptionSource: 'xs:documentation' })]) }, (emitError, emitted) => {
+			const properties = emitted && emitted.nodes && emitted.nodes[0] ? emitted.nodes[0].properties : {};
+			done({ pass: !emitError && properties.descriptionSource === 'xs:documentation', detail: emitError || `card descriptionSource ${JSON.stringify(properties.descriptionSource)}` });
+		});
+	},
 	e_tipsFromRootNeverInvented: (finisher, done) => {
 		const otherRow = { ...rootRow({ exactMappedProperties: 0, mappingKindList: [], mappingSourceList: [] }), sourceKey: 'Unlisted' };
 		finisher.emit({ readQuery: readQueryOver([rootRow({ exactMappedProperties: 1, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'], standardKind: 'dataStandard', standardUsageTips: 'Toy tips.' }), otherRow]) }, (emitError, emitted) => {
@@ -117,6 +131,18 @@ const conjunctJudgeByRefId = {
 };
 
 const TWIN_LIST = [
+	{
+		conjunctRefId: 'h_unsourcedRootRefusedByName',
+		twinName: 'descriptionSourceRefusalRemoved',
+		find: "				const unsourcedRowList = rows.filter((oneRow) => typeof oneRow.descriptionSource !== 'string' || !oneRow.descriptionSource.trim());",
+		replace: '				const unsourcedRowList = [];',
+	},
+	{
+		conjunctRefId: 'hPrime_descriptionSourceCarriedToTheCard',
+		twinName: 'descriptionSourceNotCarried',
+		find: '					descriptionSource: oneRow.descriptionSource,\n',
+		replace: '',
+	},
 	{
 		conjunctRefId: 'g_familylessRootRefusedByName',
 		twinName: 'familyRefusalRemoved',

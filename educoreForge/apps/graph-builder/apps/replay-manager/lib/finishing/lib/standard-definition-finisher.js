@@ -98,6 +98,7 @@ const moduleFunction =
 			       root.stableId AS rootStableId,
 			       root.standardKind AS standardKind, root.standardUsageTips AS standardUsageTips,
 			       root.standardFamily AS standardFamily, root.releaseLabel AS releaseLabel,
+			       root.descriptionSource AS descriptionSource,
 			       propertyCount, classCount, optionValueCount,
 			       exactMappedProperties, closeMappedProperties,
 			       mappingKindList, mappingSourceList, unkindedMappingEdgeCount,
@@ -167,6 +168,8 @@ const moduleFunction =
 					// the rows are refused by name before shaping (below)
 					standardFamily: oneRow.standardFamily,
 					releaseLabel: oneRow.releaseLabel,
+					// ⟪lane FIX, Fix 3⟫ REQUIRED like the family: the root's forge-declared description provenance
+					descriptionSource: oneRow.descriptionSource,
 					...(oneRow.standardUsageTips ? { standardUsageTips: oneRow.standardUsageTips } : {}),
 					// SORTED — collect() order is not stable and this node is in fingerprint scope.
 					mappingEdgeTypes: sorted(oneRow.mappingEdgeTypes).filter((oneType) => oneType !== 'null'),
@@ -207,6 +210,7 @@ const moduleFunction =
 					standardUsageTips: oneRecord.get('standardUsageTips'),
 					standardFamily: oneRecord.get('standardFamily'),
 					releaseLabel: oneRecord.get('releaseLabel'),
+					descriptionSource: oneRecord.get('descriptionSource'),
 					propertyCount: oneRecord.get('propertyCount'),
 					classCount: oneRecord.get('classCount'),
 					optionValueCount: oneRecord.get('optionValueCount'),
@@ -237,6 +241,17 @@ const moduleFunction =
 					callback(
 						`standard-definition-finisher REFUSED: ${familylessRowList.map((oneRow) => `${oneRow.sourceKey} (standardFamily ${JSON.stringify(oneRow.standardFamily)}, releaseLabel ${JSON.stringify(oneRow.releaseLabel)})`).join(', ')} ` +
 							`carry no forge-declared family and release label on their root: the block was forged before the contract (W-C-4). Re-forge it.`,
+					);
+					return;
+				}
+
+				// ⟪lane FIX, Fix 3⟫ every root declares where its description text comes from (forge declaration); a root without
+				// one was forged before Fix 3 — refused by name, never a card whose text has no stated provenance
+				const unsourcedRowList = rows.filter((oneRow) => typeof oneRow.descriptionSource !== 'string' || !oneRow.descriptionSource.trim());
+				if (unsourcedRowList.length > 0) {
+					callback(
+						`standard-definition-finisher REFUSED: ${unsourcedRowList.map((oneRow) => oneRow.sourceKey).join(', ')} carry no forge-declared ` +
+							`descriptionSource on their root: the block was forged before the declaration (lane FIX, Fix 3). Re-forge it.`,
 					);
 					return;
 				}

@@ -133,7 +133,7 @@ const build = ({ forgeDeclaration, metadata, describedRoot, activeAllowanceById 
 	}
 
 	const rootStableId = resolveRootStableId({ forgeDeclaration, metadata });
-	const { standardKey, standardSource, standardDisplayName, stableUriPropertyName, rootLabel, parserVersion, mappingInstruction, standardKind, standardUsageTips, standardFamily, releaseLabel } = forgeDeclaration;
+	const { standardKey, standardSource, standardDisplayName, stableUriPropertyName, rootLabel, parserVersion, mappingInstruction, standardKind, standardUsageTips, standardFamily, releaseLabel, descriptionSource } = forgeDeclaration;
 
 	const candidateProperties = {
 		_id: rootStableId,
@@ -163,6 +163,8 @@ const build = ({ forgeDeclaration, metadata, describedRoot, activeAllowanceById 
 		// ⟪campaign P3, W-C-4⟫ declared by the forge; always present, never null (REQUIRED_PROPERTIES.STANDARD_ROOT enforces it)
 		standardFamily,
 		releaseLabel,
+		// ⟪lane FIX, Fix 3⟫ declared by the forge: where the standard's description text comes from in its source
+		descriptionSource,
 		...extraProperties,
 	};
 	rootOmitPropertyList.forEach((oneName) => {

@@ -58,6 +58,7 @@ const cedsForgeDeclaration = Object.freeze({
 	// ⟪campaign P3, W-C-4⟫ the family and which member of it, version-free (CONTRACTS §7)
 	standardFamily: STANDARD_FAMILY.CEDS,
 	releaseLabel: 'CEDS',
+	descriptionSource: 'dc:description: the Dublin Core description literal of each term in the CEDS ontology RDF (every value carried)',
 	standardUsageTips: "CEDS is the hub. A CEDS HubReference is a tuple: domain class + property + range [+ value], keyed by canonicalKey (the CEDS Global ID). It decomposes via HAS_CEDS_DOMAIN / HAS_CEDS_PROPERTY / HAS_CEDS_RANGE / HAS_CEDS_VALUE / HAS_CEDS_QUALIFIER; its range may be an option set, another CEDS class (a reference), or a datatype. Present a CEDS anchor as its full tuple — domain · property · range [· value], the cedsTuple field from dme_find_mappings — never as a bare Global ID: the Global ID is the tuple's durable key, not its meaning.",
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// the REAL predicate, verbatim from normalize.js:74 CEDS_URI_RE, as data (FR6).

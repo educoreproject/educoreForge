@@ -38,6 +38,7 @@ const edfiForgeDeclaration = Object.freeze({
 	// ⟪campaign P3, W-C-4⟫ the family and which member of it, version-free (CONTRACTS §7)
 	standardFamily: STANDARD_FAMILY.EDFI,
 	releaseLabel: 'EdFi',
+	descriptionSource: "MetaEd 'documentation': the documentation text written on each Ed-Fi model construct and property",
 	standardUsageTips: "Ed-Fi keeps its mappings directly on its properties (no instance nodes). The same property name often appears in several Ed-Fi entities or common types (e.g. BirthDate in the BirthData inline common and in ApplicantProfile), each with its own mapping and confidence: name the owning entity when presenting, and do not merge their confidences.",
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// the REAL predicate (forgeEdfiContractGraph.js:216-221 EDFI_STABLE_ID_RE + trim), as data (FR6)

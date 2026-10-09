@@ -69,6 +69,8 @@ const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName 
 		standardDisplayName: releaseDeclarationData.standardDisplayName,
 		standardKind: PESC_RELEASE_STANDARD_KIND,
 		standardUsageTips: PESC_RELEASE_STANDARD_USAGE_TIPS,
+		// ⟪lane FIX, Fix 3⟫ a node's description is its own xs:annotation/xs:documentation text (walk.js mintNode)
+		descriptionSource: "xs:documentation: the schema component's own xs:annotation/xs:documentation text (the first non-blank one)",
 		// ⟪campaign P3, W-C-4⟫ every release is a member of the PESC family; its label is the release's own `standard` token
 		// (CollegeTranscript, …), which every releaseDeclaration.json already carries, so the seven bundles are untouched
 		standardFamily: STANDARD_FAMILY.PESC,

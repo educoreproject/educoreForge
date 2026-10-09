@@ -26,6 +26,7 @@ const sif260928ForgeDeclaration = Object.freeze({
 	// ⟪campaign P3, W-C-4⟫ the family and which member of it, version-free (CONTRACTS §7)
 	standardFamily: STANDARD_FAMILY.SIF,
 	releaseLabel: 'sif260928',
+	descriptionSource: "the 'Description' column of the SIF 4.3 specification's element tables (one cell per field row)",
 	standardUsageTips: "SIF keeps its mappings on INSTANCE nodes. A SIF Question (DmeProperty, the node search finds) carries no match edge; it has one Field (DmeInstance) per object it appears in, reached by HAS_INSTANCE, and the Fields carry the mappings. They arrive as dme_find_mappings rows with direction 'outgoingViaInstance' (or rows carrying instanceGroupList / instanceCount / viaInstanceGroupList), and in dme_graph_retriever as instanceView.mappingsViaInstances. Group them by the owning object, (object)-[:HAS_FIELD]->(field), e.g. StudentPersonal, StaffPersonal: present each hub concept ONCE with the objects that hold it and the instance count, never one repeated line per instance. If different objects carry different hub concepts for the same Question, say so plainly — the meaning differs by context; it is not an error. Structure: HAS_FIELD reads 'object has field', HAS_CHILD 'element contains element' (Object -> Container -> Container|Field).",
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// sif260928:<kind> or sif260928:<kind>/<rest>. trimmed is true because '(/.+)' admits
