@@ -86,7 +86,10 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // ⟪forgeClean lane CLEAN, G19, 2026-10-08 (PRISM_CASCADE)⟫ +1 more, unrelated to V1: EDGE_TYPES.HAS_DEFINITION (schema file to a
 // top-level definition no other edge owns), projected as one edgeType member; +1 more, the PESC list-valued name
 // precedingCommentList (graph-contract §1, G20), projected as one list-valued-name member.
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1;
+// ⟪forgeClean lane FIX, Fix 3, 2026-10-09 (PRISM_SHARD)⟫ +1 more, unrelated to V1: StandardDefinition.descriptionSource (TQ: the
+// provenance of each standard's description text), projected as one selfDocField member (measured: the member diff against
+// main 2fbbca10 is exactly that one row).
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1;
 // ⟪campaign P3, W-C-2⟫ rows RETIRED from V1's own five: the real registry is AFTER_V1 + added − retired, and the pre-V1
 // reading (the remaining V1 rows removed) is BEFORE_V1 + added, unchanged.
 const SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1 = RETIRED_V1_EDGE_TYPE_NAME_LIST.length;
