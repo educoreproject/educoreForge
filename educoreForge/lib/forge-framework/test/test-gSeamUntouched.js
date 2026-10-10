@@ -198,7 +198,11 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // ═══ RE-ANCHOR, 2026-10-09 (PRISM_SHARD; forgeClean lane FIX; pre-authorised by the work order) ═══ G-SEAM-UNTOUCHED
 // postForgeCleanMergeGSeamUntouched-100826 -> postFixReplayStampExit64GSeamUntouched-100926, tag cut ON this commit. CENSUS over the 7
 // seam files: 2 files, replayManager.js and replay-engine.js — lane FIX's own commits 12abd25a..d037e35e on fix/replayStampExit64 from main 2fbbca10: replayManager.js (hex scratch credential, logs read before dispose, restore conservation), replay-engine.js (loaded summary from replay), interfaces.js (restore conservation declared), graph-contract.js (DME_TEXT_FIELD_RULE, StandardDefinition.descriptionSource), vocabulary.js (STANDARD_ROOT descriptionSource), forgeDeclarationContract.js + rootNode.js (descriptionSource), standard-definition-finisher.js, the forge declarations, and their tests and re-pinned literals.
-const PRE_MIGRATION_REF = 'postFixReplayStampExit64GSeamUntouched-100926'; // re-anchored by PRISM_SHARD (lane FIX); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-10 (COPPER_NEXUS; forgeClean lane BM25; pre-authorised by the work order) ═══ G-SEAM-UNTOUCHED
+// postFixReplayStampExit64GSeamUntouched-100926 -> postBm25FulltextGSeamUntouched-101026, tag cut ON this commit. CENSUS over the 7
+// seam files: 2 files — replay-engine.js (phase 3: the fulltext index beside the vector indexes) and replayManager.js (X5 allow-list:
+// seven named apoc.text functions), lane BM25's own commits e54693bb, fca4246e on bm25/fulltextHybrid from main 658b8477.
+const PRE_MIGRATION_REF = 'postBm25FulltextGSeamUntouched-101026'; // re-anchored by COPPER_NEXUS (lane BM25); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

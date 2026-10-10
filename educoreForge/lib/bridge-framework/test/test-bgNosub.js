@@ -174,7 +174,10 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // ═══ RE-ANCHOR, 2026-10-09 (PRISM_SHARD; forgeClean lane FIX; pre-authorised) ═══ (ii) postForgeCleanMergeVocabularyIi-100826 ->
 // postFixReplayStampExit64VocabularyIi-100926, tag cut ON this commit. CENSUS (lib/vocabulary/): graph-contract.js, vocabulary.js,
 // test-sifEdgeVocabulary.js, test-sifVocabularyInvariance.js — lane FIX's own commits 12abd25a..d037e35e on fix/replayStampExit64 from main 2fbbca10: replayManager.js (hex scratch credential, logs read before dispose, restore conservation), replay-engine.js (loaded summary from replay), interfaces.js (restore conservation declared), graph-contract.js (DME_TEXT_FIELD_RULE, StandardDefinition.descriptionSource), vocabulary.js (STANDARD_ROOT descriptionSource), forgeDeclarationContract.js + rootNode.js (descriptionSource), standard-definition-finisher.js, the forge declarations, and their tests and re-pinned literals.
-const POST_D1_BASE_TAG = 'postFixReplayStampExit64VocabularyIi-100926'; // re-anchored by PRISM_SHARD (lane FIX); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-10 (COPPER_NEXUS; forgeClean lane BM25; pre-authorised) ═══ (ii) postFixReplayStampExit64VocabularyIi-100926 ->
+// postBm25FulltextVocabularyIi-101026, tag cut ON this commit. CENSUS (lib/vocabulary/): graph-contract.js (§10b) and
+// test/test-graphContract.js (SECTION 5b) — lane BM25's own commits e54693bb, fca4246e on bm25/fulltextHybrid from main 658b8477.
+const POST_D1_BASE_TAG = 'postBm25FulltextVocabularyIi-101026'; // re-anchored by COPPER_NEXUS (lane BM25); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -832,7 +835,12 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // tool's entry module for the new College Transcript 1.7.0 bundle (a forge entry file, so in scope by name). Path list byte-identical; nothing excluded.
 // ═══ RE-ANCHOR, 2026-10-09 (PRISM_SHARD; forgeClean lane FIX; pre-authorised) ═══ seamDiffEmpty (and its (i-live) companion):
 // postForgeCleanCT17SeamDiffEmpty-100926 -> postFixReplayStampExit64SeamDiffEmpty-100926, tag cut ON this commit. CENSUS: lane FIX's own commits 12abd25a..d037e35e on fix/replayStampExit64 from main 2fbbca10: replayManager.js (hex scratch credential, logs read before dispose, restore conservation), replay-engine.js (loaded summary from replay), interfaces.js (restore conservation declared), graph-contract.js (DME_TEXT_FIELD_RULE, StandardDefinition.descriptionSource), vocabulary.js (STANDARD_ROOT descriptionSource), forgeDeclarationContract.js + rootNode.js (descriptionSource), standard-definition-finisher.js, the forge declarations, and their tests and re-pinned literals.
-const PHASE3_ANCHOR_TAG = 'postFixReplayStampExit64SeamDiffEmpty-100926'; // re-anchored by PRISM_SHARD (lane FIX); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-10 (COPPER_NEXUS; forgeClean lane BM25; pre-authorised) ═══ seamDiffEmpty (and its (i-live) companion):
+// postFixReplayStampExit64SeamDiffEmpty-100926 -> postBm25FulltextSeamDiffEmpty-101026, tag cut ON this commit. CENSUS: lane BM25's own
+// commits e54693bb, fca4246e: replay/replay-engine.js (phase 3 builds the fulltext index), replay/test/test-gFulltextIndex.js (new gate),
+// replay-manager/lib/finishing/promotion-stamp.js + test (fulltext rename), replay-manager/replayManager.js + test-replay-manager.js
+// (X5 allow-list: seven named apoc.text functions). No forge-framework source; no bridge-framework source.
+const PHASE3_ANCHOR_TAG = 'postBm25FulltextSeamDiffEmpty-101026'; // re-anchored by COPPER_NEXUS (lane BM25); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
