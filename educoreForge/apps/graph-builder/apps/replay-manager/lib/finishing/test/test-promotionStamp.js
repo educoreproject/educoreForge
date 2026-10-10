@@ -16,9 +16,15 @@
 //   (h) ⟪lane REFORGE, forgeClean R3⟫ the stampable gates are graph-contract §4's promotionStamp list, read from the contract:
 //       a reforgeDeterminism verdict is stamped beside goldEvalCheck and replay, and a gate the contract does not name is
 //       REFUSED by name before anything is written
+//   (i) ⟪lane BM25⟫ the scratch-named FULLTEXT index is dropped and re-created as <promoted>_fulltext with the declared
+//       properties and analyzer (graph-contract §10b), and the summary names it
+//   (j) a graph with vectors and NO fulltext index is REFUSED by name, before any index is dropped; a graph with no vector
+//       index and no fulltext index is stamped (it has no search leg of either kind) and the summary says so
+//   (k) a FULLTEXT index that is not the declared one (another property list) is REFUSED by name, before any index is dropped
 // RED TWINS, each observed in memory: (a) the scratch name not kept; (b) the census comparison removed; (c) the evidence
 // check removed; (d) the passport singleton check removed; (e) the drop+create step never planned; (f) the label check
-// removed (the slot then matches by property name alone).
+// removed (the slot then matches by property name alone); (i) the fulltext rename never planned; (j) the one-index count
+// check removed; (k) the declared-shape comparison removed.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
@@ -54,7 +60,9 @@ const SCRATCH_INDEX_ROW_LIST = [
 	{ name: 'DEV_gb_materialize_1_1_embedText_vector', labelsOrTypes: ['DmeEmbedText'], properties: ['textEmbedding'], options: { indexConfig: { 'vector.dimensions': 1024, 'vector.similarity_function': 'COSINE' } } },
 	{ name: 'DEV_gb_materialize_1_1_vector', labelsOrTypes: ['ForgedNode'], properties: ['embedding'], options: { indexConfig: { 'vector.dimensions': 1024, 'vector.similarity_function': 'COSINE' } } },
 ];
-const runCypherDouble = ({ censusList, passportCount = 1, indexRowList = SCRATCH_INDEX_ROW_LIST }) => {
+const declaredFulltextAnalyzer = vocabulary.fulltextIndexDeclaration().analyzer;
+const SCRATCH_FULLTEXT_ROW_LIST = [{ name: 'DEV_gb_materialize_1_1_fulltext', labelsOrTypes: ['ForgedNode'], properties: vocabulary.fulltextIndexDeclaration().propertyNameList.slice(), options: { indexConfig: { 'fulltext.analyzer': declaredFulltextAnalyzer, 'fulltext.eventually_consistent': false } } }];
+const runCypherDouble = ({ censusList, passportCount = 1, indexRowList = SCRATCH_INDEX_ROW_LIST, fulltextIndexRowList = SCRATCH_FULLTEXT_ROW_LIST }) => {
 	const statementList = [];
 	const remainingCensusList = censusList.slice();
 	const runCypher = ({ cypher }, callback) => {
@@ -78,11 +86,15 @@ const runCypherDouble = ({ censusList, passportCount = 1, indexRowList = SCRATCH
 			callback('', { records: [recordOf({ rowCount: 1 })] });
 			return;
 		}
-		if (/^SHOW INDEXES/.test(cypher)) {
+		if (/^SHOW INDEXES.*type = 'VECTOR'/.test(cypher)) {
 			callback('', { records: indexRowList.map(recordOf) });
 			return;
 		}
-		if (/^(DROP INDEX|CREATE VECTOR INDEX|CALL db\.awaitIndexes)/.test(cypher)) {
+		if (/^SHOW INDEXES.*type = 'FULLTEXT'/.test(cypher)) {
+			callback('', { records: fulltextIndexRowList.map(recordOf) });
+			return;
+		}
+		if (/^(DROP INDEX|CREATE VECTOR INDEX|CREATE FULLTEXT INDEX|CALL db\.awaitIndexes)/.test(cypher)) {
 			callback('', { records: [] });
 			return;
 		}
@@ -95,8 +107,8 @@ const runCypherDouble = ({ censusList, passportCount = 1, indexRowList = SCRATCH
 	return { runCypher, statementList };
 };
 
-const runStamp = ({ mutationList, censusList, passportCount, gateVerdictList, indexRowList }, callback) => {
-	const cypherDouble = runCypherDouble({ censusList, passportCount, indexRowList });
+const runStamp = ({ mutationList, censusList, passportCount, gateVerdictList, indexRowList, fulltextIndexRowList }, callback) => {
+	const cypherDouble = runCypherDouble({ censusList, passportCount, indexRowList, fulltextIndexRowList });
 	stampFor(mutationList).stampPromotion({ runCypher: cypherDouble.runCypher, promotedGraphName: 'GOLD_EVAL_TEST_promoted', gateVerdictList }, (err, stamped) => callback({ err, stamped, statementList: cypherDouble.statementList }));
 };
 const SAME_CENSUS = { contentNodeCount: 100, contentEdgeCount: 200 };
@@ -118,7 +130,7 @@ const conjunctJudgeByRefId = {
 	},
 	e_vectorIndexesRenamedToThePromotedName: (mutationList, done) =>
 		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: goodVerdictList() }, ({ err, stamped, statementList }) => {
-			const dropList = statementList.filter((oneStatement) => /^DROP INDEX/.test(oneStatement));
+			const dropList = statementList.filter((oneStatement) => /^DROP INDEX `[^`]*_vector`$/.test(oneStatement));
 			const createList = statementList.filter((oneStatement) => /^CREATE VECTOR INDEX/.test(oneStatement));
 			const promotedNameList = ['GOLD_EVAL_TEST_promoted_embedText_vector', 'GOLD_EVAL_TEST_promoted_vector'];
 			const pass = !err && dropList.length === 2 && createList.length === 2 &&
@@ -145,6 +157,26 @@ const conjunctJudgeByRefId = {
 				done({ pass, detail: `${err || stamped.stampedGateList.join(',')} | unknown gate: ${String(unknownError || 'STAMPED').slice(0, 160)}` });
 			}));
 	},
+	i_fulltextIndexRenamedToThePromotedName: (mutationList, done) =>
+		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: goodVerdictList() }, ({ err, stamped, statementList }) => {
+			const fulltextCreateList = statementList.filter((oneStatement) => /^CREATE FULLTEXT INDEX/.test(oneStatement));
+			const pass = !err && statementList.includes('DROP INDEX `DEV_gb_materialize_1_1_fulltext`') && fulltextCreateList.length === 1 &&
+				/^CREATE FULLTEXT INDEX `GOLD_EVAL_TEST_promoted_fulltext` IF NOT EXISTS FOR \(n:`ForgedNode`\) ON EACH \[n\.`name`, n\.`description`\] OPTIONS/.test(fulltextCreateList[0]) &&
+				fulltextCreateList[0].indexOf(`\`fulltext.analyzer\`: '${declaredFulltextAnalyzer}'`) !== -1 &&
+				stamped.fulltextIndexName === 'GOLD_EVAL_TEST_promoted_fulltext' && /fulltext index GOLD_EVAL_TEST_promoted_fulltext \(1 renamed\)/.test(stamped.summary);
+			done({ pass, detail: err || `${fulltextCreateList.join(' || ').slice(0, 220)} | ${stamped.summary}` });
+		}),
+	j_absentFulltextIndexRefused: (mutationList, done) =>
+		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: goodVerdictList(), fulltextIndexRowList: [] }, ({ err, statementList }) =>
+			runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: goodVerdictList(), indexRowList: [], fulltextIndexRowList: [] }, ({ err: vectorlessError, stamped: vectorlessStamped }) =>
+				done({
+					pass: /REFUSED: the graph carries 0 FULLTEXT index\(es\) \[\], not exactly one .* its keyword search leg would be absent/.test(String(err)) && !statementList.some((oneStatement) => /^DROP INDEX/.test(oneStatement))
+						&& !vectorlessError && /fulltext index none \(the graph carries no vectors, so no search leg of either kind\)/.test(vectorlessStamped.summary),
+					detail: `${String(err || 'a graph without its fulltext index passed the stamp').slice(0, 200)} | vectorless: ${vectorlessError || vectorlessStamped.summary}`,
+				}))),
+	k_undeclaredFulltextIndexRefused: (mutationList, done) =>
+		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], gateVerdictList: goodVerdictList(), fulltextIndexRowList: [{ ...SCRATCH_FULLTEXT_ROW_LIST[0], properties: ['name', 'description', 'searchText'] }] }, ({ err, statementList }) =>
+			done({ pass: /REFUSED: FULLTEXT index 'DEV_gb_materialize_1_1_fulltext' is :ForgedNode\(name, description, searchText\) analyzer .*, not the declared :ForgedNode\(name, description\)/.test(String(err)) && !statementList.some((oneStatement) => /^DROP INDEX/.test(oneStatement)), detail: String(err || 'an undeclared FULLTEXT index passed the stamp').slice(0, 220) })),
 	d_passportSingletonRequired: (mutationList, done) =>
 		runStamp({ mutationList, censusList: [SAME_CENSUS, SAME_CENSUS], passportCount: 2, gateVerdictList: goodVerdictList() }, ({ err }) =>
 			done({ pass: /REFUSED: the graph does not hold exactly one GraphProvenance passport/.test(String(err)), detail: String(err || 'stamped a graph holding two passports').slice(0, 160) })),
@@ -158,6 +190,9 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'g_stampRowHasTheDeclaredIdentityAndLabels', twinName: 'labelLessMergeOnStableId', find: '						MERGE (a:\\`${attestationLabel}\\` {gate: ${cypherString(oneVerdict.gate)}})', replace: '						MERGE (a {stableId: ${cypherString(stableId)}})' },
 	{ conjunctRefId: 'e_vectorIndexesRenamedToThePromotedName', twinName: 'dropCreateNeverPlanned', find: '\t\t\t\tplan.dropCreateList.push({', replace: '\t\t\t\tvoid ({' },
 	{ conjunctRefId: 'h_contractNamesTheStampableGates', twinName: 'gateListRestatedLocally', find: 'const STAMPABLE_GATE_LIST = ATTESTATION_GATE_LIST_BY_CHANNEL[STAMP_CHANNEL_NAME];', replace: "const STAMPABLE_GATE_LIST = Object.freeze(['goldEvalCheck', 'replay']);" },
+	{ conjunctRefId: 'i_fulltextIndexRenamedToThePromotedName', twinName: 'fulltextRenameNeverPlanned', find: '\t\t\treturn oneRow.name === declaredName\n', replace: '\t\t\treturn true\n' },
+	{ conjunctRefId: 'j_absentFulltextIndexRefused', twinName: 'fulltextCountCheckRemoved', find: '\t\t\tif (indexRowList.length !== 1) {', replace: "\t\t\tif (indexRowList.length === 0) { return { declaredName: fulltextIndexNameFor({ graphName: promotedGraphName }), dropCreateList: [], refusal: '' }; }\n\t\t\tif (indexRowList.length > 1) {" },
+	{ conjunctRefId: 'k_undeclaredFulltextIndexRefused', twinName: 'fulltextShapeCheckRemoved', find: '\t\t\tif (rowText !== declaredText) {', replace: '\t\t\tif (false) {' },
 	{ conjunctRefId: 'f_undeclaredVectorIndexRefused', twinName: 'labelCheckRemoved', find: "if (!slot || (oneRow.labelsOrTypes || [])[0] !== slot.label) {", replace: 'if (!slot) {' },
 ];
 

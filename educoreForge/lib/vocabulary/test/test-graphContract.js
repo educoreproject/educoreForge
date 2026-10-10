@@ -162,5 +162,44 @@ harness.section('SECTION 5 — §10 vector index naming (campaign P2, W-A-9)');
 	harness.ok("observed RED with the text slot removed from the table (twin 'textSlotUndeclared')", !twinVerdict.pass, twinVerdict.detail);
 	harness.note(`RED-OBSERVED vectorIndexNaming twin='textSlotUndeclared' → ${twinVerdict.pass ? 'STILL PASSING' : 'FAIL'}: ${twinVerdict.detail}`);
 }
+// =====================================================================
+harness.section('SECTION 5b — §10b the fulltext index (lane BM25, 2026-10-10)');
+// =====================================================================
+{
+	const { loadBuildJsDouble } = require('../../bridge-framework/test/testSupport/bridgeTwinFactories');
+	const CONTRACT_PATH = path.join(__dirname, '..', 'graph-contract.js');
+	const fulltextVerdictOf = (contractModule) => {
+		let thrownText = '';
+		try {
+			contractModule.fulltextIndexNameFor({ graphName: ' ' });
+		} catch (namingError) {
+			thrownText = namingError.message;
+		}
+		const declaration = contractModule.fulltextIndexDeclaration();
+		const documentDeclaration = contractModule.graphContractDocument().fulltextIndexDeclaration;
+		const createCypher = contractModule.fulltextIndexCreateCypherFor({ indexName: 'G_fulltext' });
+		const checkList = [
+			['named off the graph', contractModule.fulltextIndexNameFor({ graphName: 'G' }) === 'G_fulltext'],
+			['an absent graphName refused', /graphName is REQUIRED/.test(thrownText)],
+			['declared on :ForgedNode over name and description (searchText measured out, DEVLOG-BM25)', declaration.label === vocabulary.NODE_LABELS.FORGED_NODE && JSON.stringify(declaration.propertyNameList) === JSON.stringify(['name', 'description'])],
+			['the analyzer is declared, not left to the default', typeof declaration.analyzer === 'string' && declaration.analyzer !== ''],
+			['it covers the ordinary vector slot', Boolean(contractModule.vectorIndexSlotTable()[declaration.searchedVectorSlotPropertyName])],
+			['the JSON document carries it (the DME reads it from graphContract.json)', JSON.stringify(documentDeclaration) === JSON.stringify(declaration)],
+			['the CREATE statement says exactly the declaration', createCypher === `CREATE FULLTEXT INDEX \`G_fulltext\` IF NOT EXISTS FOR (n:\`ForgedNode\`) ON EACH [n.\`name\`, n.\`description\`] OPTIONS {indexConfig: {\`fulltext.analyzer\`: '${declaration.analyzer}'}}`],
+		];
+		const failedList = checkList.filter((oneCheck) => !oneCheck[1]).map((oneCheck) => oneCheck[0]);
+		return { pass: failedList.length === 0, detail: failedList.length ? `failed: ${failedList.join('; ')}` : createCypher };
+	};
+	const realVerdict = fulltextVerdictOf(graphContract);
+	harness.ok('fulltextIndexNameFor / fulltextIndexDeclaration / fulltextIndexCreateCypherFor say one declaration, carried in the document', realVerdict.pass, realVerdict.detail);
+	[
+		{ twinName: 'fulltextLeftOutOfTheDocument', find: '\t\tfulltextIndexDeclaration: fulltextIndexDeclaration(),\n', replace: '' },
+		{ twinName: 'fulltextNameUnguarded', find: "typeof graphName !== 'string' || !graphName.trim() ? 'fulltextIndexNameFor", replace: "false ? 'fulltextIndexNameFor" },
+	].forEach((oneTwin) => {
+		const twinVerdict = fulltextVerdictOf(loadBuildJsDouble({ buildJsPath: CONTRACT_PATH, mutationList: [{ find: oneTwin.find, replace: oneTwin.replace }] }));
+		harness.ok(`observed RED under '${oneTwin.twinName}'`, !twinVerdict.pass, twinVerdict.detail);
+		harness.note(`RED-OBSERVED fulltextIndex twin='${oneTwin.twinName}' → ${twinVerdict.pass ? 'STILL PASSING' : 'FAIL'}: ${twinVerdict.detail}`);
+	});
+}
 
 harness.report();

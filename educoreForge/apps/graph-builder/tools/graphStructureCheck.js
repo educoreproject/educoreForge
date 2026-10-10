@@ -2,13 +2,14 @@
 'use strict';
 
 // graphStructureCheck.js — PLAN G5 and G6 against a NAMED, already-built graph (campaign P4a). READ-ONLY: one READ session,
-// every query under a server-side transaction timeout. Runs lib/graph-structure-check.js's four checks:
+// every query under a server-side transaction timeout. Runs lib/graph-structure-check.js's five checks:
 //   instanceStructure (verdict)  every SIF Field and PESC occurrence has one declaration and one owner
 //   codeListStructure (verdict)  every option value has one owning set; counts per standard; frozen source censuses equal
 //   rootOwnership     (verdict)  every content node of every standard reached from its root (forgeClean R2; a
 //                                measurement until 2026-10-08), the orphans named
 //   dmeTextField      (verdict)  every standard's text is in description, the field the DME reads (lane FIX, Fix 3)
-// All four also run inside the forgeCensus attestation at every -build (forge-census-gate.js); this tool
+//   fulltextIndex     (verdict)  the one declared FULLTEXT index exists and covers every vector-searched node (lane BM25)
+// All five also run inside the forgeCensus attestation at every -build (forge-census-gate.js); this tool
 // is how a graph built BEFORE that (the gold GOLD_EVAL_261006_jevContract, P3) is checked without a rebuild.
 //
 // Run: node apps/graph-builder/tools/graphStructureCheck.js --containerName=<container> [--outputFilePath=<json>]
@@ -16,18 +17,18 @@
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = `
 NAME
-     ${moduleName} -- the instance-structure, code-list, root-ownership and DME-text checks (PLAN G5, G6, G19; Fix 3), read-only
+     ${moduleName} -- the instance-structure, code-list, root-ownership, DME-text and fulltext-index checks (PLAN G5, G6, G19; Fix 3; BM25), read-only
 
 SYNOPSIS
      ${moduleName} --containerName=<a running graph container> [--outputFilePath=<json>] [-help]
 
 DESCRIPTION
      Reads the bolt port and credential from the container (docker inspect, as -stampPromotion does), opens ONE READ
-     session, and runs the four checks of apps/graph-builder/lib/graph-structure-check.js. The source code-list censuses
+     session, and runs the five checks of apps/graph-builder/lib/graph-structure-check.js. The source code-list censuses
      are read from the forge tree for every standard whose family graphStructureRules.json names.
 
 EXIT STATUS
-     0 all four checks pass;  1 a check failed (rootOwnership since forgeClean R2, dmeTextField since lane FIX), or refused.
+     0 all five checks pass;  1 a check failed (rootOwnership since forgeClean R2, dmeTextField since lane FIX, fulltextIndex since lane BM25), or refused.
 
 FILES
      apps/graph-builder/lib/graphStructureRules.json   the owner edge per instance label suffix; the source census rules
@@ -48,7 +49,7 @@ const structureCheck = require(path.join(__dirname, '..', 'lib', 'graph-structur
 // the CEDS round-trip compiler's resolver, as -stampPromotion uses it (its module export is a factory)
 const { resolveContainerBolt } = require(path.join(TREE_ROOT, 'forges', 'ceds', 'lib', 'roundTripCompiler'))();
 
-const CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure', 'rootOwnership', 'dmeTextField']);
+const CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure', 'rootOwnership', 'dmeTextField', 'fulltextIndex']);
 const TRANSACTION_TIMEOUT_MS = 120000;
 const STANDARD_DEFINITION_CYPHER = 'MATCH (d:StandardDefinition) RETURN d.sourceKey AS sourceKey, d.standardKey AS standardKey, d.standardFamily AS standardFamily ORDER BY sourceKey';
 

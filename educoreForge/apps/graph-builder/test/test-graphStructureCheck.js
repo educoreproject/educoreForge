@@ -21,9 +21,15 @@
 //       GOLD_EVAL_261009_ct17 (PESC CollegeTranscript 1.8.0: 0 of 1,476 declarations described, 1,452 documentation texts
 //       without description) FAIL naming PESC and not CEDS; a standard with some description but one text left only in
 //       documentation fails; a standard with declarations and no description at all fails; the fixed rows pass
+//   (l) ⟪lane BM25⟫ fulltextIndex is a VERDICT (graph-contract §10b): the rows MEASURED on GOLD_EVAL_261009_ct17text (no
+//       FULLTEXT index; 141,838 vector-searched nodes) FAIL as absent; the declared index passes; an index over another
+//       property list, a second index and an index not named <graph>_fulltext each FAIL by name; the 101 PESC DmeClass nodes
+//       with no name and no description PASS with their gap NAMED (per standard and role, and in measured); a graph with no
+//       vectors and no fulltext index PASSES saying it has no search leg of either kind (replay builds both or neither)
 // RED TWINS (in memory, module double): ownerRuleIgnored -> (b); ownMatchEdgeIgnored -> (c); suffixGuessed -> (d);
 // valueOwnershipIgnored -> (e); censusMismatchIgnored -> (f); uncomparedHidden -> (g); absentCensusSkipped -> (i);
-// orphanIgnored, orphanNotNamed -> (h); reachedListIgnored -> (j); undescribedStandardIgnored, sourceTextOnlyIgnored -> (k).
+// orphanIgnored, orphanNotNamed -> (h); reachedListIgnored -> (j); undescribedStandardIgnored, sourceTextOnlyIgnored -> (k);
+// fulltextAbsenceIgnored, fulltextShapeIgnored, fulltextSuffixIgnored, fulltextGapUnnamed, vectorlessGraphFailed -> (l).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -40,6 +46,7 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const vocabulary = require('../../../lib/vocabulary/vocabulary');
 const { loadBuildJsDouble } = require('../../../lib/bridge-framework/test/testSupport/bridgeTwinFactories');
 
 const CHECK_PATH = path.join(__dirname, '..', 'lib', 'graph-structure-check.js');
@@ -121,6 +128,29 @@ const conjunctJudgeByRefId = {
 			detail: `${goldRow.verdict}: ${goldRow.detail} || ${oneLeftRow.verdict} || ${silentRow.verdict} || ${fixedRow.verdict}: ${fixedRow.detail}`,
 		});
 	},
+	l_fulltextIndexIsAVerdict: (mutationList, done) => {
+		const check = checkFor(mutationList);
+		const DECLARED_INDEX_ROW = { name: 'DEV_toy_fulltext', entityType: 'NODE', labelsOrTypes: ['ForgedNode'], properties: vocabulary.fulltextIndexDeclaration().propertyNameList.slice(), analyzer: vocabulary.fulltextIndexDeclaration().analyzer };
+		const COVERED_ROW_LIST = [{ standardName: 'CEDS', role: 'HubReference', searchedNodeCount: 94602, uncoveredNodeCount: 0 }, { standardName: 'PESC-AcademicEportfolio-1.0.0', role: 'DmeClass', searchedNodeCount: 210, uncoveredNodeCount: 0 }];
+		const goldRow = check.fulltextIndexRowFor({ fulltextIndexRowList: [], fulltextCoverageRowList: COVERED_ROW_LIST });
+		const declaredRow = check.fulltextIndexRowFor({ fulltextIndexRowList: [DECLARED_INDEX_ROW], fulltextCoverageRowList: COVERED_ROW_LIST });
+		const shapeRow = check.fulltextIndexRowFor({ fulltextIndexRowList: [{ ...DECLARED_INDEX_ROW, properties: ['name', 'description', 'searchText'] }], fulltextCoverageRowList: COVERED_ROW_LIST });
+		const secondRow = check.fulltextIndexRowFor({ fulltextIndexRowList: [DECLARED_INDEX_ROW, { ...DECLARED_INDEX_ROW, name: 'other_fulltext' }], fulltextCoverageRowList: COVERED_ROW_LIST });
+		const suffixRow = check.fulltextIndexRowFor({ fulltextIndexRowList: [{ ...DECLARED_INDEX_ROW, name: 'DEV_toy_text' }], fulltextCoverageRowList: COVERED_ROW_LIST });
+		const vectorlessRow = check.fulltextIndexRowFor({ fulltextIndexRowList: [], fulltextCoverageRowList: [] });
+		const gapRow = check.fulltextIndexRowFor({ fulltextIndexRowList: [DECLARED_INDEX_ROW], fulltextCoverageRowList: [COVERED_ROW_LIST[0], { ...COVERED_ROW_LIST[1], uncoveredNodeCount: 101 }] });
+		done({
+			pass: goldRow.verdict === 'fail' && /the keyword \(BM25\) leg is absent: 0 FULLTEXT index\(es\)/.test(goldRow.detail)
+				&& declaredRow.verdict === 'pass' && /every one of the 94812 node\(s\) the embedding vector index searches carries a fulltext property/.test(declaredRow.detail)
+				&& shapeRow.verdict === 'fail' && /is NODE :ForgedNode\(name, description, searchText\) analyzer/.test(shapeRow.detail)
+				&& secondRow.verdict === 'fail' && /2 FULLTEXT index\(es\)/.test(secondRow.detail)
+				&& suffixRow.verdict === 'fail' && /'DEV_toy_text' is not named <graph>_fulltext/.test(suffixRow.detail)
+				&& gapRow.verdict === 'pass' && /GAP \(reported, not failed\): 101 of 94812 vector-searched node\(s\) carry none of name\/description, so only the vector leg can find them — PESC-AcademicEportfolio-1\.0\.0 DmeClass 101\/210/.test(gapRow.detail)
+				&& gapRow.measured.uncoveredNodeCountByStandardAndRole['PESC-AcademicEportfolio-1.0.0 DmeClass'] === 101
+				&& vectorlessRow.verdict === 'pass' && /this graph carries no vectors, so it has no search leg of either kind/.test(vectorlessRow.detail),
+			detail: [goldRow, declaredRow, shapeRow, secondRow, suffixRow, gapRow, vectorlessRow].map((oneRow) => `${oneRow.verdict}: ${oneRow.detail}`).join(' || ').slice(0, 900),
+		});
+	},
 	i_absentCensusRefusedByName: (mutationList, done) => {
 		const scratchTreeRootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'graphStructureCheck-'));
 		fs.mkdirSync(path.join(scratchTreeRootPath, 'forges', 'pesctoy', 'lib'), { recursive: true });
@@ -144,6 +174,11 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'j_orphansAreTheUnreachedStableIds', twinName: 'reachedListIgnored', find: '	const reachedStableIdSet = new Set(reachedStableIdList);', replace: '	const reachedStableIdSet = new Set([]);' },
 	{ conjunctRefId: 'k_dmeTextFieldIsAVerdict', twinName: 'undescribedStandardIgnored', find: '.filter((oneRow) => (oneRow.declarationNodeCount > 0 && oneRow.describedDeclarationCount === 0) || oneRow.sourceTextWithoutDmeTextCount > 0)', replace: '.filter((oneRow) => oneRow.sourceTextWithoutDmeTextCount > 0)' },
 	{ conjunctRefId: 'k_dmeTextFieldIsAVerdict', twinName: 'sourceTextOnlyIgnored', find: '.filter((oneRow) => (oneRow.declarationNodeCount > 0 && oneRow.describedDeclarationCount === 0) || oneRow.sourceTextWithoutDmeTextCount > 0)', replace: '.filter((oneRow) => oneRow.declarationNodeCount > 0 && oneRow.describedDeclarationCount === 0)' },
+	{ conjunctRefId: 'l_fulltextIndexIsAVerdict', twinName: 'fulltextAbsenceIgnored', find: '	if (fulltextIndexRowList.length !== 1) {', replace: '	if (fulltextIndexRowList.length > 1) {' },
+	{ conjunctRefId: 'l_fulltextIndexIsAVerdict', twinName: 'fulltextShapeIgnored', find: "		if (oneRow.entityType !== 'NODE' || indexTextOf(oneRow) !== declaredText) {", replace: '		if (false) {' },
+	{ conjunctRefId: 'l_fulltextIndexIsAVerdict', twinName: 'fulltextSuffixIgnored', find: '		if (!`${oneRow.name}`.endsWith(declaration.indexNameSuffix)) {', replace: '		if (false) {' },
+	{ conjunctRefId: 'l_fulltextIndexIsAVerdict', twinName: 'vectorlessGraphFailed', find: '	if (searchedNodeTotal === 0 && fulltextIndexRowList.length === 0) {', replace: '	if (false) {' },
+	{ conjunctRefId: 'l_fulltextIndexIsAVerdict', twinName: 'fulltextGapUnnamed', find: '	const uncoveredRowList = fulltextCoverageRowList.filter((oneRow) => oneRow.uncoveredNodeCount > 0);', replace: '	const uncoveredRowList = [];' },
 	{ conjunctRefId: 'i_absentCensusRefusedByName', twinName: 'absentCensusSkipped', find: "			refusalList.push(`${sourceKey}: family ${standardFamily} declares a source census at ${censusFilePath}, which is absent`);", replace: '' },
 ];
 

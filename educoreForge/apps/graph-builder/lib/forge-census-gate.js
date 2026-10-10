@@ -18,7 +18,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // codeListStructure (every option value has one owning set of its standard; counts per standard). Either failing fails the
 // row by name. ⟪forgeClean lane CLEAN, R2, 2026-10-08⟫ rootOwnership joins them, a verdict now: every -build fails BY NAME
 // on a content node its standard's root does not reach (the orphans' stableIds in the detail). ⟪lane FIX, Fix 3⟫ dmeTextField joins
-// them: a standard whose text the DME cannot read (no description) fails the build by name. The source-census half of
+// them: a standard whose text the DME cannot read (no description) fails the build by name. ⟪lane BM25⟫ fulltextIndex joins them:
+// a graph without the declared FULLTEXT index, or with a vector-searched node no keyword can reach, fails the build by name. The source-census half of
 // codeListStructure is compared by tools/graphStructureCheck.js, which reads the
 // graph's StandardDefinitions; here the census map is {} and the detail says no standard was compared to one.
 //
@@ -37,7 +38,7 @@ const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabu
 const graphStructureCheck = require(path.join(__dirname, 'graph-structure-check'));
 
 const GATE_NAME = 'forgeCensus';
-const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure', 'rootOwnership', 'dmeTextField']);
+const STRUCTURE_CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure', 'rootOwnership', 'dmeTextField', 'fulltextIndex']);
 const OUTSIDE_THE_KIT_LABEL_LIST = Object.freeze(['HubReference', 'HubDefinition']);
 const NODE_CENSUS_CYPHER = `
 	MATCH (n:ForgedNode) WHERE n._source = $standardName AND ${OUTSIDE_THE_KIT_LABEL_LIST.map((oneLabel) => `NOT n:\`${oneLabel}\``).join(' AND ')}

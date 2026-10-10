@@ -21,6 +21,8 @@
 //       resolve, else record a danglingRefs entry, NEVER a partial edge;
 //   (3) build the <graphName>_vector index (1024-dim cosine) LAST, and beside it the
 //       <graphName>_embedText_vector index for text nodes (R-ET-8), + db.awaitIndexes.
+//       ⟪lane BM25⟫ and the <graphName>_fulltext index the keyword (BM25) leg reads (graph-contract §10b), on every
+//       graph that gets vectors: a searchable graph gets both legs of the search.
 // Idempotent (MERGE, not CREATE) + deterministic.
 //
 // PROVENANCE ENFORCEMENT (§21), TWO EDGE CLASSES: a non-mapping edge MUST carry a provenanceTier in the
@@ -47,7 +49,7 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const replayBlock = require('./replay-block')();
 const contentAddress = require('../content-address/content-address')();
 // ⟪R-ET-24⟫ the second vector index's label, property and name suffix have ONE home, the vocabulary.
-const { EMBED_TEXT_VECTOR, SKOS_EDGE_TYPES, MAPPING_KIND_LIST, LIST_VALUED_PROPERTY_NAME_LIST, INTEGER_VALUED_PROPERTY_NAME_LIST, vectorIndexNameRefusal, vectorIndexNameFor, subjectOfHeader } = require('../vocabulary/vocabulary');
+const { EMBED_TEXT_VECTOR, SKOS_EDGE_TYPES, MAPPING_KIND_LIST, LIST_VALUED_PROPERTY_NAME_LIST, INTEGER_VALUED_PROPERTY_NAME_LIST, vectorIndexNameRefusal, vectorIndexNameFor, fulltextIndexNameFor, fulltextIndexCreateCypherFor, subjectOfHeader } = require('../vocabulary/vocabulary');
 
 const BATCH_SIZE = 500;
 const NEO4J_USER = 'neo4j';
@@ -1674,6 +1676,16 @@ const writeShapedGraph = (
 		}
 		const vectorIndex = vectorIndexNameFor({ graphName, slotPropertyName: 'embedding' });
 		const embedTextVectorIndex = vectorIndexNameFor({ graphName, slotPropertyName: EMBED_TEXT_VECTOR.propertyName });
+		const fulltextIndex = fulltextIndexNameFor({ graphName });
+		// ⟪lane BM25⟫ the FULLTEXT index needs no kernel probe (every Neo4j this engine meets has it), so it is built on
+		// both arms of the vector capability below; the vector indexes are what an old kernel skips
+		const buildFulltextIndex = (indexesBuiltSoFar) => {
+			session
+				.run(fulltextIndexCreateCypherFor({ indexName: fulltextIndex }))
+				.then(() => session.run('CALL db.awaitIndexes(300)'))
+				.then(() => next('', { ...args, indexesBuilt: indexesBuiltSoFar.concat([fulltextIndex]) }))
+				.catch((err) => next(`phase3 fulltext index failed: ${err.message}`));
+		};
 		const buildVectorIndex = () => {
 			const vectorQuery = `
 				CREATE VECTOR INDEX ${vectorIndex} IF NOT EXISTS
@@ -1701,7 +1713,7 @@ const writeShapedGraph = (
 				.then(() => {
 					indexesBuilt.push(vectorIndex);
 					indexesBuilt.push(embedTextVectorIndex);
-					next('', { ...args, indexesBuilt });
+					buildFulltextIndex(indexesBuilt);
 				})
 				.catch((err) => next(`phase3 vector index failed: ${err.message}`));
 		};
@@ -1720,7 +1732,7 @@ const writeShapedGraph = (
 				}
 				indexesBuilt.push(`${vectorIndex}:skipped(serverVersion ${kernelVersion} < 5.13)`);
 				indexesBuilt.push(`${embedTextVectorIndex}:skipped(serverVersion ${kernelVersion} < 5.13)`);
-				next('', { ...args, indexesBuilt });
+				buildFulltextIndex(indexesBuilt);
 			})
 			.catch((err) => next(`phase3 version probe failed: ${err.message}`));
 	});

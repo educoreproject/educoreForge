@@ -268,6 +268,49 @@ const vectorIndexNameFor = ({ graphName, slotPropertyName } = {}) => {
 	return `${graphName}${vectorIndexSlotTable()[slotPropertyName].indexNameSuffix}`;
 };
 
+// §10b FULLTEXT INDEX (lane BM25, 2026-10-10; TQ: "No BM25/fulltext is a bug"). The search's keyword (BM25) leg reads ONE
+// FULLTEXT index, <graphName><indexNameSuffix>, built by replay beside the vector indexes. It was in the reimplementation
+// spec's union contract (indices <graphname>_{fulltext,vector}, SPECIFICATION-educoreForge-real-061726) and in the incumbent
+// generation (graphEmbedder), and the greenfield replay engine (63f6a143) built only the vector index. Read from vocabulary
+// at CALL time (the TRAP in the header). MEASURED on a true replay of GOLD_EVAL_261009_ct17text's manifest (DEVLOG-BM25,
+// evidence/BM25/benchmark-*), 55 questions, RRF over an AND keyword leg:
+//   propertyNameList — name and description, the element's OWN text. Adding searchText (the incumbent's third field)
+//       made every child of a class match the class's name: 'LEAInfo' fell from rank 1 to 2 behind a child, exact-term
+//       hit@1 33 -> 31 of 35, overall MRR 0.808 -> 0.790. The cost of leaving it out is NAMED, not hidden: of the 141,838
+//       nodes the ordinary vector index searches, 101 carry neither name nor description (PESC anonymous types, DmeClass;
+//       their only text is searchText = '<release> | <owning element name>', and the owning element is keyword-searchable
+//       itself). graph-structure-check fulltextIndex reports that gap per standard and role.
+//   analyzer — 'standard' (English stop words removed), declared, never left to Neo4j's default (standard-no-stop-words):
+//       the DME's AND query needs a stop word's clause dropped ('date of birth' = date AND birth), and english /
+//       standard-no-stop-words measured no better in any fusion.
+//   searchedVectorSlotPropertyName — the vector slot whose population the keyword leg is measured against: the DME holds
+//       its keyword leg to those nodes, so the two legs rank one population.
+const fulltextIndexDeclaration = () => {
+	const { NODE_LABELS } = require('./vocabulary');
+	return Object.freeze({
+		label: NODE_LABELS.FORGED_NODE,
+		propertyNameList: Object.freeze(['name', 'description']),
+		analyzer: 'standard',
+		indexNameSuffix: '_fulltext',
+		searchedVectorSlotPropertyName: 'embedding',
+	});
+};
+// fulltextIndexNameRefusal — '' for a named graph, else why not (the write path and the stamp refuse with it)
+const fulltextIndexNameRefusal = ({ graphName } = {}) =>
+	typeof graphName !== 'string' || !graphName.trim() ? 'fulltextIndexNameFor: graphName is REQUIRED — an index is named off the graph it serves' : '';
+const fulltextIndexNameFor = ({ graphName } = {}) => {
+	const refusal = fulltextIndexNameRefusal({ graphName });
+	if (refusal) {
+		throw new Error(refusal);
+	}
+	return `${graphName}${fulltextIndexDeclaration().indexNameSuffix}`;
+};
+// fulltextIndexCreateCypherFor — the one CREATE statement, used by replay and by the promotion stamp's rename
+const fulltextIndexCreateCypherFor = ({ indexName }) => {
+	const declaration = fulltextIndexDeclaration();
+	return `CREATE FULLTEXT INDEX \`${indexName}\` IF NOT EXISTS FOR (n:\`${declaration.label}\`) ON EACH [${declaration.propertyNameList.map((propertyName) => `n.\`${propertyName}\``).join(', ')}] OPTIONS {indexConfig: {\`fulltext.analyzer\`: '${declaration.analyzer}'}}`;
+};
+
 // BRIDGE PAIR LABELS (W-B-13, V1-C29). A bridge run stamps both endpoints of every edge it writes with a pair-scoped label
 // <prefix>_<SOURCE>_<HUB> so the harvest can select the pair's nodes; it is BUILD SCAFFOLD, re-applied by replay from the
 // relationship blocks, and the finish strips it (bridge-label-finisher) because a hub's label set would otherwise vary by
@@ -344,6 +387,7 @@ const graphContractDocument = () => {
 		usagePatternFieldList: USAGE_PATTERN_FIELD_LIST,
 		selfDocRetiredFieldNameByLabel: SELF_DOC_RETIRED_FIELD_NAME_BY_LABEL,
 		vectorIndexSlotTable: vectorIndexSlotTable(),
+		fulltextIndexDeclaration: fulltextIndexDeclaration(),
 		bridgePairLabelPrefix: BRIDGE_PAIR_LABEL_PREFIX,
 		bridgePairLabelPatternSource: BRIDGE_PAIR_LABEL_PATTERN_SOURCE,
 		producerLocalLabelPatternSourceList: PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST,
@@ -396,6 +440,10 @@ module.exports = Object.freeze({
 	vectorIndexSlotTable,
 	vectorIndexNameRefusal,
 	vectorIndexNameFor,
+	fulltextIndexDeclaration,
+	fulltextIndexNameRefusal,
+	fulltextIndexNameFor,
+	fulltextIndexCreateCypherFor,
 	BRIDGE_PAIR_LABEL_PREFIX,
 	BRIDGE_PAIR_LABEL_PATTERN_SOURCE,
 	pairScopedLabelFor,

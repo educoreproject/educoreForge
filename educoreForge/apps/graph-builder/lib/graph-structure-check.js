@@ -24,15 +24,23 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //       field, description. FAIL when a standard has DmeClass/DmeProperty nodes and none carries description, or when any
 //       content node carries a source text (PESC's documentation) without description. GOLD_EVAL_261009_ct17 fails it: its
 //       eight PESC releases carried 0 descriptions beside 10,472 documentation texts, which is how askMilo saw no PESC text.
+//   fulltextIndex (lane BM25, 2026-10-10; a VERDICT) — graph-contract §10b: the graph carries exactly ONE FULLTEXT index, on
+//       the declared label, over the declared properties in order, with the declared analyzer, named <graph>_fulltext.
+//       FAIL names what differs. The nodes the declared vector slot's index searches (:ForgedNode with embedding) that carry
+//       none of those properties are the keyword leg's GAP: REPORTED per standard and role, not failed (measured on the
+//       ct17 gold: 101 PESC anonymous DmeClass types, no name and no description; graph-contract §10b says why). A node in
+//       the gap is reachable by the vector leg only, and the detail says so. GOLD_EVAL_261009_ct17text fails the check: it
+//       has no FULLTEXT index at all (TQ: "No BM25/fulltext is a bug").
 //
-// The forgeCensus attestation (forge-census-gate.js) folds all four checks into its row at every -build; the
-// standalone tools/graphStructureCheck.js runs all three against a named container, read-only.
+// The forgeCensus attestation (forge-census-gate.js) folds all five checks into its row at every -build; the
+// standalone tools/graphStructureCheck.js runs all five against a named container, read-only.
 //
 //   instanceStructureRowFor({ instanceRowList, declarationRowList }) -> row (pure)
 //   codeListStructureRowFor({ optionValueRowList, optionSetRowList, sourceCodeListCensusByStandard }) -> row (pure)
 //   rootOwnershipRowFor({ rootRoleRowList, unreachedStableIdListByStandard }) -> row (pure; the orphan names are optional)
 //   unreachedStableIdListFor({ reachedStableIdList, contentStableIdList }) -> the sorted orphans (pure)
 //   dmeTextFieldRowFor({ dmeTextRowList }) -> row (pure)
+//   fulltextIndexRowFor({ fulltextIndexRowList, fulltextCoverageRowList }) -> row (pure)
 //   runGraphStructureCheck({ session, checkNameList, sourceCodeListCensusByStandard }, callback(err, checkRowList))
 //   sourceCodeListCensusFor({ treeRootPath, standardDefinitionRowList }) -> { sourceCodeListCensusByStandard, refusal }
 //
@@ -264,6 +272,53 @@ const dmeTextFieldRowFor = ({ dmeTextRowList }) => {
 	};
 };
 
+// FULLTEXT_INDEX_CYPHER — every FULLTEXT index the graph carries (the declaration is compared in JavaScript, so a second
+// or a misdeclared index is named, never filtered away); FULLTEXT_COVERAGE_CYPHER — per standard and role, the nodes the
+// declared vector slot's index searches and how many carry none of the fulltext properties (a blank string is none)
+const FULLTEXT_INDEX_CYPHER = `SHOW INDEXES YIELD name, type, entityType, labelsOrTypes, properties, options WHERE type = 'FULLTEXT' RETURN name, entityType, labelsOrTypes, properties, options.indexConfig.\`fulltext.analyzer\` AS analyzer ORDER BY name`;
+const FULLTEXT_COVERAGE_CYPHER = `
+	MATCH (n:ForgedNode) WHERE n[$fulltextSearchedVectorSlotPropertyName] IS NOT NULL
+	WITH n, any(onePropertyName IN $fulltextPropertyNameList WHERE n[onePropertyName] IS NOT NULL AND n[onePropertyName] <> '') AS covered
+	RETURN n._source AS standardName, n.role AS role, count(n) AS searchedNodeCount, count(CASE WHEN NOT covered THEN 1 END) AS uncoveredNodeCount
+	ORDER BY standardName, role`;
+
+const fulltextIndexRowFor = ({ fulltextIndexRowList, fulltextCoverageRowList }) => {
+	const declaration = vocabulary.fulltextIndexDeclaration();
+	const declaredText = `:${declaration.label}(${declaration.propertyNameList.join(', ')}) analyzer ${declaration.analyzer}`;
+	const indexTextOf = (oneRow) => `:${(oneRow.labelsOrTypes || []).join(':')}(${(oneRow.properties || []).join(', ')}) analyzer ${oneRow.analyzer}`;
+	const failureList = [];
+	const searchedNodeTotal = fulltextCoverageRowList.reduce((soFar, oneRow) => soFar + oneRow.searchedNodeCount, 0);
+	// a graph with no vectors has no search at all (the DME refuses it, graphHasNoVectors); replay builds the fulltext index
+	// beside the vectors, so such a graph carries none, and that is said, not failed
+	if (searchedNodeTotal === 0 && fulltextIndexRowList.length === 0) {
+		return { checkName: 'fulltextIndex', verdict: verdictOf([]), detail: `no FULLTEXT index and no vector-searched node: this graph carries no vectors, so it has no search leg of either kind (replay builds ${declaredText} beside the vectors)`, measured: { fulltextIndexNameList: [], searchedNodeTotal: 0, uncoveredNodeTotal: 0, uncoveredNodeCountByStandardAndRole: {} } };
+	}
+	if (fulltextIndexRowList.length !== 1) {
+		failureList.push(`${fulltextIndexRowList.length} FULLTEXT index(es) [${fulltextIndexRowList.map((oneRow) => `${oneRow.name} ${indexTextOf(oneRow)}`).join('; ')}], not exactly one ${declaredText}`);
+	}
+	fulltextIndexRowList.forEach((oneRow) => {
+		if (oneRow.entityType !== 'NODE' || indexTextOf(oneRow) !== declaredText) {
+			failureList.push(`FULLTEXT index '${oneRow.name}' is ${oneRow.entityType} ${indexTextOf(oneRow)}, not the declared ${declaredText}`);
+		}
+		if (!`${oneRow.name}`.endsWith(declaration.indexNameSuffix)) {
+			failureList.push(`FULLTEXT index '${oneRow.name}' is not named <graph>${declaration.indexNameSuffix}`);
+		}
+	});
+	const uncoveredRowList = fulltextCoverageRowList.filter((oneRow) => oneRow.uncoveredNodeCount > 0);
+	const uncoveredNodeTotal = uncoveredRowList.reduce((soFar, oneRow) => soFar + oneRow.uncoveredNodeCount, 0);
+	const gapText = uncoveredRowList.length === 0
+		? `every one of the ${searchedNodeTotal} node(s) the ${declaration.searchedVectorSlotPropertyName} vector index searches carries a fulltext property`
+		: `GAP (reported, not failed): ${uncoveredNodeTotal} of ${searchedNodeTotal} vector-searched node(s) carry none of ${declaration.propertyNameList.join('/')}, so only the vector leg can find them — ${uncoveredRowList.map((oneRow) => `${oneRow.standardName} ${oneRow.role} ${oneRow.uncoveredNodeCount}/${oneRow.searchedNodeCount}`).join(', ')}`;
+	return {
+		checkName: 'fulltextIndex',
+		verdict: verdictOf(failureList),
+		detail: failureList.length === 0
+			? `FULLTEXT index ${fulltextIndexRowList.map((oneRow) => oneRow.name).join(', ')} is the declared ${declaredText}; ${gapText}`
+			: `FAILED — the keyword (BM25) leg is ${fulltextIndexRowList.length === 0 ? 'absent' : 'not as declared'}: ${cappedText(failureList)}; ${gapText}`,
+		measured: { fulltextIndexNameList: fulltextIndexRowList.map((oneRow) => oneRow.name), searchedNodeTotal, uncoveredNodeTotal, uncoveredNodeCountByStandardAndRole: uncoveredRowList.reduce((soFar, oneRow) => ({ ...soFar, [`${oneRow.standardName} ${oneRow.role}`]: oneRow.uncoveredNodeCount }), {}) },
+	};
+};
+
 // the neo4j-driver promise is met in exactly this one place; rows come back as plain objects with integers as numbers
 const runCypher = (session, cypherText, cypherParameters, callback) => {
 	session.run(cypherText, cypherParameters).then(
@@ -286,6 +341,8 @@ const CYPHER_PARAMETERS = Object.freeze({
 	dmeTextPropertyName: vocabulary.DME_TEXT_FIELD_RULE.textPropertyName,
 	dmeTextDeclarationRoleList: vocabulary.DME_TEXT_FIELD_RULE.declarationRoleList.slice(),
 	dmeSourceTextPropertyNameList: vocabulary.DME_TEXT_FIELD_RULE.sourceTextPropertyNameList.slice(),
+	fulltextPropertyNameList: vocabulary.fulltextIndexDeclaration().propertyNameList.slice(),
+	fulltextSearchedVectorSlotPropertyName: vocabulary.fulltextIndexDeclaration().searchedVectorSlotPropertyName,
 });
 
 // each check: the Cyphers it reads (by the row-list name its row builder takes) and the builder
@@ -321,6 +378,7 @@ const CHECK_BY_NAME = Object.freeze({
 	codeListStructure: { cypherByRowListName: { optionValueRowList: OPTION_VALUE_STRUCTURE_CYPHER, optionSetRowList: OPTION_SET_STRUCTURE_CYPHER }, rowFor: codeListStructureRowFor },
 	rootOwnership: { cypherByRowListName: { rootRoleRowList: ROOT_OWNERSHIP_CYPHER }, secondReadFor: unreachedStableIdListByStandardFor, rowFor: rootOwnershipRowFor },
 	dmeTextField: { cypherByRowListName: { dmeTextRowList: DME_TEXT_FIELD_CYPHER }, rowFor: dmeTextFieldRowFor },
+	fulltextIndex: { cypherByRowListName: { fulltextIndexRowList: FULLTEXT_INDEX_CYPHER, fulltextCoverageRowList: FULLTEXT_COVERAGE_CYPHER }, rowFor: fulltextIndexRowFor },
 });
 
 const runGraphStructureCheck = ({ session, checkNameList, sourceCodeListCensusByStandard } = {}, callback) => {
@@ -414,11 +472,14 @@ module.exports = {
 	ROOT_OWNERSHIP_CYPHER,
 	ROOT_OWNERSHIP_STABLE_ID_CYPHER,
 	DME_TEXT_FIELD_CYPHER,
+	FULLTEXT_INDEX_CYPHER,
+	FULLTEXT_COVERAGE_CYPHER,
 	instanceStructureRowFor,
 	codeListStructureRowFor,
 	rootOwnershipRowFor,
 	unreachedStableIdListFor,
 	dmeTextFieldRowFor,
+	fulltextIndexRowFor,
 	runGraphStructureCheck,
 	sourceCodeListCensusFor,
 };

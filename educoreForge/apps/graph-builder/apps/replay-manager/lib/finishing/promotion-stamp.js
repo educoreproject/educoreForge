@@ -15,6 +15,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // vectorIndexNameFor): Neo4j has no index RENAME, so each index whose name is not the declared one is DROPPED and
 // re-CREATED under it at the dimensions it already had, then the passport's vectorIndexNameList is rewritten. A VECTOR
 // index on an undeclared (label, property) slot is refused by name — never silently kept, never silently dropped.
+// ⟪lane BM25, 2026-10-10⟫ and the ONE FULLTEXT index (graph-contract §10b), renamed the same way to <promoted>_fulltext. A
+// graph WITH vectors and no fulltext index, with more than one, or with one that is not the declared (label, properties,
+// analyzer) is refused by name: a gold whose keyword leg is missing or different is not the searchable graph the contract
+// declares. A graph with no vector index has no search leg of either kind (replay builds both or neither): nothing to rename.
 // It writes no content node or edge, and PROVES it: the content census (nodes carrying _source; edges with no :GraphMeta
 // endpoint) is taken before and after, and any difference is refused by name.
 //
@@ -31,7 +35,7 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabulary, passportWriter } = {}) => {
-		const { NODE_LABELS, SELF_DOC, GRAPH_META, vectorIndexSlotTable, vectorIndexNameFor, ATTESTATION_LABEL_SET_BY_CHANNEL, ATTESTATION_GATE_LIST_BY_CHANNEL } = vocabulary;
+		const { NODE_LABELS, SELF_DOC, GRAPH_META, vectorIndexSlotTable, vectorIndexNameFor, fulltextIndexDeclaration, fulltextIndexNameFor, fulltextIndexCreateCypherFor, ATTESTATION_LABEL_SET_BY_CHANNEL, ATTESTATION_GATE_LIST_BY_CHANNEL } = vocabulary;
 		// the passport's singleton key is the passport writer's, read from it, never restated here
 		if (!passportWriter || typeof passportWriter.PASSPORT_KEY_PROPERTY !== 'string' || typeof passportWriter.PASSPORT_SINGLETON_VALUE !== 'string') {
 			throw new Error(`${moduleName} REFUSED: a constructed passportWriter is required (its PASSPORT_KEY_PROPERTY and PASSPORT_SINGLETON_VALUE find the passport)`);
@@ -111,6 +115,28 @@ const moduleFunction =
 			});
 			plan.declaredNameList.sort();
 			return plan;
+		};
+		// THE FULLTEXT INDEX CENSUS and its rename plan (pure, like the vector plan): rows in → { keptName, dropCreateList, declaredName, refusal }
+		const FULLTEXT_INDEX_CENSUS_CYPHER = `SHOW INDEXES YIELD name, type, labelsOrTypes, properties, options WHERE type = 'FULLTEXT' RETURN name, labelsOrTypes, properties, options ORDER BY name`;
+		const fulltextIndexRenamePlanFor = ({ indexRowList, promotedGraphName, vectorIndexCount }) => {
+			const declaration = fulltextIndexDeclaration();
+			const declaredText = `:${declaration.label}(${declaration.propertyNameList.join(', ')}) analyzer ${declaration.analyzer}`;
+			if (indexRowList.length === 0 && vectorIndexCount === 0) {
+				return { declaredName: 'none (the graph carries no vectors, so no search leg of either kind)', dropCreateList: [], refusal: '' };
+			}
+			if (indexRowList.length !== 1) {
+				return { refusal: `${moduleName} REFUSED: the graph carries ${indexRowList.length} FULLTEXT index(es) [${indexRowList.map((oneRow) => oneRow.name).join(', ')}], not exactly one (graph-contract §10b: ${declaredText}) — its keyword search leg would be ${indexRowList.length === 0 ? 'absent' : 'ambiguous'}` };
+			}
+			const oneRow = indexRowList[0];
+			const rowAnalyzer = ((oneRow.options || {}).indexConfig || {})['fulltext.analyzer'];
+			const rowText = `:${(oneRow.labelsOrTypes || []).join(':')}(${(oneRow.properties || []).join(', ')}) analyzer ${rowAnalyzer}`;
+			if (rowText !== declaredText) {
+				return { refusal: `${moduleName} REFUSED: FULLTEXT index '${oneRow.name}' is ${rowText}, not the declared ${declaredText} (graph-contract §10b) — it is neither kept nor re-created silently` };
+			}
+			const declaredName = fulltextIndexNameFor({ graphName: promotedGraphName });
+			return oneRow.name === declaredName
+				? { declaredName, dropCreateList: [], refusal: '' }
+				: { declaredName, dropCreateList: [{ oldName: oneRow.name, newName: declaredName, dropCypher: `DROP INDEX \`${oneRow.name}\``, createCypher: fulltextIndexCreateCypherFor({ indexName: declaredName }) }], refusal: '' };
 		};
 		const plainOf = (oneValue) => (oneValue && typeof oneValue.toNumber === 'function' ? oneValue.toNumber() : Array.isArray(oneValue) ? oneValue.map(plainOf) : oneValue && typeof oneValue === 'object' ? Object.keys(oneValue).reduce((soFar, oneName) => ({ ...soFar, [oneName]: plainOf(oneValue[oneName]) }), {}) : oneValue);
 
@@ -232,12 +258,28 @@ const moduleFunction =
 					next('', { ...args, vectorIndexPlan: plan });
 				});
 			});
+			// ⟪lane BM25⟫ the fulltext index: censused and planned BEFORE any index statement runs, so a refusal leaves every index as it was
 			taskList.push((args, next) => {
-				const statementList = args.vectorIndexPlan.dropCreateList.reduce((soFar, oneStep) => soFar.concat([oneStep.dropCypher, oneStep.createCypher]), []);
+				runCypher({ cypher: FULLTEXT_INDEX_CENSUS_CYPHER }, (err, result) => {
+					if (err) {
+						next(`${moduleName}: the fulltext index census failed: ${err}`);
+						return;
+					}
+					const indexRowList = ((result && result.records) || []).map((oneRecord) => ({ name: oneRecord.get('name'), labelsOrTypes: oneRecord.get('labelsOrTypes'), properties: oneRecord.get('properties'), options: plainOf(oneRecord.get('options')) }));
+					const plan = fulltextIndexRenamePlanFor({ indexRowList, promotedGraphName, vectorIndexCount: args.vectorIndexPlan.declaredNameList.length });
+					if (plan.refusal) {
+						next(plan.refusal);
+						return;
+					}
+					next('', { ...args, fulltextIndexPlan: plan });
+				});
+			});
+			taskList.push((args, next) => {
+				const statementList = args.vectorIndexPlan.dropCreateList.concat(args.fulltextIndexPlan.dropCreateList).reduce((soFar, oneStep) => soFar.concat([oneStep.dropCypher, oneStep.createCypher]), []);
 				const statementTaskList = new taskListPlus();
 				statementList.concat(statementList.length ? ['CALL db.awaitIndexes(600)'] : []).forEach((oneStatement) => {
 					statementTaskList.push((statementArgs, statementNext) => {
-						runCypher({ cypher: oneStatement }, (err) => (err ? statementNext(`${moduleName}: the vector index rename failed at '${oneStatement.slice(0, 80)}': ${err}`) : statementNext('', statementArgs)));
+						runCypher({ cypher: oneStatement }, (err) => (err ? statementNext(`${moduleName}: the index rename failed at '${oneStatement.slice(0, 80)}': ${err}`) : statementNext('', statementArgs)));
 					});
 				});
 				pipeRunner(statementTaskList.getList(), {}, (err) => (err ? next(err) : next('', args)));
@@ -287,17 +329,20 @@ const moduleFunction =
 					stampedGateList: args.stampedGateList,
 					vectorIndexNameList: args.vectorIndexNameList,
 					renamedVectorIndexList: args.vectorIndexPlan.dropCreateList.map((oneStep) => `${oneStep.oldName} -> ${oneStep.newName}`),
+					fulltextIndexName: args.fulltextIndexPlan.declaredName,
+					renamedFulltextIndexList: args.fulltextIndexPlan.dropCreateList.map((oneStep) => `${oneStep.oldName} -> ${oneStep.newName}`),
 					before: args.before,
 					after: args.after,
 					summary:
 						`promotion stamp: graphName '${args.graphName}' (scratch '${args.scratchGraphName}'); attested ${args.stampedGateList.join(', ')}; ` +
 						`vector indexes ${args.vectorIndexNameList.join(', ')} (${args.vectorIndexPlan.dropCreateList.length} renamed); ` +
+						`fulltext index ${args.fulltextIndexPlan.declaredName} (${args.fulltextIndexPlan.dropCreateList.length} renamed); ` +
 						`content unchanged: ${args.after.contentNodeCount} node(s), ${args.after.contentEdgeCount} edge(s) before and after`,
 				});
 			});
 		};
 
-		return { stampPromotion, STAMPABLE_GATE_LIST, STAMPABLE_VERDICT_LIST, CONTENT_CENSUS_CYPHER, VECTOR_INDEX_CENSUS_CYPHER, vectorIndexRenamePlanFor };
+		return { stampPromotion, STAMPABLE_GATE_LIST, STAMPABLE_VERDICT_LIST, CONTENT_CENSUS_CYPHER, VECTOR_INDEX_CENSUS_CYPHER, FULLTEXT_INDEX_CENSUS_CYPHER, fulltextIndexRenamePlanFor, vectorIndexRenamePlanFor };
 	};
 
 // END OF moduleFunction() ============================================================
