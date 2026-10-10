@@ -99,9 +99,22 @@ const NEO4J_USER = 'neo4j';
 // Why not an --internal Docker network: on Docker Desktop an internal network publishes no ports, so the host-side
 // DME could not reach the graph; masquerade-off and routed bridges still reached the internet (measured, evidence
 // P4b/X5-findings.md). The network wall is a production option, written in the deploy-dme-graph notes.
+//   * ⟪lane BM25, 2026-10-10; TQ approved via VIOLET_VALLEY, for the next lane, dme_grep: fuzzy name search⟫ APOC's PURE text
+//     functions, each allowed BY NAME (no apoc.text.* wildcard): string in, number or string out, no I/O, no procedure. The
+//     allow-list governs functions as well as procedures, so a function not named here is absent from the graph.
+const APOC_PURE_TEXT_FUNCTION_NAME_LIST = Object.freeze([
+	'apoc.text.levenshteinSimilarity',
+	'apoc.text.levenshteinDistance',
+	'apoc.text.jaroWinklerDistance',
+	'apoc.text.sorensenDiceSimilarity',
+	'apoc.text.fuzzyMatch',
+	'apoc.text.clean',
+	'apoc.text.compareCleaned',
+]);
+const APOC_ALLOWLIST_ENTRY_LIST = Object.freeze(['apoc.merge.*'].concat(APOC_PURE_TEXT_FUNCTION_NAME_LIST));
 const NEO4J_CONTAINER_SECURITY_ENV_LIST = Object.freeze([
 	'NEO4J_PLUGINS=["apoc"]',
-	'NEO4J_dbms_security_procedures_allowlist=apoc.merge.*',
+	`NEO4J_dbms_security_procedures_allowlist=${APOC_ALLOWLIST_ENTRY_LIST.join(',')}`,
 	'NEO4J_internal_dbms_cypher__ip__blocklist=0.0.0.0/0,::/0',
 ]);
 
@@ -1659,6 +1672,7 @@ module.exports.findAvailablePortPair = findAvailablePortPair;
 module.exports.PORT_ALLOCATION_LOCK_DIR_PATH = PORT_ALLOCATION_LOCK_DIR_PATH;
 module.exports.engineVersionsFor = engineVersionsFor;
 module.exports.NEO4J_CONTAINER_SECURITY_ENV_LIST = NEO4J_CONTAINER_SECURITY_ENV_LIST;
+module.exports.APOC_PURE_TEXT_FUNCTION_NAME_LIST = APOC_PURE_TEXT_FUNCTION_NAME_LIST;
 // The declared conservation exemption, exported so a caller NAMES it rather than repeating a
 // magic string that could drift from the one harvest compares against.
 module.exports.CONSERVATION_NOT_LOADED_THROUGH_INIT = CONSERVATION_NOT_LOADED_THROUGH_INIT;

@@ -847,13 +847,16 @@ rmUnderTest.create({ purpose: 'forge' }, (createErr, createHandle) => {
 	const runArgText = (runCalls[0] || []).join(' ');
 	const securityEnvList = replayManagerModule.NEO4J_CONTAINER_SECURITY_ENV_LIST || [];
 	harness.ok('  NEO4J_CONTAINER_SECURITY_ENV_LIST is declared and frozen', Array.isArray(securityEnvList) && securityEnvList.length > 0 && Object.isFrozen(securityEnvList), JSON.stringify(securityEnvList));
-	harness.ok('  it allows exactly apoc.merge.*', securityEnvList.indexOf('NEO4J_dbms_security_procedures_allowlist=apoc.merge.*') !== -1, JSON.stringify(securityEnvList));
+	// ⟪lane BM25, 2026-10-10, TQ-approved⟫ plus seven PURE apoc.text functions BY NAME, for dme_grep; still no apoc.text.* wildcard
+	const DECLARED_APOC_TEXT_FUNCTION_NAME_LIST = ['apoc.text.levenshteinSimilarity', 'apoc.text.levenshteinDistance', 'apoc.text.jaroWinklerDistance', 'apoc.text.sorensenDiceSimilarity', 'apoc.text.fuzzyMatch', 'apoc.text.clean', 'apoc.text.compareCleaned'];
+	harness.ok('  it allows exactly apoc.merge.* and the seven named pure apoc.text functions', securityEnvList.indexOf(`NEO4J_dbms_security_procedures_allowlist=${['apoc.merge.*'].concat(DECLARED_APOC_TEXT_FUNCTION_NAME_LIST).join(',')}`) !== -1 && JSON.stringify(replayManagerModule.APOC_PURE_TEXT_FUNCTION_NAME_LIST) === JSON.stringify(DECLARED_APOC_TEXT_FUNCTION_NAME_LIST), JSON.stringify(securityEnvList));
 	harness.ok('  it blocks every IPv4 and IPv6 URL', securityEnvList.indexOf('NEO4J_internal_dbms_cypher__ip__blocklist=0.0.0.0/0,::/0') !== -1, JSON.stringify(securityEnvList));
 	securityEnvList.forEach((oneEnv) => {
 		harness.ok(`  the docker run passes -e ${oneEnv}`, runArgText.indexOf(`-e ${oneEnv}`) !== -1, runArgText);
 	});
 	harness.ok('  the docker run grants no unrestricted procedures', runArgText.indexOf('procedures_unrestricted') === -1, runArgText);
 	harness.ok('  the docker run allows no apoc.* wildcard', runArgText.indexOf('procedures_allowlist=apoc.*') === -1, runArgText);
+	harness.ok('  the docker run allows no apoc.text.* wildcard (each text function is named)', runArgText.indexOf('apoc.text.*') === -1, runArgText);
 
 	harness.report();
 });
