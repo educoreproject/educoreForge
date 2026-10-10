@@ -405,7 +405,11 @@ const POST_D1_BASE_TAG = 'postBm25FulltextVocabularyIi-101026'; // re-anchored b
 // ═══ RE-ANCHOR, 2026-10-09 (PRISM_SHARD; forgeClean lane FIX; pre-authorised) ═══ (iii) postForgeCleanMergeForgeFrameworkIii-100826 ->
 // postFixReplayStampExit64ForgeFrameworkIii-100926, tag cut ON this commit. CENSUS (lib/forge-framework/): forgeDeclarationContract.js,
 // rootNode.js, the toy fixture declaration, expectedFingerprints.json, test-gStandardMetadata.js, test-gSeamUntouched.js (this re-anchor) — lane FIX's own commits 12abd25a..d037e35e on fix/replayStampExit64 from main 2fbbca10: replayManager.js (hex scratch credential, logs read before dispose, restore conservation), replay-engine.js (loaded summary from replay), interfaces.js (restore conservation declared), graph-contract.js (DME_TEXT_FIELD_RULE, StandardDefinition.descriptionSource), vocabulary.js (STANDARD_ROOT descriptionSource), forgeDeclarationContract.js + rootNode.js (descriptionSource), standard-definition-finisher.js, the forge declarations, and their tests and re-pinned literals.
-const PHASE0_ANCHOR_TAG = 'postFixReplayStampExit64ForgeFrameworkIii-100926'; // re-anchored by PRISM_SHARD (lane FIX); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-10 (COPPER_NEXUS; forgeClean lane BM25; pre-authorised) ═══ (iii) postFixReplayStampExit64ForgeFrameworkIii-100926 ->
+// postBm25FulltextForgeFrameworkIii-101026, tag cut ON this commit. CENSUS (lib/forge-framework/): test/test-gSeamUntouched.js ONLY — its
+// G-SEAM-UNTOUCHED re-anchor (f23e1aec), the chain FIX warned of; lane BM25 changed no forge-framework source. All five lane-BM25 tags
+// are cut ON this commit, so this re-anchor moves no other gate.
+const PHASE0_ANCHOR_TAG = 'postBm25FulltextForgeFrameworkIii-101026'; // re-anchored by COPPER_NEXUS (lane BM25); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
