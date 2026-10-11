@@ -3,8 +3,8 @@
 ONE shared library that satisfies the EDUcore Bridge Profile (`SPEC-educoreBridgeProfile-v1.0.md`, v1.0.6) for
 every mapping bridge plugin, so that each of the Profile's choices — tuple addressing, the multimap, cardinality
 classification, the judge and its double, the frozen decision block and its replay, SSSOM export, every refusal
-and the census — is made ONCE and observed red ONCE. Specification: `system/management/zNotesPlansDocs/
-forgeDefinitionV2/SPEC-bridgeFramework-v1.md` (v1.1.2). Built in B2 (FROZEN_STREAM, 2026-08-16) under SABLE_RIVER;
+and the census — is made ONCE and observed red ONCE. Specification: `apps/graph-builder/
+README_BridgeDocumentation/README_BridgeFrameworkSpecification.md` (built against v1.1.2; the old forgeDefinitionV2 copy is a MOVED stub). Built in B2 (FROZEN_STREAM, 2026-08-16) under SABLE_RIVER;
 `DEVLOG-bridgeFramework.md` beside the spec carries the red-observation table, the deviations and the B3 handoff.
 
 ```

@@ -7,9 +7,10 @@
 > RULINGS-supervisor-phase2.md §2) and is recoverable from `system/codeAttic/` and tag `preDemolition-081526`;
 > the full text of THIS guide as it stood on 2026-07-30 is `git show preDemolition-081526:./forges/README_bridgeProgrammingGuide.md` (run from this tree; the repo root is one level up).
 >
-> **To write a bridge TODAY read, in this order:** `system/management/zNotesPlansDocs/forgeDefinitionV2/SPEC-educoreBridgeProfile-v1.0.md`
+> **To write a bridge TODAY read, in this order:** `apps/graph-builder/README_BridgeDocumentation/README_BridgeProfile.md`
 > (the EDUcore Bridge Profile — predicates, `mapping_justification`, `matchBasis`/`resolution`, provenance),
-> `forgeDefinitionV2/SPEC-bridgeFramework-v1.md` (the framework that runs every plugin), and
+> `apps/graph-builder/README_BridgeDocumentation/README_BridgeFrameworkSpecification.md` (the framework that runs every
+> plugin; the old `forgeDefinitionV2/SPEC-*` files are MOVED stubs since 2026-10-11), and
 > `lib/bridge-framework/README.md` (the plugin shape: a DECLARATION + a walk + a subject rule; the toy fixture
 > under `lib/bridge-framework/test/fixtures/toyBridge/` is the first worked instance). Nothing below is how the
 > tree is wired now.

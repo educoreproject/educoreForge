@@ -1,4 +1,91 @@
-# EDUcore Bridge Framework — specification v1.1.3
+# EDUcore Bridge Framework — specification v1.2.1
+
+> **v1.2.1 (COPPER_RIVER, 2026-10-11, reconciliation only, at TQ's instruction "clean up the specs"):** two copies of this
+> specification had forked after the 2026-08-16 move into the code tree. The v1.2 note below (2026-08-17) was written into
+> the old `management/zNotesPlansDocs/forgeDefinitionV2/SPEC-bridgeFramework-v1.md`, while the 2026-09-07 JOB 0 / JOB 1
+> corrections (§ Ask: `JUDGE_PROVIDER_SHAPE`, `requireJudgment` retired, `wireModel`/`model` split; the `debugJudge:`
+> separator) went into this file. This version carries BOTH, unchanged; nothing was re-decided. The management copy is now a
+> MOVED stub. This file is the only copy: edit it here. Not re-audited against the code as of this date.
+>
+> **v1.2 (supervisor, 2026-08-17 02:55 CDT, at DERIVED D-CLEAR — HEAD `55357b5`; covers B3 CLEAR `b86f57a`, the DERIVED
+> order D1–D4, and the D4 adversarial review):** the specification is amended by reference to match the code where an order
+> deviated with a NAMED reason, and to carry the rulings in `RULINGS-supervisor-bridgeFramework.md` (B3 review rulings
+> BR3-1..8 + CLEAR; DERIVED D1 rulings; CP1; D4 review rulings DR-1..DR-17; D-CLEAR) and the reviews
+> `reviews/REVIEW-B3-adversarial-081726.md`, `reviews/REVIEW-D0-derivedBridge-081726.md`,
+> `reviews/REVIEW-D4-derivedBridge-081726.md`. Sections touched by reference only; the normative text below is read WITH
+> this note (an editorial fold-in is a later pass).
+>
+> **B3 (Ed-Fi crosswalk plugin) — what became normative.** (1) **§10.4 census**: the frozen census is the MEASURED
+> **894 / 216 / 3 / 31 / 2** (specified / judged / orphan / subjectCollision / sourceGap over 1,146 subjects), which
+> SUPERSEDES the printed projection 992 / 151 / 3; every delta is a NAMED mover (M1 subjectCollision 31, M2 sourceGap 2,
+> M3 single-card key pool whose class URI DISAGREES → `sourceSideMismatch` → judged, 72 subjects / 21 keys, M4 merged-leaf
+> mixed labels 2, M5 remodel-table `domainId` 4 → specified/remodel); the M3 keys are the v1-empty class-side remodel
+> CANDIDATE table (BR-036). Per-target members that depend on the JUDGE (abstainedCount, edgeCount, distinctTripleCount)
+> are asserted per block, not against the debug fixture (BR3 checkpoint-2 ruling); the census fixture asserts EQUAL on the
+> CLASSIFIER members. (2) **§10.2**: the walk keeps the subject triple RAW; `segmentNormalisationRuleList` is consumed
+> inside `subjectStableIdFor` (the "strip (TPDM)" is the hook's job). (3) **The Ed-Fi crosswalk's provenance is
+> settled**: an AEM/CEDS deliverable (Nathan Clinton, 2026-03-25) authored against CEDS Ontology **V13**; the hub is
+> **V14**, which is the NAMED cause of the M3 mover. (4) **§7 / §8 real-judge contract fixes**, four named framework
+> commits ruled at first contact with the real client: `777cb18` abstention normalisation; `2a1c526` bounded rationale
+> re-ask; `45dfcb3` SSSOM conformance; and — from the derived order — `cd3a8b9` absent-category abstention + rationale
+> re-ask, `f123a8c` BR-067 checks the CHOSEN ordinal only + re-ask prompt in forensics, `1393f82` BR-067
+> purpose-satisfied (a name present is accepted) + symmetric-contrast RE-ASK text only + the named refusal net
+> `rationaleFormRefusedTwice` (unexercised in production across 701 subjects; proven by its twin only). The system prompt
+> is FROZEN for the life of a spend (promptHash includes it). (5) **§7 PG-JSON contract (BR3-2)**: the certified block holds
+> `attestationChannelList` as a list; the graph collapses single-element arrays to scalars on replay (`pgToStored`) —
+> DECLARED as the contract, consumers re-widen; `graphWriter.js` bytes left untouched by ruling (fingerprint). (6)
+> **§12 / -verify (BR3-3)**: `buildFailed !== null` is a FAULT; an absent/empty pin table REFUSES by name; UNMEASURED
+> conjuncts are COUNTED and fail the suite (BR3-6, stable conjunct count). (7) **BG-PLUGIN (BR3-1)**: the acceptance
+> suite requires the REAL plugin, validates declaration + hooks against the real bundle, recomputes the three digests
+> and asserts EQUAL to the fixture; twins = the reviewer's two plugin faults. (8) `bridge-framework.js` writes
+> `reportedCategoryOnAbstain` into the frozen judge record only when non-null (BR3-4; debug blocks byte-unchanged).
+>
+> **DERIVED order (D1–D4) — what became normative** (PLAN-derivedBridge-v1.md §11 rulings 1–12 BIND). (a) `matchBasis`
+> gains **`derived`**, producerKind gains **`inferred`**; `predicateSource` kind **`judge`** with the declared
+> `predicateByCategory` table (`categoryTable-v1`: strong → exactMatch, moderate/weakButReal → closeMatch, NONE →
+> abstain) as a NAMED non-conformance from the crosswalk plugin's channel-asserted predicate; a NEW seat reason
+> `retrieval` and a `noCandidate` reason; SSSOM for derived: NO `mapping_provider` (forbidden at the write seam by
+> producerKind), `mapping_tool` REQUIRED (set-level = declared tool; row-level = the judge), justification
+> `semapv:SemanticSimilarityThresholdMatching` (adopted), `subject_match_field` OMITTED (G-1: the exporter now consults
+> the disposition table — the literal string `"undefined"` failed `sssom validate`; twin reproduces the shipped
+> failure), `object_match_field` `EDUcoreHub:semanticSimilarity`; the exporter is RECORD-first like the materialiser
+> (G-2: block, graph and export agree on all rows). (b) `SOURCE_ACQUISITION_REGISTRY` keyed by matchBasis
+> {walkChannelSourceKind, subjectGroupProducerKind, poolProducerKind, requiresSubjectSource}; `subjectSource`
+> {graphLabel, scopeStableIdListPath} enters STEP 5; retrieval = cosine over STORED voyage-4-large vectors via
+> `forRetrieval()` (no embedder), K and floor DECLARED (v1: 15 / 0.30), tie-break stableId asc, recall never rendered;
+> allow-list rendering BOTH sides (subject: name, path, description, propertyType, owningConstructName/Type; candidate:
+> name, propertyDefinition, domainName, domainDefinition, rangeOptionSetName/Definition) with `embedding`/`embedText`
+> dropped on every path; the derived prompt variant has its own `RENDERER_VERSION` (`bridgeEvidenceRenderer-derived-v1`)
+> and the crosswalk variant's rendered text stays byte-identical; the id-gate runs over ALL prompts with a positive control
+> on unblinded crosswalk prompts; the renderer's second net is twinned (H-1). (c) A PARTIAL block (a `--limit` window)
+> REFUSES to materialise as a whole graph (guard twinned, H-2 — the harness needed a `secondRunConfigOverride` to even
+> express it); every frozen line declares `maxJudgmentCount` — a **BOUNDARY CHECK, not a ceiling** (DR-6): it asserts a
+> human chose a number; the spend protection is `materialiseRealSpendAuthorisedBy` as data + the run's natural size; a
+> line that judges nothing declares 0; the runner reconstructs each committed line (tamper-check) and a declared recipe
+> override is data on the line. (d) The harness (`derivedEval.js`) reads the truth block BY PINNED ID, read-only
+> (latest-by-seq fallback REMOVED, DR-11), reports recall@K, correct/wrong/abstain, renderingTie, sameNameDifferentDomain
+> (a FLOOR: in-pool wrong picks only), retrieval LOSS as its own number, abstention quality, calibration as three points,
+> new claims unscored, per entity; rows above the declared K are labelled CEILING ARTIFACT and the MEASURED unbounded
+> curve is printed beside them (DR-4). (e) The frozen census fixture is generated from the decision store, named from the
+> ids fixture (data-derived), asserts EQUAL member for member; a framework fingerprint move with the census HELD is the
+> proof that a change altered no classification (observed at DR-3: 589c878f → ad3cc4c7, census EQUAL). (f) `genesis` is
+> DECLARED DATA on a rejudge line whose store does not yet exist (BS-5; inert once it does; three twins). (g) A real-judge
+> batch document compares against a REFERENCE declared with a ROLE (`truth` | `comparison`); a standard with no answer key
+> declares `comparison`, never `truth` (BS-8).
+>
+> **Results of record.** Ed-Fi DERIVED v1 block `b327ea01f6…` (mounted as DEV_edfiDerived_260817), v1.1 block
+> `e23ced4966…` (post-remediation re-freeze from the warm cache, byte-identical decisions): 701 subjects, 655 scorable,
+> retrieval loss 121 (18.5%; unbounded ceiling @15 = pool recall exactly, 30 never retrieved at any K ≤ 200), in-pool 534 →
+> correct 378 / wrong 89 / abstain 65 / renderingTie 2 / sameNameDifferentDomain 34 (bounded 34–47); precision on
+> non-abstain 80.9%; end-to-end 57.7%; abstentions 181 = 91 retrieval-loss / 65 in-pool / 25 no-truth. SIF standard
+> plugin (b4-sif-plugin, zero framework diff): census **1,875 / 327 / 29** over 2,231 — EQUALS §11's projection with NO
+> movers (1,841 on the key + 34 via the shared remodel table).
+>
+> **Open, named (not silently dropped):** BG-NOCROSSWALK fs-open + store-open doubles (DR-9, next builder); the LLM
+> client retries an honest abstention up to `maxRetries` because its category enum omits `none` (DR-17; llmClient.js
+> untouched by TQ's ruling; `retryReasons` not yet forwarded into the forensic record); the D0/D1-era 22 crash-red twins,
+> forensic trail run-id, and count-guard literals audit; the editorial fold-in of this note.
+>
 
 > **v1.1.3 (supervisor, 2026-08-16 21:20, at B2 CLEAR — HEAD `611888f`):** the specification is amended to match the
 > code where B2 deviated with a NAMED reason (the code wins, then the spec is amended, never silently), and to carry
