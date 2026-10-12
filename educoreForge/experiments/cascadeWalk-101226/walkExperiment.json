@@ -47,5 +47,6 @@
 	},
 	"jevUsdPerMillionInputTokens": 0.0422,
 	"jevUsdPerMillionOutputTokens": 0.0422,
-	"spendStopUsd": 25
+	"spendStopUsd": 25,
+	"plannedRunCount": 3
 }

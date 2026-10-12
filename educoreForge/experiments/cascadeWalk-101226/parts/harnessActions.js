@@ -21,6 +21,8 @@ const canonicalJson = require(path.join(BRIDGE_LIB, 'bridgePluginContract')).can
 const { resolveGoldGraphHandle } = require('./goldGraphHandle');
 const { buildBridgeRunContext } = require('./bridgeRunContext');
 const { renderSubjectQuestion } = require('./subjectJudge');
+const { runArmsOnce } = require('./armRun');
+const { ARM_ROW_LIST } = require('./armPools');
 
 const requiredValue = ({ valueOf, valueName }) => {
 	const given = valueOf(valueName);
@@ -116,7 +118,51 @@ const reproduceBaseline = ({ experimentConfig, valueOf }, callback) => {
 	});
 };
 
-const runArms = (actionContext, callback) => callback(`${moduleName}: -runArms is not built yet`);
+// runArms — one run (design §5): --runLabel names it and its fresh cache; --armList narrows the arms (optional,
+// documented in -help: all four when absent); --subjectLimit takes the first n subjects of the set (optional, for a smoke)
+const runArms = ({ experimentConfig, valueOf }, callback) => {
+	const resolutionList = ['runLabel', 'outDirPath', 'scratchDirPath'].map((valueName) => ({ valueName, ...requiredValue({ valueOf, valueName }) }));
+	const unresolved = resolutionList.find((oneResolution) => oneResolution.error);
+	if (unresolved) {
+		callback(unresolved.error);
+		return;
+	}
+	const [runLabel, outDirPath, scratchDirPath] = resolutionList.map((oneResolution) => oneResolution.value);
+	const knownArmNameList = ARM_ROW_LIST.map((oneRow) => oneRow.armName);
+	const askedArmNameList = valueOf('armList') === undefined ? knownArmNameList : `${valueOf('armList')}`.split(',');
+	const unknownArmName = askedArmNameList.find((oneName) => knownArmNameList.indexOf(oneName) === -1);
+	if (unknownArmName !== undefined) {
+		callback(`--armList names '${unknownArmName}'; the arms are ${knownArmNameList.join(', ')}`);
+		return;
+	}
+	const subjectLimitText = valueOf('subjectLimit');
+	if (subjectLimitText !== undefined && !/^[1-9][0-9]*$/.test(`${subjectLimitText}`)) {
+		callback(`--subjectLimit is '${subjectLimitText}'; it must be a positive integer`);
+		return;
+	}
+	openBridgeRun({ experimentConfig, bridgeRunLabel: 'edfi' }, (openError, opened) => {
+		if (openError) {
+			callback(openError);
+			return;
+		}
+		const fullSubjectList = JSON.parse(fs.readFileSync(opened.bridgeRun.subjectSetFilePath, 'utf8'));
+		const subjectStableIdList = subjectLimitText === undefined ? fullSubjectList : fullSubjectList.slice(0, Number(subjectLimitText));
+		// spend already made by earlier runs in this output directory, for the projection against the design's stop
+		const earlierSummaryList = fs.existsSync(outDirPath) ? fs.readdirSync(outDirPath).filter((oneName) => oneName.indexOf('run-') === 0 && oneName !== `run-${runLabel}` && fs.existsSync(path.join(outDirPath, oneName, 'runSummary.json'))).map((oneName) => JSON.parse(fs.readFileSync(path.join(outDirPath, oneName, 'runSummary.json'), 'utf8'))) : [];
+		const spendSoFarUsd = earlierSummaryList.reduce((soFar, oneSummary) => soFar + oneSummary.ledger.usd, 0);
+		const runsRemainingIncludingThis = Math.max(1, experimentConfig.plannedRunCount - earlierSummaryList.length);
+		runArmsOnce({ experimentConfig, opened, runLabel, outDirPath, scratchDirPath, askedArmNameList, subjectStableIdList, spendSoFarUsd, runsRemainingIncludingThis }, (runError, runSummary) => {
+			opened.runContext.reader.close(() => {
+				if (runError) {
+					callback(runError);
+					return;
+				}
+				const kindText = Object.keys(runSummary.ledgerByKind).map((oneKind) => `  ${oneKind.padEnd(10)} asked ${runSummary.ledgerByKind[oneKind].askedCount}, served from cache ${runSummary.ledgerByKind[oneKind].servedFromCacheCount}, tokens in ${runSummary.ledgerByKind[oneKind].inputTokens} out ${runSummary.ledgerByKind[oneKind].outputTokens}`).join('\n');
+				callback('', { summaryText: `run ${runLabel}: ${runSummary.subjectDoneCount}/${runSummary.subjectCount} subject(s), arms ${askedArmNameList.join(',')}, ${(runSummary.wallMs / 1000).toFixed(0)} s, US$${runSummary.ledger.usd.toFixed(4)}\n${kindText}`, passed: true });
+			});
+		});
+	});
+};
 const sifRecall = (actionContext, callback) => callback(`${moduleName}: -sifRecall is not built yet`);
 
 module.exports = { reproduceBaseline, runArms, sifRecall, openBridgeRun, requiredValue, moduleName };

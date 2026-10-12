@@ -35,6 +35,9 @@ DESCRIPTION
     Never touches: any graph (no writer exists here), the gold's stores, the DME pointer, demo or production.
 
 OPTIONS
+    --armList=A0,A1,A2,A3     -runArms only. Optional; when absent, all four arms run. Prerequisite arms are built
+                              (not judged) when an asked arm reads them: A2 reads A1, A3 reads A0 and A1.
+    --subjectLimit=<n>        -runArms only. Optional; when absent, the whole hundred. A smoke takes the first n.
     --configFilePath=<file>   the experiment configuration. Optional; when absent, walkExperiment.json beside
                               this file is read. Every setting inside it is required.
 
