@@ -1,0 +1,401 @@
+className	classId	primaryConcept	secondaryConcept	guidePageNumber
+Accessibility Feature	C200012	Resource	—	24
+Accessibility Feature Relationship	C200400	Resource	—	24
+Accrediting Organization	C200393	Organization	—	24
+Activity	C200001	Resource	—	24
+Activity Membership	C200403	Membership	—	24
+Activity Recognition	C200002	Resource	—	24
+Adult Education Course	C200003	Resource	—	24
+Adult Education Provider	C200004	Organization	—	24
+Adult Education Staff	C200005	Membership	—	24
+Adult Education Student Academic Record	C200006	Person	Membership	24
+Adult Education Student Employment	C200007	Membership	Person	24
+Affiliated Institution	C200392	Organization	—	24
+Apip Interaction	C200008	Resource	—	24
+Application	C200009	Membership	Person	24
+Assessment	C200010	Resource	—	24
+Assessment Administration	C200013	Event	Membership	25
+Assessment Asset	C200015	Resource	—	25
+Assessment Form	C200017	Resource	—	25
+Assessment Form Assessment Form Section	C200019	Resource	—	25
+Assessment Form Section	C200020	Resource	—	25
+Assessment Form Section Assessment Item	C200022	Resource	—	25
+Assessment Item	C200023	Resource	—	25
+Assessment Item Apip	C200024	Resource	—	25
+Assessment Item Apip Description	C200025	Resource	—	25
+Assessment Item Characteristic	C200026	Resource	—	25
+Assessment Item Possible Response Detail	C200027	Resource	—	25
+Assessment Item Response	C200028	Person	Resource	25
+Assessment Item Response Theory	C200029	Resource	—	25
+Assessment Item Rubric Criterion Result	C200030	Person	Resource	25
+Assessment Need Apip Content	C200032	Resource	—	25
+Assessment Need Apip Control	C200033	Resource	—	25
+Assessment Need Apip Display	C200034	Resource	—	25
+Assessment Need Braille	C200035	Resource	—	25
+Assessment Need Screen Enhancement	C200036	Resource	—	25
+Assessment Participant Session	C200037	Membership	Event	25
+Assessment Performance Level	C200038	Resource	—	25
+Assessment Personal Need Language Learner	C200039	Person	Resource	25
+Assessment Personal Need Screen Reader	C200040	Person	Resource	25
+Assessment Personal Needs Profile	C200041	Person	Resource	25
+Assessment Personal Needs Profile Content	C200042	Person	Resource	25
+Assessment Personal Needs Profile Control	C200043	Person	Resource	26
+Assessment Personal Needs Profile Display	C200044	Person	Resource	26
+Assessment Personal Needs Profile Screen Enhancement	C200045	Person	Resource	26
+Assessment Registration	C200046	Membership	Resource	26
+Assessment Result	C200047	Person	Resource	26
+Assessment Result Rubric Criterion Result	C200048	Person	Resource	26
+Assessment Session	C200049	Event	Membership	26
+Assessment Session Staff Role	C200050	Membership	Event	26
+Assessment Subtest	C200051	Resource	—	26
+Assessment Subtest Assessment Item	C200052	Resource	—	26
+Assignment	C200406	Membership	—	26
+Authentication	C200054	Resource	Person	26
+Authorization	C200055	Resource	Person	26
+Authorization Document	C200056	Resource	Person	26
+Board Membership	C200057	Membership	Organization	26
+Building Space	C200058	Resource	—	26
+Building Space Utilization	C200059	Resource	Organization	26
+Building System Category	C200060	Resource	—	26
+Building System Component	C200061	Resource	—	26
+Building System Component Service	C200062	Event	Resource	26
+Campus	C200069	Organization	Resource	26
+Career And Technical Course	C200090	Resource	—	26
+Career And Technical Student Academic Record	C200091	Person	Membership	26
+Charter School Authorizing Organization	C200021	Organization	—	26
+Charter School Management Organization	C200379	Organization	—	26
+Classroom	C200063	Resource	Organization	27
+Competency Definition	C200065	Resource	—	27
+Competency Definition Association	C200064	Resource	—	27
+Competency Framework	C200067	Resource	—	27
+Competency Set	C200068	Resource	—	27
+Contact	C200412	Person	Organization	27
+Core Knowledge Area	C200071	Resource	—	27
+Course	C200072	Resource	—	27
+Course Funding Source	C200073	Resource	—	27
+Course Section	C200074	Resource	Organization	27
+Course Section Assessment Reporting	C200075	Membership	Resource	27
+Course Section Level	C200076	Resource	—	27
+Course Section Location	C200077	Resource	Organization	27
+Course Section Schedule	C200078	Resource	—	27
+Credential Award	C200079	Asset	Person	27
+Credential Award Credit	C200080	Asset	Person	27
+Credential Award Evidence	C200081	Asset	Resource	27
+Credential Award Relationship Detail	C200082	Asset	Resource	27
+Credential Criteria Course	C200415	Resource	—	27
+Credential Definition	C200087	Resource	—	27
+Credential Definition Agent	C200083	Resource	Organization	27
+Credential Definition Category	C200084	Resource	—	27
+Credential Definition Criteria Definition	C200085	Resource	—	27
+Credential Definition Identification	C200086	Resource	—	27
+Credential Issuer	C200088	Organization	Resource	27
+Credential Offered	C200089	Resource	Organization	27
+Credentialing Organization	C200391	Organization	—	28
+Credits Earned	C200414	Asset	Membership	28
+Data Collection	C200410	Provenance	—	28
+Early College	C200066	Organization	—	28
+Early Learning Child Demographic	C200094	Person	—	28
+Early Learning Child Developmental Assessment	C200095	Person	Resource	28
+Early Learning Child Health	C200096	Person	—	28
+Early Learning Child Individualized Program	C200097	Membership	Resource	28
+Early Learning Child Outcome Summary	C200098	Person	Membership	28
+Early Learning Child Program Eligibility	C200099	Membership	—	28
+Early Learning Child Service	C200100	Membership	—	28
+Early Learning Child Services Application	C200101	Membership	Resource	28
+Early Learning Child Transition Plan	C200102	Membership	Resource	28
+Early Learning Class Section	C200103	Resource	Organization	28
+Early Learning Class Section Service	C200104	Resource	Membership	28
+Early Learning Course	C200105	Resource	—	28
+Early Learning Credential	C200092	Asset	Person	28
+Early Learning Enrollment	C200106	Membership	—	28
+Early Learning Enrollment Other Funding	C200107	Membership	Resource	28
+Early Learning Facility Licensing	C200108	Organization	Resource	28
+Early Learning Organization	C200110	Organization	—	28
+Early Learning Organization Availability	C200111	Organization	Resource	28
+Early Learning Organization Funds	C200112	Organization	Resource	28
+Early Learning Organization Monitoring	C200113	Organization	Event	28
+Early Learning Organization Student Responsibility	C200114	Organization	Membership	28
+Early Learning Program Licensing	C200115	Organization	Resource	29
+Early Learning Program Type Offered	C200093	Organization	Resource	29
+Early Learning Quality Initiative	C200116	Organization	Resource	29
+Early Learning Quality Rating Improvement	C200117	Organization	Resource	29
+Early Learning Service Partner	C200118	Organization	Membership	29
+Early Learning Staff Assignment	C200120	Membership	—	29
+Early Learning Staff Education	C200121	Person	Resource	29
+Early Learning Staff Employment	C200122	Membership	—	29
+Education Institution	C200390	Organization	—	29
+Education Organization Network	C200389	Organization	—	29
+Eligibility Determination	C200399	Person	Membership	29
+Eligibility Evaluation	C200109	Event	Membership	29
+Emergency Response Agency	C200227	Organization	—	29
+Employee Benefit Carrier	C200388	Organization	—	29
+Employee Benefit Contributor	C200387	Organization	—	29
+Employer	C200386	Organization	—	29
+Employment	C200405	Membership	—	29
+Enrollment	C200402	Membership	—	29
+Facility	C200123	Organization	Resource	29
+Facility Audit	C200124	Event	Resource	29
+Facility Compliance	C200125	Organization	Resource	29
+Facility Design	C200126	Resource	—	29
+Facility Design Construction	C200127	Resource	—	29
+Facility Energy	C200128	Resource	—	29
+Facility Finance	C200129	Resource	—	29
+Facility Financial	C200130	Resource	—	29
+Facility Hazard	C200131	Resource	—	30
+Facility Joint Use	C200132	Organization	Resource	30
+Facility Lease	C200133	Resource	—	30
+Facility Management	C200134	Organization	Resource	30
+Facility Management Plan	C200135	Resource	—	30
+Facility Mandate	C200136	Resource	—	30
+Facility Mortgage	C200137	Resource	—	30
+Facility Mortgage Fee	C200138	Resource	—	30
+Facility School Design	C200139	Resource	—	30
+Facility Site	C200140	Resource	—	30
+Facility Utilization	C200141	Organization	Resource	30
+Financial Account	C200142	Organization	Resource	30
+Financial Account Program	C200143	Organization	Resource	30
+Financial Aid Application	C200144	Membership	Resource	30
+Financial Aid Award	C200145	Asset	Person	30
+Goal	C200146	Resource	Membership	30
+Goal Measurement	C200147	Resource	Membership	30
+Goal Measurement Criterion	C200148	Resource	—	30
+Goal Performance	C200149	Person	Resource	30
+Governing Board	C200385	Organization	—	30
+IDEA Part C Lead Agency	C200384	Organization	—	30
+IEP Authorization	C200151	Membership	Resource	30
+IEP Authorization Rejected	C200152	Membership	Event	30
+IEP Present Level	C200153	Person	Membership	30
+IPEDS Finance	C200174	Organization	Resource	30
+Incident	C200154	Event	Membership	30
+Incident Person	C200156	Membership	Person	31
+Individualized Program	C200157	Membership	Resource	31
+Individualized Program Accessibility Feature	C200159	Resource	Membership	31
+Individualized Program Accessibility Feature Subject	C200160	Resource	Membership	31
+Individualized Program Accessible Format	C200158	Resource	Membership	31
+Individualized Program Amendment	C200161	Membership	Event	31
+Individualized Program Assessment	C200162	Membership	Resource	31
+Individualized Program Assessment Accessibility Feature	C200163	Resource	Membership	31
+Individualized Program Eligibility	C200164	Person	Membership	31
+Individualized Program Eligibility Determination	C200417	Person	Membership	31
+Individualized Program Eligibility Evaluation	C200165	Event	Membership	31
+Individualized Program Goal	C200166	Resource	Membership	31
+Individualized Program Meeting	C200167	Event	Membership	31
+Individualized Program Meeting Attendee	C200168	Membership	Person	31
+Individualized Program Progress Goal	C200169	Person	Membership	31
+Individualized Program Progress Report	C200170	Person	Membership	31
+Individualized Program Progress Report Plan	C200171	Resource	Membership	31
+Individualized Program Service	C200172	Event	Membership	31
+Individualized Program Services Received	C200173	Membership	Event	31
+Intermediate Educational Unit	C200383	Organization	—	31
+Job	C200175	Resource	—	31
+Job Competency	C200176	Resource	—	31
+Job Credential	C200177	Resource	Asset	31
+Job Detail	C200178	Resource	—	31
+Job Identification	C200179	Resource	—	31
+Job Position	C200180	Resource	Organization	32
+Job Position Detail	C200181	Resource	—	32
+Job Position Identification	C200182	Resource	—	32
+Job Position Status Detail	C200183	Resource	Event	32
+K12 Charter School Authorizer Agency	C200184	Organization	—	32
+K12 Course	C200186	Resource	—	32
+K12 Federal Fund Allocation	C200187	Organization	Resource	32
+K12 Organization Student Responsibility	C200197	Organization	Membership	32
+K12 Program Or Service	C200198	Organization	Resource	32
+K12 School	C200199	Organization	—	32
+K12 School Corrective Action	C200200	Organization	Resource	32
+K12 School Improvement	C200201	Organization	Resource	32
+K12 School Status	C200203	Organization	—	32
+K12 Staff Assignment	C200207	Membership	—	32
+K12 Staff Employment	C200208	Membership	—	32
+K12 Student Academic Honor	C200209	Asset	Person	32
+K12 Student Academic Record	C200210	Person	Membership	32
+K12 Student Activity	C200211	Membership	—	32
+K12 Student Cohort	C200212	Person	Membership	32
+K12 Student Course Section Mark	C200214	Person	Membership	32
+K12 Student Discipline	C200215	Event	Membership	32
+K12 Student Dropout	C200216	Person	—	32
+K12 Student Dropout Reason	C200217	Person	—	32
+K12 Student Employment	C200218	Person	Membership	32
+K12 Student Enrollment	C200219	Membership	—	32
+K12 Student Graduation Plan	C200220	Membership	Resource	32
+K12 Student Home Language Survey	C200221	Person	—	33
+K12 Student Literacy Assessment	C200222	Person	Resource	33
+K12 Student Session	C200223	Membership	Event	33
+K12 Title III Language Instruction	C200224	Membership	Resource	33
+Learner Action	C200225	Membership	Event	33
+Learner Activity	C200226	Resource	Membership	33
+Learning Resource	C200228	Resource	—	33
+Learning Resource Adaptation	C200229	Resource	—	33
+Learning Resource Identification	C200230	Resource	—	33
+Learning Resource Issued	C200231	Asset	Resource	33
+Learning Resource Media Feature	C200232	Resource	—	33
+Learning Resource Order	C200233	Resource	—	33
+Learning Resource Peer Rating	C200234	Resource	—	33
+Learning Resource Physical Media	C200235	Resource	—	33
+Learning Resource Status Detail	C200236	Resource	—	33
+Local Education Agency	C200188	Organization	—	33
+Local Education Agency Federal Funds	C200189	Organization	Resource	33
+Local Education Agency Federal Reporting	C200190	Organization	Resource	33
+Local Education Agency Policy	C200191	Organization	Resource	33
+Local Education Agency PreK Eligibility	C200192	Organization	Membership	33
+Local Education Agency PreK Eligible Ages IDEA	C200193	Organization	Membership	33
+Local Education Agency Safe Drug Free	C200194	Organization	Resource	33
+Local Education Agency Title I Support Service	C200196	Organization	Resource	33
+Local Education Agency Title III Professional Development	C200195	Organization	Resource	33
+Local Education Agerncy Operational Detail	C200396	Organization	—	33
+Location	C200237	Resource	—	34
+Location Address	C200238	Resource	—	34
+Membership	C200257	Membership	—	34
+Membership Application	C200258	Membership	—	34
+Membership Full Time Equivalency	C200259	Membership	—	34
+Organization	C200239	Organization	—	34
+Organization Accreditation	C200240	Organization	Resource	34
+Organization Calendar	C200241	Organization	Event	34
+Organization Calendar Crisis	C200242	Event	Organization	34
+Organization Calendar Day	C200243	Organization	Event	34
+Organization Calendar Event	C200244	Event	Organization	34
+Organization Calendar Session	C200245	Event	Organization	34
+Organization Email	C200247	Organization	—	34
+Organization Employee Benefit	C200248	Organization	Resource	34
+Organization Enrollment Capacity	C200249	Organization	—	34
+Organization Federal Accountability	C200250	Organization	Resource	34
+Organization Financial	C200251	Organization	Resource	34
+Organization Identification	C200252	Organization	—	34
+Organization Image	C200253	Organization	Resource	34
+Organization Indicator	C200254	Organization	—	34
+Organization Indirect Cost Rate	C200401	Organization	Resource	34
+Organization Jurisdiction	C200255	Organization	—	34
+Organization Operational Detail	C200398	Organization	—	34
+Organization Policy	C200261	Organization	Resource	34
+Organization Population Served	C200262	Organization	—	34
+Organization Program Type	C200263	Organization	Resource	34
+Organization Project Based Learning	C200264	Organization	Resource	35
+Organization Relationship	C200265	Organization	—	35
+Organization Salary Schedule Criteria	C200266	Organization	Resource	35
+Organization Salary Schedule Criteria Value	C200267	Organization	Resource	35
+Organization Salary Schedule Criteria Value Salary	C200268	Organization	Resource	35
+Organization Salary Schedule Salary	C200269	Organization	Resource	35
+Organization Service	C200270	Organization	Resource	35
+Organization Technical Assistance	C200271	Organization	Resource	35
+Organization Title	C200246	Organization	—	35
+Organization Website	C200273	Organization	Resource	35
+Peer Rating System	C200274	Resource	—	35
+Person	C200275	Person	—	35
+Person Address NCES Side	C200276	Person	—	35
+Person Allergy	C200277	Person	—	35
+Person Birth	C200376	Person	—	35
+Person Birthplace	C200278	Person	—	35
+Person Career Education Plan	C200279	Person	—	35
+Person Citizenship	C200014	Person	—	35
+Person Credential	C200280	Person	Asset	35
+Person Death	C200418	Person	—	35
+Person Degree Or Certificate	C200281	Person	Asset	35
+Person Demographic Race	C200282	Person	—	35
+Person Digital Access	C200283	Person	Resource	35
+Person Digital Access Speed	C200284	Person	Resource	35
+Person Disability	C200285	Person	—	35
+Person Email Address	C200286	Person	—	35
+Person Family	C200287	Person	—	36
+Person Health	C200288	Person	—	36
+Person Health Birth	C200289	Person	—	36
+Person Homelessness	C200290	Person	—	36
+Person Identification	C200291	Person	—	36
+Person Immunization	C200292	Person	—	36
+Person Language	C200293	Person	—	36
+Person Learning Device	C200294	Person	Resource	36
+Person Master	C200295	Person	—	36
+Person Military	C200296	Person	—	36
+Person Military Campaigns	C200297	Person	—	36
+Person Military Deployment	C200298	Person	—	36
+Person Military Duties	C200299	Person	—	36
+Person Military Expertise	C200300	Person	—	36
+Person Military Honors	C200301	Person	—	36
+Person Military Occupational Specialties	C200302	Person	—	36
+Person Military Service Locations	C200303	Person	—	36
+Person Name	C200377	Person	—	36
+Person Other Name	C200304	Person	—	36
+Person Personal Information Verification	C200305	Person	—	36
+Person Program Participation	C200306	Person	Membership	36
+Person Referral	C200307	Person	Membership	36
+Person Relationship	C200308	Person	—	36
+Person Residency	C200378	Person	—	36
+Person Sex Gender	C200011	Person	—	36
+Person Status	C200309	Person	—	36
+Person Transportation Eligibility	C200310	Person	—	37
+Postsecondary Course	C200328	Resource	—	37
+Postsecondary Institution	C200329	Organization	—	37
+Postsecondary Price Of Attendance	C200330	Resource	Organization	37
+Postsecondary Program	C200331	Resource	Organization	37
+Postsecondary Section	C200332	Resource	Organization	37
+Postsecondary Section Location	C200333	Resource	Organization	37
+Postsecondary Staff Employment	C200334	Membership	—	37
+Postsecondary Student Academic Award	C200335	Asset	Person	37
+Postsecondary Student Academic Record	C200336	Person	Membership	37
+Postsecondary Student Admission Test	C200337	Person	—	37
+Postsecondary Student Application	C200338	Membership	Person	37
+Postsecondary Student Cohort	C200339	Person	Membership	37
+Postsecondary Student Course Section Mark	C200340	Person	Membership	37
+Postsecondary Student Demographic	C200341	Person	—	37
+Postsecondary Student Employment	C200342	Person	Membership	37
+Postsecondary Student Enrollment	C200343	Membership	—	37
+Postsecondary Student Financial Aid	C200344	Asset	Membership	37
+Postsecondary Student Program	C200345	Membership	Resource	37
+Postsecondary Student Section	C200346	Membership	Resource	37
+Postsecondary System	C200070	Organization	—	37
+Professional Development Activity	C200311	Resource	—	37
+Professional Development Requirement	C200312	Resource	Membership	37
+Professional Development Session	C200313	Event	Resource	37
+Professional Membership Organization	C200382	Organization	—	37
+Program	C200315	Organization	Resource	37
+Program Participation	C200407	Membership	—	38
+Program Participation Adult Education	C200316	Membership	—	38
+Program Participation Attainment	C200317	Person	Membership	38
+Program Participation Career And Technical	C200318	Membership	—	38
+Program Participation Food Service	C200319	Membership	—	38
+Program Participation Migrant	C200320	Membership	—	38
+Program Participation Neglected	C200321	Membership	—	38
+Program Participation Special Education	C200322	Membership	—	38
+Program Participation Teacher Prep	C200323	Membership	—	38
+Program Participation Title I	C200324	Membership	—	38
+Program Participation Title III English Learner	C200325	Membership	—	38
+Program Participation WIOA	C200326	Membership	—	38
+Program Participation WIOA Barriers	C200327	Membership	—	38
+Quarterly Employment Record	C200347	Person	Membership	38
+Record Status	C200411	Provenance	—	38
+Record Status History	C200395	Provenance	—	38
+Recruiter	C200381	Organization	—	38
+Region	C200394	Organization	—	38
+Role Attendance	C200350	Membership	—	38
+Role Attendance Event	C200351	Event	Membership	38
+Role Status	C200352	Membership	—	38
+Rubric	C200353	Resource	—	38
+Rubric Criterion	C200354	Resource	—	38
+Rubric Criterion Level	C200355	Resource	—	38
+SHEEO Agency	C200018	Organization	—	38
+School Operational Detail	C200397	Organization	—	38
+Service Frequency	C200356	Resource	—	39
+Service Membership	C200404	Membership	—	39
+Service Plan	C200357	Resource	Membership	39
+Service Provided	C200358	Membership	Resource	39
+Service Provider	C200359	Organization	—	39
+Service Staff	C200361	Membership	—	39
+Services Received	C200360	Membership	—	39
+Staff Compensation	C200362	Membership	Resource	39
+Staff Compensation Funding Source	C200363	Membership	Resource	39
+Staff Credential	C200364	Person	Asset	39
+Staff Development Provider	C200380	Organization	—	39
+Staff Education Enrollment	C200408	Membership	—	39
+Staff Evaluation	C200366	Person	Membership	39
+Staff Evaluation Part	C200367	Person	Membership	39
+Staff Experience	C200368	Person	—	39
+Staff Professional Development Activity	C200369	Membership	Resource	39
+Staff Technical Assistance	C200370	Membership	Resource	39
+State Education Agency	C200204	Organization	—	39
+State Education Agency Federal Funds	C200206	Organization	Resource	39
+Student Course Section Enrollment	C200213	Membership	Resource	39
+Teacher Education Credential Exam	C200371	Membership	Resource	39
+Teacher Student Data Link Exclusion	C200372	Person	Membership	39
+Telephone	C200272	Person	Organization	39
+Workforce Employment Quarterly Data	C200373	Person	Membership	39
+Workforce Program Participant Cohort	C200374	Person	Membership	39
+Workforce Program Participation	C200375	Membership	—	39

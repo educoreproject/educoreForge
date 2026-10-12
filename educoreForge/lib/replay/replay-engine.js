@@ -1175,6 +1175,25 @@ const edgeTypeRefusal = (edgeTypeList) => {
 	return '';
 };
 
+// ⟪lane DES, 2026-10-12⟫ edgeEndpointRule — which endpoints of a label-scoped harvest's edges must carry the selection.
+// ABSENT (every caller before lane DES): BOTH, the block carries only edges whose endpoints it also carries. 'eitherSelected':
+// a LAYER block (vocabulary SCHEMA_BLOCK_KIND.LAYER) carries its own nodes and the edges joining them to its standard's BASE
+// nodes, which it requires and does not copy; replay resolves both endpoints by stableId anywhere in the graph and reports a
+// dangling one. Allowed ONLY with a named edgeTypeList, so it can never sweep up a base's own edges.
+const EDGE_ENDPOINT_RULE_LIST = Object.freeze(['bothSelected', 'eitherSelected']);
+const edgeEndpointRuleRefusal = (edgeEndpointRule, edgeTypeList) => {
+	if (edgeEndpointRule === undefined) {
+		return '';
+	}
+	if (EDGE_ENDPOINT_RULE_LIST.indexOf(edgeEndpointRule) === -1) {
+		return `harvestBlock: edgeEndpointRule ${JSON.stringify(edgeEndpointRule)} is not one of ${EDGE_ENDPOINT_RULE_LIST.join(', ')}`;
+	}
+	if (edgeEndpointRule === 'eitherSelected' && edgeTypeList === undefined) {
+		return "harvestBlock: edgeEndpointRule 'eitherSelected' requires an edgeTypeList — an either-endpoint harvest with no named types would take every edge touching the selection, the base's own included";
+	}
+	return '';
+};
+
 const edgeTypeMatch = (edgeTypeList) =>
 	edgeTypeList === undefined ? '' : `:${edgeTypeList.map((oneEdgeType) => `\`${oneEdgeType}\``).join('|')}`;
 
@@ -1207,11 +1226,15 @@ const fetchNodesByLabelsPaged = (session, selectionLabels, header, emitEmbedding
 
 // Edges with BOTH endpoints inside the selected labels. A block carries only the edges whose
 // endpoints it also carries; anything else would deserialize into a dangling reference.
-const fetchEdgesWithinLabels = (session, selectionLabels, edgeTypeList, callback) => {
+const fetchEdgesWithinLabels = (session, selectionLabels, edgeTypeList, edgeEndpointRule, callback) => {
 	const clause = labelMatch(selectionLabels);
+	const matchText =
+		edgeEndpointRule === 'eitherSelected'
+			? `MATCH (a)-[r${edgeTypeMatch(edgeTypeList)}]->(b) WHERE a:${clause} OR b:${clause}`
+			: `MATCH (a:${clause})-[r${edgeTypeMatch(edgeTypeList)}]->(b:${clause})`;
 	session
 		.run(
-			`MATCH (a:${clause})-[r${edgeTypeMatch(edgeTypeList)}]->(b:${clause})
+			`${matchText}
 			 RETURN a._source AS fromSrc, a.stableId AS fromStableId, type(r) AS type,
 			        b._source AS toSrc, b.stableId AS toStableId, properties(r) AS props
 			 ORDER BY fromStableId, type, toStableId`,
@@ -1236,9 +1259,10 @@ const harvestBlock = ({ boltUri, password, selector, header, vectorStore }, call
 	// are the incumbent-faithful ones, kept because they are proven and cost nothing.
 	const selectionLabels = selector && selector.selectionLabels;
 	const edgeTypeList = selector && selector.edgeTypeList;
+	const edgeEndpointRule = selector && selector.edgeEndpointRule;
 	const isLabelScoped = !!selectionLabels;
 	if (isLabelScoped) {
-		const refusal = labelRefusal(selectionLabels) || edgeTypeRefusal(edgeTypeList);
+		const refusal = labelRefusal(selectionLabels) || edgeTypeRefusal(edgeTypeList) || edgeEndpointRuleRefusal(edgeEndpointRule, edgeTypeList);
 		if (refusal) {
 			session.close().then(() => driver.close());
 			callback(refusal);
@@ -1305,7 +1329,7 @@ const harvestBlock = ({ boltUri, password, selector, header, vectorStore }, call
 			next('', { ...args, edges });
 		};
 		if (isLabelScoped) {
-			fetchEdgesWithinLabels(session, selectionLabels, edgeTypeList, collectEdges);
+			fetchEdgesWithinLabels(session, selectionLabels, edgeTypeList, edgeEndpointRule, collectEdges);
 			return;
 		}
 		fetchStandardEdges(session, sourceOf(selector.source), collectEdges);
@@ -1831,7 +1855,7 @@ const replay = ({ manifest, boltUri, password, graphName, storeResolver }, callb
 		// carried it in standardKey and are still read); an unreadable header names itself rather than 'v undefined'
 		const relationshipHeaderSubject = h.blockType === 'relationship' && h.serializerVersion !== '1' ? subjectOfHeader(h) : null;
 		const blockName = relationshipHeaderSubject === null
-			? `${h.blockType} ${h.standardKey} v${h.version}`
+			? `${h.blockType} ${h.standardKey} v${h.version}${h.blockType === 'layer' ? ` layer ${h.layerKey} v${h.layerVersion}` : ''}`
 			: relationshipHeaderSubject.error
 				? `relationship (header subject unreadable: ${relationshipHeaderSubject.error})`
 				: `relationship ${relationshipHeaderSubject.subject}`;

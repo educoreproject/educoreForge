@@ -99,7 +99,8 @@ own output — plus the build-scoped gates (vectors present, two-forge determini
 | **README_roundTripContract.md** | before changing anything about what "faithful" means, or before believing a fidelity number |
 | **README_addingAField.md** | before carrying a new predicate. **Four lists must agree; missing one fails silently.** Read it first — it costs an afternoon otherwise |
 | **README_identityRules.md** | before touching ids. Some are the source's, some are rewritten, some are derived, some are minted — and one of them is load-bearing in a way that is easy to destroy |
-| **README_sourceExceptions.md** | when CEDS does something that looks like a bug. It probably isn't; there are eleven documented cases |
+| **README_sourceExceptions.md** | when CEDS does something that looks like a bug. It probably isn't; there are twelve documented cases (the twelfth, U+FFFD text, is repaired in a layer) |
+| **layers/README_layers.md** | before touching CEDS's LAYERS: the Domain Entity Schema V13, the Ontology Guide V14 Appendix A and the U+FFFD text repairs, each its own block beside this one (2026-10-12) |
 
 ---
 

@@ -1,0 +1,205 @@
+propertyName	propertyId	classText	conceptText	guidePageNumber
+Accessible Format Issued Begin Date	P002090	Individualized Program Accessible Format	Membership, Event	40
+Accessible Format Issued End Date	P002091	Individualized Program Accessible Format	Membership, Event	40
+Accreditation Award Date	P000840	Organization Accreditation	Organization, Event	40
+Accreditation Expiration Date	P000841	Organization Accreditation	Organization, Event	40
+Activity Involvement Begin Date	P000007	Activity Membership	Membership, Event	40
+Activity Involvement End Date	P000008	Activity Membership	Membership, Event	40
+Adequate Yearly Progress Appeal Process Date	P000444	Organization Federal Accountability	Organization, Event	40
+Adult Education Postsecondary Transition Date	P001081	Program Participation Adult Education	Membership, Event	40
+Anticipated Date of Transition	P002125	Early Learning Child Transition Plan	Membership, Event	40
+Application Date	P000323	Early Learning Child Services Application	Membership, Event	40
+Assessment Administration Finish Date	P000964	Assessment Administration	Event	40
+Assessment Administration Start Date	P000962	Assessment Administration	Event	40
+Assessment Asset Published Date	P001197	Assessment Asset	Resource, Event	40
+Assessment Form Intended Administration End Date	P001187	Assessment Form	Resource, Event	40
+Assessment Item Response Descriptive Feedback Date	P001537	Assessment Item Response	Person, Resource, Event	41
+Assessment Item Response Start Date	P000959	Assessment Item Response	Person, Resource, Event	41
+Assessment Registration Completion Status Date Time	P001542	Assessment Registration	Membership, Event	41
+Assessment Registration Creation Date	P001017	Assessment Registration	Membership, Event	41
+Assessment Registration Score Publish Date	P001056	Assessment Registration	Membership, Event	41
+Assessment Result Date Created	P000971	Assessment Result	Person, Resource, Event	41
+Assessment Result Date Updated	P000970	Assessment Result	Person, Resource, Event	41
+Assessment Result Descriptive Feedback Date Time	P001545	Assessment Result	Person, Resource, Event	41
+Assessment Revision Date	P001544	Assessment	Resource, Event	41
+Assessment Session Actual End Date Time	P001022	Assessment Session	Event	41
+Assessment Session Actual Start Date Time	P001021	Assessment Session	Event	41
+Assessment Session Scheduled End Date Time	P001020	Assessment Session	Event	41
+Assessment Session Scheduled Start Date Time	P001019	Assessment Session	Event	41
+Assessment Subtest Published Date	P001091	Assessment Subtest	Resource, Event	41
+Assignment End Date	P000527	Assignment	Membership, Event	41
+Assignment Start Date	P000526	Assignment	Membership, Event	41
+Attendance Event Date	P001649	Role Attendance Event	Membership, Event	41
+Authentication Identity Provider End Date	P001172	Authentication	Resource, Event	41
+Authentication Identity Provider Start Date	P001171	Authentication	Resource, Event	41
+Authorization Date	P001725	Authorization	Resource, Event	41
+Authorization End Date	P001177	Authorization	Resource, Event	42
+Authorization Start Date	P001176	Authorization	Resource, Event	42
+Birthdate	P000033	Person Birth	Person, Event	42
+Board Member Term End Date	P002103	Board Membership	Membership, Event	42
+Board Member Term Start Date	P002102	Board Membership	Membership, Event	42
+Building Date of Certificate of Occupancy	P001880	Facility Design Construction	Resource, Event	42
+Calendar Event Date	P001275	Organization Calendar Event	Organization, Event	42
+Cardiopulmonary Resuscitation Certification Expiration Date	P001059	Person Credential	Person, Asset, Event	42
+Career Education Plan Date	P001289	Person Career Education Plan	Person, Event	42
+Career Pathways Program Participation Exit Date	P001583	Program Participation Career And Technical	Membership, Event	42
+Career Pathways Program Participation Start Date	P001584	Program Participation Career And Technical	Membership, Event	42
+Charter School Contract Approval Date	P001652	K12 Charter School Authorizer Agency	Organization, Event	42
+Charter School Contract Renewal Date	P001653	K12 Charter School Authorizer Agency	Organization, Event	42
+Class Ranking Date	P000042	K12 Student Academic Record	Person, Membership, Event	42
+Competency Definition Valid End Date	P001511	Competency Definition	Resource, Event	42
+Competency Definition Valid Start Date	P001512	Competency Definition	Resource, Event	42
+Competency Framework Publication Date	P001569	Competency Framework	Resource, Event	42
+Competency Framework Valid End Date	P000701	Competency Framework	Resource, Event	42
+Competency Framework Valid Start Date	P000700	Competency Framework	Resource, Event	42
+Component or Fixture Check Date	P001898	Building System Component Service	Resource, Event	42
+Component or Fixture Scheduled Serviced Date	P001900	Building System Component Service	Resource, Event	43
+Component or Fixture Serviced Date	P001899	Building System Component Service	Resource, Event	43
+Consent to Evaluation Date	P001727	Individualized Program Eligibility Evaluation	Membership, Event	43
+Continuing License Date	P000349	Early Learning Program Licensing	Organization, Event	43
+Course Add Date	P001300	Student Course Section Enrollment	Membership, Event	43
+Course Begin Date	P000054	Course / Course Section	Resource, Event	43
+Course Drop Date	P001305	Student Course Section Enrollment	Membership, Event	43
+Course End Date	P000059	Course / Course Section	Resource, Event	43
+Course Section Enrollment Status End Date	P000975	Student Course Section Enrollment	Membership, Event	43
+Course Section Enrollment Status Start Date	P000974	Student Course Section Enrollment	Membership, Event	43
+Course Section Exit Withdrawal Date	P000651	Student Course Section Enrollment	Membership, Event	43
+Credential Award End Date	P001164	Credential Award	Asset, Event	43
+Credential Award Start Date	P001163	Credential Award	Asset, Event	43
+Credential Award Status Date	P002197	Credential Award	Asset, Event	43
+Credential Completion Date	P001664	Credential Award	Asset, Event	43
+Credential Definition Date Effective	P001910	Credential Definition	Resource, Event	43
+Credential Expiration Date	P000069	Person Credential	Person, Asset, Event	43
+Credential Offered End Date	P001912	Credential Offered	Resource, Event	43
+Credential Offered Start Date	P001911	Credential Offered	Resource, Event	43
+Credential Revoked Date	P001660	Credential Award	Asset, Event	43
+Crisis End Date	P001552	Organization Calendar Crisis	Organization, Event	43
+Crisis Start Date	P000614	Organization Calendar Crisis	Organization, Event	43
+Date of Transition Plan	P001367	Early Learning Child Transition Plan	Membership, Event	43
+Date State Received Title III Allocation	P000455	K12 Title III Language Instruction	Organization, Event	44
+Date Title III Funds Available to Subgrantees	P000456	K12 Title III Language Instruction	Organization, Event	44
+Death Date	P002206	Person Death	Person, Event	44
+Declined Services Date	P001712	Person Referral	Person, Membership, Event	44
+Degree or Certificate Conferring Date	P000344	Person Degree Or Certificate	Asset, Event	44
+Dental Screening Date	P000706	Person Health	Person, Event	44
+Disciplinary Action End Date	P000082	K12 Student Discipline	Membership, Event	44
+Disciplinary Action Start Date	P000083	K12 Student Discipline	Membership, Event	44
+Doctoral Candidacy Date	P001325	Postsecondary Student Academic Record	Person, Membership, Event	44
+Doctoral Exam Taken Date	P001326	Postsecondary Student Academic Record	Person, Membership, Event	44
+Early Learning Enrollment Application Verification Date	P001592	Early Learning Enrollment	Membership, Event	44
+Early Learning Outcome Measurement Date	P002126	Early Learning Child Outcome Summary	Person, Membership, Event	44
+Early Learning Program Eligibility Expiration Date	P001338	Early Learning Child Program Eligibility	Membership, Event	44
+Early Learning Program Eligibility Status Date	P001340	Early Learning Child Program Eligibility	Membership, Event	44
+Eligibility Determination Date	P002120	Eligibility Determination	Person, Membership, Event	44
+Eligibility Evaluation Date	P001731	Eligibility Evaluation	Membership, Event	44
+Employment End Date	P000795	Employment	Membership, Event	44
+Employment Record Reference Period End Date	P000993	Quarterly Employment Record	Membership, Event	44
+Employment Record Reference Period Start Date	P000992	Quarterly Employment Record	Membership, Event	44
+Employment Start Date	P000346	Employment	Membership, Event	44
+Enrollment Date	P000324	Early Learning Child Program Eligibility	Membership, Event	44
+Enrollment Entry Date	P000097	Enrollment / K12 Student Enrollment	Membership, Event	44
+Enrollment Exit Date	P000107	Enrollment / K12 Student Enrollment	Membership, Event	44
+Enrollment Status Date	P002129	Postsecondary Student Enrollment	Membership, Event	45
+Entry Date into Postsecondary	P000098	Postsecondary Student Enrollment	Membership, Event	45
+Facility Acquisition Date	P001768	Facility	Organization, Event	45
+Facility Audit Date	P001881	Facility Audit	Resource, Event	45
+Facility Compliance Determination Date	P001837	Facility Compliance	Organization, Event	45
+Facility Construction Date	P001780	Facility Design Construction	Resource, Event	45
+Facility Hazardous Condition Expected Remediation Date	P001842	Facility Hazard	Resource, Event	45
+Financial Accounting Date	P001648	Financial Account	Organization, Event	45
+First Aid Certification Expiration Date	P001060	Person Credential	Person, Asset, Event	45
+First Entry Date into a US School	P000529	K12 Student Enrollment	Membership, Event	45
+First Instruction Date	P000497	Organization Calendar Session	Organization, Event	45
+Fiscal Period Begin Date	P001642	Financial Account	Organization, Event	45
+Fiscal Period End Date	P001643	Financial Account	Organization, Event	45
+Functional Behavioral Assessment Date	P002127	Individualized Program Assessment	Membership, Event	45
+Goal End Date	P001166	Goal	Resource, Event	45
+Goal Start Date	P001165	Goal	Resource, Event	45
+Hazardous Material or Condition Testing Date	P001845	Facility Hazard	Resource, Event	45
+Hearing Screening Date	P000705	Person Health	Person, Event	45
+Hire Date	P000143	Employment / K12 Staff Employment	Membership, Event	45
+Home Language Survey Administration Date	P001989	K12 Student Home Language Survey	Person, Event	45
+IDEA Part C to Part B Notification Date	P001500	Early Learning Child Transition Plan	Membership, Event	45
+IDEA Part C to Part B Notification Opt Out Date	P001364	Early Learning Child Transition Plan	Membership, Event	45
+Immunization Date	P000306	Person Immunization	Person, Event	45
+Incident Date	P000502	Incident	Event	46
+Indirect Cost Rate Agreement End Date	P002135	Organization Indirect Cost Rate	Organization, Event	46
+Indirect Cost Rate Agreement Start Date	P002134	Organization Indirect Cost Rate	Organization, Event	46
+Individualized Program Date	P001232	Individualized Program	Membership, Event	46
+Individualized Program Planned Service Start Date	P001381	Individualized Program Service	Membership, Event	46
+Individualized Program Service Plan Date	P001236	Individualized Program	Membership, Event	46
+Individualized Program Service Plan End Date	P001683	Individualized Program	Membership, Event	46
+Individualized Program Service Plan Meeting Date	P001684	Individualized Program Meeting	Membership, Event	46
+Individualized Program Service Plan Progress Report Date	P001699	Individualized Program Progress Report	Person, Membership, Event	46
+Individualized Program Service Plan Reevaluation Date	P001241	Individualized Program	Membership, Event	46
+Individualized Program Service Plan Signature Date	P001240	Individualized Program	Membership, Event	46
+Initial License Date	P000348	Early Learning Program Licensing	Organization, Event	46
+Intended Administration Start Date	P001186	Assessment Form	Resource, Event	46
+Internet Speed Test Date Time	P001977	Person Digital Access Speed	Person, Event	46
+Job Position Expected Start Date	P002077	Job Position Status Detail	Resource, Event	46
+Job Position Status Date	P002079	Job Position Status Detail	Resource, Event	46
+Last Instruction Date	P000498	Organization Calendar Session	Organization, Event	46
+Last Qualifying Move Date	P000171	Program Participation Migrant	Membership, Event	46
+Learner Action Date Time	P000937	Learner Action	Membership, Event	46
+Learner Activity Creation Date	P000943	Learner Activity	Resource, Event	46
+Learner Activity Due Date	P000946	Learner Activity	Resource, Event	46
+Learner Activity Release Date	P000950	Learner Activity	Resource, Event	47
+Learning Resource Date Created	P000916	Learning Resource	Resource, Event	47
+Learning Resource Date Modified	P001564	Learning Resource	Resource, Event	47
+Learning Resource Issued Date	P002093	Learning Resource Issued	Asset, Event	47
+Learning Resource Ordered Date	P002095	Learning Resource Order	Resource, Event	47
+Learning Resource Published Date	P001184	Learning Resource	Resource, Event	47
+Learning Resource Received Date	P002094	Learning Resource Issued	Asset, Event	47
+Membership Entry Date	P600559	Membership	Membership, Event	47
+Membership Exit Date	P600560	Membership	Membership, Event	47
+Memorandum of Understanding End Date	P001614	Early Learning Service Partner	Organization, Event	47
+Memorandum of Understanding Start Date	P001615	Early Learning Service Partner	Organization, Event	47
+Migrant Education Program Eligibility Expiration Date	P000430	Program Participation Migrant	Membership, Event	47
+Migrant Student Qualifying Arrival Date	P000432	Program Participation Migrant	Membership, Event	47
+Military Deployment End Date	P002043	Person Military Deployment	Person, Event	47
+Military Deployment Start Date	P002042	Person Military Deployment	Person, Event	47
+Military Discharge Date	P002040	Person Military	Person, Event	47
+Military Induction Date	P002039	Person Military	Person, Event	47
+Military Release Date	P002041	Person Military	Person, Event	47
+Monitoring Visit End Date	P001332	Early Learning Organization Monitoring	Organization, Event	47
+Monitoring Visit Start Date	P001331	Early Learning Organization Monitoring	Organization, Event	47
+Operation Date	P000351	Organization Operational Detail	Organization, Event	47
+Operational Status Effective Date	P000534	Organization Operational Detail	Organization, Event	47
+Oral Defense Date	P001417	Postsecondary Student Academic Record	Person, Membership, Event	48
+Organization Seeking Accreditation Date	P001419	Organization Accreditation	Organization, Event	48
+Peer Rating Date	P001167	Learning Resource Peer Rating	Resource, Event	48
+Professional Development Activity Approval End Date	P002205	Professional Development Activity	Resource, Event	48
+Professional Development Activity Approval Start Date	P002204	Professional Development Activity	Resource, Event	48
+Professional Development Activity Expiration Date	P001451	Professional Development Activity	Resource, Event	48
+Professional Development Plan Completion	P001621	Person Career Education Plan	Person, Event	48
+Professional Development Session End Date	P001447	Professional Development Session	Resource, Event	48
+Professional Development Session Start Date	P001455	Professional Development Session	Resource, Event	48
+Program Participation Exit Date	P000591	Program Participation	Membership, Event	48
+Program Participation Start Date	P000590	Program Participation	Membership, Event	48
+Projected Graduation Date	P000226	K12 Student Graduation Plan	Membership, Event	48
+Quality Initiative Participation End Date	P001464	Early Learning Quality Initiative	Organization, Event	48
+Quality Initiative Participation Start Date	P001465	Early Learning Quality Initiative	Organization, Event	48
+Quality Rating and Improvement System Award Date	P000830	Early Learning Quality Rating Improvement	Organization, Event	48
+Quality Rating and Improvement System Expiration Date	P000831	Early Learning Quality Rating Improvement	Organization, Event	48
+Referral Date	P001481	Person Referral	Person, Membership, Event	48
+School Improvement Exit Date	P000481	K12 School Improvement	Organization, Event	48
+Service Date	P001635	Early Learning Child Service	Membership, Event	48
+Service Entry Date	P000326	Service Membership	Membership, Event	48
+Service Exit Date	P000327	Service Membership	Membership, Event	49
+Session Begin Date	P000251	Organization Calendar Session	Organization, Event	49
+Session End Date	P000253	Organization Calendar Session	Organization, Event	49
+Special Education Services Exit Date	P000263	Program Participation Special Education	Membership, Event	49
+Staff Education Entry Date	P000793	Staff Education Enrollment	Membership, Event	49
+Staff Education Withdrawal Date	P000794	Staff Education Enrollment	Membership, Event	49
+Staff Professional Development Activity Completion Date	P001062	Staff Professional Development Activity	Membership, Event	49
+Staff Professional Development Activity Start Date	P001061	Staff Professional Development Activity	Membership, Event	49
+Status End Date	P001228	Role Status	Membership, Event	49
+Status Start Date	P001227	Role Status	Membership, Event	49
+Teaching Assignment End Date	P000646	K12 Staff Assignment	Membership, Event	49
+Teaching Assignment Start Date	P000645	K12 Staff Assignment	Membership, Event	49
+Transition Conference Date	P001365	Early Learning Child Transition Plan	Membership, Event	49
+Transition Conference Decline Date	P001366	Early Learning Child Transition Plan	Membership, Event	49
+Vision Screening Date	P000703	Person Health	Person, Event	49
+Well Child Screening Received Date	P001631	Early Learning Organization Monitoring	Organization, Event	49
+Workforce Program Participation End Date	P000999	Workforce Program Participation	Membership, Event	49
+Workforce Program Participation Start Date	P000998	Workforce Program Participation	Membership, Event	49

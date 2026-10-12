@@ -1,0 +1,95 @@
+{
+	"_note": "lane DES (cedsRichness-101226, 2026-10-12; COPPER_RIVER ruling Q5): gate D, the CEDS-Elements CEDS-V14.0.0.0.xlsx workbook as an INDEPENDENT rendering of the release the forge carries. For each of the four term sheets, the IRI column keys a row to an RDF subject, and every compared column names the predicate it renders (the workbook's own headers carry it, e.g. 'Label (rdfs:label)'). valueSplitText splits a multi-valued cell (the workbook joins with ' | '); objectKind 'resource' compares IRIs, 'literal' compares literal text under the canonicalizer's own whitespace rule. Columns NOT compared are listed with the reason, so a reader sees what the gate does not see. The flat sheet 'CEDS V14 Ontology' is a join of the four term sheets and is not compared.",
+	"prefixByName": {
+		"rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+		"rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+		"owl": "http://www.w3.org/2002/07/owl#",
+		"skos": "http://www.w3.org/2004/02/skos/core#",
+		"dc": "http://purl.org/dc/elements/1.1/",
+		"schema": "https://schema.org/",
+		"ceds": "https://w3id.org/CEDStandards/terms/"
+	},
+	"valueSplitText": " | ",
+	"_renderingRuleNote": "THREE SYSTEMATIC RENDERING DIFFERENCES, measured 2026-10-12 against the pinned CEDS-Ontology.rdf (the emission's own source), each declared as a column rule rather than as thousands of exceptions: (1) subClassOf: the workbook prints named superclasses only, never the anonymous owl:Restriction blocks (canonical subjects carrying '#/rtStruct/'); (2) rdf:type: the workbook prints a concept scheme's skos:ConceptScheme without owl:Class, and a named individual's scheme class without owl:NamedIndividual and skos:Concept; (3) an EMPTY literal (CEDS writes <skos:definition/> on 27 named individuals) has no cell to show it in, so a graph value '' is compared as an empty cell (graphEmptyLiteralIsEmptyCell).",
+	"graphEmptyLiteralIsEmptyCell": true,
+	"notComparedSheetList": [{ "sheetName": "CEDS V14 Ontology", "reason": "a flat join of the four term sheets (class x property x scheme x value), derivable from them; each fact it states is compared on its own sheet" }],
+	"sheetList": [
+		{
+			"sheetName": "Classes",
+			"iriColumnHeader": "IRI",
+			"columnList": [
+				{ "header": "Label", "predicate": "rdfs:label", "objectKind": "literal" },
+				{ "header": "Technical Name (skos:notation)", "predicate": "skos:notation", "objectKind": "literal" },
+				{ "header": "Identifier (dc:identifier)", "predicate": "dc:identifier", "objectKind": "literal" },
+				{ "header": "Description (dc:description)", "predicate": "dc:description", "objectKind": "literal" },
+				{ "header": "Definition (skos:definition)", "predicate": "skos:definition", "objectKind": "literal" },
+				{ "header": "Creator (dc:creator)", "predicate": "dc:creator", "objectKind": "literal" },
+				{ "header": "Sub Class Of (rdfs:subClassOf)", "predicate": "rdfs:subClassOf", "objectKind": "resource", "ignoredGraphObjectSubstringList": ["#/rtStruct/"] }
+			],
+			"notComparedColumnList": ["Edit History: Version", "Edit History: Change Description", "Edit History: New (changeNew)", "Edit History: Updated (changeUpdated)", "Edit History: Issue Link", "Edit History: Property Added to Class"]
+		},
+		{
+			"sheetName": "Concept Schemes",
+			"iriColumnHeader": "IRI",
+			"columnList": [
+				{ "header": "Label (rdfs:label)", "predicate": "rdfs:label", "objectKind": "literal" },
+				{ "header": "Preferred Label (skos:prefLabel)", "predicate": "skos:prefLabel", "objectKind": "literal" },
+				{ "header": "Technical Name (skos:notation)", "predicate": "skos:notation", "objectKind": "literal" },
+				{ "header": "Identifier (dc:identifier)", "predicate": "dc:identifier", "objectKind": "literal" },
+				{ "header": "Description (dc:description)", "predicate": "dc:description", "objectKind": "literal" },
+				{ "header": "Definition (skos:definition)", "predicate": "skos:definition", "objectKind": "literal" },
+				{ "header": "Creator (dc:creator)", "predicate": "dc:creator", "objectKind": "literal" },
+				{ "header": "Sub Class Of (rdfs:subClassOf)", "predicate": "rdfs:subClassOf", "objectKind": "resource", "ignoredGraphObjectSubstringList": ["#/rtStruct/"] },
+				{ "header": "RDF Type (rdf:type)", "predicate": "rdf:type", "objectKind": "resource", "ignoredGraphObjectList": ["http://www.w3.org/2002/07/owl#Class"] },
+				{ "header": "Comment (rdfs:comment)", "predicate": "rdfs:comment", "objectKind": "literal" },
+				{ "header": "Equivalent Property (owl:equivalentProperty)", "predicate": "owl:equivalentProperty", "objectKind": "resource" },
+				{ "header": "Deprecated (owl:deprecated)", "predicate": "owl:deprecated", "objectKind": "literal" }
+			],
+			"notComparedColumnList": ["Edit History: Version", "Edit History: Change Description", "Edit History: New (changeNew)", "Edit History: Updated (changeUpdated)", "Edit History: Issue Link", "Edit History: Property Added to Class"]
+		},
+		{
+			"sheetName": "Properties",
+			"iriColumnHeader": "IRI",
+			"columnList": [
+				{ "header": "Label (rdfs:label)", "predicate": "rdfs:label", "objectKind": "literal" },
+				{ "header": "Technical Name (skos:notation)", "predicate": "skos:notation", "objectKind": "literal" },
+				{ "header": "Identifier (dc:identifier)", "predicate": "dc:identifier", "objectKind": "literal" },
+				{ "header": "Description (dc:description)", "predicate": "dc:description", "objectKind": "literal" },
+				{ "header": "Definition (skos:definition)", "predicate": "skos:definition", "objectKind": "literal" },
+				{ "header": "Preferred Label (skos:prefLabel)", "predicate": "skos:prefLabel", "objectKind": "literal" },
+				{ "header": "Comment (rdfs:comment)", "predicate": "rdfs:comment", "objectKind": "literal" },
+				{ "header": "Alternative Name (dc:alternative)", "predicate": "dc:alternative", "objectKind": "literal" },
+				{ "header": "Creator (dc:creator)", "predicate": "dc:creator", "objectKind": "literal" },
+				{ "header": "Domain Includes (schema:domainIncludes)", "predicate": "schema:domainIncludes", "objectKind": "resource" },
+				{ "header": "Range Includes (schema:rangeIncludes)", "predicate": "schema:rangeIncludes", "objectKind": "resource" },
+				{ "header": "Text Format (ceds:textFormat)", "predicate": "ceds:textFormat", "objectKind": "literal" },
+				{ "header": "Max Length (ceds:maxLength)", "predicate": "ceds:maxLength", "objectKind": "literal" },
+				{ "header": "Min Length (ceds:minLength)", "predicate": "ceds:minLength", "objectKind": "literal" },
+				{ "header": "Min Inclusive (ceds:minInclusive)", "predicate": "ceds:minInclusive", "objectKind": "literal" },
+				{ "header": "Max Inclusive (ceds:maxInclusive)", "predicate": "ceds:maxInclusive", "objectKind": "literal" },
+				{ "header": "Decimal Places (ceds:decimalPlaces)", "predicate": "ceds:decimalPlaces", "objectKind": "literal" },
+				{ "header": "Equivalent Property (owl:equivalentProperty)", "predicate": "owl:equivalentProperty", "objectKind": "resource" },
+				{ "header": "Deprecated (owl:deprecated)", "predicate": "owl:deprecated", "objectKind": "literal" }
+			],
+			"notComparedColumnList": ["Edit History: Version", "Edit History: Change Description", "Edit History: New (changeNew)", "Edit History: Updated (changeUpdated)", "Edit History: Issue Link", "Edit History: Property Added to Class"]
+		},
+		{
+			"sheetName": "Named Individuals",
+			"iriColumnHeader": "IRI",
+			"columnList": [
+				{ "header": "Label (rdfs:label)", "predicate": "rdfs:label", "objectKind": "literal" },
+				{ "header": "Code (skos:notation)", "predicate": "skos:notation", "objectKind": "literal" },
+				{ "header": "Preferred Label (skos:prefLabel)", "predicate": "skos:prefLabel", "objectKind": "literal" },
+				{ "header": "Identifier (dc:identifier)", "predicate": "dc:identifier", "objectKind": "literal" },
+				{ "header": "Description (dc:description)", "predicate": "dc:description", "objectKind": "literal" },
+				{ "header": "Definition (skos:definition)", "predicate": "skos:definition", "objectKind": "literal" },
+				{ "header": "Creator (dc:creator)", "predicate": "dc:creator", "objectKind": "literal" },
+				{ "header": "In Scheme (skos:inScheme)", "predicate": "skos:inScheme", "objectKind": "resource" },
+				{ "header": "Type / Class (rdf:type)", "predicate": "rdf:type", "objectKind": "resource", "ignoredGraphObjectList": ["http://www.w3.org/2002/07/owl#NamedIndividual", "http://www.w3.org/2004/02/skos/core#Concept"] },
+				{ "header": "Close Match (skos:closeMatch)", "predicate": "skos:closeMatch", "objectKind": "resource" },
+				{ "header": "Deprecated (owl:deprecated)", "predicate": "owl:deprecated", "objectKind": "literal" }
+			],
+			"notComparedColumnList": ["Edit History: Version", "Edit History: Change Description", "Edit History: New (changeNew)", "Edit History: Updated (changeUpdated)", "Edit History: Issue Link", "Edit History: Property Added to Class"]
+		}
+	]
+}

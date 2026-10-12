@@ -71,6 +71,8 @@ const PURPOSE_SOURCE = {
 	FORGED: 'mechanical:forged',
 	REUSED: 'mechanical:reused',
 	BRIDGED: 'mechanical:bridged',
+	// ⟪lane DES, 2026-10-12⟫ a layer block (kind 'layer'), written by build.js Phase A2
+	LAYERED: 'mechanical:layered',
 	UNRECOGNIZED: 'unrecognized',
 };
 // `site` NAMES THE WRITE, IT DOES NOT LOCATE IT. This field is emitted into the graph as
@@ -86,6 +88,7 @@ const PURPOSE_TEMPLATE_MATCHERS = [
 	{ token: PURPOSE_SOURCE.REUSED, pattern: /REUSED \(not forged\) by recipe /, site: 'build.js reused-standardBase description write' },
 	{ token: PURPOSE_SOURCE.BRIDGED, pattern: /^relationship schema block for .*bridged by bridge /, site: 'build.js bridged-relationship description write' },
 	{ token: PURPOSE_SOURCE.FORGED, pattern: /^standardBase schema block for .*forged by recipe /, site: 'build.js forged-standardBase description write' },
+	{ token: PURPOSE_SOURCE.LAYERED, pattern: /^layer schema block for .*forged by recipe /, site: 'build.js forged-layer description write' },
 ];
 
 // START OF moduleFunction() ============================================================
@@ -283,6 +286,10 @@ const moduleFunction =
 				}, {});
 				const relationshipFieldsOf = (oneMember) => {
 					const parsedSubject = vocabulary.parseBlockSubject(oneMember.subject);
+					// ⟪lane DES⟫ a layer member names the one base block it requires, in the same field a relationship uses
+					if (parsedSubject.kind === 'layer') {
+						return { requiresSchemaBlockRefIdList: Array.isArray(oneMember.requires) ? oneMember.requires.slice() : null };
+					}
 					if (parsedSubject.kind !== 'relationship') {
 						return {};
 					}

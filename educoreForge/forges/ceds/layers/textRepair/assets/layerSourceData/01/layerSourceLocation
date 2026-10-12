@@ -1,0 +1,10 @@
+layer: ceds/textRepair
+publishedVersion: 14.0.0.0
+publishedVersionEvidence: git tag v14.0.0.0 of CEDS-IDS (the Integrated Data Store, v14.0.0.0); the two files are written out of that tag with `git show v14.0.0.0:<path>` (HEAD at harvest differed from the tag only by one added change-log xlsx)
+upstreamUrl: https://github.com/CEDStandards/CEDS-IDS/tree/9919c9faec77a81a79ae7d4eba7a9c4987f53e8f/src
+upstreamCommit: 9919c9faec77a81a79ae7d4eba7a9c4987f53e8f
+upstreamPath: src/ddl/CEDS-IDS.sql, src/reference-data/Populate-CEDS-Ref-Tables.sql
+licence: Apache-2.0 (CEDS-IDS LICENSE, copied verbatim beside this file)
+encoding: CEDS-IDS.sql is UTF-8; Populate-CEDS-Ref-Tables.sql is Windows-1252 (cp1252) and decodes with zero replacement characters
+copiedFrom: educoreForge/system/dataStores/sourceData/cedsPublications-101226/github/CEDS-IDS (git show v14.0.0.0:<path>)
+copiedDate: 2026-10-12

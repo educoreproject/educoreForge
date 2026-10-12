@@ -1319,7 +1319,8 @@ const moduleFunction =
 		// path, exactly as before.
 		// (phase B6) edgeTypeList (optional): the relationship types a producer wrote. Absent, the harvest takes
 		// every edge between two labelled nodes (a base block); present, only those types (see replay-engine).
-		const { inGraph, selectionLabels, edgeTypeList, header, vectorStore, conservationExpectation } = spec || {};
+		// ⟪lane DES⟫ edgeEndpointRule (optional): 'eitherSelected' for a layer block, whose edges reach its base's nodes
+		const { inGraph, selectionLabels, edgeTypeList, edgeEndpointRule, header, vectorStore, conservationExpectation } = spec || {};
 
 		const graphName = inGraph && (inGraph.containerName || inGraph.graphName);
 		const refusal = nameRefusal(graphName, 'harvest');
@@ -1353,7 +1354,7 @@ const moduleFunction =
 			{
 				boltUri: inGraph.boltUrl,
 				password: inGraph.password,
-				selector: { selectionLabels, edgeTypeList },
+				selector: { selectionLabels, edgeTypeList, edgeEndpointRule },
 				header,
 				vectorStore,
 			},

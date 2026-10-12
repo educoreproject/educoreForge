@@ -1,0 +1,9 @@
+conceptOrdinal	conceptName	conceptDefinition	guidePageNumber
+1	Person	may exist on its own or may interact with an Organization or a Resource.	6
+2	Organization	may exist on its own or may interact with a Person or a Resource.	6
+3	Resource	may exist on its own or may interact with a Person or an Organization.	6
+4	Membership	the interaction between a Person and an Organization.	6
+5	Asset	the interaction between a Person and a Resource or an Organization and a Resource.	6
+6	Event	may relate to Person, Organization, Resource, Membership, and/or Asset—individually or in any combination.	6
+7	Claim	any informational assertion made about any one or more concepts. This claim may or may not be verified.	6
+8	Provenance	metadata stored about all information related to any of the other seven concepts and including its own information.	6

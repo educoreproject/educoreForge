@@ -9,7 +9,7 @@ LOST .......................        0
 INVENTED ...................        0
 ```
 
-Eleven cases. **Every one was found by measurement, not by reading a specification** — the
+Eleven cases (a twelfth, the declared U+FFFD exception, added 2026-10-12). **Every one was found by measurement, not by reading a specification** — the
 round-trip diff reported a number that would not move, and each investigation ended at a fact about
 CEDS nobody had written down.
 
@@ -142,6 +142,30 @@ guessing at the one thing the source states outright.
   travels as data now — the one place where *"the role IS the fact"* stops being sufficient.
 - `P001396`'s range points at `dc:format` — **foreign vocabulary**, neither a CEDS URI nor an XSD
   datatype, so both existing filters dropped it.
+
+---
+
+## Damaged text (a DECLARED source exception, 2026-10-12)
+
+### 12. U+FFFD replacement characters, carried faithfully, repaired BESIDE the text
+
+The V14 ontology carries **2,837 U+FFFD replacement characters in some 950 terms** (`C�TE D'IVOIRE`, `Proven�al`):
+characters lost at CEDS's end before publication, in every upstream version (lane INV, cedsRichness-101226). The forge carries
+them **exactly as published**, so the round trip above is unchanged: if it is in the OWL, it comes out of the graph.
+
+⟪TQ ruling 3, 2026-10-12⟫ The correct text, taken from the **CEDS IDS v14.0.0.0 reference data**, rides BESIDE the faithful one
+with its provenance (file, sha256, line). **Never a silent overwrite. Terms the IDS cannot correct are listed and left alone.**
+
+How it is carried: not here. The repairs live in the CEDS **`textRepair` layer** (`layers/textRepair/`, block kind `layer`),
+one `DmeTextRepair` node per repaired (term, property, value), linked to the CEDS node by `REPAIRS_TEXT_OF`. The CEDS node is
+never written to, so this bundle's block, its round trip and its hub cards do not move. A repair is minted only by an ID join
+(option value -> option set -> property -> the IDS reference table naming that property's Global ID -> the row with the
+value's Code) where every non-U+FFFD character agrees and each U+FFFD stands for one character. Measured: **834 repairs**
+(407 labels, 407 prefLabels, 10 definitions, 10 descriptions); everything else is listed on the layer root with its reason
+(1,795 with no IDS row by the id join, 27 not option values, 2 where the IDS text differs beyond the damage, 1 notation).
+
+**Lesson:** a faithful forge must carry a publisher's damage; the repair belongs beside it, sourced, so a reader can always
+tell what CEDS published from what we believe it meant.
 
 ---
 

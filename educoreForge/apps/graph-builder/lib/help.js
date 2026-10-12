@@ -79,6 +79,16 @@ COMMANDS
                   verdict with inventedTotal > 0 FAILS the build; lostTotal > 0 is tolerated
                   and logged (the enrichment meter). GOLD_EVAL certification requires the
                   stage to have run: see -goldEvalCheck.
+
+                  LAYERS (lane DES, 2026-10-12). A recipe may name a standard's LAYERS:
+                  "layers": [{ "standard": "ceds", "layer": "des" }, ...]. A layer is a
+                  separately published companion of the standard (for CEDS: des = the Domain
+                  Entity Schema V13, guide = Ontology Guide V14 Appendix A, textRepair = the
+                  U+FFFD repairs), declared by the kit in forges/<std>/layers/<layer>/ and
+                  built as its OWN block (kind 'layer', subject <std>@<v>_layer_<layer>@<lv>)
+                  that requires the standard's base. A layer is produced over a base forged in
+                  the same build: naming one for a REUSED base is refused by name. Each layer's
+                  roundTripValidator runs in the RT-13 stage as '<std>:<layer>'.
      -validate    Validate a recipe (Layer 1 JSON Schema + Layer 2 semantic/referential).
      -replay      Regenerate a graph FROM A STORED MANIFEST -- open the manifest by refId, resolve
                   its member schema blocks, and materialize them into a fresh DEV_ graph. NO forging,

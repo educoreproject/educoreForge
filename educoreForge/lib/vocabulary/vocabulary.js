@@ -76,7 +76,27 @@ const DME_ROLES = {
 	// declaration's CEDS mapping edges (12,681 of them sat on DmeSupport nodes before this role) and no text or vector of
 	// its own, so every forge that mints one declares the role non-embeddable.
 	INSTANCE: 'DmeInstance',
+	// ⟪lane DES, cedsRichness-101226, 2026-10-12; COPPER_RIVER ruling⟫ the SIX LAYER ROLES. A node in one of these roles
+	// lives in a `layer` block (SCHEMA_BLOCK_KIND.LAYER): a separately published companion of one standard. None is a data
+	// role, so the hub derivation, the CEDS RDF compiler (role-scoped, gate L-4), the DME's browse and the mapping counts
+	// never see one; none is embedded. LAYER_ROLE_LIST below is the list the DME excludes from search and counts.
+	LAYER_ROOT: 'DmeLayerRoot',
+	AREA: 'DmeArea',
+	LAYER_ELEMENT: 'DmeLayerElement',
+	PLACEMENT: 'DmePlacement',
+	CONCEPT: 'DmeConcept',
+	TEXT_REPAIR: 'DmeTextRepair',
 };
+const LAYER_ROLE_LIST = Object.freeze([
+	DME_ROLES.LAYER_ROOT,
+	DME_ROLES.AREA,
+	DME_ROLES.LAYER_ELEMENT,
+	DME_ROLES.PLACEMENT,
+	DME_ROLES.CONCEPT,
+	DME_ROLES.TEXT_REPAIR,
+]);
+// the label every node of a layer block carries (the StandardBase analogue): what a reader excludes a layer by
+const STANDARD_LAYER_LABEL = 'StandardLayer';
 
 // =====================================================================
 // EDGE TYPES — canonical structural edges (forge-ceds addEdge + producer-specific HAS_SUPPORT/
@@ -123,6 +143,23 @@ const EDGE_TYPES = {
 	// ⟪forgeClean lane CLEAN, G19, 2026-10-08⟫ schema file to a top-level definition it declares that no other edge owns
 	// (PESC: named code lists, named data types, global elements), so every definition is reachable from the root
 	HAS_DEFINITION: 'HAS_DEFINITION',
+	// ⟪lane DES, 2026-10-12⟫ LAYER EDGES. "Domain" already means the rdfs domain (the CLASS) in this graph (HAS_CEDS_DOMAIN,
+	// HubReference.domainName), so the DES ownership edges carry DES in their names (COPPER_RIVER amendment A).
+	HAS_LAYER: 'HAS_LAYER',
+	HAS_DES_DOMAIN: 'HAS_DES_DOMAIN',
+	HAS_DES_ENTITY: 'HAS_DES_ENTITY',
+	HAS_DES_CATEGORY: 'HAS_DES_CATEGORY',
+	HAS_DES_PLACEMENT: 'HAS_DES_PLACEMENT',
+	PLACES_ELEMENT: 'PLACES_ELEMENT',
+	PLACES_PROPERTY: 'PLACES_PROPERTY',
+	SAME_GLOBAL_ID_PROPERTY: 'SAME_GLOBAL_ID_PROPERTY',
+	DECLARES_ELEMENT: 'DECLARES_ELEMENT',
+	HAS_PRIMARY_CONCEPT: 'HAS_PRIMARY_CONCEPT',
+	HAS_SECONDARY_CONCEPT: 'HAS_SECONDARY_CONCEPT',
+	HAS_EVENT_DATE_CONCEPT: 'HAS_EVENT_DATE_CONCEPT',
+	DECLARES_CONCEPT: 'DECLARES_CONCEPT',
+	REPAIRS_TEXT_OF: 'REPAIRS_TEXT_OF',
+	DECLARES_REPAIR: 'DECLARES_REPAIR',
 };
 
 // ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE ⟪campaign P3, W-C-1 (V1-C28, G5)⟫ — the table a forge reads a root-parented node's ownership
@@ -205,15 +242,23 @@ const CLASSIFICATION_EDGE_TYPES = {
 //
 // The named tokens come first and the list is DERIVED from them, so a producer naming one kind and
 // a gate enumerating all three cannot drift apart.
+// ⟪lane DES, cedsRichness-101226, 2026-10-12; COPPER_RIVER ruling Q1⟫ THE TAXONOMY GAINS ONE KIND, `layer`, by ruling: a
+// separately published, separately versioned companion of ONE standard. Its nodes are its own; its edges may land on that
+// standard's base nodes (resolved by stableId, as relationship edges are); it requires exactly that standard's base block;
+// it never relates the standard to another standard (FBB-001). The first layers are CEDS's Domain Entity Schema V13, the
+// Ontology Guide V14 Appendix A and the U+FFFD text repairs. Before this ruling the list was LOCKED at three, and it stays
+// locked: a fourth kind arrived by ruling, not by a caller extending it.
 const SCHEMA_BLOCK_KIND = {
 	STANDARD_BASE: 'standardBase',
 	HUB: 'hub',
 	RELATIONSHIP: 'relationship',
+	LAYER: 'layer',
 };
 const SCHEMA_BLOCK_KINDS = [
 	SCHEMA_BLOCK_KIND.STANDARD_BASE,
 	SCHEMA_BLOCK_KIND.HUB,
 	SCHEMA_BLOCK_KIND.RELATIONSHIP,
+	SCHEMA_BLOCK_KIND.LAYER,
 ];
 
 // =====================================================================
@@ -355,6 +400,8 @@ const SCHEMA_BLOCK_KIND_SUFFIX = {
 	// — a bare '..._rel_...' with no producer suffix is REFUSED (a relationship block that does not say
 	// which producer authored it cannot be gated per-producer; §7 / settled decision #2).
 	[SCHEMA_BLOCK_KIND.RELATIONSHIP]: { marker: '_rel_', match: 'relationshipPairProducer' },
+	// ⟪lane DES⟫ a LAYER subject carries the '_layer_' infix AND a well-formed <layerKey>@<layerVersionSlug> tail
+	[SCHEMA_BLOCK_KIND.LAYER]: { marker: '_layer_', match: 'layerTail' },
 };
 
 // match-mode registry: mode name -> (subject, marker) predicate. A new match mode is one entry
@@ -366,6 +413,8 @@ const SUFFIX_MATCHERS = {
 	// very end or immediately before a well-formed discriminator tail. The two cases are ONE test because the
 	// strip is a no-op on an undiscriminated subject; a malformed tail is not stripped, so '..._close~' and
 	// '..._close~Bad' are REFUSED here rather than quietly read as relationship subjects.
+	// layerTail — the whole subject parses as the layer grammar (LAYER_SUBJECT_PATTERN, below); the marker alone is not enough
+	layerTail: (subject, marker) => subject.indexOf(marker) !== -1 && LAYER_SUBJECT_PATTERN.test(subject),
 	relationshipPairProducer: (subject, marker) =>
 		subject.indexOf(marker) !== -1 &&
 		RELATIONSHIP_PRODUCER_SUFFIXES.some((oneSuffix) => subjectWithoutRelationshipDiscriminator(subject).endsWith(oneSuffix)),
@@ -404,6 +453,24 @@ const BASE_SUBJECT_PATTERN = new RegExp(`^(${SUBJECT_STANDARD_KEY_SOURCE})@(${SU
 const RELATIONSHIP_SUBJECT_PATTERN = new RegExp(
 	`^(${SUBJECT_STANDARD_KEY_SOURCE})@(${SUBJECT_VERSION_SLUG_SOURCE})${RELATIONSHIP_PAIR_INFIX}(${SUBJECT_STANDARD_KEY_SOURCE})@(${SUBJECT_VERSION_SLUG_SOURCE}?)(${RELATIONSHIP_PRODUCER_SUFFIXES.join('|')})(?:${RELATIONSHIP_DISCRIMINATOR_SEPARATOR}(${RELATIONSHIP_DISCRIMINATOR_PATTERN.source.replace(/^\^/, '').replace(/\$$/, '')}))?$`,
 );
+// ⟪lane DES⟫ layer: <standardKey>@<versionSlug>_layer_<layerKey>@<layerVersionSlug>. layerKey is lower-camel (textRepair).
+const LAYER_INFIX = '_layer_';
+const SUBJECT_LAYER_KEY_SOURCE = '[a-z][A-Za-z0-9]*';
+const LAYER_SUBJECT_PATTERN = new RegExp(`^(${SUBJECT_STANDARD_KEY_SOURCE})@(${SUBJECT_VERSION_SLUG_SOURCE})${LAYER_INFIX}(${SUBJECT_LAYER_KEY_SOURCE})@(${SUBJECT_VERSION_SLUG_SOURCE})$`);
+// layerSubject — COMPOSE a layer subject. Every part is REQUIRED; returns { subject } or { error }.
+const layerSubject = ({ standardKey, version, layerKey, layerVersion } = {}) => {
+	if (typeof standardKey !== 'string' || !new RegExp(`^${SUBJECT_STANDARD_KEY_SOURCE}$`).test(standardKey)) {
+		return { error: `layerSubject: standardKey ${JSON.stringify(standardKey)} is not a lower-case standard token` };
+	}
+	if (typeof layerKey !== 'string' || !new RegExp(`^${SUBJECT_LAYER_KEY_SOURCE}$`).test(layerKey)) {
+		return { error: `layerSubject: layerKey ${JSON.stringify(layerKey)} is not a lower-camel layer token` };
+	}
+	const missingVersionList = [[version, 'version'], [layerVersion, 'layerVersion']].filter(([oneValue]) => oneValue === undefined || oneValue === null || slugifyVersion(oneValue) === '');
+	if (missingVersionList.length) {
+		return { error: `layerSubject: ${missingVersionList.map(([, name]) => name).join(', ')} slugs to nothing — a layer block names its standard's resolved version AND its own; there is no default` };
+	}
+	return { subject: `${standardKey}@${slugifyVersion(version)}${LAYER_INFIX}${layerKey}@${slugifyVersion(layerVersion)}` };
+};
 // baseSubject — COMPOSE a standardBase subject. Returns { subject } or { error }.
 const baseSubject = ({ standardKey, version } = {}) => {
 	if (typeof standardKey !== 'string' || !new RegExp(`^${SUBJECT_STANDARD_KEY_SOURCE}$`).test(standardKey)) {
@@ -434,6 +501,10 @@ const parseBlockSubject = (subject) => {
 			...(relationshipMatch[6] === undefined ? {} : { discriminator: relationshipMatch[6] }),
 		};
 	}
+	const layerMatch = typeof subject === 'string' ? LAYER_SUBJECT_PATTERN.exec(subject) : null;
+	if (layerMatch) {
+		return { kind: SCHEMA_BLOCK_KIND.LAYER, standardKey: layerMatch[1], versionSlug: layerMatch[2], layerKey: layerMatch[3], layerVersionSlug: layerMatch[4] };
+	}
 	return { error: `parseBlockSubject: ${JSON.stringify(subject)} is neither <standardKey>@<versionSlug>_base nor <pairA>@<slug>_rel_<pairB>@<slug><producerSuffix>[~<discriminator>] (versions are slugged since campaign P3, W-C-6)` };
 };
 // SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND — the header line's fields, IN ORDER, per blockType (serializerVersion 2). The
@@ -444,11 +515,14 @@ const SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND = Object.freeze({
 	[SCHEMA_BLOCK_KIND.STANDARD_BASE]: Object.freeze(['kind', 'blockType', 'serializerVersion', 'standardKey', 'version', 'stableUriPropertyName', 'resolutionKey', 'embeddingRefGrammar', ...SCHEMA_BLOCK_HEADER_EMBEDDING_FIELD_LIST]),
 	// discriminator: present only on a discriminated subject (vanishes otherwise), so the header names the subject EXACTLY
 	[SCHEMA_BLOCK_KIND.RELATIONSHIP]: Object.freeze(['kind', 'blockType', 'serializerVersion', 'pairA', 'pairAVersion', 'pairB', 'pairBVersion', 'producer', 'discriminator', ...SCHEMA_BLOCK_HEADER_EMBEDDING_FIELD_LIST]),
+	// ⟪lane DES⟫ a layer header names its standard and BOTH versions; it carries no vectors, so the embedding fields vanish
+	[SCHEMA_BLOCK_KIND.LAYER]: Object.freeze(['kind', 'blockType', 'serializerVersion', 'standardKey', 'version', 'layerKey', 'layerVersion', 'stableUriPropertyName', 'resolutionKey', ...SCHEMA_BLOCK_HEADER_EMBEDDING_FIELD_LIST]),
 });
 // the fields a header of each kind MUST carry (a harvest refuses a header missing one, by name)
 const SCHEMA_BLOCK_HEADER_IDENTITY_FIELD_LIST_BY_KIND = Object.freeze({
 	[SCHEMA_BLOCK_KIND.STANDARD_BASE]: Object.freeze(['standardKey', 'version']),
 	[SCHEMA_BLOCK_KIND.RELATIONSHIP]: Object.freeze(['pairA', 'pairAVersion', 'pairB', 'pairBVersion', 'producer']),
+	[SCHEMA_BLOCK_KIND.LAYER]: Object.freeze(['standardKey', 'version', 'layerKey', 'layerVersion']),
 });
 
 // headerSubjectRefusal / subjectOfHeader — a header's own subject, read by the table. serializerVersion '1' headers (before
@@ -468,6 +542,9 @@ const subjectOfHeader = (header) => {
 	}
 	if (h.blockType === SCHEMA_BLOCK_KIND.STANDARD_BASE) {
 		return baseSubject({ standardKey: h.standardKey, version: h.version });
+	}
+	if (h.blockType === SCHEMA_BLOCK_KIND.LAYER) {
+		return layerSubject({ standardKey: h.standardKey, version: h.version, layerKey: h.layerKey, layerVersion: h.layerVersion });
 	}
 	return relationshipSubject({ hubStandard: h.pairA, hubVersion: h.pairAVersion, sourceStandard: h.pairB, sourceVersion: h.pairBVersion, producer: h.producer, discriminator: h.discriminator });
 };
@@ -1179,6 +1256,8 @@ const { TERM_DEFINITIONS } = require('./vocabulary-definitions');
 const vocabulary = {
 	NODE_LABELS,
 	DME_ROLES,
+	LAYER_ROLE_LIST,
+	STANDARD_LAYER_LABEL,
 	EDGE_TYPES,
 	ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE,
 	rootOwnershipEdgeTypeFor,
@@ -1207,6 +1286,7 @@ const vocabulary = {
 	// ⟪campaign P3, W-C-6⟫ the one subject grammar and the per-kind header shape
 	slugifyVersion,
 	baseSubject,
+	layerSubject,
 	parseBlockSubject,
 	SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND,
 	subjectOfHeader,

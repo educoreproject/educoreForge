@@ -85,6 +85,15 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const compilerLib = require('./lib/roundTripCompiler')();
+// ⟪lane DES, 2026-10-12; COPPER_RIVER ruling Q5⟫ GATE D rides inside this verdict: the CEDS-Elements V14 workbook, an independent
+// rendering of the same release, held against the emission compiled from the graph (lib/elementsWorkbookOracle.js)
+const canonicalLib = require('./lib/roundTripCanonical')();
+const elementsWorkbookOracleLib = require('./lib/elementsWorkbookOracle');
+const xlsxReader = require(path.join(__dirname, '..', '..', 'lib', 'xlsx-reader', 'xlsx-reader'))();
+const sourceVerificationLib = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'sourceVerification'));
+const ELEMENTS_WORKBOOK_ORACLE_DIR_PATH = path.join(__dirname, 'gates', 'elementsWorkbookOracleData', '01');
+const ELEMENTS_WORKBOOK_ORACLE_LAYOUT = require('./gates/elementsWorkbookOracleLayout.json');
+const ELEMENTS_WORKBOOK_DECLARED_DIFFERENCE_LIST = require('./gates/elementsWorkbookDeclaredDifferences.json').declaredDifferenceList;
 const diffLib = require('./lib/roundTripDiff')();
 const { verifyVerdictShape, partitionLostList, LOST_CATEGORY } = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'verdictAssembler'));
 
@@ -442,6 +451,63 @@ const moduleFunction =
 				);
 			});
 
+			// GATE D — the V14 Elements workbook against the emission. Applies ONLY when the snapshot's ontology is the exact
+			// release the workbook renders (oracleDescriptor.json); otherwise it says so by name and does not run (a fixture
+			// ontology, or a future release awaiting its own workbook).
+			taskList.push((args, next) => {
+				const oracleDescriptor = JSON.parse(fs.readFileSync(path.join(ELEMENTS_WORKBOOK_ORACLE_DIR_PATH, 'oracleDescriptor.json'), 'utf8'));
+				const ontologyRecord = args.snapshot.fileRecordList.find((oneRecord) => oneRecord.filename === oracleDescriptor.rendersOntologyFileName);
+				if (!ontologyRecord || ontologyRecord.sha256 !== oracleDescriptor.rendersOntologySha256) {
+					next('', { ...args, elementsWorkbookAgreement: { disposition: 'notApplicable', reason: `the workbook renders ${oracleDescriptor.rendersRelease} (${oracleDescriptor.rendersOntologyFileName} sha256 ${oracleDescriptor.rendersOntologySha256.slice(0, 12)}); this snapshot's ontology is ${ontologyRecord ? `${ontologyRecord.filename} sha256 ${ontologyRecord.sha256.slice(0, 12)}` : 'a different file'}` } });
+					return;
+				}
+				sourceVerificationLib.verifySnapshotChecksums({ snapshotDirPath: ELEMENTS_WORKBOOK_ORACLE_DIR_PATH, relativePathList: [oracleDescriptor.workbookFileName] }, (verifyError) => {
+					if (verifyError) {
+						next(`${moduleName} gate D: ${verifyError}`);
+						return;
+					}
+					xlsxReader.readWorkbookFile({ filePath: path.join(ELEMENTS_WORKBOOK_ORACLE_DIR_PATH, oracleDescriptor.workbookFileName) }, (readError, workbook) => {
+						if (readError) {
+							next(`${moduleName} gate D: ${readError}`);
+							return;
+						}
+						canonicalLib.canonicalizeRdfFile({ filePath: args.emittedFilePath }, (canonicalError, canonical) => {
+							if (canonicalError) {
+								next(`${moduleName} gate D: ${canonicalError}`);
+								return;
+							}
+							const compared = elementsWorkbookOracleLib.compareWorkbookWithStatements({
+								workbook,
+								emittedStatementMap: canonical.statements,
+								normalizeLiteral: canonicalLib.normalizeLiteral,
+								layout: ELEMENTS_WORKBOOK_ORACLE_LAYOUT,
+								declaredDifferenceList: ELEMENTS_WORKBOOK_DECLARED_DIFFERENCE_LIST,
+							});
+							if (compared.error) {
+								next(`${moduleName} gate D: ${compared.error}`);
+								return;
+							}
+							const agreementPassed = compared.undeclaredDifferenceList.length === 0 && compared.unobservedDeclaredDifferenceList.length === 0;
+							next('', {
+								...args,
+								elementsWorkbookAgreement: {
+									disposition: agreementPassed ? 'pass' : 'fail',
+									workbookFileName: oracleDescriptor.workbookFileName,
+									comparedRowCount: compared.comparedRowCount,
+									comparedFieldCount: compared.comparedFieldCount,
+									agreeingFieldCount: compared.agreeingFieldCount,
+									declaredDifferenceCount: compared.declaredDifferenceList.length,
+									declaredDifferenceList: compared.declaredDifferenceList,
+									undeclaredDifferenceCount: compared.undeclaredDifferenceList.length,
+									undeclaredDifferenceList: compared.undeclaredDifferenceList.slice(0, 200),
+									unobservedDeclaredDifferenceList: compared.unobservedDeclaredDifferenceList,
+								},
+							});
+						});
+					});
+				});
+			});
+
 			taskList.push((args, next) => {
 				const assembled = assembleVerdictNumbers({ report: args.report });
 				if (assembled.error) {
@@ -570,6 +636,8 @@ const moduleFunction =
 						emittedCounts: args.compiled.counts,
 					},
 					report: args.report,
+					// ⟪lane DES⟫ gate D's answer, carried in the verdict whether it passed, failed or did not apply
+					elementsWorkbookAgreement: args.elementsWorkbookAgreement,
 					...normativePart,
 				};
 				// ONE SHAPE (W-C-14): the verdict is held to the forge framework's whole rule before it is written; a verdict
@@ -590,6 +658,16 @@ const moduleFunction =
 						`${JSON.stringify(verdict, null, 1)}\n`,
 					);
 					fs.writeFileSync(path.join(outputPath, REPORT_FILE_NAME), rendered.reportText);
+					// a gate-D failure FAILS the verdict, after the verdict (with the differences) is on disk for the reader
+					if (verdict.elementsWorkbookAgreement.disposition === 'fail') {
+						next(
+							`${moduleName}: GATE D FAILED — the CEDS-Elements V14 workbook disagrees with the release compiled from the graph: ` +
+								`${verdict.elementsWorkbookAgreement.undeclaredDifferenceCount} undeclared difference(s), ` +
+								`${verdict.elementsWorkbookAgreement.unobservedDeclaredDifferenceList.length} declared difference(s) no longer observed. ` +
+								`Detail: ${path.join(outputPath, VERDICT_FILE_NAME)}`,
+						);
+						return;
+					}
 					next('', { ...args, verdict });
 				});
 			});

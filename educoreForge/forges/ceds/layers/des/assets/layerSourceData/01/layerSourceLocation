@@ -1,0 +1,10 @@
+layer: ceds/des
+publishedVersion: 13
+publishedVersionEvidence: CEDS calls this publication "Version 13" (ceds.ed.gov downloads page: complete files V1-V13; file CEDS-V13.xlsx); the CEDS-Elements repository names the same bytes CEDS-V13.0.0.0.xlsx. No V14 DES exists (lane INV, REPORT-INV-cedsPublications-101226 §1).
+upstreamUrl: https://github.com/CEDStandards/CEDS-Elements/blob/6186c00a7de58d197ab3cdd0606a95f1d3a796e7/CEDS-V13.0.0.0.xlsx
+upstreamCommit: 6186c00a7de58d197ab3cdd0606a95f1d3a796e7
+upstreamPath: CEDS-V13.0.0.0.xlsx
+licence: Apache-2.0 (CEDS-Elements LICENSE, copied verbatim beside this file)
+alsoPublishedAt: https://ceds.ed.gov/data/xls/CEDS-V13.xlsx (byte-identical, sha256 f1ac3e06...; that site states no licence)
+copiedFrom: educoreForge/system/dataStores/sourceData/cedsPublications-101226/elementsWorkbookHistory/CEDS-V13.0.0.0.xlsx
+copiedDate: 2026-10-12

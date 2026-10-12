@@ -77,6 +77,7 @@ const configFileProcessor = require('qtools-config-file-processor');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
 const { shapeForgedGraph } = require('./lib/shape-forged-graph')();
+const layerFramework = require(path.join(__dirname, '..', '..', '..', '..', 'lib', 'layer-framework', 'layer-framework'))();
 
 // tree root (educoreForge/) is four levels up: forger -> apps -> graph-builder -> apps -> root
 const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..');
@@ -306,7 +307,61 @@ const resolveBundle = ({ standard }) => {
 		hubModuleFileName: descriptor.hubModule,
 		hubModulePath: descriptor.hubModule === undefined ? undefined : path.join(bundleDir, `${descriptor.hubModule}`),
 		hubNamespace: descriptor.hubNamespace,
+		// ⟪lane DES, 2026-10-12⟫ the one declared root of every layer id this kit mints (layers/<layerKey>/); undefined on a kit
+		// that declares no layer. A recipe naming a layer of such a kit is refused by name in forgeLayersOf.
+		layerNamespace: descriptor.layerNamespace,
 	};
+};
+
+// -----
+// forgeLayersOf — ⟪lane DES, cedsRichness-101226, 2026-10-12; COPPER_RIVER ruling Q1⟫ produce the LAYERS the recipe names for
+// one standard, over that standard's just-shaped base nodeEdges (READ-ONLY, the forgeHub data boundary). Each layer is
+// resolved from the kit's own declaration (layers/<layerKey>/layerDescriptor.ini; capability is not activation), produced
+// and checked by lib/layer-framework, and shaped for the engine by the forger's own translator.
+//   forgeLayersOf({ bundle, layerKeyList, baseNodeEdges, declaredEmbeddingDims }, callback(errString, layerReportList))
+//   layerReport = { layerKey, layerVersion, layerLabel, nodeEdges, harvestEdgeTypeList, layerStats, layerReport,
+//                   roundTripValidatorPath, snapshotDirPath }
+const forgeLayersOf = ({ bundle, layerKeyList, baseNodeEdges, declaredEmbeddingDims }, callback) => {
+	const layerReportList = [];
+	if (layerKeyList.length && (typeof bundle.layerNamespace !== 'string' || bundle.layerNamespace.trim() === '')) {
+		callback(`forger: the recipe names layer(s) ${layerKeyList.join(', ')} of '${bundle.standardName}', but its kit declares no layerNamespace= in ${path.join(bundle.bundleDir, 'parserDescriptor.ini')} — a kit that carries layers declares the one root their ids are minted under`);
+		return;
+	}
+	const nextLayer = (layerIndex) => {
+		if (layerIndex >= layerKeyList.length) {
+			callback('', layerReportList);
+			return;
+		}
+		const resolvedLayer = layerFramework.resolveLayer({ bundleDir: bundle.bundleDir, layerKey: layerKeyList[layerIndex] });
+		if (resolvedLayer.error) {
+			callback(`forger: ${resolvedLayer.error}`);
+			return;
+		}
+		layerFramework.forgeLayer({ resolvedLayer, baseNodeEdges, standardName: bundle.standardName, layerNamespace: bundle.layerNamespace.trim() }, (layerError, forgedLayer) => {
+			if (layerError) {
+				callback(`forger: ${layerError}`);
+				return;
+			}
+			const shapedLayer = shapeForgedGraph({ forged: forgedLayer.stampedGraph, declaredEmbeddingDims });
+			if (shapedLayer.error) {
+				callback(`forger: shaping layer '${resolvedLayer.layerKey}' of '${bundle.standardName}': ${shapedLayer.error}`);
+				return;
+			}
+			layerReportList.push({
+				layerKey: resolvedLayer.layerKey,
+				layerVersion: resolvedLayer.layerVersion,
+				layerLabel: resolvedLayer.layerLabel,
+				nodeEdges: shapedLayer,
+				harvestEdgeTypeList: forgedLayer.harvestEdgeTypeList,
+				layerStats: forgedLayer.layerStats,
+				layerReport: forgedLayer.layerReport,
+				roundTripValidatorPath: resolvedLayer.roundTripValidatorPath,
+				snapshotDirPath: resolvedLayer.snapshotDirPath,
+			});
+			nextLayer(layerIndex + 1);
+		});
+	};
+	nextLayer(0);
 };
 
 // -----
@@ -748,6 +803,8 @@ const moduleFunction =
 			source,
 			owner = ':golden',
 			deriveHub = false,
+			// ⟪lane DES⟫ the layers of this standard the recipe names; absent means none (documented optional, like deriveHub)
+			layerKeyList = [],
 			vectorize,
 			embedNodeLimit,
 			embeddingConfigFilePath,
@@ -991,6 +1048,24 @@ const moduleFunction =
 			);
 		});
 
+		// ⟪lane DES⟫ LAYERS, over the base as shaped (the hub fold, when there is one, included: a layer may read it and never
+		// writes to it). Each comes back as its own nodeEdges for build.js to load and harvest as its own block.
+		taskList.push((args, next) => {
+			if (!Array.isArray(layerKeyList)) {
+				next(`forger: layerKeyList is ${JSON.stringify(layerKeyList)}; it lists layer keys (empty for none)`);
+				return;
+			}
+			const bundle = resolveBundle({ standard });
+			forgeLayersOf({ bundle, layerKeyList, baseNodeEdges: args.shaped, declaredEmbeddingDims }, (layerError, layerReportList) => {
+				if (layerError) {
+					next(layerError);
+					return;
+				}
+				layerReportList.forEach((oneLayer) => xLog.status(`[forger] layer '${oneLayer.layerKey}' of ${resolved.standardName}: ${oneLayer.nodeEdges.nodes.length} nodes, ${oneLayer.nodeEdges.edges.length} edges`));
+				next('', { ...args, layerReportList });
+			});
+		});
+
 		pipeRunner(taskList.getList(), {}, (err, args) => {
 			if (err) {
 				callback(err);
@@ -1035,6 +1110,8 @@ const moduleFunction =
 				// the model the vectors were made at (undefined when --vectorize=false).
 				stableUriPropertyName: args.forged.stableUriPropertyName,
 				embeddingModelVersion: declaredEmbeddingModelVersion,
+				// ⟪lane DES⟫ one entry per layer the recipe named for this standard ([] when none)
+				layerReportList: args.layerReportList,
 			});
 		});
 	};
@@ -1055,3 +1132,4 @@ module.exports.getVersionStamp = getVersionStamp;
 // the facts it used to carry are read from the resolved bundle (resolveBundle -> hubModuleFileName,
 // hubNamespace), which is exported above and is what the migrated suites read.
 module.exports.foldHubIntoNodeEdges = foldHubIntoNodeEdges;
+module.exports.forgeLayersOf = forgeLayersOf;

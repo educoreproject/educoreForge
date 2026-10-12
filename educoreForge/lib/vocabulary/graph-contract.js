@@ -56,7 +56,8 @@ const LIST_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 // coverage gate (schema-view-coverage-finisher) proves it. Sources, not RegExps: the contract is JSON.
 // Sif is the old SIF forge (forges/sif, rootLabel SifRoot); the gold census held none of its labels, the fleet's embedded
 // sifOnly build did (campaign P2). Every forge declaration's rootLabel family must match (test-schemaViewContractProjection e).
-const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif|Sif260928|Pesc[A-Za-z0-9]+)[A-Z]', '^StandardBase$', '^BridgedRelation_']);
+// ⟪lane DES, 2026-10-12⟫ '^StandardLayer$' joins '^StandardBase$': it names every node of a layer block.
+const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif|Sif260928|Pesc[A-Za-z0-9]+)[A-Z]', '^StandardBase$', '^StandardLayer$', '^BridgedRelation_']);
 // names that END in List / Keys but are JSON strings or literals by declaration: the name-rule test exempts exactly these
 const LIST_NAME_RULE_EXEMPTION_BY_NAME = Object.freeze({
 	importList: 'JSON string (pesc-release-forge walk.js)',
@@ -141,8 +142,8 @@ const ATTESTATION_FIELD_LIST = Object.freeze([
 	{ name: 'roundTripClean', type: 'boolean', channel: 'channelA', gateList: ['roundTrip'], meaning: 'true when every standard that ran round-tripped clean, losing and inventing nothing' },
 	{ name: 'lostTotal', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'source statements the round trip could not find again, summed over the standards that ran' },
 	{ name: 'explicitlyOmittedTotal', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'source statements a forge declares it does not carry, summed over the standards that ran' },
-	{ name: 'explicitOmissionDeclarationList', type: 'stringList', channel: 'channelA', gateList: ['roundTrip'], meaning: 'one line per standard that ran: what its round trip omitted by declaration, by kind with counts, the rule (module) that declares it, and the rule\'s caveat — e.g. "pesccollegetranscript1v8v0: whitespace 28,428, comment 907, processingInstruction 4 (rule: lib/pesc-release-forge/roundTripPair.js); comments may carry content (PLAN G20)" (G21)' },
-	{ name: 'standardCount', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'how many standards the round trip ran over' },
+	{ name: 'explicitOmissionDeclarationList', type: 'stringList', channel: 'channelA', gateList: ['roundTrip'], meaning: 'one line per standard that ran, and one per standard LAYER that ran (token \'<standard>:<layerKey>\', e.g. \'ceds:des\'; lane DES): what its round trip omitted by declaration, by kind with counts, the rule (module) that declares it, and the rule\'s caveat — e.g. "pesccollegetranscript1v8v0: whitespace 28,428, comment 907, processingInstruction 4 (rule: lib/pesc-release-forge/roundTripPair.js); comments may carry content (PLAN G20)" (G21)' },
+	{ name: 'standardCount', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'how many standards the round trip ran over; a standard\'s layers are not counted (they add lines to explicitOmissionDeclarationList)' },
 	{ name: 'exemplarCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'], meaning: 'usage-pattern exemplars re-executed against the finished graph' },
 	{ name: 'verifiedCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'], meaning: 'exemplars that returned rows against the finished graph' },
 	{ name: 'missingVectorTotal', type: 'integer', channel: 'channelA', gateList: ['embeddingCoverage'], meaning: 'nodes, cards and texts lacking the vector their embed input requires, plus vectors with no embed input' },
@@ -182,7 +183,7 @@ const MANIFEST_RECIPE_FIELD_LIST = Object.freeze([
 ].map((oneRow) => Object.freeze(oneRow)));
 const RECIPE_BLOCK_FIELD_LIST = Object.freeze([
 	{ name: 'schemaBlockRefId', type: 'string', required: true, meaning: 'the member block\'s content address (64 hex)' },
-	{ name: 'kind', type: 'string', required: true, meaning: 'the block kind: standardBase or relationship' },
+	{ name: 'kind', type: 'string', required: true, meaning: 'the block kind: standardBase, relationship or layer (a separately published companion of one standard, lane DES 2026-10-12)' },
 	{ name: 'subject', type: 'string', required: true, meaning: 'the block subject: <standardKey>@<version>_base or a relationship pair subject' },
 	{ name: 'version', type: 'string', required: false, meaning: 'the block\'s version column' },
 	{ name: 'position', type: 'integer', required: true, meaning: 'the member\'s position in the manifest' },
@@ -398,6 +399,21 @@ const graphContractDocument = () => {
 		userEdgeRule: USER_EDGE_RULE,
 		userEmbeddingRule: USER_EMBEDDING_RULE,
 		dmeTextFieldRule: DME_TEXT_FIELD_RULE,
+		// ⟪lane DES, cedsRichness-101226, 2026-10-12; COPPER_RIVER amendment B⟫ how a reader tells a LAYER node from its standard's
+		// own: a layer node carries the standard's _source AND the label StandardLayer, in one of the layer roles. A reader that
+		// counts or selects a standard's content excludes StandardLayer unless it says why it includes it.
+		layerScopeRule: layerScopeRule(),
+	};
+};
+
+// layerScopeRule — read at CALL time (the cycle TRAP in the header): the layer label, the layer roles, the block kinds
+const layerScopeRule = () => {
+	const { STANDARD_LAYER_LABEL, LAYER_ROLE_LIST, SCHEMA_BLOCK_KINDS } = require('./vocabulary');
+	return {
+		layerLabel: STANDARD_LAYER_LABEL,
+		layerRoleList: LAYER_ROLE_LIST.slice(),
+		schemaBlockKindList: SCHEMA_BLOCK_KINDS.slice(),
+		rule: 'a node labelled StandardLayer belongs to a LAYER of its standard (a separately published companion such as the CEDS Domain Entity Schema V13), not to the standard itself: exclude it from a standard\'s counts, searches and name lookups, and reach it through the layer edges (HAS_LAYER, HAS_DES_*, PLACES_PROPERTY, REPAIRS_TEXT_OF)',
 	};
 };
 

@@ -1,0 +1,10 @@
+layer: ceds/guide
+publishedVersion: 14
+publishedVersionEvidence: the PDF's running header reads "CEDS Ontology Guide Version 14.0.0.0" and its file name is CEDS_Ontology_Guide_Version_14.pdf; Table A-1 states it covers "All 400 domain classes from the V14 ontology". NOTE: the guide is NOT at the CEDS-Ontology tag V14.0.0.0 (15b964d, 2026-03-11, which holds the Version 12 guide); it was committed at 77e1ef1 on 2026-06-01.
+upstreamUrl: https://github.com/CEDStandards/CEDS-Ontology/blob/77e1ef1774842ed8d5236530c3149b66783682cc/doc/CEDS_Ontology_Guide_Version_14.pdf
+upstreamCommit: 77e1ef1774842ed8d5236530c3149b66783682cc
+upstreamPath: doc/CEDS_Ontology_Guide_Version_14.pdf
+licence: Apache-2.0 (CEDS-Ontology LICENSE, copied verbatim beside this file)
+derivedFiles: the three ontologyGuideV14-*.tsv were extracted from the PDF by forges/ceds/layers/guide/tools/extractGuideAppendixA.py (pdfplumber word positions), and CHECKED BY EYE against the rendered PDF pages 6, 24, 25, 40 and 49 on 2026-10-12 (RADIANT_HORIZON)
+copiedFrom: educoreForge/system/dataStores/sourceData/cedsPublications-101226/github/CEDS-Ontology/doc/CEDS_Ontology_Guide_Version_14.pdf
+copiedDate: 2026-10-12

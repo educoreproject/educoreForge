@@ -105,6 +105,23 @@ const TERM_DEFINITIONS = {
 			'GraphProvenance passport to one UsagePattern — the graph\'s advice on how it is meant to be used, as distinct from what it structurally guarantees. Passport-rooted and MATCH-created.',
 		DEFINES:
 			'StandardDefinition to the DmeStandardRoot it describes: the single hop from the build\'s view of a standard to the parsed standard itself. Both endpoints carry :ForgedNode, so unlike the passport-rooted edges this one is written through the shared content write path. The two nodes stay SEPARATE deliberately — the definition\'s counts depend on the mappings, so folding them onto the content root would let a re-bridge alter a content node and the standard\'s block would stop reproducing byte-for-byte.',
+		// ⟪lane DES, cedsRichness-101226, 2026-10-12⟫ LAYER edges. A layer is a separately published companion of one standard
+		// (block kind `layer`); these edges live in layer blocks and never relate one standard to another (FBB-001).
+		HAS_LAYER: 'Standard root to the root of one LAYER of that standard: a separately published, separately versioned companion (for CEDS: the Domain Entity Schema V13, the Ontology Guide V14 Appendix A, the U+FFFD text repairs). The layer\'s nodes carry the label StandardLayer and a layer role; none is a data element.',
+		HAS_DES_DOMAIN: 'CEDS Domain Entity Schema (DES) layer root to one DES domain (K12, Postsecondary, Early Learning ...). A DES domain is an AREA of CEDS\'s organising structure, published in DES V13; it is NOT the rdfs domain of a property (that is the class, HAS_CEDS_DOMAIN / HubReference.domainName).',
+		HAS_DES_ENTITY: 'DES domain to one of its DES entities (K12 Student, PS Institution ...). An entity is scoped to its domain: Course Section under K12 and Course Section under Postsecondary are two entities. No edge links an entity to a CEDS class (ruled: a name match is not a join).',
+		HAS_DES_CATEGORY: 'DES entity to a top-level DES category, or a category to a sub-category (DES paths go up to three categories deep below the entity).',
+		HAS_DES_PLACEMENT: 'DES entity or deepest DES category to one placement: one row of the DES \'All - By Domain\' sheet, identified by CEDS\'s own Data Model ID. A placement with no category hangs on its entity.',
+		PLACES_ELEMENT: 'DES placement to the DES element it places (the element as DES V13 publishes it, with its V13 prose).',
+		PLACES_PROPERTY: 'DES placement to the CEDS V14 property whose identifier is \'P\' + the element\'s Global ID (joinBasis globalId): the one way a DES position reaches a V14 property. Present only when that property exists; DES-only elements (retired in V14) have none, and the DES layer root counts them.',
+		SAME_GLOBAL_ID_PROPERTY: 'DES element to the CEDS V14 property whose identifier is \'P\' + its Global ID (an id join, never a name match). Reaches the property even for a deprecated element with no placement; the hop a future search leg may take to find a V14 property through its V13 alternate name.',
+		DECLARES_ELEMENT: 'Layer root to an element the layer publishes (DES: all 1,965 V13 elements, placed or not).',
+		HAS_PRIMARY_CONCEPT: 'CEDS class to its PRIMARY Conceptual Model concept (Person, Organization, Resource, Membership, Asset, Event, Claim, Provenance) as Table A-1 of the CEDS Ontology Guide V14 assigns it. Carries the class name as the guide prints it (guideClassName), which differs from the ontology label for 16 classes.',
+		HAS_SECONDARY_CONCEPT: 'CEDS class to its SECONDARY Conceptual Model concept, where Table A-1 of the CEDS Ontology Guide V14 gives one.',
+		HAS_EVENT_DATE_CONCEPT: 'CEDS date property to each concept Table A-2 of the CEDS Ontology Guide V14 lists for it (the 204 properties the guide marks as Event dates), in the guide\'s order (conceptOrdinal), carrying the row as the guide prints it.',
+		DECLARES_CONCEPT: 'Ontology Guide layer root to one Conceptual Model concept.',
+		REPAIRS_TEXT_OF: 'A declared text repair to the CEDS node whose text it repairs. The CEDS node keeps the ontology\'s faithful text (with its U+FFFD replacement characters); the repair carries both texts and its source (the CEDS IDS v14 reference row: file, sha256, line). A reader shows the repair BESIDE the faithful text, never instead of it.',
+		DECLARES_REPAIR: 'Text-repair layer root to one repair.',
 	},
 	provenanceTier: {
 		'spec-authoritative': 'Asserted by the standard’s own specification or an authored crosswalk. The strongest evidence tier.',
@@ -163,6 +180,14 @@ const TERM_DEFINITIONS = {
 			'A grammar role: a node in this role is a term the standard defines for its OWN descriptive vocabulary rather than a data element of the domain it models. It carries no data role and no embedding, so it is invisible to both browse and search, and it is never a mapping unit. (Role sense; the label sense — minted identifiers and the cedsIdIsMinted flag — is under nodeLabel.)',
 		DmeEmbedText:
 			'A derived-text role: a node in this role is ONE distinct descriptive text of a standard (a name, description, definition or the like, trimmed), minted by the forge framework rather than by a walk, from the text-property include list the forge declares, and linked by EMBEDS_TEXT_OF to every node whose declared property carries that text. Its identity is content-addressed over the text alone (the standard\'s root id joined to embedText/<sha256(text)>), so a text repeated within a standard is one node. It is never a data element and never a mapping unit: it carries NO name, NO searchText and NO embedding property. Its vector lives on textEmbedding, with the ordinary embeddingModelVersion beside it, under its own index <graphName>_embedText_vector (EMBED_TEXT_VECTOR); the DME\'s semantic search reads only <graphName>_vector over :ForgedNode(embedding), so it never sees these nodes. (Role sense; the per-standard label, e.g. EdfiEmbedText, is declared by each forge.)',
+		// ⟪lane DES, 2026-10-12⟫ the six LAYER roles. None is a data role: the hub, the RDF compiler, browse and mapping counts
+		// never see one, and none is embedded.
+		DmeLayerRoot: 'The root of one LAYER of a standard (a separately published, separately versioned companion, block kind layer): its provenance (source URL, commit, sha256, licence, version) and its counts, reached from the standard root by HAS_LAYER.',
+		DmeArea: 'A named AREA of a standard\'s own organising structure, above its properties: for CEDS, a DES domain, DES entity or DES category (Domain Entity Schema V13). Not a class, and a DES domain is not the rdfs domain of a property.',
+		DmeLayerElement: 'An element as a companion publication declares it, with that publication\'s own prose (for the DES: V13 name, definition, alternate name, usage notes, use-case links). Never written onto the standard\'s own property; linked to it by id.',
+		DmePlacement: 'One placement of an element at one position of a layer\'s structure: for the DES, one Data Model ID row (domain, entity, category, element).',
+		DmeConcept: 'A conceptual-model concept a publication assigns the standard\'s classes to (CEDS Ontology Guide V14 Appendix A: Person, Organization, Resource, Membership, Asset, Event, Claim, Provenance).',
+		DmeTextRepair: 'A declared repair of damaged source text: the faithful text, the repaired text and the repair\'s source, linked to the node it repairs by REPAIRS_TEXT_OF. The repaired node is never written to.',
 	},
 	referenceTier: {
 		property: 'A 3-slot hub address (domain · property · range) — the property-tier resolution target.',

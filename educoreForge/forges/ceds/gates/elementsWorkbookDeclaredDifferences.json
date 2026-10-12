@@ -1,0 +1,10 @@
+{
+	"_note": "lane DES (2026-10-12): the five places where CEDS's own V14 Elements workbook and the V14 ontology disagree, MEASURED against the pinned CEDS-Ontology.rdf (lane INV found the same set independently: REPORT-INV §4.1). Each is tolerated by name and reported in the CEDS round-trip verdict; any OTHER difference fails it, and any of these that STOPS appearing fails it too (a stale exception would excuse a future real one).",
+	"declaredDifferenceList": [
+		{ "sheetName": "Properties", "iri": "https://w3id.org/CEDStandards/terms/P000725", "header": "Alternative Name (dc:alternative)", "reason": "the ontology carries two dc:alternative values (Competency Item Education Level, Learning Standard Item Education Level); the workbook prints one" },
+		{ "sheetName": "Properties", "iri": "https://w3id.org/CEDStandards/terms/P000972", "header": "Alternative Name (dc:alternative)", "reason": "the ontology carries two dc:alternative values (Competency Item Education Level, Learning Standard Item Education Level); the workbook prints one" },
+		{ "sheetName": "Properties", "iri": "https://w3id.org/CEDStandards/terms/P600571", "header": "Description (dc:description)", "reason": "the ontology carries two dc:description values ('References the current status ...' and 'The current status ...'); the workbook prints one" },
+		{ "sheetName": "Named Individuals", "iri": "https://w3id.org/CEDStandards/terms/NI001637175392", "header": "Label (rdfs:label)", "reason": "the ontology's label is '=/Hua'; the workbook cell is empty (a spreadsheet takes a leading '=' as a formula; lane INV's inference)" },
+		{ "sheetName": "Named Individuals", "iri": "https://w3id.org/CEDStandards/terms/NI001637175392", "header": "Preferred Label (skos:prefLabel)", "reason": "the ontology's prefLabel is '=/Hua'; the workbook cell is empty (as for its label)" }
+	]
+}

@@ -131,6 +131,7 @@ const { resolveBundle: resolveForgeBundle } = require(path.join(__dirname, '..',
 // hermetic suites inject a SELF-ANNOUNCING stub so no test build writes into the canonical
 // buildLogs home — never a silent skip.
 const roundTripStageLib = require('./round-trip-stage')();
+const layerFramework = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-framework', 'layer-framework'))();
 
 // =====================================================================
 // ⟪JOB 6a⟫ THE PER-BLOCK CONSERVATION ARTIFACT
@@ -588,11 +589,16 @@ const roundTripRowFor = (roundTripStageReport) => {
 	const inventedTotal = totalOf('inventedTotal');
 	const explicitlyOmittedTotal = totalOf('explicitlyOmittedTotal');
 	const cleanCount = ranRowList.filter((oneRow) => oneRow.roundTripClean === true).length;
+	// ⟪lane DES, cedsRichness-101226⟫ a standard's LAYER (row carrying layerKey, token '<standard>:<layerKey>') runs, counts in
+	// the totals and declares its own omission line, but is not a standard: standardCount counts standards only, and the
+	// detail names the layers apart (a build with no layer writes the text it always wrote)
+	const ranStandardCount = ranRowList.filter((oneRow) => oneRow.layerKey === undefined).length;
+	const ranLayerCount = ranRowList.length - ranStandardCount;
 	return {
 		gate: 'roundTrip',
 		verdict: ranRowList.length > 0 && failedTokenList.length === 0 ? vocabulary.BUILD_ATTESTATION_VERDICT.PASS : vocabulary.BUILD_ATTESTATION_VERDICT.FAIL,
 		detail:
-			`${ranRowList.length} standard(s) ran: clean ${cleanCount}/${ranRowList.length}, lost ${lostTotal}, invented ${inventedTotal}, ` +
+			`${ranStandardCount} standard(s)${ranLayerCount > 0 ? ` and ${ranLayerCount} standard layer(s)` : ''} ran: clean ${cleanCount}/${ranRowList.length}, lost ${lostTotal}, invented ${inventedTotal}, ` +
 			`explicitly omitted ${explicitlyOmittedTotal}, declared per standard: ${explicitOmissionDeclarationList.join(' | ') || 'none'}` +
 			`${unmeasuredTokenList.length ? `; UNMEASURED (ran, reported no totals or no omission declaration): ${unmeasuredTokenList.join(', ')}` : ''}` +
 			`${failedTokenList.length ? `; FAILED: ${failedTokenList.join(', ')}` : ''}${ranRowList.length === 0 ? '; no standard ran, so nothing was certified' : ''}; summary ${ROUND_TRIP_SUMMARY_RELATIVE_PATH} in the build's run directory`,
@@ -601,7 +607,7 @@ const roundTripRowFor = (roundTripStageReport) => {
 		lostTotal,
 		explicitlyOmittedTotal,
 		explicitOmissionDeclarationList,
-		standardCount: ranRowList.length,
+		standardCount: ranStandardCount,
 	};
 };
 
@@ -1539,6 +1545,12 @@ const build = (recipe, deps, callback) => {
 		const hubs = Array.isArray(recipe.hubs) ? recipe.hubs : [];
 		const bridges = Array.isArray(recipe.bridges) ? recipe.bridges : [];
 		const hubStdSet = new Set(hubs.map((h) => String(h.standard).toLowerCase()));
+		// ⟪lane DES⟫ the layers the recipe activates, and per standard token the keys the forger is asked to produce
+		const recipeLayerList = Array.isArray(recipe.layers) ? recipe.layers : [];
+		const layerKeyListByToken = recipeLayerList.reduce((soFar, oneLayer) => {
+			const token = String(oneLayer.standard).toLowerCase();
+			return { ...soFar, [token]: (soFar[token] || []).concat([oneLayer.layer]) };
+		}, {});
 
 		// ---- the build's report directory (hubReimplementation Phase 2, SPEC §5) ----
 		// ONE directory per build invocation under the canonical dataStores home (the actions.js
@@ -1718,6 +1730,13 @@ const build = (recipe, deps, callback) => {
 					return;
 				}
 				if (reused) {
+					// ⟪lane DES⟫ a layer is produced over the base as the forger SHAPES it and minted in the graph that holds it;
+					// a reused base was never shaped in this build, so its layers cannot be made here. Refused by name rather
+					// than built without the layers the recipe asked for.
+					if ((layerKeyListByToken[String(std.token).toLowerCase()] || []).length) {
+						done(`[A] ${std.token}: its base block was REUSED from the store, and the recipe names layer(s) ${layerKeyListByToken[String(std.token).toLowerCase()].join(', ')} of it; layers are produced over a base forged in the same build. Build with a fresh store (or without reuse) to make them.`);
+						return;
+					}
 					done('');
 					return;
 				}
@@ -1767,6 +1786,7 @@ const build = (recipe, deps, callback) => {
 						vectorize: vectorizeSpend,
 						embeddingCacheFilePath,
 						deriveHub: hubStdSet.has(String(std.token).toLowerCase()),
+						layerKeyList: layerKeyListByToken[String(std.token).toLowerCase()] || [],
 					},
 					(err, forgeReport) => {
 						if (!err) {
@@ -1784,7 +1804,11 @@ const build = (recipe, deps, callback) => {
 							// recipe token, NOT bundleVersion.
 							resolvedVersionByToken[std.token] = explicitVersion;
 							// ⟪campaign P2, W-C-21⟫ the kit's counts for this standard, compared with the graph at materialize
-							forgeCensusExpectationList.push({ standardName: forgeReport.standard, nodeCountByRole: (forgeReport.forgeStats || {}).nodeCountByRole, edgeCountByType: (forgeReport.forgeStats || {}).edgeCountByType });
+							// ⟪lane DES⟫ a layer's nodes carry its standard's _source, so its counts join the standard's expectation: the
+							// census then proves every layer node and edge reached the graph, by role and by type
+							const layerStatsList = (forgeReport.layerReportList || []).map((oneLayer) => oneLayer.layerStats);
+							const mergedCountOf = (countByName, fieldName) => layerStatsList.reduce((soFar, oneStats) => Object.keys(oneStats[fieldName]).reduce((merged, oneName) => ({ ...merged, [oneName]: (merged[oneName] || 0) + oneStats[fieldName][oneName] }), soFar), { ...(countByName || {}) });
+							forgeCensusExpectationList.push({ standardName: forgeReport.standard, nodeCountByRole: (forgeReport.forgeStats || {}).nodeCountByRole && mergedCountOf(forgeReport.forgeStats.nodeCountByRole, 'nodeCountByRole'), edgeCountByType: (forgeReport.forgeStats || {}).edgeCountByType && mergedCountOf(forgeReport.forgeStats.edgeCountByType, 'edgeCountByType') });
 								// same embedder for every standard in the run — captured for Phase C's
 								// relationship harvest header (undefined on --vectorize=false).
 								buildEmbeddingModelVersion = forgeReport.embeddingModelVersion;
@@ -2024,6 +2048,82 @@ const build = (recipe, deps, callback) => {
 						);
 						next('', args);
 					},
+				);
+			});
+
+			// ⟪lane DES, cedsRichness-101226, 2026-10-12; COPPER_RIVER ruling Q1⟫ PHASE A2 — THE LAYERS of this standard, each its
+			// OWN block (kind 'layer'), minted in the SAME working graph, which still holds the base the layer's edges land on.
+			// Per layer: init its nodeEdges under the StandardLayer label; harvest its nodes by [StandardLayer, <layerLabel>]
+			// and its edges by the types it declared, taking an edge when EITHER endpoint is a layer node (edgeEndpointRule
+			// 'eitherSelected': a layer's edges reach base nodes it requires and does not copy); add it requiring the base.
+			taskList.push((args, next) => {
+				const layerReportList = args.forgeReport.layerReportList || [];
+				eachSeries(
+					layerReportList,
+					(oneLayer, layerDone) => {
+						const composedLayerSubject = vocabulary.layerSubject({ standardKey: std.token, version: explicitVersion, layerKey: oneLayer.layerKey, layerVersion: oneLayer.layerVersion });
+						if (composedLayerSubject.error) {
+							layerDone(`[A2] ${std.token}: ${composedLayerSubject.error}`);
+							return;
+						}
+						replay.init(
+							{ inGraph: args.workingGraph, nodeEdges: oneLayer.nodeEdges, applyLabels: [vocabulary.STANDARD_LAYER_LABEL], sourceLabel: `nodeEdges of layer '${oneLayer.layerKey}' of '${std.token}'` },
+							(initError, initReport) => {
+								if (initError) {
+									layerDone(`init layer ${composedLayerSubject.subject}: ${initError}`);
+									return;
+								}
+								replay.harvest(
+									{
+										inGraph: args.workingGraph,
+										selectionLabels: [vocabulary.STANDARD_LAYER_LABEL, oneLayer.layerLabel],
+										edgeTypeList: oneLayer.harvestEdgeTypeList,
+										edgeEndpointRule: 'eitherSelected',
+										conservationExpectation: initReport && initReport.loadedConservationSummary,
+										header: {
+											blockType: vocabulary.SCHEMA_BLOCK_KIND.LAYER,
+											standardKey: std.token,
+											version: explicitVersion,
+											layerKey: oneLayer.layerKey,
+											layerVersion: oneLayer.layerVersion,
+											stableUriPropertyName: 'uri',
+											resolutionKey: 'uri',
+										},
+									},
+									(harvestError, layerSchemaBlock) => {
+										if (harvestError) {
+											layerDone(`harvest layer ${composedLayerSubject.subject}: ${harvestError}`);
+											return;
+										}
+										const layerArtifactRefusal = writeConservationArtifact({ buildReportsDirPath, schemaBlock: layerSchemaBlock });
+										if (layerArtifactRefusal) {
+											layerDone(`harvest layer ${composedLayerSubject.subject}: ${layerArtifactRefusal}`);
+											return;
+										}
+										manifest.add(
+											{
+												subject: composedLayerSubject.subject,
+												kind: vocabulary.SCHEMA_BLOCK_KIND.LAYER,
+												version: explicitVersion,
+												requires: [baseBlockRefIdByToken[std.token]],
+												description: `layer schema block for ${composedLayerSubject.subject} (layer '${oneLayer.layerKey}' version ${oneLayer.layerVersion} of ${std.token}), forged by recipe '${recipe.recipeName}'`,
+												schemaBlock: layerSchemaBlock,
+											},
+											(addError, addReport) => {
+												if (addError) {
+													layerDone(`add layer ${composedLayerSubject.subject}: ${addError}`);
+													return;
+												}
+												xLog.status(`  [A2] layer ${composedLayerSubject.subject} -> layer ${addReport.schemaBlockRefId} (alreadyPresent ${addReport.alreadyPresent === true ? 'true' : addReport.alreadyPresent === false ? 'false' : 'NOT REPORTED'})`);
+												layerDone('');
+											},
+										);
+									},
+								);
+							},
+						);
+					},
+					(layerError) => next(layerError || '', args),
 				);
 			});
 
@@ -2575,6 +2675,17 @@ const build = (recipe, deps, callback) => {
 			{
 				standardTokens: standards.map((one) => one.token),
 				bundleResolver: components.forger.resolveBundle,
+				// ⟪lane DES⟫ every recipe layer is a declared round trip of its own; resolving it here is also the pre-spend
+				// check that the kit declares the layer at all (refused before a single forge)
+				layerList: recipeLayerList.map((oneLayer) => ({ standardToken: oneLayer.standard, layerKey: oneLayer.layer })),
+				layerResolver: ({ standardToken, layerKey }) => {
+					const bundle = components.forger.resolveBundle({ standard: standardToken });
+					if (bundle.error) {
+						return { error: bundle.error };
+					}
+					const resolvedLayer = layerFramework.resolveLayer({ bundleDir: bundle.bundleDir, layerKey });
+					return resolvedLayer.error ? { error: resolvedLayer.error } : { standardName: `${bundle.standardName} layer ${layerKey}`, validatorPath: resolvedLayer.roundTripValidatorPath, snapshotDirPath: resolvedLayer.snapshotDirPath };
+				},
 			},
 			(rosterError, composedRoster) => {
 				if (rosterError) {

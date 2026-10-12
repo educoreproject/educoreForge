@@ -165,8 +165,12 @@ const moduleFunction =
 		// component's resolveBundle static — the ONE descriptor authority; tests inject
 		// doubles and fault shapes). requireValidator is the load seam (default: require).
 		// ---------------------------------------------------------------
+		// ⟪lane DES, 2026-10-12⟫ layerList (optional, [] when the recipe names no layer) = [{ standardToken, layerKey }] with its
+		// layerResolver ({ standardToken, layerKey }) -> { error } | { standardName, validatorPath, snapshotDirPath }: every LAYER
+		// declares a roundTripValidator (its descriptor requires one), so each becomes a DECLARED row, token
+		// '<standardToken>:<layerKey>', run by the stage and certified by -goldEvalCheck exactly as a standard's is.
 		const composeValidatorRoster = (
-			{ standardTokens, bundleResolver, requireValidator = require } = {},
+			{ standardTokens, bundleResolver, requireValidator = require, layerList = [], layerResolver } = {},
 			callback,
 		) => {
 			if (!Array.isArray(standardTokens)) {
@@ -252,6 +256,36 @@ const moduleFunction =
 					snapshotDirPath: resolved.snapshotDirPath,
 				});
 			}
+			for (const oneLayer of layerList) {
+				if (typeof layerResolver !== 'function') {
+					callback(`${moduleName}.composeValidatorRoster: a layerList was given with no layerResolver — nothing is substituted for it.`);
+					return;
+				}
+				const layerToken = `${oneLayer.standardToken}:${oneLayer.layerKey}`;
+				const resolvedLayer = layerResolver(oneLayer);
+				if (resolvedLayer.error) {
+					callback(`${moduleName}.composeValidatorRoster: layer '${layerToken}': ${resolvedLayer.error}`);
+					return;
+				}
+				if (!fs.existsSync(resolvedLayer.validatorPath)) {
+					callback(`${moduleName}.composeValidatorRoster: layer '${layerToken}' declares roundTripValidator '${resolvedLayer.validatorPath}', which does not EXIST (RT-13.3: declared-but-missing is a refusal)`);
+					return;
+				}
+				const layerApiResolution = resolveValidatorApi({ validatorPath: resolvedLayer.validatorPath, requireValidator });
+				if (layerApiResolution.error) {
+					callback(`${moduleName}.composeValidatorRoster: layer '${layerToken}': ${layerApiResolution.error}`);
+					return;
+				}
+				rosterRows.push({
+					token: layerToken,
+					layerKey: oneLayer.layerKey,
+					standardName: resolvedLayer.standardName,
+					disposition: 'declared',
+					validatorPath: resolvedLayer.validatorPath,
+					validatorApi: layerApiResolution.validatorApi,
+					snapshotDirPath: resolvedLayer.snapshotDirPath,
+				});
+			}
 			callback('', {
 				rosterRows,
 				declaredTokens: rosterRows
@@ -300,6 +334,8 @@ const moduleFunction =
 			return {
 				rowSummary: {
 					token: oneRow.token,
+					// ⟪lane DES⟫ a LAYER's row says so, so the attestation counts standards apart from their layers
+					...(oneRow.layerKey === undefined ? {} : { layerKey: oneRow.layerKey }),
 					standardName: oneRow.standardName,
 					disposition: 'declared',
 					ran: true,

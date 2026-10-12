@@ -294,8 +294,24 @@ function makeManifest({ name, description, recipeName, recipeHash, recipeFileNam
 				callback(`manifestEditor.add '${subject}' to ${selfName()}: ${requiresFault}`);
 				return;
 			}
+		} else if (kind === 'layer') {
+			// ⟪lane DES, 2026-10-12⟫ a LAYER block names the ONE base block of its standard, which must already be a member and
+			// a standardBase: its edges land on that base's nodes, so a layer whose base is not in the manifest would replay
+			// into dangling references
+			const memberKindByRefId = members.reduce((soFar, oneMember) => ({ ...soFar, [oneMember.schemaBlockRefId]: oneMember.kind }), {});
+			const requiresFault = !Array.isArray(requires) || requires.length !== 1 || typeof requires[0] !== 'string' || !/^[0-9a-f]{64}$/.test(requires[0])
+				? `requires must list exactly the one base block refId of the layer's standard (got ${JSON.stringify(requires)})`
+				: memberKindByRefId[requires[0]] === undefined
+					? `requires names ${requires[0]}, which is not a member of this manifest — a layer may require only its base, already in it`
+					: memberKindByRefId[requires[0]] !== 'standardBase'
+						? `requires names ${requires[0]}, a ${memberKindByRefId[requires[0]]} block; a layer requires its standard's standardBase`
+						: '';
+			if (requiresFault) {
+				callback(`manifestEditor.add '${subject}' to ${selfName()}: ${requiresFault}`);
+				return;
+			}
 		} else if (requires !== undefined) {
-			callback(`manifestEditor.add '${subject}' to ${selfName()}: a ${kind} block requires nothing; only a relationship block names the bases it was built over (got ${JSON.stringify(requires)})`);
+			callback(`manifestEditor.add '${subject}' to ${selfName()}: a ${kind} block requires nothing; only a relationship block names the bases it was built over, and a layer its one base (got ${JSON.stringify(requires)})`);
 			return;
 		}
 

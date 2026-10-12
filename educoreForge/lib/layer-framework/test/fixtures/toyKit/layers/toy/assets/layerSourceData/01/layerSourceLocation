@@ -1,0 +1,6 @@
+layer: toyKit/toy
+publishedVersion: 1
+publishedVersionEvidence: a test fixture; the version is declared here
+upstreamUrl: https://example.invalid/toy
+upstreamCommit: 0000000000000000000000000000000000000000
+licence: test fixture, not distributed

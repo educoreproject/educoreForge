@@ -82,6 +82,22 @@ const RECIPE_SCHEMA = {
 				},
 			},
 		},
+		// ⟪lane DES, cedsRichness-101226, 2026-10-12; COPPER_RIVER ruling Q1⟫ layers — which LAYERS of a standard this build
+		// makes (block kind `layer`: a separately published companion of one standard, beside its base). The standard's kit
+		// DECLARES what it can carry (forges/<standard>/layers/<layerKey>/layerDescriptor.ini); the recipe ACTIVATES. A layer
+		// names its standard, which must be in standards[] (2a), and must be declared by that standard's kit (forger refusal).
+		layers: {
+			type: 'array',
+			items: {
+				type: 'object',
+				additionalProperties: false,
+				required: ['standard', 'layer'],
+				properties: {
+					standard: { type: 'string', minLength: 1 },
+					layer: { type: 'string', pattern: '^[a-z][A-Za-z0-9]*$' },
+				},
+			},
+		},
 		bridges: {
 			type: 'array',
 			items: {
@@ -256,6 +272,10 @@ const summarizeRecipe = (recipe) => {
 				.join(', ')}]`,
 		);
 	}
+	const layers = asArray(recipe.layers);
+	if (layers.length) {
+		lines.push(`  layers:      ${layers.length}  [${layers.map((oneLayer) => `${tokenOf(oneLayer.standard)}:${oneLayer.layer}`).join(', ')}]`);
+	}
 	if (bridges.length) {
 		lines.push(
 			`  bridges:     ${bridges.length}  [${bridges
@@ -265,7 +285,7 @@ const summarizeRecipe = (recipe) => {
 	}
 	const known = new Set([
 		'$schema', 'schemaVersion', 'recipeName', 'goldenName', 'kind', 'recipeKind',
-		'description', 'notes', 'standards', 'crosswalks', 'references', 'hubs', 'bridges', 'output',
+		'description', 'notes', 'standards', 'crosswalks', 'references', 'hubs', 'layers', 'bridges', 'output',
 	]);
 	const others = Object.keys(recipe).filter((k) => !known.has(k));
 	if (others.length) {
@@ -294,6 +314,19 @@ const referentialErrors = (recipe) => {
 		if (h.standard && !stdTokens.has(lc(h.standard))) {
 			errors.push(`referential: hubs[${i}].standard '${h.standard}' is not in standards[]`);
 		}
+	});
+
+	// ⟪lane DES⟫ a layer belongs to a standard this recipe forges, and is named once
+	const seenLayerSet = new Set();
+	asArray(recipe.layers).forEach((oneLayer, i) => {
+		if (oneLayer.standard && !stdTokens.has(lc(oneLayer.standard))) {
+			errors.push(`referential: layers[${i}].standard '${oneLayer.standard}' is not in standards[]`);
+		}
+		const layerIdentity = `${lc(oneLayer.standard)}::${oneLayer.layer}`;
+		if (seenLayerSet.has(layerIdentity)) {
+			errors.push(`referential: duplicate layer '${oneLayer.layer}' of standard '${oneLayer.standard}'`);
+		}
+		seenLayerSet.add(layerIdentity);
 	});
 
 	// The uniqueness key is source::hub::<bridgeName> (design_bridgeResolution_072526 §3a): TWO
