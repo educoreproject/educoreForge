@@ -15,6 +15,10 @@
 //                        a version would be a second implementation of the content-addressing rule,
 //                        and a certificate whose ids are recomputed rather than read certifies the
 //                        recomputation, not the build.
+//                        ⟪lane DES, cedsRichness-101226⟫ a LAYER token '<standard>:<layerKey>' certified its LAYER
+//                        block, so it maps to that member's refId (kind 'layer', read off the member's own subject), not
+//                        to the standard's base: the layer's round trip compares the layer's statements, and the base is
+//                        certified under the standard's own token.
 //   recipeTextHash     — sha256 of the recipe FILE BYTES, with the algorithm named IN the value so
 //                        a reader can never mistake it for some other digest. It is computed HERE,
 //                        from the file, and is not read from the store. MEASURED, and stated at the
@@ -66,6 +70,8 @@ const vocabularyLib = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
 const { SCHEMA_BLOCK_KIND } = vocabularyLib;
 
 const RECIPE_HASH_ALGORITHM = 'sha256';
+// a round-trip roster token naming a standard's LAYER (round-trip-stage composeValidatorRoster): '<standard>:<layerKey>'
+const LAYER_TOKEN_PATTERN = /^([a-z0-9]+):([a-z][A-Za-z0-9]*)$/;
 
 // The named absence for a run whose RECIPE could not be located. NOT a null-fill and NOT a default:
 // -goldEvalCheck derives the recipe from the run directory's own name, and a synthetic or foreign run
@@ -204,18 +210,26 @@ const readBaseBlockIdByToken = ({ manifest, declaredTokenList } = {}) => {
 	}
 	const memberList = Array.isArray(manifest.members) ? manifest.members : [];
 	const baseMemberList = memberList.filter((oneMember) => oneMember.kind === SCHEMA_BLOCK_KIND.STANDARD_BASE);
+	const layerMemberList = memberList.filter((oneMember) => oneMember.kind === SCHEMA_BLOCK_KIND.LAYER);
 	const baseBlockIdByToken = {};
 	const refusalList = [];
 	declaredTokenList.forEach((oneToken) => {
-		// the member's OWN subject is `<token>@<versionSlug>_base`; matching on its prefix READS the
-		// association the build recorded. The refId below is then taken verbatim from the member.
-		const matchList = baseMemberList.filter((oneMember) => typeof oneMember.subject === 'string' && oneMember.subject.indexOf(`${oneToken}@`) === 0);
+		const layerTokenMatch = LAYER_TOKEN_PATTERN.exec(oneToken);
+		// the member's OWN subject is `<token>@<versionSlug>_base` (a layer's: `<standard>@<slug>_layer_<layerKey>@<slug>`);
+		// matching on it READS the association the build recorded. The refId below is then taken verbatim from the member.
+		const matchList = layerTokenMatch
+			? layerMemberList.filter((oneMember) => {
+					const parsedSubject = typeof oneMember.subject === 'string' ? vocabularyLib.parseBlockSubject(oneMember.subject) : {};
+					return parsedSubject.standardKey === layerTokenMatch[1] && parsedSubject.layerKey === layerTokenMatch[2];
+				})
+			: baseMemberList.filter((oneMember) => typeof oneMember.subject === 'string' && oneMember.subject.indexOf(`${oneToken}@`) === 0);
+		const memberKindText = layerTokenMatch ? 'layer' : 'standardBase';
 		if (matchList.length === 0) {
-			refusalList.push(`declared token '${oneToken}' has NO standardBase member in manifest ${manifest.refId} — the certificate cannot name the base schema block it certified for that token`);
+			refusalList.push(`declared token '${oneToken}' has NO ${memberKindText} member in manifest ${manifest.refId} — the certificate cannot name the ${layerTokenMatch ? 'layer' : 'base'} schema block it certified for that token`);
 			return;
 		}
 		if (matchList.length > 1) {
-			refusalList.push(`declared token '${oneToken}' matches ${matchList.length} standardBase members in manifest ${manifest.refId} (${matchList.map((oneMember) => oneMember.subject).join(', ')}) — the base schema block is ambiguous and must not be guessed`);
+			refusalList.push(`declared token '${oneToken}' matches ${matchList.length} ${memberKindText} members in manifest ${manifest.refId} (${matchList.map((oneMember) => oneMember.subject).join(', ')}) — the schema block is ambiguous and must not be guessed`);
 			return;
 		}
 		baseBlockIdByToken[oneToken] = matchList[0].schemaBlockRefId;

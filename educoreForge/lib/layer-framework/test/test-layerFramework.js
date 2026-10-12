@@ -107,4 +107,21 @@ const runIntegritySection = (done) => {
 	done();
 };
 
-runForgeSection(() => runDescriptorRefusalSection(() => runIntegritySection(() => harness.report())));
+// the -goldEvalCheck certificate names, per round-trip token, the block it certified: a LAYER token its layer block
+// (RED FIRST on the real gold: evidence/DES/desCt17Layers-goldEvalCheck.log refused 'ceds:des' with NO standardBase member)
+const runCertificateSection = (done) => {
+	harness.section('certificate: a layer token names its LAYER block, read off the manifest member');
+	const { readBaseBlockIdByToken } = require('../../../apps/graph-builder/lib/certificate-enrichment');
+	const manifest = { refId: 'm1', members: [
+		{ kind: 'standardBase', subject: 'ceds@14_0_0_0_base', schemaBlockRefId: 'baseRefId' },
+		{ kind: 'layer', subject: 'ceds@14_0_0_0_layer_des@13', schemaBlockRefId: 'desLayerRefId' },
+		{ kind: 'layer', subject: 'ceds@14_0_0_0_layer_guide@14', schemaBlockRefId: 'guideLayerRefId' },
+	] };
+	const verdict = readBaseBlockIdByToken({ manifest, declaredTokenList: ['ceds', 'ceds:des', 'ceds:guide'] });
+	harness.equal('ceds -> its base; ceds:des and ceds:guide -> their layer blocks', JSON.stringify(verdict.value), JSON.stringify({ ceds: 'baseRefId', 'ceds:des': 'desLayerRefId', 'ceds:guide': 'guideLayerRefId' }));
+	const missing = readBaseBlockIdByToken({ manifest, declaredTokenList: ['ceds:textRepair'] });
+	harness.match('a layer token with no layer member is refused by name', missing.refusalMessage || '', /'ceds:textRepair' has NO layer member/);
+	done();
+};
+
+runForgeSection(() => runDescriptorRefusalSection(() => runIntegritySection(() => runCertificateSection(() => harness.report()))));

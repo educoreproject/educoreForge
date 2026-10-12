@@ -41,7 +41,9 @@ const valueKeyedMapOf = (statementMap) => {
 const validatorFor = ({ standardSource, layerKey, verdictVersion, semanticValidationLimit, sourceStatementsOf, graphStatementsOf, sourceFileList, baseQueryList } = {}) => {
 	const omissionDeclaration = { rule: `the '${layerKey}' layer roundTripValidator: nothing is omitted by declaration`, kindPropertyName: 'kind', kindList: [], textBearingKindList: [], textPropertyName: '', caveatText: '' };
 
-	const compare = ({ snapshotPath, layerGraph, outputPath }, callback) => {
+	// graphEndpoint ({ containerName, boltUrl }) is where a MATERIALIZED layer was read; it lands at verdict.graph, where
+	// -goldEvalCheck's certificate reads the endpoint the round trip actually ran against (certificate-enrichment boltEndpoint)
+	const compare = ({ snapshotPath, layerGraph, outputPath, graphEndpoint }, callback) => {
 		const startedAt = Date.now();
 		sourceVerificationLib.verifySnapshotChecksums({ snapshotDirPath: snapshotPath, relativePathList: sourceFileList }, (verifyError) => {
 			if (verifyError) {
@@ -73,8 +75,9 @@ const validatorFor = ({ standardSource, layerKey, verdictVersion, semanticValida
 					callback(`${moduleName} '${layerKey}': ${assembled.error}`);
 					return;
 				}
+				const verdict = graphEndpoint === undefined ? assembled.verdict : { ...assembled.verdict, standard: standardSource, layerKey, graph: { containerName: graphEndpoint.containerName, boltUrl: graphEndpoint.boltUrl, layerNodeCount: layerGraph.nodes.length, layerEdgeCount: layerGraph.edges.length } };
 				if (typeof outputPath !== 'string' || outputPath === '') {
-					callback('', assembled.verdict);
+					callback('', verdict);
 					return;
 				}
 				fs.mkdir(outputPath, { recursive: true }, (mkdirError) => {
@@ -82,15 +85,15 @@ const validatorFor = ({ standardSource, layerKey, verdictVersion, semanticValida
 						callback(`${moduleName} '${layerKey}': cannot create ${outputPath}: ${mkdirError.message}`);
 						return;
 					}
-					fs.writeFile(path.join(outputPath, VERDICT_FILE_NAME), JSON.stringify(assembled.verdict, null, '\t'), (writeError) =>
-						callback(writeError ? `${moduleName} '${layerKey}': cannot write the verdict: ${writeError.message}` : '', assembled.verdict),
+					fs.writeFile(path.join(outputPath, VERDICT_FILE_NAME), JSON.stringify(verdict, null, '\t'), (writeError) =>
+						callback(writeError ? `${moduleName} '${layerKey}': cannot write the verdict: ${writeError.message}` : '', verdict),
 					);
 				});
 			});
 		});
 	};
 
-	const validate = ({ boltUrl, user, password, snapshotPath, outputPath } = {}, callback) => {
+	const validate = ({ containerName, boltUrl, user, password, snapshotPath, outputPath } = {}, callback) => {
 		openLayerGraphReader({ boltUrl, user, password, standardSource, layerKey, baseQueryList: baseQueryList || [] }, (openError, reader) => {
 			if (openError) {
 				callback(openError);
@@ -102,7 +105,7 @@ const validatorFor = ({ standardSource, layerKey, verdictVersion, semanticValida
 						callback(readError || closeError);
 						return;
 					}
-					compare({ snapshotPath, layerGraph, outputPath }, callback);
+					compare({ snapshotPath, layerGraph, outputPath, graphEndpoint: { containerName, boltUrl } }, callback);
 				});
 			});
 		});
