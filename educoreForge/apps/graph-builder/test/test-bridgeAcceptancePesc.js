@@ -840,7 +840,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postFixReplayStampExit64PescCompose-100926 -> postBm25FulltextPescCompose-101026, tag cut ON this commit. CENSUS over this gate's
 // paths: graph-contract.js (§10b fulltextIndexDeclaration and its name/CREATE helpers, lane BM25 e54693bb) and test-bgNosub.js (its
 // re-anchors, this commit) — no bridge-framework source.
-const P1_BASELINE_COMMIT = 'postBm25FulltextPescCompose-101026'; // re-anchored by COPPER_NEXUS (lane BM25); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-12 (RADIANT_HORIZON; cedsRichness lane DES; pre-authorised by the work order) ═══ BG-COMPOSE-PESC
+// postBm25FulltextPescCompose-101026 -> postDesLayersPescCompose-101226, tag cut ON this commit. CENSUS over this gate's paths:
+// lib/bridge-framework/README.md (main 3e4cd28a, documentation pointers only), build.js (Phase A2 layers; standardCount), and lib/vocabulary/
+// vocabulary.js, vocabulary-definitions.js, graph-contract.js, test-sifEdgeVocabulary.js, test-layerBlockKind.js (lane DES a3f6c081), plus
+// test-bgNosub.js (its re-anchors, this commit) — no bridge-framework source.
+const P1_BASELINE_COMMIT = 'postDesLayersPescCompose-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

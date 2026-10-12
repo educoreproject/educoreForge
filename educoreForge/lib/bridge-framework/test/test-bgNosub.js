@@ -177,7 +177,12 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // ═══ RE-ANCHOR, 2026-10-10 (COPPER_NEXUS; forgeClean lane BM25; pre-authorised) ═══ (ii) postFixReplayStampExit64VocabularyIi-100926 ->
 // postBm25FulltextVocabularyIi-101026, tag cut ON this commit. CENSUS (lib/vocabulary/): graph-contract.js (§10b) and
 // test/test-graphContract.js (SECTION 5b) — lane BM25's own commits e54693bb, fca4246e on bm25/fulltextHybrid from main 658b8477.
-const POST_D1_BASE_TAG = 'postBm25FulltextVocabularyIi-101026'; // re-anchored by COPPER_NEXUS (lane BM25); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-12 (RADIANT_HORIZON; cedsRichness lane DES; pre-authorised by the work order) ═══ (ii) postBm25FulltextVocabularyIi-101026 ->
+// postDesLayersVocabularyIi-101226, tag cut ON this commit. CENSUS (lib/vocabulary/): vocabulary.js (block kind 'layer', six layer roles,
+// fifteen layer edge types, layer subject grammar), vocabulary-definitions.js (their definitions), graph-contract.js (StandardLayer
+// producer-local label, layerScopeRule, the roundTrip standardCount / omission-line meaning), test/test-sifEdgeVocabulary.js (schema-view
+// rows +27), test/test-layerBlockKind.js (new) — lane DES's own commit a3f6c081.
+const POST_D1_BASE_TAG = 'postDesLayersVocabularyIi-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -409,7 +414,11 @@ const POST_D1_BASE_TAG = 'postBm25FulltextVocabularyIi-101026'; // re-anchored b
 // postBm25FulltextForgeFrameworkIii-101026, tag cut ON this commit. CENSUS (lib/forge-framework/): test/test-gSeamUntouched.js ONLY — its
 // G-SEAM-UNTOUCHED re-anchor (f23e1aec), the chain FIX warned of; lane BM25 changed no forge-framework source. All five lane-BM25 tags
 // are cut ON this commit, so this re-anchor moves no other gate.
-const PHASE0_ANCHOR_TAG = 'postBm25FulltextForgeFrameworkIii-101026'; // re-anchored by COPPER_NEXUS (lane BM25); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-12 (RADIANT_HORIZON; cedsRichness lane DES; pre-authorised by the work order) ═══ (iii) postBm25FulltextForgeFrameworkIii-101026 ->
+// postDesLayersForgeFrameworkIii-101226, tag cut ON this commit. CENSUS (lib/forge-framework/): roundTripHarness/graphReader.js
+// (openLayerGraphReader, read-only, for the layer round-trip validators; lane DES a3f6c081) and test/test-gSeamUntouched.js (its
+// re-anchor, this commit). All five lane-DES tags are cut ON this commit, so this re-anchor moves no other gate.
+const PHASE0_ANCHOR_TAG = 'postDesLayersForgeFrameworkIii-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -844,7 +853,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // commits e54693bb, fca4246e: replay/replay-engine.js (phase 3 builds the fulltext index), replay/test/test-gFulltextIndex.js (new gate),
 // replay-manager/lib/finishing/promotion-stamp.js + test (fulltext rename), replay-manager/replayManager.js + test-replay-manager.js
 // (X5 allow-list: seven named apoc.text functions). No forge-framework source; no bridge-framework source.
-const PHASE3_ANCHOR_TAG = 'postBm25FulltextSeamDiffEmpty-101026'; // re-anchored by COPPER_NEXUS (lane BM25); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-12 (RADIANT_HORIZON; cedsRichness lane DES; pre-authorised by the work order) ═══ seamDiffEmpty (and its (i-live) companion):
+// postBm25FulltextSeamDiffEmpty-101026 -> postDesLayersSeamDiffEmpty-101226, tag cut ON this commit. CENSUS: lane DES's own commit
+// a3f6c081: build.js (Phase A2 layers; standardCount), forger.js (forgeLayersOf), replay-engine.js + replayManager.js (eitherSelected
+// harvest), manifestEditor.js + manifest-recipe-finisher.js (kind 'layer'), lib/forge-framework/roundTripHarness/graphReader.js (layer
+// reader), forges/ceds (parserDescriptor layerNamespace, roundTripValidator gate D), and this commit's re-anchor test edits. No
+// bridge-framework source.
+const PHASE3_ANCHOR_TAG = 'postDesLayersSeamDiffEmpty-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

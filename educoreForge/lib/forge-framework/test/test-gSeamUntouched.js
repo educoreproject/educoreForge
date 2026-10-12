@@ -202,7 +202,12 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // postFixReplayStampExit64GSeamUntouched-100926 -> postBm25FulltextGSeamUntouched-101026, tag cut ON this commit. CENSUS over the 7
 // seam files: 2 files — replay-engine.js (phase 3: the fulltext index beside the vector indexes) and replayManager.js (X5 allow-list:
 // seven named apoc.text functions), lane BM25's own commits e54693bb, fca4246e on bm25/fulltextHybrid from main 658b8477.
-const PRE_MIGRATION_REF = 'postBm25FulltextGSeamUntouched-101026'; // re-anchored by COPPER_NEXUS (lane BM25); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-12 (RADIANT_HORIZON; cedsRichness lane DES; pre-authorised by the work order) ═══ G-SEAM-UNTOUCHED
+// postBm25FulltextGSeamUntouched-101026 -> postDesLayersGSeamUntouched-101226, tag cut ON this commit. CENSUS over the 7 seam files:
+// 3 files — forger.js (forgeLayersOf: each recipe-named layer produced over the shaped base), build.js (Phase A2: the layer block minted
+// in the base's working graph; standardCount counts standards, not layers), replay-engine.js (harvest edgeEndpointRule 'eitherSelected',
+// layer blockName); replayManager.js (passes the rule) — main's documentation-only commit 3e4cd28a (bridge spec READMEs) and lane DES's own commit a3f6c081 on cedsRichness/desLayers from main 3e4cd28a.
+const PRE_MIGRATION_REF = 'postDesLayersGSeamUntouched-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
