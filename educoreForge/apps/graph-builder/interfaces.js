@@ -65,6 +65,9 @@
  * @property {number} nodeCount
  * @property {number} edgeCount
  * @property {number} embedCallCount
+ * @property {Array} layerReportList  ⟪lane DES, cedsRichness-101226⟫ one entry per LAYER the spec's layerKeyList named, each
+ *                                    produced over this standard's shaped base: { layerKey, layerVersion, layerLabel,
+ *                                    nodeEdges, harvestEdgeTypeList, layerStats, layerReport, roundTripValidatorPath, snapshotDirPath }; [] when it named none
  */
 
 /**
@@ -606,6 +609,7 @@ const COMPONENT_SHAPES = {
 				'nodeCount',
 				'edgeCount',
 				'embedCallCount',
+				'layerReportList',
 			],
 		},
 	},

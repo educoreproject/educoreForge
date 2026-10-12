@@ -185,7 +185,7 @@ const validatorApi = validatorFor({
 				callback(sourceError);
 				return;
 			}
-			const joinMap = sourceJoinStatementsOf({ workbookStatementMap, basePropertyCedsIdSet: new Set(layerGraph.basePropertyCedsIdList || []) });
+			const joinMap = sourceJoinStatementsOf({ workbookStatementMap, basePropertyCedsIdSet: new Set(layerGraph.basePropertyCedsIdList) });
 			joinMap.forEach((oneStatement, oneStatementKey) => workbookStatementMap.set(oneStatementKey, oneStatement));
 			callback('', workbookStatementMap);
 		}),

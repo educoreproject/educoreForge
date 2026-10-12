@@ -368,6 +368,7 @@ const workingForger = (overrides) =>
 							nodeEdges: { nodes: [], edges: [], embeddingDims: null },
 							nodeCount: 0,
 							edgeCount: 0,
+							layerReportList: [],
 							embedCallCount: 0,
 						}),
 				},
@@ -542,7 +543,7 @@ const preSpendCollisionRefusal = (whenDone) => {
 	let forgeInvoked = false;
 	let bridgeRunInvoked = false;
 	const flaggingForger = Object.assign(
-		() => ({ forge: (spec, cb) => { forgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0 }); } }),
+		() => ({ forge: (spec, cb) => { forgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [] }); } }),
 		{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
 	);
 	// BOTH bridges describe to the SAME tuple — the pescCedsDerived / pescOptionSetCedsDerived shape.
@@ -573,7 +574,7 @@ const preSpendCollisionRefusal = (whenDone) => {
 		// every two-bridge recipe, which is a different (and wrong) rule.
 		let clearedForgeInvoked = false;
 		const clearedForger = Object.assign(
-			() => ({ forge: (spec, cb) => { clearedForgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0 }); } }),
+			() => ({ forge: (spec, cb) => { clearedForgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [] }); } }),
 			{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
 		);
 		const discriminatedBridgeMaker = () => ({
@@ -593,7 +594,7 @@ const preSpendCollisionRefusal = (whenDone) => {
 			// left as a paragraph: the flag is what proves the refusal moved, exactly as in the collision case.
 			let unregisteredForgeInvoked = false;
 			const unregisteredFlaggingForger = Object.assign(
-				() => ({ forge: (spec, cb) => { unregisteredForgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0 }); } }),
+				() => ({ forge: (spec, cb) => { unregisteredForgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [] }); } }),
 				{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
 			);
 			const refusingBridgeMaker = () => ({
@@ -1521,7 +1522,7 @@ const hubFoldingForger = (baseNodeEdges) => Object.assign(() => ({
 				nodeEdges,
 				nodeCount: nodeEdges.nodes.length,
 				edgeCount: nodeEdges.edges.length,
-				embedCallCount: 0,
+				embedCallCount: 0, layerReportList: [],
 				// deliberately NO hubDivergenceReport/hubSkipReport on this double's report: build.js
 				// writes those to the real dataStores/buildLogs when present, and this suite is
 				// hermetic — the report-write path is not this stage's subject.
@@ -2017,7 +2018,7 @@ const buildCapturingVectorize = (vectorizeDep, done) => {
 					nodeEdges: { nodes: [], edges: [], embeddingDims: null },
 					nodeCount: 0,
 					edgeCount: 0,
-					embedCallCount: 0,
+					embedCallCount: 0, layerReportList: [],
 				});
 			},
 		}),
@@ -2366,7 +2367,7 @@ const stageP2ReviewGuards = () => {
 						nodeEdges: { nodes: [], edges: [], embeddingDims: null },
 						nodeCount: 0,
 						edgeCount: 0,
-						embedCallCount: 0,
+						embedCallCount: 0, layerReportList: [],
 						hubDivergenceReport: [], // present WITHOUT its pair — malformed by contract
 					}),
 			}),

@@ -220,7 +220,7 @@ const seedForger = () =>
 	Object.assign(
 		() => ({
 			forge: ({ standard, version }, cb) =>
-				cb('', { standard, version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0 }),
+				cb('', { standard, version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [] }),
 		}),
 		// the EXACT-NAME RULE static (see test-build.js's forgerRegistryDouble note)
 		{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },

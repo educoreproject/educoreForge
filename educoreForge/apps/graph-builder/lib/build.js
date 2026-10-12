@@ -1806,7 +1806,7 @@ const build = (recipe, deps, callback) => {
 							// ⟪campaign P2, W-C-21⟫ the kit's counts for this standard, compared with the graph at materialize
 							// ⟪lane DES⟫ a layer's nodes carry its standard's _source, so its counts join the standard's expectation: the
 							// census then proves every layer node and edge reached the graph, by role and by type
-							const layerStatsList = (forgeReport.layerReportList || []).map((oneLayer) => oneLayer.layerStats);
+							const layerStatsList = forgeReport.layerReportList.map((oneLayer) => oneLayer.layerStats);
 							const mergedCountOf = (countByName, fieldName) => layerStatsList.reduce((soFar, oneStats) => Object.keys(oneStats[fieldName]).reduce((merged, oneName) => ({ ...merged, [oneName]: (merged[oneName] || 0) + oneStats[fieldName][oneName] }), soFar), { ...(countByName || {}) });
 							forgeCensusExpectationList.push({ standardName: forgeReport.standard, nodeCountByRole: (forgeReport.forgeStats || {}).nodeCountByRole && mergedCountOf(forgeReport.forgeStats.nodeCountByRole, 'nodeCountByRole'), edgeCountByType: (forgeReport.forgeStats || {}).edgeCountByType && mergedCountOf(forgeReport.forgeStats.edgeCountByType, 'edgeCountByType') });
 								// same embedder for every standard in the run — captured for Phase C's
@@ -2057,7 +2057,7 @@ const build = (recipe, deps, callback) => {
 			// and its edges by the types it declared, taking an edge when EITHER endpoint is a layer node (edgeEndpointRule
 			// 'eitherSelected': a layer's edges reach base nodes it requires and does not copy); add it requiring the base.
 			taskList.push((args, next) => {
-				const layerReportList = args.forgeReport.layerReportList || [];
+				const layerReportList = args.forgeReport.layerReportList;
 				eachSeries(
 					layerReportList,
 					(oneLayer, layerDone) => {
