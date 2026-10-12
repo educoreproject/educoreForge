@@ -46,12 +46,14 @@ const cardIndexFor = ({ cardSlotIndex }) => {
 	const cardStableIdListByClassStableId = {};
 	const cardStableIdListByPropertyStableId = {};
 	const propertyStableIdListByCardStableId = {};
+	const classStableIdListByCardStableId = {};
 	cardSlotIndex.baseStableIdListBySlotKindByCardStableId.forEach((baseListBySlotKind, cardStableId) => {
 		baseListBySlotKind.domain.forEach((classStableId) => (cardStableIdListByClassStableId[classStableId] = cardStableIdListByClassStableId[classStableId] || []).push(cardStableId));
 		baseListBySlotKind.property.forEach((propertyStableId) => (cardStableIdListByPropertyStableId[propertyStableId] = cardStableIdListByPropertyStableId[propertyStableId] || []).push(cardStableId));
 		propertyStableIdListByCardStableId[cardStableId] = baseListBySlotKind.property.slice();
+		classStableIdListByCardStableId[cardStableId] = baseListBySlotKind.domain.slice();
 	});
-	return { cardStableIdListByClassStableId, cardStableIdListByPropertyStableId, propertyStableIdListByCardStableId };
+	return { cardStableIdListByClassStableId, cardStableIdListByPropertyStableId, propertyStableIdListByCardStableId, classStableIdListByCardStableId };
 };
 
 const buildStructureIndex = ({ inGraph, cardSlotIndex }, callback) => {
@@ -84,6 +86,7 @@ const buildStructureIndex = ({ inGraph, cardSlotIndex }, callback) => {
 				cardStableIdListByClassStableId: cardIndex.cardStableIdListByClassStableId,
 				cardStableIdListByPropertyStableId: cardIndex.cardStableIdListByPropertyStableId,
 				propertyStableIdListByCardStableId: cardIndex.propertyStableIdListByCardStableId,
+				classStableIdListByCardStableId: cardIndex.classStableIdListByCardStableId,
 			});
 		});
 	});

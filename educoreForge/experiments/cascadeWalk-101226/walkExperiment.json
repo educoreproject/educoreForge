@@ -16,6 +16,19 @@
 			"sourceVersion": "5.2.0",
 			"hubVersion": "14.0.0.0",
 			"subjectSetFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiEval/edfiEvalSubjectSet-100-047b5685cabd.json"
+		},
+		"sif": {
+			"bridgeName": "sif260928CedsDerivedPlugin",
+			"sourceToken": "sif260928",
+			"hubToken": "ceds",
+			"sourceStandardName": "SIF260928",
+			"sourceVersion": "4.3",
+			"hubVersion": "14.0.0.0",
+			"goldBlockFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/walk_101226/goldSifBlock.json",
+			"regressionTargetPropertyStableIdBySubjectName": {
+				"PreferredName": "https://w3id.org/CEDStandards/terms/P000206",
+				"StateProvinceId": "https://w3id.org/CEDStandards/terms/P001572"
+			}
 		}
 	},
 	"proxyTruthFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/management/zNotesPlansDocs/jevJudge/evidence-093026/perSubject.json",

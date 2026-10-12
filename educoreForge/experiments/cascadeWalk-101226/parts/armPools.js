@@ -68,7 +68,7 @@ const conceptWalk = (armInput, callback) => {
 		// a concept no class is assigned to (Claim) offers nothing; its members are an empty list, not an error
 		const memberClassStableIdList = distinctList([].concat(...conceptChoice.rankedOptionList.map((oneConcept) => structureIndex.classStableIdListByConceptStableId[oneConcept.optionStableId] || []))).sort(compareStrings);
 		if (memberClassStableIdList.length === 0) {
-			const emptied = cappedResult({ runContext, subjectStableId, rawCardStableIdList: [], poolCardCount, walkTrace: { conceptTrace: conceptChoice.trace, classTrace: null, memberClassCount: 0 } });
+			const emptied = cappedResult({ runContext, subjectStableId, rawCardStableIdList: [], poolCardCount, walkTrace: { conceptTrace: conceptChoice.trace, classTrace: null, memberClassCount: 0, memberClassStableIdList: [], chosenClassStableIdList: [] } });
 			callback(emptied.error || '', emptied.pool);
 			return;
 		}

@@ -169,4 +169,4 @@ const runArmsOnce = ({ experimentConfig, opened, runLabel, outDirPath, scratchDi
 	});
 };
 
-module.exports = { runArmsOnce, moduleName };
+module.exports = { runArmsOnce, buildArmsForSubject, moduleName };

@@ -22,7 +22,10 @@ const { resolveGoldGraphHandle } = require('./goldGraphHandle');
 const { buildBridgeRunContext } = require('./bridgeRunContext');
 const { renderSubjectQuestion } = require('./subjectJudge');
 const { runArmsOnce } = require('./armRun');
+const { runSifRegression } = require('./sifRegression');
 const { ARM_ROW_LIST } = require('./armPools');
+const { buildStructureIndex } = require('./structureIndex');
+const scoringLib = require('./scoring');
 
 const requiredValue = ({ valueOf, valueName }) => {
 	const given = valueOf(valueName);
@@ -163,6 +166,118 @@ const runArms = ({ experimentConfig, valueOf }, callback) => {
 		});
 	});
 };
-const sifRecall = (actionContext, callback) => callback(`${moduleName}: -sifRecall is not built yet`);
+// sifRecall — the SIF regression pair, pool recall only (parts/sifRegression.js); one fresh walk cache per --runLabel
+const sifRecall = ({ experimentConfig, valueOf }, callback) => {
+	const resolutionList = ['runLabel', 'outDirPath', 'scratchDirPath'].map((valueName) => ({ valueName, ...requiredValue({ valueOf, valueName }) }));
+	const unresolved = resolutionList.find((oneResolution) => oneResolution.error);
+	if (unresolved) {
+		callback(unresolved.error);
+		return;
+	}
+	const [runLabel, outDirPath, scratchDirPath] = resolutionList.map((oneResolution) => oneResolution.value);
+	openBridgeRun({ experimentConfig, bridgeRunLabel: 'sif' }, (openError, opened) => {
+		if (openError) {
+			callback(openError);
+			return;
+		}
+		runSifRegression({ experimentConfig, opened, runLabel, outDirPath, scratchDirPath }, (runError, summary) => {
+			opened.runContext.reader.close(() => {
+				if (runError) {
+					callback(runError);
+					return;
+				}
+				const lineList = summary.reachTable.map((oneSubject) => `  ${oneSubject.subjectName} (${oneSubject.copyCount} copies): ${Object.keys(oneSubject.byArmName).map((armName) => `${armName} @15 ${oneSubject.byArmName[armName].reachAt15}${oneSubject.byArmName[armName].reachAtDeclaredK === undefined ? '' : ` @declaredK ${oneSubject.byArmName[armName].reachAtDeclaredK}`} uncapped ${oneSubject.byArmName[armName].reachUncapped}`).join(' | ')}`);
+				callback('', { summaryText: [`SIF regression ${runLabel}: ${summary.subjectCount} question(s); A0 matches the gold's frozen pools on ${summary.a0MatchesGoldCount}; US$${summary.ledger.usd.toFixed(4)}`, ...lineList].join('\n'), passed: true });
+			});
+		});
+	});
+};
 
-module.exports = { reproduceBaseline, runArms, sifRecall, openBridgeRun, requiredValue, moduleName };
+// WALK_KIND_LIST_BY_ARM_NAME — which walk choice calls an arm needs, its prerequisites' included (A2 and A3 cannot be
+// built without A1's walk), so an arm's cost is everything it takes to build it from nothing
+const WALK_KIND_LIST_BY_ARM_NAME = Object.freeze({ A0: [], A1: ['concept', 'class'], A2: ['concept', 'class', 'desDomain', 'desEntity'], A3: ['concept', 'class'] });
+const BUILD_ARM_LIST_BY_ARM_NAME = Object.freeze({ A0: ['A0'], A1: ['A1'], A2: ['A1', 'A2'], A3: ['A0', 'A1', 'A3'] });
+
+// score — design §4-§6 over every run-*/ under --outDirPath; writes scoreReport.json and subjectVerdicts.json there
+const score = ({ experimentConfig, valueOf }, callback) => {
+	const outDirResolution = requiredValue({ valueOf, valueName: 'outDirPath' });
+	if (outDirResolution.error) {
+		callback(outDirResolution.error);
+		return;
+	}
+	const outDirPath = outDirResolution.value;
+	const runDirNameList = fs.readdirSync(outDirPath).filter((oneName) => oneName.indexOf('run-') === 0).sort();
+	if (runDirNameList.length === 0) {
+		callback(`no run-* directory under ${outDirPath}`);
+		return;
+	}
+	openBridgeRun({ experimentConfig, bridgeRunLabel: 'edfi' }, (openError, opened) => {
+		if (openError) {
+			callback(openError);
+			return;
+		}
+		buildStructureIndex({ inGraph: opened.inGraph, cardSlotIndex: opened.runContext.retrievalState.cardSlotIndex }, (indexError, structureIndex) => {
+			opened.runContext.reader.close(() => {
+				if (indexError) {
+					callback(indexError);
+					return;
+				}
+				const subjectStableIdList = JSON.parse(fs.readFileSync(opened.bridgeRun.subjectSetFilePath, 'utf8'));
+				const truthResolution = scoringLib.truthBySubjectFor({ proxyTruthRowList: JSON.parse(fs.readFileSync(experimentConfig.proxyTruthFilePath, 'utf8')), subjectStableIdList, cardList: opened.runContext.cardList });
+				if (truthResolution.error) {
+					callback(truthResolution.error);
+					return;
+				}
+				const truthBySubject = truthResolution.truthBySubject;
+				const loadedRunList = runDirNameList.map((runDirName) => ({
+					runDirName,
+					rowList: fs.readFileSync(path.join(outDirPath, runDirName, 'subjectRows.jsonl'), 'utf8').split('\n').filter((oneLine) => oneLine.trim() !== '').map((oneLine) => JSON.parse(oneLine)),
+					runSummary: JSON.parse(fs.readFileSync(path.join(outDirPath, runDirName, 'runSummary.json'), 'utf8')),
+				}));
+				const partialRun = loadedRunList.find((oneRun) => oneRun.rowList.length !== subjectStableIdList.length || oneRun.runSummary.runError);
+				if (partialRun !== undefined) {
+					callback(`${partialRun.runDirName} holds ${partialRun.rowList.length} subject row(s) of ${subjectStableIdList.length} (runError '${partialRun.runSummary.runError}'); a partial run is not scored`);
+					return;
+				}
+				// the arms scored are the arms every run judged (a sweep judges A1 alone); runs that disagree are refused
+				const armNameList = scoringLib.ARM_NAME_LIST.filter((armName) => loadedRunList[0].runSummary.askedArmNameList.indexOf(armName) !== -1);
+				const mismatchedRun = loadedRunList.find((oneRun) => oneRun.runSummary.askedArmNameList.slice().sort().join(',') !== armNameList.slice().sort().join(','));
+				if (mismatchedRun !== undefined) {
+					callback(`${mismatchedRun.runDirName} judged arms ${mismatchedRun.runSummary.askedArmNameList.join(',')}, not ${armNameList.join(',')}; runs scored together must judge the same arms`);
+					return;
+				}
+				const runScoreList = loadedRunList.map(({ rowList, runSummary }) => {
+					const scored = scoringLib.scoreRun({ rowList, truthBySubject, cardByStableId: opened.runContext.cardByStableId, structureIndex, armNameList });
+					const costByArmName = armNameList.reduce((soFar, armName) => {
+						const walkKindList = WALK_KIND_LIST_BY_ARM_NAME[armName];
+						const walkTally = walkKindList.map((oneKind) => runSummary.ledgerByKind[oneKind]).filter((oneTally) => oneTally !== undefined);
+						const armScore = scored.armScoreByArmName[armName];
+						const buildMsTotal = rowList.reduce((buildSoFar, oneRow) => buildSoFar + BUILD_ARM_LIST_BY_ARM_NAME[armName].reduce((armSoFar, builtArmName) => armSoFar + oneRow.armResultByArmName[builtArmName].buildMs, 0), 0);
+						return Object.assign(soFar, {
+							[armName]: {
+								walkCallsPerSubject: walkTally.reduce((callSoFar, oneTally) => callSoFar + oneTally.askedCount + oneTally.servedFromCacheCount, 0) / rowList.length,
+								judgeCallsPerSubject: (armScore.subjectCount - armScore.noCandidateCount) / rowList.length,
+								walkInputTokensPerSubject: walkTally.reduce((tokenSoFar, oneTally) => tokenSoFar + oneTally.inputTokens, 0) / rowList.length,
+								judgeInputTokensPerSubject: armScore.judgeInputTokens / Math.max(1, armScore.judgeAskedCount),
+								outputTokensPerSubject: (walkTally.reduce((tokenSoFar, oneTally) => tokenSoFar + oneTally.outputTokens, 0) + armScore.judgeOutputTokens) / rowList.length,
+								wallMsPerSubject: (buildMsTotal + armScore.judgeMsTotal) / rowList.length,
+							},
+						});
+					}, {});
+					return { runLabel: runSummary.runLabel, runSummary, armScoreByArmName: scored.armScoreByArmName, costByArmName, subjectVerdictList: scored.subjectVerdictList };
+				});
+				const minimumSubjectCount = 3;
+				const comparisonList = [['A2', 'A1'], ['A1', 'A2'], ['A1', 'A0'], ['A2', 'A0'], ['A3', 'A0'], ['A0', 'A1'], ['A0', 'A2'], ['A0', 'A3']].filter((armPair) => armPair.every((armName) => armNameList.indexOf(armName) !== -1)).map(([leaderArmName, otherArmName]) => scoringLib.realDifference({ runScoreList, leaderArmName, otherArmName, minimumSubjectCount }));
+				const scoreReport = { runLabelList: runScoreList.map((oneRun) => oneRun.runLabel), truthCountByKind: Object.keys(truthBySubject).reduce((soFar, oneSubject) => Object.assign(soFar, { [truthBySubject[oneSubject].truthKind]: (soFar[truthBySubject[oneSubject].truthKind] || 0) + 1 }), {}), runScoreList: runScoreList.map((oneRun) => ({ runLabel: oneRun.runLabel, armScoreByArmName: oneRun.armScoreByArmName, costByArmName: oneRun.costByArmName, ledger: oneRun.runSummary.ledger, ledgerByKind: oneRun.runSummary.ledgerByKind, wallMs: oneRun.runSummary.wallMs })), comparisonList, minimumSubjectCount };
+				fs.writeFileSync(path.join(outDirPath, 'scoreReport.json'), `${JSON.stringify(scoreReport, null, '\t')}\n`);
+				fs.writeFileSync(path.join(outDirPath, 'subjectVerdicts.json'), `${JSON.stringify(runScoreList.map((oneRun) => ({ runLabel: oneRun.runLabel, subjectVerdictList: oneRun.subjectVerdictList })), null, '\t')}\n`);
+				const spreadOf = (fieldName) => (armName) => runScoreList.map((oneRun) => oneRun.armScoreByArmName[armName][fieldName]).join(' / ');
+				const tableLineList = armNameList.map((armName) => `  ${armName}  recall ${spreadOf('recallHitCount')(armName)} of ${runScoreList[0].armScoreByArmName[armName].recallPopulationCount}   uncapped ${spreadOf('uncappedRecallHitCount')(armName)}   proxy-correct ${spreadOf('proxyCorrectCount')(armName)} of ${runScoreList[0].armScoreByArmName[armName].proxyPopulationCount}   abstained ${spreadOf('abstainedCount')(armName)}   noCandidate ${spreadOf('noCandidateCount')(armName)}`);
+				const comparisonLineList = comparisonList.map((oneComparison) => `  ${oneComparison.leaderArmName} over ${oneComparison.otherArmName}: ${oneComparison.byMeasure.map((oneMeasure) => `${oneMeasure.measureName} [${oneMeasure.differenceList.join(', ')}]${oneMeasure.real ? ' REAL' : ''}`).join('  ')}  => ${oneComparison.real ? 'REAL' : 'not real'}`);
+				callback('', { summaryText: [`runs ${scoreReport.runLabelList.join(', ')}; truths by kind ${JSON.stringify(scoreReport.truthCountByKind)}`, ...tableLineList, 'differences (leader minus other, per run):', ...comparisonLineList].join('\n'), passed: true });
+			});
+		});
+	});
+};
+
+module.exports = { reproduceBaseline, runArms, sifRecall, score, openBridgeRun, requiredValue, moduleName };

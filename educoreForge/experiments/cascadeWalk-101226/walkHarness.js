@@ -19,6 +19,7 @@ SYNOPSIS
     node walkHarness.js -reproduceBaseline --outDirPath=<dir>
     node walkHarness.js -runArms --runLabel=<r1|r2|r3> --outDirPath=<dir> --scratchDirPath=<dir> [--armList=A0,A1,A2,A3] [--subjectLimit=<n>]
     node walkHarness.js -sifRecall --outDirPath=<dir> --scratchDirPath=<dir> --runLabel=<label>
+    node walkHarness.js -score --outDirPath=<dir>
     node walkHarness.js -help
 
 DESCRIPTION
@@ -30,6 +31,9 @@ DESCRIPTION
                         a0Reproduction.json to --outDirPath and exits 1 if anything differs.
     -runArms            one run: every named arm over the hundred, with ONE fresh judgment cache under
                         --scratchDirPath shared by the arms of this run. Calls Jev. Writes per-subject rows.
+    -score              design §4-§6 over every run-*/ under --outDirPath: recall, uncapped recall, proxy-correct,
+                        abstentions, confidence, cost, where the walks went wrong, and the §6 real-difference
+                        test. Writes scoreReport.json and subjectVerdicts.json. No AI call.
     -sifRecall          the SIF regression pair (PreferredName, StateProvinceId): pool recall per arm.
 
     Never touches: any graph (no writer exists here), the gold's stores, the DME pointer, demo or production.
@@ -74,6 +78,7 @@ const ACTION_BY_SWITCH = Object.freeze({
 	reproduceBaseline: harnessActionsLib.reproduceBaseline,
 	runArms: harnessActionsLib.runArms,
 	sifRecall: harnessActionsLib.sifRecall,
+	score: harnessActionsLib.score,
 });
 
 const actionNameList = Object.keys(ACTION_BY_SWITCH).filter((oneName) => switchesGiven[oneName]);
