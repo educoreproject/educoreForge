@@ -207,7 +207,12 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // 3 files — forger.js (forgeLayersOf: each recipe-named layer produced over the shaped base), build.js (Phase A2: the layer block minted
 // in the base's working graph; standardCount counts standards, not layers), replay-engine.js (harvest edgeEndpointRule 'eitherSelected',
 // layer blockName); replayManager.js (passes the rule) — main's documentation-only commit 3e4cd28a (bridge spec READMEs) and lane DES's own commit a3f6c081 on cedsRichness/desLayers from main 3e4cd28a.
-const PRE_MIGRATION_REF = 'postDesLayersGSeamUntouched-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
+// ═══ RE-ANCHOR (2), 2026-10-12 (RADIANT_HORIZON; cedsRichness lane DES; pre-authorised) ═══ G-SEAM-UNTOUCHED postDesLayersGSeamUntouched-101226 ->
+// postDesLayersAuditGSeamUntouched-101226, tag cut ON this commit. CENSUS over the 7 seam files: build.js only (two reads of
+// layerReportList without '|| []') — lane DES's own commits 0f9713b8 (lib/layer-framework/layerRoundTrip.js: a layer verdict records the endpoint it read;
+// certificate-enrichment.js: a layer token names its layer block) and 4681cf0b (self-audit: interfaces.js ForgeReport and the forger
+// resultKeys declare layerReportList; build.js reads it without a silent '|| []'; forger doubles in test-build.js and test-replay.js).
+const PRE_MIGRATION_REF = 'postDesLayersAuditGSeamUntouched-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

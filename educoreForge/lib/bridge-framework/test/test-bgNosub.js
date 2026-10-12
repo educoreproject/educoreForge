@@ -418,7 +418,10 @@ const POST_D1_BASE_TAG = 'postDesLayersVocabularyIi-101226'; // re-anchored by R
 // postDesLayersForgeFrameworkIii-101226, tag cut ON this commit. CENSUS (lib/forge-framework/): roundTripHarness/graphReader.js
 // (openLayerGraphReader, read-only, for the layer round-trip validators; lane DES a3f6c081) and test/test-gSeamUntouched.js (its
 // re-anchor, this commit). All five lane-DES tags are cut ON this commit, so this re-anchor moves no other gate.
-const PHASE0_ANCHOR_TAG = 'postDesLayersForgeFrameworkIii-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
+// ═══ RE-ANCHOR (2), 2026-10-12 (RADIANT_HORIZON; cedsRichness lane DES; pre-authorised) ═══ (iii) postDesLayersForgeFrameworkIii-101226 ->
+// postDesLayersAuditForgeFrameworkIii-101226, tag cut ON this commit. CENSUS (lib/forge-framework/): test/test-gSeamUntouched.js ONLY
+// (its re-anchor (2), this commit); no forge-framework source moved. All four re-anchor (2) tags are cut ON this commit.
+const PHASE0_ANCHOR_TAG = 'postDesLayersAuditForgeFrameworkIii-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -859,7 +862,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // harvest), manifestEditor.js + manifest-recipe-finisher.js (kind 'layer'), lib/forge-framework/roundTripHarness/graphReader.js (layer
 // reader), forges/ceds (parserDescriptor layerNamespace, roundTripValidator gate D), and this commit's re-anchor test edits. No
 // bridge-framework source.
-const PHASE3_ANCHOR_TAG = 'postDesLayersSeamDiffEmpty-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
+// ═══ RE-ANCHOR (2), 2026-10-12 (RADIANT_HORIZON; cedsRichness lane DES; pre-authorised) ═══ seamDiffEmpty (and its (i-live) companion):
+// postDesLayersSeamDiffEmpty-101226 -> postDesLayersAuditSeamDiffEmpty-101226, tag cut ON this commit. CENSUS: build.js and
+// interfaces.js (the forger's resultKeys add layerReportList: the ONE COMPONENT_SHAPES member that moved is the forger's, by
+// declaration) — lane DES's own commits 0f9713b8 (lib/layer-framework/layerRoundTrip.js: a layer verdict records the endpoint it read;
+// certificate-enrichment.js: a layer token names its layer block) and 4681cf0b (self-audit: interfaces.js ForgeReport and the forger
+// resultKeys declare layerReportList; build.js reads it without a silent '|| []'; forger doubles in test-build.js and test-replay.js); and this commit's re-anchor test edits. No bridge-framework source.
+const PHASE3_ANCHOR_TAG = 'postDesLayersAuditSeamDiffEmpty-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
