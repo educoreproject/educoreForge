@@ -182,7 +182,12 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // fifteen layer edge types, layer subject grammar), vocabulary-definitions.js (their definitions), graph-contract.js (StandardLayer
 // producer-local label, layerScopeRule, the roundTrip standardCount / omission-line meaning), test/test-sifEdgeVocabulary.js (schema-view
 // rows +27), test/test-layerBlockKind.js (new) — lane DES's own commit a3f6c081.
-const POST_D1_BASE_TAG = 'postDesLayersVocabularyIi-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-13 (GRANITE_BEACON; cedsRichness lane UNDES; pre-authorised by the work order) ═══ (ii) postDesLayersVocabularyIi-101226 ->
+// postUndesVocabularyIi-101326, tag cut ON this commit. CENSUS (lib/vocabulary/): vocabulary.js (three layer roles and eight layer edge
+// types REMOVED with the V13 structure layer), vocabulary-definitions.js (their definitions removed; HAS_LAYER's text), graph-contract.js
+// (layerScopeRule text names the remaining layer edges; the omission-line example token), test/test-sifEdgeVocabulary.js (schema-view
+// rows 27 -> 13, measured 343 -> 329), test/test-layerBlockKind.js (guide subjects, three roles) — lane UNDES's own commit a54c85f7.
+const POST_D1_BASE_TAG = 'postUndesVocabularyIi-101326'; // re-anchored by GRANITE_BEACON (lane UNDES); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -421,7 +426,11 @@ const POST_D1_BASE_TAG = 'postDesLayersVocabularyIi-101226'; // re-anchored by R
 // ═══ RE-ANCHOR (2), 2026-10-12 (RADIANT_HORIZON; cedsRichness lane DES; pre-authorised) ═══ (iii) postDesLayersForgeFrameworkIii-101226 ->
 // postDesLayersAuditForgeFrameworkIii-101226, tag cut ON this commit. CENSUS (lib/forge-framework/): test/test-gSeamUntouched.js ONLY
 // (its re-anchor (2), this commit); no forge-framework source moved. All four re-anchor (2) tags are cut ON this commit.
-const PHASE0_ANCHOR_TAG = 'postDesLayersAuditForgeFrameworkIii-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-13 (GRANITE_BEACON; cedsRichness lane UNDES; pre-authorised) ═══ (iii) postDesLayersAuditForgeFrameworkIii-101226 ->
+// postUndesForgeFrameworkIii-101326, tag cut ON this commit. CENSUS (lib/forge-framework/): roundTripHarness/graphReader.js ONLY
+// (openLayerGraphReader no longer reads the base property id list only the removed layer's validator used; lane UNDES a54c85f7). All three
+// lane-UNDES tags are cut ON this commit, so this re-anchor moves no other gate.
+const PHASE0_ANCHOR_TAG = 'postUndesForgeFrameworkIii-101326'; // re-anchored by GRANITE_BEACON (lane UNDES); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -868,7 +877,12 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // declaration) — lane DES's own commits 0f9713b8 (lib/layer-framework/layerRoundTrip.js: a layer verdict records the endpoint it read;
 // certificate-enrichment.js: a layer token names its layer block) and 4681cf0b (self-audit: interfaces.js ForgeReport and the forger
 // resultKeys declare layerReportList; build.js reads it without a silent '|| []'; forger doubles in test-build.js and test-replay.js); and this commit's re-anchor test edits. No bridge-framework source.
-const PHASE3_ANCHOR_TAG = 'postDesLayersAuditSeamDiffEmpty-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-13 (GRANITE_BEACON; cedsRichness lane UNDES; pre-authorised) ═══ seamDiffEmpty (and its (i-live) companion):
+// postDesLayersAuditSeamDiffEmpty-101226 -> postUndesSeamDiffEmpty-101326, tag cut ON this commit. CENSUS: lane UNDES's own commit
+// a54c85f7: forges/ceds/layers/ (the V13 structure layer's directory removed: producer, validator, workbook layout, snapshot) and
+// lib/forge-framework/roundTripHarness/graphReader.js (the base property id list removed from the layer reader). No build.js, forger,
+// replay or bridge-framework source.
+const PHASE3_ANCHOR_TAG = 'postUndesSeamDiffEmpty-101326'; // re-anchored by GRANITE_BEACON (lane UNDES); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
