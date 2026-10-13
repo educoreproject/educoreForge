@@ -873,7 +873,16 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // fixtures/jevQuestion/oldJudgeRenderInput.json 79/0, test-bgJudgeSlot.js 22/16, test-bgJudgePredicate.js 10/5 (re-anchored literals).
 // No build.js, interfaces.js or vocabulary change; the PESC plugins changed only by declaration (judgePromptVariant and
 // owningConstructDefinitionSource), through the same seam.
-const P1_BASELINE_COMMIT = 'postJevqPescCompose-101326'; // re-anchored by LUNAR_PEAK (lane JEVQ); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-13 (LUNAR_PEAK; lane JEVQ, ruling COPPER_RIVER; pre-authorised) ═══ BG-COMPOSE-PESC postJevqPescCompose-101326 ->
+// postJevqPerBridgePescCompose-101326, tag cut ON this commit. Found red at f0b0a274 (25/26; evidence/JEVQ/redFirst-bgComposePesc-jevqf0b0a274.log).
+// CENSUS over this gate's paths (numstat from the old tag, 14 paths, all f0b0a274, the split question's form chosen per bridge and Jev's
+// 499 retry): lib/bridge-framework/ bridge-framework.js 16/4, bridgePluginContract.js 33/5, evidenceRenderer.js 29/2,
+// judgeClientForChoiceQuestionForm.js 47/0 (new), test/test-bgJevQuestion.js 68/12, test/test-bgJudgePredicate.js 9/10,
+// test/test-bgJudgeSlot.js 13/12, test/testSupport/toyBridgeScenario.js 2/0; apps/graph-builder/interfaces.js 5/0
+// (JUDGE_PROVIDER_SHAPE.modelForChoiceQuestionForm); apps/graph-builder/apps/bridge-maker/lib/ jevJudgeClient.js 67/30,
+// jevOpusJudgeClient.js 16/3, llmClient.js 5/1, ollamaJudgeClient.js 4/0, debugJudge.js 4/0. The PESC plugins changed only by
+// declaration (choiceQuestionFormName), through the same seam.
+const P1_BASELINE_COMMIT = 'postJevqPerBridgePescCompose-101326'; // re-anchored by LUNAR_PEAK (lane JEVQ, per-bridge form); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
