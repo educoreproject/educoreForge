@@ -6,9 +6,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // Lane JEVQ (cedsRichness-101226), 2026-10-13, on TQ's "go" to the deep dive's first finding
 // (deepDive-101326/REPORT-deepDive-101326.md §1, §4.3).
 //
-// THE FINDING. Jev was asked to match an Ed-Fi property without ever being told what the property's owning entity IS,
+// THE FINDING. Jev was asked to match a source property without ever being told what the property's owning entity IS,
 // although the graph holds a definition for it. Adding that definition to the source element (and taking Claude's
-// system prompt out of Jev's state) moved Jev from 45/45/47 to 52/52/51 of 71 on the frozen Ed-Fi hundred.
+// system prompt out of Jev's state) moved Jev from 45/45/47 to 52/52/51 of 71 on the frozen evaluation hundred.
 //
 // WHAT THIS MODULE DOES. Given a subject node, the source standard's nodes by stableId and the plugin's DECLARED
 // owningConstructDefinitionSource, it returns the owning construct's definition text, or no text and the reason there
@@ -17,12 +17,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // into Jev's split question ONLY, so the text prompt every other judge reads is unchanged.
 //
 // THE SOURCE KINDS ARE A REGISTRY (one row each, never a branch on the kind name):
-//   ownerNodeProperty  the subject names its owner by a property (Ed-Fi and PESC: parentId), and the owner node carries
-//                      the definition in a declared property (description). An owner WITHOUT that text is a measured,
-//                      normal absence (Ed-Fi extension entities; PESC anonymous types): no text, reason recorded. An owner
+//   ownerNodeProperty  the subject names its owner by a property (parentId, in the shipped plugins), and the owner node
+//                      carries the definition in a declared property (description). An owner WITHOUT that text is a
+//                      measured, normal absence (extension entities, anonymous types): no text, reason recorded. An owner
 //                      reference that names no node is a graph defect and is refused by name.
-//   none               the standard publishes no definition for its owning constructs (SIF: 0 of 159 objects carry
-//                      one, measured 2026-10-13). Every subject renders without one, under the DECLARED reason.
+//   none               the standard publishes no definition for its owning constructs (measured per plugin; the plugin
+//                      says so in its declaration). Every subject renders without one, under the DECLARED reason.
 //
 //   owningConstructDefinitionFor({ subjectNode, subjectNodeByStableId, owningConstructDefinitionSource })
 //     → { owningConstructDefinition: string, absentReason: null } | { owningConstructDefinition: null, absentReason: string } | { error }

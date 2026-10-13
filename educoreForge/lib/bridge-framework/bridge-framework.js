@@ -651,7 +651,7 @@ const moduleFunction =
 										return;
 									}
 									const finish = (sssomExportPath) => {
-										const counts = { cardinalityCensus: block.header.cardinalityCensus, contentionCensus: block.header.contentionCensus, edgesWritten: materialised.edgesWritten, conflictCount: report.conflictCount, judgeSpend: report.judgeSpend, refusalCount: report.refusalList.length, discardedPredicateKeyCount: report.discardedPredicateKeyCount };
+										const counts = { cardinalityCensus: block.header.cardinalityCensus, contentionCensus: block.header.contentionCensus, edgesWritten: materialised.edgesWritten, conflictCount: report.conflictCount, judgeSpend: report.judgeSpend, refusalCount: report.refusalList.length, discardedPredicateKeyCount: report.discardedPredicateKeyCount, ...(report.owningConstructDefinitionCoverage === null ? {} : { owningConstructDefinitionCoverage: report.owningConstructDefinitionCoverage }) };
 										say(`materialised ${materialised.edgesWritten} edge(s) under ${pairScopedLabel} from block ${decisionBlockHash.slice(0, 12)}… (${mode})`);
 										const note = mode === MODE_MATERIALISE ? `replayed frozen block ${decisionBlockHash} for ${pairKey}` : `re-judged and froze block ${decisionBlockHash} for ${pairKey}`;
 										tailCallback('', { runReport: runReportFor({ decisionBlockHash, blocksDecisionBlock: { decisionBlockHash, pairKey, generation: block.header.generation }, edgesWritten: materialised.edgesWritten, counts, sssomExportPath, note, loadedConservationSummary }), writtenEdgeList: materialised.writtenEdgeList, report });
@@ -1710,6 +1710,9 @@ const moduleFunction =
 						}
 						const yieldedRecordList = yieldedTaskYieldList.reduce((soFar, oneTaskYield) => soFar.concat(oneTaskYield), []);
 						say(`judged: ${yieldedTaskYieldList.length} (asked ${report.judgeSpend.asked}, cache ${report.judgeSpend.servedFromCache}, abstained ${report.judgeSpend.abstained}, rationaleForm refused ${namedRefusalCount}; judge ${judgeKind})`);
+						if (report.owningConstructDefinitionCoverage !== null) {
+							say(`owning-construct definitions (lane JEVQ): rendered ${report.owningConstructDefinitionCoverage.renderedCount}; absent ${JSON.stringify(report.owningConstructDefinitionCoverage.absentCountByReason)}`);
+						}
 						next('', { ...args, judgedRecordList: yieldedRecordList, judgeKind });
 					});
 				});

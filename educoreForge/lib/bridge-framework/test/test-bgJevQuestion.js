@@ -186,4 +186,41 @@ harness.equal('an identifier in the owning definition is a hit, on the choiceQue
 const cleanScan = promptIdentifierScanLib.scanSurfaces({ compiledScan, surfaceTextByName: promptIdentifierScanLib.questionSurfaceTextByName({ predicateRule: 'judgeSlot-v1', question: newRendered }) });
 harness.equal('the clean question has no hit', cleanScan.hit, null);
 
-harness.report();
+harness.section('(f) END TO END THROUGH THE FRAMEWORK: A TOY judgeSlot-v1 RUN RESOLVES EACH SUBJECT\'S OWNER');
+// The toy standard's property nodes gain an owner reference to their construct node; Student and School carry a
+// definition, Course does not. A capturing judge (the debug judge, wrapped) records the split question each subject reached.
+const scenarioLib = require('./testSupport/toyBridgeScenario');
+const debugJudgeLib = require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'debugJudge'));
+const TOY_DEFINITION_BY_CONSTRUCT_STABLE_ID = Object.freeze({ 'toy:construct/Student': 'A person enrolled in a school.', 'toy:construct/School': 'An institution that teaches students.' });
+const toyRunScenario = scenarioLib.makeScenario();
+toyRunScenario.spec.bridge = 'toyDerivedPlugin';
+toyRunScenario.graph.nodeList = toyRunScenario.graph.nodeList.map((oneNode) => {
+	const withModel = oneNode.properties.embedding === undefined ? oneNode : { ...oneNode, properties: { ...oneNode.properties, embeddingModelVersion: 'toy-embed-v1' } };
+	if (withModel.labels.indexOf('ToyProperty') !== -1) {
+		return { ...withModel, properties: { ...withModel.properties, parentId: `toy:construct/${withModel.properties.owningConstructName}` } };
+	}
+	return TOY_DEFINITION_BY_CONSTRUCT_STABLE_ID[withModel.stableId] === undefined ? withModel : { ...withModel, properties: { ...withModel.properties, description: TOY_DEFINITION_BY_CONSTRUCT_STABLE_ID[withModel.stableId] } };
+});
+const toyDerivedDeclaration = cloneJson(require(path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyDerivedPlugin.js')).bridgeDeclaration);
+toyDerivedDeclaration.predicateSource = { kind: 'judge', predicateRule: 'judgeSlot-v1' };
+toyDerivedDeclaration.judgePromptVariant = NEW_VARIANT_NAME;
+toyDerivedDeclaration.owningConstructDefinitionSource = { ...OWNER_SOURCE };
+delete toyDerivedDeclaration.predicateByCategory;
+toyRunScenario.pluginModuleOverrides.toyDerivedPlugin = { bridgeDeclaration: toyDerivedDeclaration };
+const capturedChoiceQuestionList = [];
+const debugJudge = debugJudgeLib({ ruleName: 'digest' });
+toyRunScenario.judgeClientOverride = { ...debugJudge, rerank: (rerankOptions, rerankCallback) => {
+	capturedChoiceQuestionList.push(rerankOptions.choiceQuestion);
+	debugJudge.rerank(rerankOptions, rerankCallback);
+} };
+scenarioLib.runScenario(toyRunScenario, (unusedError, outcome) => {
+	harness.ok('the toy run completes', outcome && !outcome.runError && !outcome.constructionError && !outcome.thrownFromRun, outcome && (outcome.runError || outcome.constructionError || outcome.thrownFromRun));
+	const definitionByOwnerName = capturedChoiceQuestionList.reduce((soFar, oneChoiceQuestion) => ({ ...soFar, [oneChoiceQuestion.stateObject.sourceElement.owningConstructName]: oneChoiceQuestion.stateObject.sourceElement.owningConstructDefinition === undefined ? '(none)' : oneChoiceQuestion.stateObject.sourceElement.owningConstructDefinition }), {});
+	harness.ok('the judge was asked', capturedChoiceQuestionList.length > 0, capturedChoiceQuestionList.length);
+	harness.equal('every question reaching the judge has no matchingInstructions', capturedChoiceQuestionList.filter((oneChoiceQuestion) => Object.prototype.hasOwnProperty.call(oneChoiceQuestion.stateObject, 'matchingInstructions')).length, 0);
+	harness.equal('each subject carries ITS owner\'s definition, and the owner without one renders none', JSON.stringify(definitionByOwnerName, Object.keys(definitionByOwnerName).sort()), JSON.stringify({ Course: '(none)', School: TOY_DEFINITION_BY_CONSTRUCT_STABLE_ID['toy:construct/School'], Student: TOY_DEFINITION_BY_CONSTRUCT_STABLE_ID['toy:construct/Student'] }));
+	const coverage = outcome && outcome.runReport && outcome.runReport.counts ? outcome.runReport.counts.owningConstructDefinitionCoverage : undefined;
+	const courseQuestionCount = capturedChoiceQuestionList.filter((oneChoiceQuestion) => oneChoiceQuestion.stateObject.sourceElement.owningConstructName === 'Course').length;
+	harness.equal('the run report counts rendered and absent-by-reason, and they add up to the questions asked', JSON.stringify(coverage), JSON.stringify({ renderedCount: capturedChoiceQuestionList.length - courseQuestionCount, absentCountByReason: { [owningConstructDefinitionLib.ABSENT_REASON_OWNER_HAS_NO_DEFINITION]: courseQuestionCount } }));
+	harness.report();
+});
