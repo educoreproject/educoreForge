@@ -863,7 +863,17 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // judge card name, identical rendered cards collapsed, a collapsed pick resolving to every member) and
 // lib/bridge-framework/test/test-bgQualifier.js 244/0 (21e5ca2a, 37a43b5c: the gate for it). No plugin, bridge-maker, build.js,
 // interfaces.js or vocabulary change: PESC still composes through the same seam with no plugin edit.
-const P1_BASELINE_COMMIT = 'postQualPescCompose-101326'; // re-anchored by TWILIGHT_ORBIT (lane QUAL); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-13 (LUNAR_PEAK; cedsRichness lane JEVQ; pre-authorised) ═══ BG-COMPOSE-PESC postQualPescCompose-101326 ->
+// postJevqPescCompose-101326, tag cut ON this commit. Found red at 2f67cfae (25/26; evidence/JEVQ/redFirst-bgComposePesc-jevq2f67cfae.log).
+// CENSUS over this gate's paths (numstat from the old tag, 10 paths, all lane JEVQ's: b9b42427, 46cc06d3, 163abc0a, 2f67cfae):
+// lib/bridge-framework/evidenceRenderer.js 96/6, bridge-framework.js 26/3, bridgePluginContract.js 27/3, promptIdentifierScan.js 7/2,
+// owningConstructDefinition.js 101/0 (new), apps/graph-builder/apps/bridge-maker/lib/jevJudgeClient.js 36/2 (the owning construct's
+// definition in Jev's split question: renderer variant derivedJudgeSlotOwningDefinition, the declaration row that names its source,
+// the question form in Jev's identity), and lib/bridge-framework/test/ test-bgJevQuestion.js 227/0 (new), its fixture
+// fixtures/jevQuestion/oldJudgeRenderInput.json 79/0, test-bgJudgeSlot.js 22/16, test-bgJudgePredicate.js 10/5 (re-anchored literals).
+// No build.js, interfaces.js or vocabulary change; the PESC plugins changed only by declaration (judgePromptVariant and
+// owningConstructDefinitionSource), through the same seam.
+const P1_BASELINE_COMMIT = 'postJevqPescCompose-101326'; // re-anchored by LUNAR_PEAK (lane JEVQ); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
