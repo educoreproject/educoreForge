@@ -1628,9 +1628,16 @@ const moduleFunction =
 								if (judged.chosenCardStableId !== null && judged.predicate !== undefined) {
 									judgeRecord.predicate = judged.predicate;
 								}
+								// ⟪lane QUAL, 2026-10-13⟫ the rendering's provenance rides on every record of a pool it touched: the cards
+								// whose qualifier was rendered into the name, and the identical cards collapsed into one choice. Omitted when
+								// both are empty, so a record from an untouched pool freezes exactly as it did.
+								const cardRenderingMarker = {
+									...(question.qualifiedCardStableIdList.length > 0 ? { qualifiedCardStableIdList: question.qualifiedCardStableIdList } : {}),
+									...(question.cardCollapseList.length > 0 ? { cardCollapseList: question.cardCollapseList } : {}),
+								};
 								if (judged.chosenCardStableId === null) {
 									report.judgeSpend.abstained += 1;
-									taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });
+									taskDone('', [{ ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList, ...cardRenderingMarker }]);
 									return;
 								}
 								// WHERE A PICK'S PREDICATE COMES FROM is a registry keyed by the declared predicateSource.kind —
@@ -1647,7 +1654,10 @@ const moduleFunction =
 									taskDone(pickPredicateResolved.error.message);
 									return;
 								}
-								taskDone('', { ...oneTask.baseRecord, objectStableId: judged.chosenCardStableId, predicate: pickPredicateResolved.predicate, predicateAssertedBy: pickPredicateResolved.predicateAssertedBy, sourceLabel: pickPredicateResolved.sourceLabel, confidence: judged.confidence, abstained: false, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList });
+								// ⟪lane QUAL⟫ A PICK ON A COLLAPSED CARD RESOLVES TO EVERY MEMBER: one record per member, each carrying the
+								// same judgment and the collapse that explains it. An uncollapsed pick is the one record it always was.
+								const memberStableIdList = evidenceRendererLib.memberStableIdListFor({ cardCollapseList: question.cardCollapseList, chosenCardStableId: judged.chosenCardStableId });
+								taskDone('', memberStableIdList.map((memberStableId) => ({ ...oneTask.baseRecord, objectStableId: memberStableId, predicate: pickPredicateResolved.predicate, predicateAssertedBy: pickPredicateResolved.predicateAssertedBy, sourceLabel: pickPredicateResolved.sourceLabel, confidence: judged.confidence, abstained: false, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList, ...cardRenderingMarker })));
 							});
 						});
 					};
@@ -1670,13 +1680,15 @@ const moduleFunction =
 						// rather than letting an undefined ride into decisionRecordList, where it reaches the freeze and
 						// the materialiser as a record with no fields. The count is reconciled against refusalList so a
 						// hole from any OTHER cause cannot hide in this filter.
-						const yieldedRecordList = judgedRecordList.filter((oneRecord) => oneRecord !== undefined && oneRecord !== null);
+						// each judged task yields a LIST of records (lane QUAL: a pick on a collapsed card yields one per member)
+						const yieldedTaskRecordListList = judgedRecordList.filter((oneRecordList) => oneRecordList !== undefined && oneRecordList !== null);
 						const namedRefusalCount = report.refusalList.filter((oneRefusal) => oneRefusal.kind === 'rationaleFormRefusedTwice').length;
-						if (judgedRecordList.length - yieldedRecordList.length !== namedRefusalCount) {
-							next(refuse.byName({ moduleName, what: `${judgedRecordList.length - yieldedRecordList.length} judged task(s) yielded no record but only ${namedRefusalCount} subject(s) are named in refusalList`, where: 'every missing decision record must be accounted for by a NAMED refusal; an unexplained hole is refused, never filtered away' }).message);
+						if (judgedRecordList.length - yieldedTaskRecordListList.length !== namedRefusalCount) {
+							next(refuse.byName({ moduleName, what: `${judgedRecordList.length - yieldedTaskRecordListList.length} judged task(s) yielded no record but only ${namedRefusalCount} subject(s) are named in refusalList`, where: 'every missing decision record must be accounted for by a NAMED refusal; an unexplained hole is refused, never filtered away' }).message);
 							return;
 						}
-						say(`judged: ${yieldedRecordList.length} (asked ${report.judgeSpend.asked}, cache ${report.judgeSpend.servedFromCache}, abstained ${report.judgeSpend.abstained}, rationaleForm refused ${namedRefusalCount}; judge ${judgeKind})`);
+						const yieldedRecordList = yieldedTaskRecordListList.reduce((soFar, oneRecordList) => soFar.concat(oneRecordList), []);
+						say(`judged: ${yieldedTaskRecordListList.length} (asked ${report.judgeSpend.asked}, cache ${report.judgeSpend.servedFromCache}, abstained ${report.judgeSpend.abstained}, rationaleForm refused ${namedRefusalCount}; judge ${judgeKind})`);
 						next('', { ...args, judgedRecordList: yieldedRecordList, judgeKind });
 					});
 				});

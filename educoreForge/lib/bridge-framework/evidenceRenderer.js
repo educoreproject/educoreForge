@@ -9,7 +9,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 //   renderQuestion({ sourceElement, candidatePool, globalGuidanceList, perCandidateNoteByStableId,
 //                    promptSegmentList, judgePromptVariant, renderingAllowList })
-//     → { systemPrompt, userPrompt, promptHash, renderedPoolStableIdList, choiceEnum, rendererVersion, judgePredicateRule } | { error }
+//     → { systemPrompt, userPrompt, promptHash, renderedPoolStableIdList, choiceEnum, rendererVersion, judgePredicateRule,
+//         cardCollapseList, qualifiedCardStableIdList } | { error }
 //
 // THREE REGISTERED VARIANTS, one row each (RULING §11.1) — never a branch on the variant name:
 //
@@ -209,10 +210,67 @@ const derivedSubjectData = ({ sourceElement, renderingAllowList }) => {
 	return graphSeamRulesLib.allowListedPropertiesFor({ properties: subjectWithIdeas, allowNameList: renderingAllowList.subject });
 };
 
+// ⟪lane QUAL, 2026-10-13⟫ THE QUALIFIER RIDES IN THE NAME. 27 CEDS property-tier tuples differ from their siblings ONLY
+// in qualifierNames (the identifier type: School Identifier, Local Education Agency Identifier, Student Identifier...),
+// and the judge's card never showed it: 13 of EducationOrganizationId's 15 cards read "Has Organization Identifier" under
+// Organization and nothing else. The name, not a separate qualifierName line, because the name is what the judge sorts,
+// compares and cites; a separate line would leave thirteen identical names in its sorted list. It is framework-side, so
+// no plugin's renderingAllowList (and so no declarationDigest) moves. An unqualified card renders byte-identical: an
+// absent or empty qualifierNames leaves the name untouched. The ideas are split from the SAME rendered name, so the
+// qualifier's nouns reach componentIdeaList too (they are names; nothing descriptive is admitted).
+const QUALIFIER_NAME_SEPARATOR = '; ';
+const renderedCardNameFor = (card) =>
+	Array.isArray(card.qualifierNames) && card.qualifierNames.length > 0 ? `${card.name} (${card.qualifierNames.join(QUALIFIER_NAME_SEPARATOR)})` : card.name;
+const qualifierNamesRefusalFor = (card) => {
+	if (card.qualifierNames === undefined || card.qualifierNames === null) {
+		return '';
+	}
+	if (!Array.isArray(card.qualifierNames) || card.qualifierNames.some((oneName) => typeof oneName !== 'string' || oneName.trim() === '')) {
+		return `card ${card.stableId} carries qualifierNames ${JSON.stringify(card.qualifierNames)}, which is not a list of non-blank names`;
+	}
+	return '';
+};
+
 const derivedCandidateData = ({ oneSeat, renderingAllowList }) => {
-	const cardWithIdeas = { ...oneSeat.card, componentIdeaList: componentIdeaSplitterLib.componentIdeaListFor({
-		nameList: [oneSeat.card.domainName, oneSeat.card.name] }).join(', ') };
+	const renderedName = renderedCardNameFor(oneSeat.card);
+	const cardWithIdeas = { ...oneSeat.card, name: renderedName, componentIdeaList: componentIdeaSplitterLib.componentIdeaListFor({
+		nameList: [oneSeat.card.domainName, renderedName] }).join(', ') };
 	return graphSeamRulesLib.allowListedPropertiesFor({ properties: cardWithIdeas, allowNameList: renderingAllowList.candidate });
+};
+
+// ⟪lane QUAL⟫ IDENTICAL CARDS COLLAPSE, compared AS RENDERED (the candidate block's own lines, index line excluded). Two
+// cards the judge cannot tell apart are one choice: keep the first in pool order (the pool arrives sorted by stableId),
+// and carry every member's stableId on that choice. A PICK ON A COLLAPSED CARD RESOLVES TO EVERY MEMBER
+// (memberStableIdListFor): the judge said "this card", and every member IS this card as far as anything it was shown can
+// say. Choosing one member would be an arbitrary choice dressed as the judge's. A variant that does not collapse
+// (crosswalk, byte-frozen) gets the pool exactly as given and an empty cardCollapseList.
+const collapsedPoolFor = ({ candidatePool, variantRow, renderingAllowList }) => {
+	if (!variantRow.collapsesIdenticalCards) {
+		return { collapsedPool: candidatePool, cardCollapseList: [] };
+	}
+	const memberStableIdListByRenderedText = {};
+	const collapsedPool = [];
+	candidatePool.forEach((oneSeat) => {
+		const renderedText = renderKeyValueLines(variantRow.candidateData({ oneSeat, renderingAllowList }), '').join('\n');
+		if (memberStableIdListByRenderedText[renderedText] === undefined) {
+			memberStableIdListByRenderedText[renderedText] = [oneSeat.card.stableId];
+			collapsedPool.push(oneSeat);
+			return;
+		}
+		memberStableIdListByRenderedText[renderedText].push(oneSeat.card.stableId);
+	});
+	const cardCollapseList = Object.keys(memberStableIdListByRenderedText)
+		.map((renderedText) => memberStableIdListByRenderedText[renderedText])
+		.filter((memberStableIdList) => memberStableIdList.length > 1)
+		.map((memberStableIdList) => ({ renderedStableId: memberStableIdList[0], memberStableIdList: memberStableIdList.slice().sort() }))
+		.sort((leftEntry, rightEntry) => (leftEntry.renderedStableId < rightEntry.renderedStableId ? -1 : leftEntry.renderedStableId > rightEntry.renderedStableId ? 1 : 0));
+	return { collapsedPool, cardCollapseList };
+};
+
+// memberStableIdListFor — the card stableIds a pick resolves to: every member of a collapsed choice, else the pick alone.
+const memberStableIdListFor = ({ cardCollapseList, chosenCardStableId }) => {
+	const collapseEntry = cardCollapseList.find((oneEntry) => oneEntry.renderedStableId === chosenCardStableId);
+	return collapseEntry === undefined ? [chosenCardStableId] : collapseEntry.memberStableIdList.slice();
 };
 
 const derivedCandidateLineList = ({ oneSeat, seatIndex, renderingAllowList }) => {
@@ -242,6 +300,10 @@ const DERIVED_VARIANT_ROW = Object.freeze({
 	// inherits it; a variant without them gets NO choiceQuestion, and a provider that needs one refuses by name.
 	subjectData: derivedSubjectData,
 	candidateData: derivedCandidateData,
+	// ⟪lane QUAL⟫ identical rendered cards collapse into one choice (collapsedPoolFor); the crosswalk row says false.
+	collapsesIdenticalCards: true,
+	// ⟪lane QUAL⟫ derivedCandidateData renders a qualified card's qualifierNames into its name (renderedCardNameFor).
+	rendersQualifierInName: true,
 	subjectMaterialNameListFor: ({ bridgeDeclaration }) => bridgeDeclaration.renderingAllowList.subject,
 	// ⟪v11, 2026-09-13 — TQ⟫ GUIDANCE MOVES TO THE SYSTEM PROMPT. The guidance is still DECLARED by the
 	// plugin (it is the plugin's taste, not the framework's) — only its PLACEMENT changes here, so the A2
@@ -275,6 +337,8 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		candidateListPreambleLineList: Object.freeze([]),
 		candidateListHeadingWord: 'CANDIDATES',
 		answerLineSuffix: '.',
+		collapsesIdenticalCards: false,
+		rendersQualifierInName: false,
 		judgePredicateRule: 'categoryTable-v1',
 	}),
 	derived: DERIVED_VARIANT_ROW,
@@ -315,6 +379,10 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		if (!isPlainObject(oneSeat) || !isPlainObject(oneSeat.card) || typeof oneSeat.card.stableId !== 'string') {
 			return { error: refuse.byName({ moduleName, what: `candidatePool[${seatIndex}] is not { card, seatReason }`, where: 'every seat carries the card and the reason it is in the pool (BR-068)' }) };
 		}
+		const qualifierNamesRefusal = qualifierNamesRefusalFor(oneSeat.card);
+		if (qualifierNamesRefusal) {
+			return { error: refuse.byName({ moduleName, what: `candidatePool[${seatIndex}] ${qualifierNamesRefusal}`, where: 'qualifierNames is a list of names, positionally parallel to qualifierKeys (hubCardFieldTable); it is rendered, never repaired' }) };
+		}
 		const seatReasonRefusal = representationPolicyLib.seatReasonRefusal(oneSeat.seatReason);
 		if (seatReasonRefusal) {
 			return { error: refuse.byName({ moduleName, what: `candidatePool[${seatIndex}] ${seatReasonRefusal}`, where: 'per-seat provenance is DATA (representationPolicy.js)' }) };
@@ -339,7 +407,12 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		}
 	}
 	const noteByStableId = perCandidateNoteByStableId === undefined ? {} : perCandidateNoteByStableId;
-	const renderedPoolStableIdList = candidatePool.map((oneSeat) => oneSeat.card.stableId);
+	// ⟪lane QUAL⟫ from here on the judge sees the COLLAPSED pool; the A2 gate above swept every card, collapsed or not
+	const { collapsedPool, cardCollapseList } = collapsedPoolFor({ candidatePool, variantRow, renderingAllowList });
+	const qualifiedCardStableIdList = variantRow.rendersQualifierInName
+		? candidatePool.filter((oneSeat) => renderedCardNameFor(oneSeat.card) !== oneSeat.card.name).map((oneSeat) => oneSeat.card.stableId).sort()
+		: [];
+	const renderedPoolStableIdList = collapsedPool.map((oneSeat) => oneSeat.card.stableId);
 	const lineList = [];
 	lineList.push(...variantRow.subjectLineList({ sourceElement, renderingAllowList }));
 	const guidanceInSystem = variantRow.guidancePlacement === 'system';
@@ -352,8 +425,8 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	// its rendering says the same words. Naming the index explicitly is load-bearing for THAT prompt: the judge is
 	// asked to SORT the candidates, and a sort that loses the original index points at the wrong card. The words
 	// come from the variant row (R1), so the crosswalk keeps its shipped heading and answer line.
-	lineList.push(`${variantRow.candidateListHeadingWord} (${candidatePool.length}), in hub order:`);
-	candidatePool.forEach((oneSeat, seatIndex) => {
+	lineList.push(`${variantRow.candidateListHeadingWord} (${collapsedPool.length}), in hub order:`);
+	collapsedPool.forEach((oneSeat, seatIndex) => {
 		lineList.push(...variantRow.candidateLineList({ oneSeat, seatIndex, noteByStableId, renderingAllowList }));
 	});
 	lineList.push(`Answer with one of: ${renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).join(', ')}, or ${ABSTAIN_TOKEN}${variantRow.answerLineSuffix}`);
@@ -378,7 +451,7 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		? {
 			stateObject: { matchingInstructions: systemPrompt, sourceElement: variantRow.subjectData({ sourceElement, renderingAllowList }) },
 			instructionText: CHOICE_QUESTION_INSTRUCTION_TEXT,
-			criteriaByChoice: candidatePool.reduce(
+			criteriaByChoice: collapsedPool.reduce(
 				(soFar, oneSeat, seatIndex) => Object.assign({}, soFar, { [String(seatIndex + 1)]: variantRow.candidateData({ oneSeat, renderingAllowList }) }),
 				{ [ABSTAIN_TOKEN]: CHOICE_QUESTION_ABSTAIN_TEXT },
 			),
@@ -405,8 +478,13 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		// ⟪RULING 14:55 (e)⟫ the rendered NAMES ride out beside the stableIds, exactly as the stableId list
 		// does, so the judge component can ask whether a rationale named its pick by NAME — which is what
 		// BR-067 is actually for — instead of policing ordinals it was never about.
-		renderedPoolNameList: candidatePool.map((oneSeat) => (typeof oneSeat.card.name === 'string' ? oneSeat.card.name : null)),
+		renderedPoolNameList: collapsedPool.map((oneSeat) => (typeof oneSeat.card.name === 'string' ? oneSeat.card.name : null)),
 		choiceEnum,
+		// ⟪lane QUAL⟫ the provenance of this rendering, beside the version string that does not carry it (COPPER_RIVER
+		// ruling 2026-10-13: the version is NOT bumped; an unqualified, uncollapsed pool renders byte-identical, so its
+		// cached answer is an answer to the identical question). Both are [] for such a pool.
+		cardCollapseList,
+		qualifiedCardStableIdList,
 		rendererVersion: variantRow.rendererVersion,
 		judgePredicateRule: variantRow.judgePredicateRule,
 		choiceQuestion,
@@ -422,6 +500,8 @@ module.exports = {
 	JUDGE_PROMPT_VARIANT_REGISTRY,
 	ABSTAIN_TOKEN,
 	renderQuestion,
+	memberStableIdListFor,
+	renderedCardNameFor,
 	candidateIdentifyingTokenList,
 	sha256Hex,
 	moduleName,
