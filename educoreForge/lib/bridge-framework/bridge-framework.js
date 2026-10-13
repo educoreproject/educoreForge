@@ -1637,7 +1637,7 @@ const moduleFunction =
 								};
 								if (judged.chosenCardStableId === null) {
 									report.judgeSpend.abstained += 1;
-									taskDone('', [{ ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList, ...cardRenderingMarker }]);
+									taskDone('', { ...oneTask.baseRecord, objectStableId: null, predicate: null, predicateAssertedBy: null, sourceLabel: null, confidence: null, abstained: true, judge: judgeRecord, renderedPoolStableIdList: question.renderedPoolStableIdList, ...cardRenderingMarker });
 									return;
 								}
 								// WHERE A PICK'S PREDICATE COMES FROM is a registry keyed by the declared predicateSource.kind —
@@ -1680,14 +1680,15 @@ const moduleFunction =
 						// rather than letting an undefined ride into decisionRecordList, where it reaches the freeze and
 						// the materialiser as a record with no fields. The count is reconciled against refusalList so a
 						// hole from any OTHER cause cannot hide in this filter.
-						// each judged task yields a LIST of records (lane QUAL: a pick on a collapsed card yields one per member)
+						// a judged task yields ONE record, or (lane QUAL) a LIST of them for a pick on a collapsed card, one per member;
+						// concat takes either
 						const yieldedTaskRecordListList = judgedRecordList.filter((oneRecordList) => oneRecordList !== undefined && oneRecordList !== null);
 						const namedRefusalCount = report.refusalList.filter((oneRefusal) => oneRefusal.kind === 'rationaleFormRefusedTwice').length;
 						if (judgedRecordList.length - yieldedTaskRecordListList.length !== namedRefusalCount) {
 							next(refuse.byName({ moduleName, what: `${judgedRecordList.length - yieldedTaskRecordListList.length} judged task(s) yielded no record but only ${namedRefusalCount} subject(s) are named in refusalList`, where: 'every missing decision record must be accounted for by a NAMED refusal; an unexplained hole is refused, never filtered away' }).message);
 							return;
 						}
-						const yieldedRecordList = yieldedTaskRecordListList.reduce((soFar, oneRecordList) => soFar.concat(oneRecordList), []);
+						const yieldedRecordList = yieldedTaskRecordListList.reduce((soFar, oneTaskYield) => soFar.concat(oneTaskYield), []);
 						say(`judged: ${yieldedTaskRecordListList.length} (asked ${report.judgeSpend.asked}, cache ${report.judgeSpend.servedFromCache}, abstained ${report.judgeSpend.abstained}, rationaleForm refused ${namedRefusalCount}; judge ${judgeKind})`);
 						next('', { ...args, judgedRecordList: yieldedRecordList, judgeKind });
 					});
