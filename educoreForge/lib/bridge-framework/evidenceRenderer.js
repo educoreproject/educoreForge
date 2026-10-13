@@ -12,7 +12,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     → { systemPrompt, userPrompt, promptHash, renderedPoolStableIdList, choiceEnum, rendererVersion, judgePredicateRule,
 //         cardCollapseList, qualifiedCardStableIdList } | { error }
 //
-// THREE REGISTERED VARIANTS, one row each (RULING §11.1) — never a branch on the variant name:
+// FOUR REGISTERED VARIANTS, one row each (RULING §11.1) — never a branch on the variant name:
 //
 //   crosswalk  the shipped rendering, BYTE-FROZEN. Every candidate is headlined by its canonicalKey and the
 //              subject prints its stableId, because for a key-filtered pool those ARE the shared join key the
@@ -31,6 +31,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //              for predicateRule judgeSlot-v1, whose judge also names the relation; that request lives in the tool
 //              schema, not in these prompts. The separate version keeps its promptHash, and so its cache rows, apart
 //              from the derived variant's, and leaves DERIVED_RENDERER_VERSION where it was.
+//
+//   derivedJudgeSlotOwningDefinition  ⟪lane JEVQ, 2026-10-13⟫ derivedJudgeSlot's TEXT prompt byte for byte, with a
+//              different SPLIT question (the one Jev reads): the source element carries its owning construct's
+//              definition (owningConstructDefinition.js), and Claude's system prompt is no longer in the state as
+//              matchingInstructions. Measured on the frozen Ed-Fi hundred (deepDive-101326 §4.3): 52/52/51 of 71
+//              against 45/45/47. Its own renderer version, and its promptHash covers the split state, so the
+//              definition text keys the cache; derivedJudgeSlot is left registered, rendering exactly as before.
 //
 // WHY THE DERIVED SYSTEM PROMPT SAYS "by name". BR-067 tells the judge to cite its choice by the candidate's
 // hub key, and judgeComponent's ORDINAL_RATIONALE_RE refuses a rationale that names an ordinal instead —
@@ -58,7 +65,16 @@ const RENDERER_VERSION = 'bridgeEvidenceRenderer-v1';
 // comparable instead of silently blended.
 const DERIVED_RENDERER_VERSION = 'bridgeEvidenceRenderer-derived-v12';
 const DERIVED_JUDGE_SLOT_RENDERER_VERSION = 'bridgeEvidenceRenderer-derivedJudgeSlot-v1';
+const DERIVED_JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION = 'bridgeEvidenceRenderer-derivedJudgeSlotOwningDefinition-v1';
 const ABSTAIN_TOKEN = 'NONE';
+// ⟪lane JEVQ⟫ the split question's FORM names. The instruction form is today's (Claude's system prompt rides in the state
+// as matchingInstructions); the owning-definition form carries the owning construct's definition on the source and no
+// instructions. Only the owning-definition form stamps its name on the split question (questionFormName), so the
+// instruction form's split question keeps exactly the members it always had; a reader takes an unstamped question as
+// the instruction form (jevJudgeClient's CHOICE_QUESTION_FORM_REGISTRY says the same).
+const CHOICE_QUESTION_FORM_NAME_INSTRUCTION_STATE = 'matchingInstructionsState';
+const CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE = 'owningConstructDefinitionState';
+const OWNING_CONSTRUCT_DEFINITION_PROPERTY_NAME = 'owningConstructDefinition';
 
 // The split form of the question (choiceQuestion, below): the one-sentence question and the abstain option's
 // description. Each option's key IS its candidate number, so no index line is carried.
@@ -68,8 +84,14 @@ const MIN_IDENTIFYING_TOKEN_LENGTH = 4;
 // promptHashPreimageSegmentListFor — PROMPT_HASH_PREIMAGE_SEGMENT_LIST, in order: rendererVersion, systemPrompt,
 // userPrompt, then CHOICE_QUESTION_INSTRUCTION_TEXT and CHOICE_QUESTION_ABSTAIN_TEXT for a variant that builds the split
 // question (subjectData + candidateData). A text-only variant's hash is therefore exactly what it was.
-const promptHashPreimageSegmentListFor = ({ variantRow, systemPrompt, userPrompt }) =>
-	[variantRow.rendererVersion, systemPrompt, userPrompt].concat(variantRow.subjectData && variantRow.candidateData ? [CHOICE_QUESTION_INSTRUCTION_TEXT, CHOICE_QUESTION_ABSTAIN_TEXT] : []);
+// ⟪lane JEVQ⟫ then the row's own split-state segments (choiceStatePreimageSegmentListFor): none for every row that existed
+// before, so their hashes are exactly what they were; the owning-definition row adds its split state, because that state
+// carries text (the owning construct's definition) the text prompt does not, and a cache key that did not cover it would
+// serve a verdict given on an old definition.
+const promptHashPreimageSegmentListFor = ({ variantRow, systemPrompt, userPrompt, choiceQuestion }) =>
+	[variantRow.rendererVersion, systemPrompt, userPrompt]
+		.concat(variantRow.subjectData && variantRow.candidateData ? [CHOICE_QUESTION_INSTRUCTION_TEXT, CHOICE_QUESTION_ABSTAIN_TEXT] : [])
+		.concat(variantRow.choiceStatePreimageSegmentListFor({ choiceQuestion }));
 
 const SYSTEM_PROMPT =
 	'You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. ' +
@@ -280,6 +302,42 @@ const derivedCandidateLineList = ({ oneSeat, seatIndex, renderingAllowList }) =>
 	return lineList;
 };
 
+// ---------------------------------------------------------------------
+// ⟪lane JEVQ⟫ THE SPLIT QUESTION'S STATE, one builder per form. Each takes the allow-listed subject object (the same
+// one the text prompt was rendered from) and returns the members the form adds to the split question.
+// ---------------------------------------------------------------------
+// instructionChoiceStateFor — today's form, member for member and in today's order: Claude's system prompt as
+// matchingInstructions, then the source element.
+const instructionChoiceStateFor = ({ systemPrompt, subjectData }) => ({ stateObject: { matchingInstructions: systemPrompt, sourceElement: subjectData } });
+
+// owningDefinitionChoiceStateFor — the source element and, when the source has one, its owning construct's definition as
+// the source element's LAST member (the order the deep dive measured). No instructions in the state. The relation
+// question (jevJudgeClient) is asked about the source element WITHOUT the definition, so relationStateSourceElement
+// carries it as the instruction form would have: the relation question is out of this lane's scope and stays unchanged.
+const owningDefinitionChoiceStateFor = ({ subjectData, sourceElement }) => ({
+	questionFormName: CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE,
+	stateObject: { sourceElement: sourceElement.owningConstructDefinition === null ? subjectData : { ...subjectData, [OWNING_CONSTRUCT_DEFINITION_PROPERTY_NAME]: sourceElement.owningConstructDefinition } },
+	relationStateSourceElement: subjectData,
+});
+
+// owningConstructDefinitionRefusalFor — a variant that renders the definition needs the framework to have said, for THIS
+// subject, either the text or why there is none (owningConstructDefinition.js); exactly one of the two. A variant that
+// does not render it must not be handed one, because it would drop it without a word.
+const owningConstructDefinitionRefusalFor = ({ sourceElement, variantRow, judgePromptVariant }) => {
+	const carriesEither = Object.prototype.hasOwnProperty.call(sourceElement, 'owningConstructDefinition') || Object.prototype.hasOwnProperty.call(sourceElement, 'owningConstructDefinitionAbsentReason');
+	if (!variantRow.requiresOwningConstructDefinitionSource) {
+		return carriesEither ? `variant '${judgePromptVariant}' does not render an owning-construct definition, and the source element carries one (or its absence)` : '';
+	}
+	const definitionText = sourceElement.owningConstructDefinition;
+	const absentReason = sourceElement.owningConstructDefinitionAbsentReason;
+	const textIsSet = typeof definitionText === 'string' && definitionText.trim() !== '';
+	const reasonIsSet = typeof absentReason === 'string' && absentReason.trim() !== '';
+	if (textIsSet === reasonIsSet || (!textIsSet && definitionText !== null) || (!reasonIsSet && absentReason !== null)) {
+		return `variant '${judgePromptVariant}' needs the source element to carry owningConstructDefinition (text) or owningConstructDefinitionAbsentReason (why there is none), exactly one, the other null; got ${JSON.stringify({ owningConstructDefinition: definitionText, owningConstructDefinitionAbsentReason: absentReason })}`;
+	}
+	return '';
+};
+
 // CROSSWALK_SUBJECT_MATERIAL_NAME_LIST — the subject-node properties the crosswalk variant lifts into
 // sourceElement.material. BYTE-FROZEN with the rest of that variant: this list decides what appears in the
 // prompt, so adding a name here re-keys every crosswalk prompt.
@@ -302,6 +360,11 @@ const DERIVED_VARIANT_ROW = Object.freeze({
 	candidateData: derivedCandidateData,
 	// ⟪lane QUAL⟫ identical rendered cards collapse into one choice (collapsedPoolFor); the crosswalk row says false.
 	collapsesIdenticalCards: true,
+	// ⟪lane JEVQ⟫ the split question's state form, whether the framework must resolve the owning construct's definition
+	// for it, and what of the split state the promptHash covers (nothing beyond the texts, for this form)
+	choiceStateFor: instructionChoiceStateFor,
+	requiresOwningConstructDefinitionSource: false,
+	choiceStatePreimageSegmentListFor: () => [],
 	subjectMaterialNameListFor: ({ bridgeDeclaration }) => bridgeDeclaration.renderingAllowList.subject,
 	// ⟪v11, 2026-09-13 — TQ⟫ GUIDANCE MOVES TO THE SYSTEM PROMPT. The guidance is still DECLARED by the
 	// plugin (it is the plugin's taste, not the framework's) — only its PLACEMENT changes here, so the A2
@@ -337,9 +400,22 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		answerLineSuffix: '.',
 		collapsesIdenticalCards: false,
 		judgePredicateRule: 'categoryTable-v1',
+		// ⟪lane JEVQ⟫ no split question here (no subjectData), so no state form and nothing of it to hash
+		requiresOwningConstructDefinitionSource: false,
+		choiceStatePreimageSegmentListFor: () => [],
 	}),
 	derived: DERIVED_VARIANT_ROW,
 	derivedJudgeSlot: Object.freeze({ ...DERIVED_VARIANT_ROW, rendererVersion: DERIVED_JUDGE_SLOT_RENDERER_VERSION, judgePredicateRule: 'judgeSlot-v1' }),
+	// ⟪lane JEVQ⟫ same text as derivedJudgeSlot; the owning-definition split state, hashed into promptHash as its JSON (member
+	// order is the allow-list's, then the definition, so the text is deterministic)
+	derivedJudgeSlotOwningDefinition: Object.freeze({
+		...DERIVED_VARIANT_ROW,
+		rendererVersion: DERIVED_JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION,
+		judgePredicateRule: 'judgeSlot-v1',
+		choiceStateFor: owningDefinitionChoiceStateFor,
+		requiresOwningConstructDefinitionSource: true,
+		choiceStatePreimageSegmentListFor: ({ choiceQuestion }) => [JSON.stringify(choiceQuestion.stateObject)],
+	}),
 });
 // ⟪lane QUAL⟫ VARIANT_ROW_BOOLEAN_MEMBER_LIST — the switches every variant row DECLARES, true or false. An absent member would
 // read as false and quietly decide a variant's rendering, so a row without one is refused when this module loads.
@@ -377,6 +453,10 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	}
 	if (!isPlainObject(sourceElement) || typeof sourceElement.name !== 'string' || sourceElement.name.trim() === '') {
 		return { error: refuse.byName({ moduleName, what: 'the source element carries no name', where: 'the judge cannot be asked which candidate matches without being told WHAT it is matching (source-presence hardening)' }) };
+	}
+	const owningConstructDefinitionRefusal = owningConstructDefinitionRefusalFor({ sourceElement, variantRow, judgePromptVariant });
+	if (owningConstructDefinitionRefusal) {
+		return { error: refuse.byName({ moduleName, what: owningConstructDefinitionRefusal, where: 'the framework resolves the owning construct\'s definition (owningConstructDefinition.js) for a variant whose row requires it, and only then' }) };
 	}
 	if (!Array.isArray(candidatePool) || candidatePool.length === 0) {
 		return { error: refuse.byName({ moduleName, what: 'candidatePool is empty or not a list', where: 'a judged question needs at least one candidate; zero is an orphan, not a judgment' }) };
@@ -456,15 +536,17 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	// texts. choiceQuestion's DATA is a function of the same inputs as the prompt; its two TEXTS were in no key until
 	// this (the old CACHE TRAP: rewording either let cached verdicts answer a different question). They are the
 	// renderer's, so they key the renderer's hash, not a provider's identity.
+	// ⟪lane JEVQ⟫ the state comes from the row's form (choiceStateFor); the instruction form returns exactly today's
+	// stateObject, so its split question is member-for-member and byte-for-byte what it was. The form's own members come
+	// first, then the three every split question carries, in today's order.
 	const choiceQuestion = variantRow.subjectData && variantRow.candidateData
-		? {
-			stateObject: { matchingInstructions: systemPrompt, sourceElement: variantRow.subjectData({ sourceElement, renderingAllowList }) },
+		? Object.assign({}, variantRow.choiceStateFor({ systemPrompt, subjectData: variantRow.subjectData({ sourceElement, renderingAllowList }), sourceElement }), {
 			instructionText: CHOICE_QUESTION_INSTRUCTION_TEXT,
 			criteriaByChoice: collapsedPool.reduce(
 				(soFar, oneSeat, seatIndex) => Object.assign({}, soFar, { [String(seatIndex + 1)]: variantRow.candidateData({ oneSeat, renderingAllowList }) }),
 				{ [ABSTAIN_TOKEN]: CHOICE_QUESTION_ABSTAIN_TEXT },
 			),
-		}
+		})
 		: undefined;
 	// THE SECOND NET, FOR THE SECOND CHANNEL. renderedBlockRefusal guards the prompt bytes; choiceQuestion reaches
 	// a judge by another road, so the same NEVER list is swept over its property names too.
@@ -482,7 +564,7 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	return {
 		systemPrompt,
 		userPrompt,
-		promptHash: sha256Hex(promptHashPreimageSegmentListFor({ variantRow, systemPrompt, userPrompt }).join('\n')),
+		promptHash: sha256Hex(promptHashPreimageSegmentListFor({ variantRow, systemPrompt, userPrompt, choiceQuestion }).join('\n')),
 		renderedPoolStableIdList,
 		// ⟪RULING 14:55 (e)⟫ the rendered NAMES ride out beside the stableIds, exactly as the stableId list
 		// does, so the judge component can ask whether a rationale named its pick by NAME — which is what
@@ -497,6 +579,11 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		rendererVersion: variantRow.rendererVersion,
 		judgePredicateRule: variantRow.judgePredicateRule,
 		choiceQuestion,
+		// ⟪lane JEVQ⟫ for a variant that renders the owning construct's definition: whether it did, and why not when it did
+		// not. Absent for every other variant, so their results keep exactly the members they had.
+		...(variantRow.requiresOwningConstructDefinitionSource
+			? { owningConstructDefinitionRecord: { rendered: sourceElement.owningConstructDefinition !== null, absentReason: sourceElement.owningConstructDefinitionAbsentReason } }
+			: {}),
 	};
 };
 
@@ -504,6 +591,9 @@ module.exports = {
 	RENDERER_VERSION,
 	DERIVED_RENDERER_VERSION,
 	DERIVED_JUDGE_SLOT_RENDERER_VERSION,
+	DERIVED_JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION,
+	CHOICE_QUESTION_FORM_NAME_INSTRUCTION_STATE,
+	CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE,
 	SYSTEM_PROMPT,
 	DERIVED_SYSTEM_PROMPT,
 	JUDGE_PROMPT_VARIANT_REGISTRY,

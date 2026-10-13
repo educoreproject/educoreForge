@@ -43,6 +43,7 @@ const candidateRetrievalMethodRegistryLib = require('./candidateRetrievalMethodR
 const promptIdentifierScanLib = require('./promptIdentifierScan');
 const judgmentPartitionLib = require('./judgmentPartition');
 const materialisationFanoutLib = require('./materialisationFanout');
+const owningConstructDefinitionLib = require('./owningConstructDefinition');
 // ⟪JOB 3, 2026-09-07⟫ SELECT_CATEGORY_ENUM — the single source of truth for the judge's verdict
 // categories. Required by the SAME path form confidenceBandTable.js:12 uses, from the same directory,
 // for the same reason: this file's JUDGE_CATEGORY_LIST must be derived from the contract rather than
@@ -149,8 +150,14 @@ const JUDGE_PREDICATE_RULE_LIST = Object.freeze([PREDICATE_RULE_CATEGORY_TABLE_V
 // the declared system-prompt / rendering variants (RULING §11.1). 'crosswalk' is the shipped text, BYTE-frozen
 // so its judgment cache keeps hitting; 'derived' is the retrieval-pool text with its OWN renderer version;
 // 'derivedJudgeSlot' is the derived text under its own renderer version, so a judgeSlot-v1 prompt never shares a
-// promptHash (and so a cache row) with a categoryTable-v1 one.
-const JUDGE_PROMPT_VARIANT_LIST = Object.freeze(['crosswalk', 'derived', 'derivedJudgeSlot']);
+// promptHash (and so a cache row) with a categoryTable-v1 one. ⟪lane JEVQ, 2026-10-13⟫ 'derivedJudgeSlotOwningDefinition' is
+// derivedJudgeSlot's text with the owning-definition split question (evidenceRenderer.js); derivedJudgeSlot stays registered.
+const JUDGE_PROMPT_VARIANT_LIST = Object.freeze(['crosswalk', 'derived', 'derivedJudgeSlot', 'derivedJudgeSlotOwningDefinition']);
+// OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST — the variants whose split question carries the owning construct's definition, so
+// a plugin resolving to one MUST declare owningConstructDefinitionSource, and a plugin resolving to any other must NOT (it
+// would be read by nothing). evidenceRenderer's rows say the same in requiresOwningConstructDefinitionSource; the suite
+// test-bgJevQuestion asserts the two agree.
+const OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST = Object.freeze(['derivedJudgeSlotOwningDefinition']);
 
 // ---------------------------------------------------------------------
 // VARIANT_BY_BASIS_AND_PREDICATE_RULE — the ONE place a run's judgePromptVariant is decided (PLAN small phases §3
@@ -163,7 +170,8 @@ const NO_JUDGE_PREDICATE_RULE = '—';
 const VARIANT_BY_BASIS_AND_PREDICATE_RULE = Object.freeze({
 	standard: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),
 	crosswalk: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),
-	derived: Object.freeze({ [PREDICATE_RULE_CATEGORY_TABLE_V1]: 'derived', [PREDICATE_RULE_JUDGE_SLOT_V1]: 'derivedJudgeSlot' }),
+	// ⟪lane JEVQ, 2026-10-13⟫ judgeSlot-v1 now renders the owning-definition split question (was 'derivedJudgeSlot')
+	derived: Object.freeze({ [PREDICATE_RULE_CATEGORY_TABLE_V1]: 'derived', [PREDICATE_RULE_JUDGE_SLOT_V1]: 'derivedJudgeSlotOwningDefinition' }),
 });
 
 // judgePromptVariantFor — { judgePromptVariant } | { error: text } for a declaration whose matchBasis and
@@ -379,6 +387,9 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	candidateRetrieval: Object.freeze({ required: false, basisConditional: true, kind: 'candidateRetrieval' }),
 	renderingAllowList: Object.freeze({ required: false, basisConditional: true, kind: 'renderingAllowList' }),
 	judgePromptVariant: Object.freeze({ required: false, basisConditional: true, kind: 'judgePromptVariant' }),
+	// ⟪lane JEVQ⟫ where the owning construct's definition is read (owningConstructDefinition.js). Its presence is ruled by the
+	// resolved variant (OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST, cross-key rule below), so the walk treats it as optional.
+	owningConstructDefinitionSource: Object.freeze({ optional: true, kind: 'owningConstructDefinitionSource' }),
 	// REQUIRED iff predicateSource.predicateRule is categoryTable-v1, FORBIDDEN otherwise: under judgeSlot-v1 the judge
 	// names the relation and a table would be read by nothing; a documentary source declares no rule at all.
 	predicateByCategory: Object.freeze({ required: false, kind: 'predicateByCategory', presentIff: Object.freeze({ key: 'predicateSource', member: 'predicateRule', value: PREDICATE_RULE_CATEGORY_TABLE_V1 }) }),
@@ -418,6 +429,8 @@ const DERIVED_PLUGIN_PER_STANDARD_KEY_LIST = Object.freeze([
 	'bridgeName', 'standardKey', 'sourceCuriePrefix', 'subjectCuriePrefix', 'subjectSource', 'candidateRetrieval', 'renderingAllowList',
 	'blindingDeclaration', 'evidenceHooksDeclared', 'globalGuidanceList', 'materialisationFanout', 'judgmentPartition',
 	'promptIdentifierScan.identifierListPath',
+	// ⟪lane JEVQ⟫ each standard says where ITS owning constructs are defined, or that they are not
+	'owningConstructDefinitionSource',
 ]);
 
 const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
@@ -983,6 +996,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		return '';
 	},
 	judgePromptVariant: (value, { propertyName }) => closedValueReason(value, JUDGE_PROMPT_VARIANT_LIST, propertyName),
+	owningConstructDefinitionSource: (value) => owningConstructDefinitionLib.owningConstructDefinitionSourceReason(value),
 	// predicateByCategory — the v1 category→predicate table (RULING §11.7 (a)). EVERY judge category must be
 	// named and nothing else: a category the table forgets would otherwise reach the edge builder with no
 	// relation and be defaulted, which is the failure this whole contract exists to prevent.
@@ -1256,6 +1270,15 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 	if (bridgeDeclaration.judgePromptVariant !== undefined && bridgeDeclaration.judgePromptVariant !== variantResolved.judgePromptVariant) {
 		return refuseWith(`bridgeDeclaration judgePromptVariant '${bridgeDeclaration.judgePromptVariant}' disagrees with VARIANT_BY_BASIS_AND_PREDICATE_RULE for (matchBasis '${bridgeDeclaration.matchBasis}', predicateRule '${bridgeDeclaration.predicateSource.predicateRule}'), which names '${variantResolved.judgePromptVariant}'`, 'the registry is the authority; declare the same variant or change the rule — a run never chooses between two answers');
 	}
+	// ⟪lane JEVQ⟫ owningConstructDefinitionSource is REQUIRED iff the resolved variant renders the owning construct's
+	// definition, FORBIDDEN otherwise: a variant that does not render it would read the declaration for nothing.
+	const variantRendersOwningDefinition = OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST.indexOf(variantResolved.judgePromptVariant) !== -1;
+	if (variantRendersOwningDefinition && bridgeDeclaration.owningConstructDefinitionSource === undefined) {
+		return refuseWith(`bridgeDeclaration resolves to variant '${variantResolved.judgePromptVariant}', which renders the owning construct's definition, and declares no owningConstructDefinitionSource`, `declare where the definition is read ({ kind: 'ownerNodeProperty', ownerReferencePropertyName, definitionPropertyName }) or that the standard has none ({ kind: 'none', reason }); there is no default`);
+	}
+	if (!variantRendersOwningDefinition && bridgeDeclaration.owningConstructDefinitionSource !== undefined) {
+		return refuseWith(`bridgeDeclaration declares owningConstructDefinitionSource, and its variant '${variantResolved.judgePromptVariant}' does not render an owning-construct definition`, 'remove the key; nothing would read it');
+	}
 	// A neighbourVote owner property chooses which neighbours reorder the pool. A property the plugin BLINDS is
 	// withheld from the judge, so it must not steer the pool either. Checked after the walk, where
 	// blindingDeclaration has already passed its own row.
@@ -1417,6 +1440,7 @@ module.exports = {
 	JUDGE_PREDICATE_RULE_LIST,
 	NO_JUDGE_PREDICATE_RULE,
 	VARIANT_BY_BASIS_AND_PREDICATE_RULE,
+	OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST,
 	judgePromptVariantFor,
 	RENDERING_NEVER_NAME_LIST,
 	PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY,

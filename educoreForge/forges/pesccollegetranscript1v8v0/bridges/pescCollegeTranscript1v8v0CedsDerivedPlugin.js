@@ -62,7 +62,12 @@ const bridgeDeclaration = Object.freeze({
 		subject: ['documentSection', 'name', 'effectiveDocumentation', 'owningTypeName', 'typeName', 'contextPathSampleList', 'minOccursAsWritten', 'maxOccursAsWritten', 'codeListName', 'codeListDocumentation'],
 		candidate: ['name', 'propertyDefinition', 'domainName', 'domainDefinition', 'rangeOptionSetName', 'rangeOptionSetDefinition', 'rangeClassName', 'rangeClassDefinition', 'componentIdeaList'],
 	},
-	judgePromptVariant: 'derivedJudgeSlot',
+	judgePromptVariant: 'derivedJudgeSlotOwningDefinition',
+	// ⟪lane JEVQ, 2026-10-13⟫ WHAT THE SOURCE ELEMENT BELONGS TO, in PESC's own words, for Jev's split question only (the text
+	// prompt is unchanged). The subject names its owner by parentId; the owner carries its published definition in
+	// description. Measured on GOLD_EVAL_261013_cedsConcepts: 1,203 of the 1,224 Element owner links carry one (the 21 without are anonymous types). An owner without one renders
+	// none and says so (owningConstructDefinition.js); nothing is borrowed.
+	owningConstructDefinitionSource: { kind: 'ownerNodeProperty', ownerReferencePropertyName: 'parentId', definitionPropertyName: 'description' },
 	// the judge names the relation itself through the tool's predicate slot, so no category table is declared
 	predicateSource: { kind: 'judge', predicateRule: 'judgeSlot-v1' },
 	mappingTool: { name: 'educoreForge bridge-framework derived', version: '1.0.0' },

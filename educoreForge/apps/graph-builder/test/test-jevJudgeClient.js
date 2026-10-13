@@ -60,6 +60,8 @@ const iniTextFor = (overrideByKey = {}) => {
 			closeMatchDescription: 'Close match: similar enough for most contexts.',
 			broadMatchDescription: 'Broad match: the chosen candidate is more general.',
 			narrowMatchDescription: 'Narrow match: the chosen candidate is more specific.',
+			// lane JEVQ: this suite's choiceQuestion is today's form; the owning-definition form has its own cases below
+			choiceQuestionFormName: 'matchingInstructionsState',
 		},
 		overrideByKey,
 	);
@@ -123,6 +125,15 @@ const choiceQuestion = {
 	},
 };
 const choiceEnum = ['1', '2', 'NONE'];
+// lane JEVQ: the same question in the owning-definition form, shaped as evidenceRenderer's owningDefinitionChoiceStateFor
+// builds it (questionFormName stamp, state { sourceElement + definition }, relationStateSourceElement without it)
+const owningDefinitionChoiceQuestion = {
+	questionFormName: 'owningConstructDefinitionState',
+	stateObject: { sourceElement: { ...choiceQuestion.stateObject.sourceElement, owningConstructDefinition: 'An organization that provides educational services.' } },
+	relationStateSourceElement: choiceQuestion.stateObject.sourceElement,
+	instructionText: choiceQuestion.instructionText,
+	criteriaByChoice: choiceQuestion.criteriaByChoice,
+};
 
 const providerFor = (overrideByKey, scriptList) => {
 	const transport = scriptedTransport(scriptList);
@@ -159,12 +170,14 @@ harness.ok('rewording the relation instruction moves the identity', reinstructed
 harness.section('W-B-6: THE IDENTITY COVERS THE CATEGORY FLOORS AND EVERY RELATION DESCRIPTION');
 const moduleDouble = require(path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 const JEV_CLIENT_PATH = path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'jevJudgeClient.js');
-const KEY_LIST_FIND = "const JEV_IDENTITY_CONFIG_KEY_LIST = Object.freeze(['wireModel', 'requestForm', 'strongMinConfidence', 'moderateMinConfidence', 'relationInstructionText', 'relationDescriptionByPredicate']);";
+const KEY_LIST_FIND = "const JEV_IDENTITY_CONFIG_KEY_LIST = Object.freeze(['wireModel', 'requestForm', 'strongMinConfidence', 'moderateMinConfidence', 'relationInstructionText', 'relationDescriptionByPredicate', 'choiceQuestionFormName']);";
 const identityPairFor = (clientLib, overrideByKey) => [clientLib({ configFilePath: iniFilePathFor({}) }).model, clientLib({ configFilePath: iniFilePathFor(overrideByKey) }).model];
 [
 	{ label: 'strongMinConfidence', overrideByKey: { strongMinConfidence: '0.85' }, twinReplace: KEY_LIST_FIND.replace("'strongMinConfidence', ", '') },
 	{ label: 'moderateMinConfidence', overrideByKey: { moderateMinConfidence: '0.45' }, twinReplace: KEY_LIST_FIND.replace("'moderateMinConfidence', ", '') },
 	{ label: 'exactMatchDescription', overrideByKey: { exactMatchDescription: 'Exact match: reworded.' }, twinReplace: KEY_LIST_FIND.replace(", 'relationDescriptionByPredicate'", '') },
+	// lane JEVQ (G11 lesson): the split question's form is a different question, so it is a different judge
+	{ label: 'choiceQuestionFormName', overrideByKey: { choiceQuestionFormName: 'owningConstructDefinitionState' }, twinReplace: KEY_LIST_FIND.replace(", 'choiceQuestionFormName'", '') },
 ].forEach((oneCase) => {
 	const [baseModel, movedModel] = identityPairFor(jevJudgeClientLib, oneCase.overrideByKey);
 	harness.ok(`changing ONLY ${oneCase.label} moves the identity`, baseModel !== movedModel && MODEL_IDENTITY_RE.test(movedModel), `${baseModel} vs ${movedModel}`);
@@ -180,6 +193,8 @@ harness.match('moderate above strong is refused', constructionErrorFor({ moderat
 harness.match('an out-of-range confidence floor is refused', constructionErrorFor({ strongMinConfidence: '1.5' }), /must be a number from 0 to 1/);
 harness.match('an absent relation description is refused naming its key', constructionErrorFor({ narrowMatchDescription: null }), /\[jevJudge\]\.narrowMatchDescription is not configured/);
 harness.match('an absent relation instruction is refused naming its key', constructionErrorFor({ relationInstructionText: null }), /\[jevJudge\]\.relationInstructionText is not configured/);
+harness.match('an absent choiceQuestionFormName is refused naming its key (lane JEVQ)', constructionErrorFor({ choiceQuestionFormName: null }), /\[jevJudge\]\.choiceQuestionFormName is not configured/);
+harness.match('an unknown choiceQuestionFormName is refused listing the forms (lane JEVQ)', constructionErrorFor({ choiceQuestionFormName: 'claudePrompt' }), /choiceQuestionFormName is 'claudePrompt'.*matchingInstructionsState, owningConstructDefinitionState/);
 harness.match('an unset key variable is refused naming the variable', constructionErrorFor({ apiKeyEnvironmentVariableName: 'JEV_JUDGE_CLIENT_TEST_KEY_UNSET' }), /JEV_JUDGE_CLIENT_TEST_KEY_UNSET .* is empty or unset/);
 
 const pickCase = ({ label, confidence, expectedCategory }) => (done) => {
@@ -387,6 +402,61 @@ const caseList = [
 			harness.match('refused naming the status', rerankError, /relation question failed: .*HTTP 400 after 1 attempt/);
 			harness.equal('no verdict', verdict, undefined);
 			harness.equal('two calls', transport.sentPayloadList.length, 2);
+			done();
+		});
+	},
+	// ── lane JEVQ (2026-10-13): the owning-definition form of the split question ──
+	(done) => {
+		const { provider, transport } = providerFor({ choiceQuestionFormName: 'owningConstructDefinitionState' }, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+			harness.section('LANE JEVQ: A JEV CONFIGURED FOR THE OWNING-DEFINITION FORM REFUSES TODAY\'S FORM BY NAME');
+			harness.match('refused naming both forms', rerankError, /received a 'matchingInstructionsState' split question, and this Jev is configured to answer 'owningConstructDefinitionState'/);
+			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
+			harness.equal('no verdict', verdict, undefined);
+			done();
+		});
+	},
+	(done) => {
+		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion: owningDefinitionChoiceQuestion }, (rerankError) => {
+			harness.section('LANE JEVQ: A JEV CONFIGURED FOR TODAY\'S FORM REFUSES THE OWNING-DEFINITION FORM BY NAME');
+			harness.match('refused naming both forms', rerankError, /received a 'owningConstructDefinitionState' split question, and this Jev is configured to answer 'matchingInstructionsState'/);
+			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
+			done();
+		});
+	},
+	(done) => {
+		const { provider, transport } = providerFor({ choiceQuestionFormName: 'owningConstructDefinitionState' }, [
+			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
+			{ statusCode: 200, responseBody: relationBody({ choice: 'closeMatch', confidence: 0.7, probabilities: RELATION_PROBABILITIES }) },
+		]);
+		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion: owningDefinitionChoiceQuestion }, (rerankError, verdict) => {
+			harness.section('LANE JEVQ: THE OWNING-DEFINITION FORM SENDS THE DEFINITION, NO INSTRUCTIONS, AND LEAVES THE RELATION QUESTION AS IT WAS');
+			harness.ok('no error', !rerankError, rerankError);
+			const pickPayload = transport.sentPayloadList[0] || { state: {} };
+			const relationPayload = transport.sentPayloadList[1] || { state: {} };
+			harness.equal('the pick state is exactly { sourceElement }: no matchingInstructions', Object.keys(pickPayload.state).join(','), 'sourceElement');
+			harness.equal('the pick state source element carries the owning construct definition', pickPayload.state.sourceElement && pickPayload.state.sourceElement.owningConstructDefinition, 'An organization that provides educational services.');
+			harness.equal('neither the form stamp nor the relation source rides to Jev in the pick payload', JSON.stringify(pickPayload).indexOf('questionFormName') + JSON.stringify(pickPayload).indexOf('relationStateSourceElement'), -2);
+			harness.equal('the relation state source element is the source WITHOUT the definition (relation question unchanged)', JSON.stringify(relationPayload.state.sourceElement), JSON.stringify(choiceQuestion.stateObject.sourceElement));
+			harness.equal('the relation state keeps its two members', Object.keys(relationPayload.state).join(','), 'sourceElement,chosenCandidate');
+			harness.equal('predicate carried', verdict && verdict.predicate, 'closeMatch');
+			done();
+		});
+	},
+	(done) => {
+		// TWIN: a client whose owning-definition row reads the relation source from the PICK state would send the definition
+		// into the relation question; observed red on the conjunct above
+		const twinLib = moduleDouble.loadWithMutations({ modulePath: JEV_CLIENT_PATH, mutationList: [{ modulePath: JEV_CLIENT_PATH, find: 'relationSourceElementOf: (choiceQuestion) => choiceQuestion.relationStateSourceElement,', replace: 'relationSourceElementOf: (choiceQuestion) => choiceQuestion.stateObject.sourceElement,' }] });
+		const transport = scriptedTransport([
+			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
+			{ statusCode: 200, responseBody: relationBody({ choice: 'closeMatch', confidence: 0.7, probabilities: RELATION_PROBABILITIES }) },
+		]);
+		const twinProvider = twinLib({ configFilePath: iniFilePathFor({ choiceQuestionFormName: 'owningConstructDefinitionState' }), componentOverrides: { postOnce: transport.postOnce } });
+		twinProvider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion: owningDefinitionChoiceQuestion }, () => {
+			harness.section('LANE JEVQ TWIN: RELATION SOURCE READ FROM THE PICK STATE');
+			const relationPayload = transport.sentPayloadList[1] || { state: {} };
+			harness.ok('TWIN observed RED: the relation question now carries the owning definition', JSON.stringify(relationPayload.state.sourceElement) !== JSON.stringify(choiceQuestion.stateObject.sourceElement), JSON.stringify(relationPayload.state.sourceElement));
 			done();
 		});
 	},

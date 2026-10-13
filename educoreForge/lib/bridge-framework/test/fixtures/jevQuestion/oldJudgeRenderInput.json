@@ -1,0 +1,79 @@
+{
+ "_purpose": "lane JEVQ 2026-10-13: the render input whose OLD-judge (derivedJudgeSlot) rendering is pinned byte for byte by test-bgJevQuestion. Frozen copies of the Ed-Fi plugin allow-list and guidance as of main a07ea515, so a later plugin edit cannot move this fixture.",
+ "judgePromptVariant": "derivedJudgeSlot",
+ "renderingAllowList": {
+  "subject": [
+   "name",
+   "path",
+   "description",
+   "propertyType",
+   "owningConstructName",
+   "owningConstructType",
+   "componentIdeaList"
+  ],
+  "candidate": [
+   "name",
+   "propertyDefinition",
+   "domainName",
+   "domainDefinition",
+   "rangeOptionSetName",
+   "rangeOptionSetDefinition",
+   "rangeClassName",
+   "rangeClassDefinition",
+   "componentIdeaList"
+  ]
+ },
+ "globalGuidanceList": [
+  "Person, student, school are FUNDAMENTAL IDEAS. If any of the CANDIDATE ELEMENTS have COMPONENT IDEAS that share one or more FUNDAMENTAL IDEAS with the SOURCE ELEMENT, one of those must be chosen unless there is a very important reason not to.",
+  "Judge by MEANING, not by wording. Two elements correspond when they assert the same fact about the world, even when their names share no words and their phrasing is nothing alike.",
+  "Answer NONE only when no CANDIDATE ELEMENT *means* the same thing as the SOURCE ELEMENT.",
+  "When evaluating two elements, consider the COMPONENT IDEAS of one against the totality of the other. The number of COMPONENT IDEAS that match are not dispositive but should enhance the potential for the two elements to be considered a match.",
+  "If a FUNDAMENTAL IDEA matches a COMPONENT IDEA in the *domain* of a CANDIDATE ELEMENT, it is mandatory that it be chosen over those that do not."
+ ],
+ "sourceElement": {
+  "name": "SurveyCategory",
+  "stableId": "edfi:property/domainEntity.Survey.SurveyCategory",
+  "material": {
+   "name": "SurveyCategory",
+   "path": "Survey.SurveyCategory",
+   "description": "The category or type of survey.",
+   "propertyType": "descriptor",
+   "owningConstructName": "Survey",
+   "owningConstructType": "domainEntity"
+  }
+ },
+ "candidatePool": [
+  {
+   "seatReason": "retrieval",
+   "card": {
+    "stableId": "ceds:prop/A",
+    "name": "Has Assessment Type",
+    "propertyDefinition": "The category of an assessment based on format and content.",
+    "domainName": "Assessment",
+    "domainDefinition": "An instrument used to measure.",
+    "rangeOptionSetName": "Assessment Type",
+    "rangeOptionSetDefinition": "Types of assessments."
+   }
+  },
+  {
+   "seatReason": "retrieval",
+   "card": {
+    "stableId": "ceds:prop/B",
+    "name": "Survey Type",
+    "propertyDefinition": "The kind of survey.",
+    "domainName": "Survey",
+    "domainDefinition": "A questionnaire administered to respondents."
+   }
+  },
+  {
+   "seatReason": "retrieval",
+   "card": {
+    "stableId": "ceds:prop/C",
+    "name": "Person Identifier",
+    "propertyDefinition": "A unique number or alphanumeric code assigned to a person.",
+    "domainName": "Person",
+    "domainDefinition": "A human being."
+   }
+  }
+ ]
+}

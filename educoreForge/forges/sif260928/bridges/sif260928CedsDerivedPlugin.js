@@ -64,7 +64,11 @@ const bridgeDeclaration = Object.freeze({
 		subject: ['name', 'description', 'relativePath', 'contextText', 'instanceCount', 'objectNameSampleList', 'objectDomain'],
 		candidate: ['name', 'propertyDefinition', 'domainName', 'domainDefinition', 'rangeOptionSetName', 'rangeOptionSetDefinition', 'rangeClassName', 'rangeClassDefinition', 'componentIdeaList'],
 	},
-	judgePromptVariant: 'derivedJudgeSlot',
+	judgePromptVariant: 'derivedJudgeSlotOwningDefinition',
+	// ⟪lane JEVQ, 2026-10-13⟫ SIF publishes no definition for its objects, so Jev's split question carries none, and every
+	// SIF judgment records why. Measured on GOLD_EVAL_261013_cedsConcepts: 0 of 159 Sif260928Object nodes carry a
+	// description (or any definition text), and a Question's parent is the standard root, not an object. Never borrowed.
+	owningConstructDefinitionSource: { kind: 'none', reason: 'SIF 260928 publishes no definition text for its objects (0 of 159 Sif260928Object nodes carry one)' },
 	// the judge names the relation itself through the tool's predicate slot, so no category table is declared
 	predicateSource: { kind: 'judge', predicateRule: 'judgeSlot-v1' },
 	mappingTool: { name: 'educoreForge bridge-framework derived', version: '1.0.0' },

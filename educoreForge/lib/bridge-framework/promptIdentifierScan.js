@@ -11,7 +11,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   identifierListFilePathFor({ identifierListPath, forgesDirPath, standardKey }) → absolute path
 //   readIdentifierList({ filePath })                 → identifierList
 //   compileScan({ scanDeclaration, identifierList }) → { compiledScan }
-//   questionSurfaceTextByName({ predicateRule, question }) → { systemPrompt, userPrompt, toolText }
+//   questionSurfaceTextByName({ predicateRule, question }) → { systemPrompt, userPrompt, toolText[, choiceQuestionText] }
 //   scanSurfaces({ compiledScan, surfaceTextByName })  → { hit: null } | { hit: { surfaceName, patternName, matchedText } }
 //
 // THE RE-ASK PROMPT IS SCANNED TOO (EBONY_DREAM, B1). The one bounded rationale re-ask (judgeComponent) sends the
@@ -98,11 +98,16 @@ const compileScan = ({ scanDeclaration, identifierList }) => {
 	return { compiledScan: { compiledPatternList } };
 };
 
-// questionSurfaceTextByName — the three texts a rendered question shows the judge, in scan order
+// questionSurfaceTextByName — the texts a rendered question shows the judge, in scan order. ⟪lane JEVQ, 2026-10-13⟫ The
+// split question (choiceQuestion, what Jev reads) is a fourth surface when the variant builds one: its owning-definition
+// form carries the owning construct's definition, which no text prompt shows, so scanning only the prompts would let an
+// identifier in that text reach Jev unseen. For every other split question the surface repeats text the prompts already
+// carry, so it can find nothing they did not.
 const questionSurfaceTextByName = ({ predicateRule, question }) => ({
 	systemPrompt: question.systemPrompt,
 	userPrompt: question.userPrompt,
 	toolText: TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: question.choiceEnum }),
+	...(question.choiceQuestion === undefined ? {} : { choiceQuestionText: JSON.stringify(question.choiceQuestion) }),
 });
 
 // scanSurfaces — the first hit, walking the surfaces in the map's own order and the patterns in declared order

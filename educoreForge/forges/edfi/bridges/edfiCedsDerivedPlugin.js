@@ -105,7 +105,12 @@ const bridgeDeclaration = Object.freeze({
 		// The graph knew; the prompt did not say. Guidance line (3) is unusable without these two names.
 		candidate: ['name', 'propertyDefinition', 'domainName', 'domainDefinition', 'rangeOptionSetName', 'rangeOptionSetDefinition', 'rangeClassName', 'rangeClassDefinition', 'componentIdeaList'],
 	},
-	judgePromptVariant: 'derivedJudgeSlot',
+	judgePromptVariant: 'derivedJudgeSlotOwningDefinition',
+	// ⟪lane JEVQ, 2026-10-13⟫ WHAT THE SOURCE ELEMENT BELONGS TO, in Ed-Fi's own words, for Jev's split question only (the text
+	// prompt is unchanged). The subject names its owner by parentId; the owner carries its published definition in
+	// description. Measured on GOLD_EVAL_261013_cedsConcepts: 1,858 of 1,904 EdfiProperty owners carry one; the 46 without are extension entities (EdfiDomainEntityExtension 38, EdfiAssociationExtension 8). An owner without one renders
+	// none and says so (owningConstructDefinition.js); nothing is borrowed.
+	owningConstructDefinitionSource: { kind: 'ownerNodeProperty', ownerReferencePropertyName: 'parentId', definitionPropertyName: 'description' },
 	// THE JUDGE NAMES THE RELATION (jevRelations R2, 2026-09-30, TQ: "we always want the SSSOM characterization").
 	// Under judgeSlot-v1 the judge returns a predicate (exactMatch, closeMatch, broadMatch or narrowMatch) beside its
 	// pick, and 'none' beside NONE; judgeComponent verifies it. No category table is declared: the contract forbids

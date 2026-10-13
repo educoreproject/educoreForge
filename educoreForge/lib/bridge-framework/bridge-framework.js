@@ -73,6 +73,7 @@ const promptIdentifierScanLib = require('./promptIdentifierScan');
 const judgeConfigRecordLib = require('./judgeConfigRecord');
 const judgmentPartitionLib = require('./judgmentPartition');
 const materialisationFanoutLib = require('./materialisationFanout');
+const owningConstructDefinitionLib = require('./owningConstructDefinition');
 
 const { RELATIONSHIP_PRODUCER_SUFFIX, SKOS_EDGE_TYPES, MAPPING_PROPERTIES } = vocabularyLib;
 const {
@@ -388,7 +389,7 @@ const moduleFunction =
 			const baseGeneration = decisionBlockLib.generationFor({ bridgeName: bridgeDeclaration.bridgeName, pluginVersion: bridgeDeclaration.pluginVersion, declarationDigest, rendererVersion: runRendererVersion });
 			const generation = debugJudgeLib.generationWithDebugMark(sourceWindowLib.generationWithWindowMark(baseGeneration, windowMark), debugMark);
 			const runPrefix = `[bridge ${bridgeDeclaration.bridgeName} ${sourceToken}→${hubToken}]`;
-			const report = { refusalList: [], conflictCount: 0, conflictList: [], judgeSpend: { asked: 0, servedFromCache: 0, abstained: 0, rationaleReaskCount: 0, usd: null }, blindingDeclarationEcho: bridgeDeclaration.blindingDeclaration.slice(), consistencyReport: [], subjectNodeReport: null, labelTableDigest, discardedPredicateKeyCount: 0, note: '' };
+			const report = { refusalList: [], conflictCount: 0, conflictList: [], judgeSpend: { asked: 0, servedFromCache: 0, abstained: 0, rationaleReaskCount: 0, usd: null }, blindingDeclarationEcho: bridgeDeclaration.blindingDeclaration.slice(), consistencyReport: [], subjectNodeReport: null, labelTableDigest, discardedPredicateKeyCount: 0, owningConstructDefinitionCoverage: null, note: '' };
 			const say = (text) => xLog.status(`${runPrefix} ${text}`);
 			say(`mode ${mode}; pairKey ${pairKey}; pair-scoped label ${pairScopedLabel}; blindingDeclaration [${bridgeDeclaration.blindingDeclaration.join(', ')}]`);
 
@@ -1517,6 +1518,25 @@ const moduleFunction =
 							sourceLabelByColumn: mergedByColumn((oneAssertion) => oneAssertion.sourceLabelByColumn),
 							sourceNoteByColumn: mergedByColumn((oneAssertion) => oneAssertion.sourceNoteByColumn),
 						};
+						// ⟪lane JEVQ, 2026-10-13⟫ a variant whose split question carries the owning construct's definition gets it
+						// HERE, read from the source standard's own nodes through the plugin's declared source (registration has
+						// required the declaration for such a variant). Text, or the reason there is none; never borrowed. Every
+						// other variant's source element is exactly what it was.
+						if (evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant].requiresOwningConstructDefinitionSource) {
+							const owningDefinition = owningConstructDefinitionLib.owningConstructDefinitionFor({ subjectNode, subjectNodeByStableId: args.subjectNodeByStableId, owningConstructDefinitionSource: bridgeDeclaration.owningConstructDefinitionSource });
+							if (owningDefinition.error) {
+								taskDone(owningDefinition.error.message);
+								return;
+							}
+							sourceElement.owningConstructDefinition = owningDefinition.owningConstructDefinition;
+							sourceElement.owningConstructDefinitionAbsentReason = owningDefinition.absentReason;
+							report.owningConstructDefinitionCoverage = report.owningConstructDefinitionCoverage === null ? { renderedCount: 0, absentCountByReason: {} } : report.owningConstructDefinitionCoverage;
+							if (owningDefinition.absentReason === null) {
+								report.owningConstructDefinitionCoverage.renderedCount += 1;
+							} else {
+								report.owningConstructDefinitionCoverage.absentCountByReason[owningDefinition.absentReason] = (report.owningConstructDefinitionCoverage.absentCountByReason[owningDefinition.absentReason] || 0) + 1;
+							}
+						}
 						const candidatePool = oneTask.pool.map((oneCard) => ({ card: oneCard, seatReason: oneTask.seatReason === null ? oneTask.seatReasonByStableId[oneCard.stableId] : oneTask.seatReason }));
 						const withEvidenceHooks = (hooksDone) => {
 							const hookState = { perCandidateNoteByStableId: {}, promptSegmentList: [], nominatedByStableId: {} };
