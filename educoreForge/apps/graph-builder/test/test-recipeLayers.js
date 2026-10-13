@@ -32,16 +32,16 @@ harness.equal('it loads', loaded.error, undefined);
 harness.accepts('it validates (schema, referential, resolvability)', errorsOf(loaded.recipe));
 
 harness.section('refusals, by name');
-harness.rejects('a layer of a standard the recipe does not forge', errorsOf({ ...baseRecipe, layers: [{ standard: 'edfi', layer: 'des' }] }), /layers\[0\]\.standard 'edfi' is not in standards\[\]/);
-harness.rejects('the same layer named twice', errorsOf({ ...baseRecipe, layers: [{ standard: 'ceds', layer: 'des' }, { standard: 'ceds', layer: 'des' }] }), /duplicate layer 'des' of standard 'ceds'/);
-harness.rejects('a layer entry with an unknown field', errorsOf({ ...baseRecipe, layers: [{ standard: 'ceds', layer: 'des', version: '13' }] }), /additional/i);
+harness.rejects('a layer of a standard the recipe does not forge', errorsOf({ ...baseRecipe, layers: [{ standard: 'edfi', layer: 'guide' }] }), /layers\[0\]\.standard 'edfi' is not in standards\[\]/);
+harness.rejects('the same layer named twice', errorsOf({ ...baseRecipe, layers: [{ standard: 'ceds', layer: 'guide' }, { standard: 'ceds', layer: 'guide' }] }), /duplicate layer 'guide' of standard 'ceds'/);
+harness.rejects('a layer entry with an unknown field', errorsOf({ ...baseRecipe, layers: [{ standard: 'ceds', layer: 'guide', version: '14' }] }), /additional/i);
 harness.rejects('a layer key that is not lower-camel', errorsOf({ ...baseRecipe, layers: [{ standard: 'ceds', layer: 'Des' }] }), /pattern/i);
 
 harness.section('the roundTrip attestation counts standards apart from their layers (graph-contract §4 standardCount)');
 const { loadBuildJsDouble } = require('../../../lib/bridge-framework/test/testSupport/bridgeTwinFactories');
 const BUILD_JS_PATH = path.join(__dirname, '..', 'lib', 'build.js');
 const cleanRoundTripRow = (token, layerKey) => ({ token, ...(layerKey ? { layerKey } : {}), ran: true, roundTripClean: true, lostTotal: 0, inventedTotal: 0, explicitlyOmittedTotal: 0, explicitOmissionDeclarationText: `${token}: nothing omitted (rule: toy)` });
-const layeredRowOf = (build) => build.roundTripRowFor({ stageRan: true, summaryFilePath: '/run/roundTrip/roundTripStageSummary.json', standards: [cleanRoundTripRow('ceds'), cleanRoundTripRow('edfi'), cleanRoundTripRow('ceds:des', 'des')] });
+const layeredRowOf = (build) => build.roundTripRowFor({ stageRan: true, summaryFilePath: '/run/roundTrip/roundTripStageSummary.json', standards: [cleanRoundTripRow('ceds'), cleanRoundTripRow('edfi'), cleanRoundTripRow('ceds:guide', 'guide')] });
 const layeredJudge = (build) => {
 	const row = layeredRowOf(build);
 	return { pass: row.standardCount === 2 && row.explicitOmissionDeclarationList.length === 3 && /^2 standard\(s\) and 1 standard layer\(s\) ran: clean 3\/3/.test(row.detail), detail: `standardCount ${row.standardCount}, lines ${row.explicitOmissionDeclarationList.length}, detail '${row.detail.slice(0, 60)}'` };

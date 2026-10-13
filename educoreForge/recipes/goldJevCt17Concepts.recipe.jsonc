@@ -1,9 +1,11 @@
 {
-  // goldJevCt17Layers — goldJevCt17 PLUS CEDS's three LAYERS (lane DES, campaign cedsRichness-101226, RADIANT_HORIZON for
-  // COPPER_RIVER, 2026-10-12): the Domain Entity Schema V13 (des), the Ontology Guide V14 Appendix A (guide) and the U+FFFD
-  // text repairs from the CEDS IDS v14 (textRepair), each its own block of kind 'layer' beside a CEDS base block that does
-  // NOT change, so every bridge replays from the copied judgment cache exactly as before. Everything below the layers line
-  // is goldJevCt17, unchanged; goldJevCt17 itself is left untouched so GOLD_EVAL_261010_ct17text stays reproducible.
+  // goldJevCt17Concepts — goldJevCt17 PLUS CEDS's two LAYERS (lane UNDES, campaign cedsRichness-101226, GRANITE_BEACON for
+  // COPPER_RIVER, 2026-10-13; TQ: "Remove the DES layer, keep text repair and concepts"): the Ontology Guide V14 Appendix A
+  // (guide: the Conceptual Model concepts of all 400 classes) and the U+FFFD text repairs from the CEDS IDS v14 (textRepair),
+  // each its own block of kind 'layer' beside a CEDS base block that does NOT change, so every bridge replays from the copied
+  // judgment cache exactly as before. It replaces goldJevCt17Layers (lane DES), whose third layer was removed; that recipe's
+  // gold, GOLD_EVAL_261012_cedsLayers, stays reproducible from tag postDesLayersAuditGSeamUntouched-101226. Everything below
+  // the layers line is goldJevCt17, unchanged.
   //
   // goldJevCt17 — goldJevAcceptance2 PLUS PESC College Transcript 1.7.0 (forgeClean lane CT17, ONYX_DANCE, 2026-10-09).
   // TQ: "I think including 1.7 would be very interesting (though we probably won't when we move to production)." This
@@ -13,9 +15,9 @@
   // Its first build (GOLD_EVAL_261009_ct17) reused the forgeClean R4 judgment cache by copy: every 1.7.0 unit whose prompt
   // renders identically to a 1.8.0 unit is a cache hit (the version carry, DESIGN-pescBridge.md "Version replay").
   "schemaVersion": "1.0.0",
-  "recipeName": "goldJevCt17Layers",
+  "recipeName": "goldJevCt17Concepts",
   "kind": "golden",
-  "description": "Pure-Jev gold graph with CEDS's three layers (Domain Entity Schema V13, Ontology Guide V14 Appendix A, U+FFFD text repairs from the IDS v14) beside the CEDS hub: CEDS hub, Ed-Fi (crosswalk excluded), SIF 260928 and all seven PESC releases plus College Transcript 1.7.0 (College Transcript 1.8.0, College Transcript 1.7.0, High School Transcript 1.6.0, Test Score Report 1.1.0, Learning Record 1.0.0, Document Request 1.0.0, Document Response 1.0.0, Academic ePortfolio 1.0.0), every standard re-forged on fresh stores and every derived bridge judged by Jev through a COPY of the forgeClean R4 judgment cache, so a unit whose prompt is unchanged is a cache hit and only new prompts are judged.",
+  "description": "Pure-Jev gold graph with CEDS's two layers (Ontology Guide V14 Appendix A concepts, U+FFFD text repairs from the IDS v14) beside the CEDS hub: CEDS hub, Ed-Fi (crosswalk excluded), SIF 260928 and all seven PESC releases plus College Transcript 1.7.0 (College Transcript 1.8.0, College Transcript 1.7.0, High School Transcript 1.6.0, Test Score Report 1.1.0, Learning Record 1.0.0, Document Request 1.0.0, Document Response 1.0.0, Academic ePortfolio 1.0.0), every standard re-forged on fresh stores and every derived bridge judged by Jev through a COPY of the forgeClean R4 judgment cache, so a unit whose prompt is unchanged is a cache hit and only new prompts are judged.",
   "standards": [
     { "token": "ceds", "version": "current" },
     { "token": "edfi", "version": "current" },
@@ -33,7 +35,6 @@
     { "standard": "ceds" }
   ],
   "layers": [
-    { "standard": "ceds", "layer": "des" },
     { "standard": "ceds", "layer": "guide" },
     { "standard": "ceds", "layer": "textRepair" }
   ],

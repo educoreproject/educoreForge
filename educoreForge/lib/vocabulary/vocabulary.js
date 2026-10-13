@@ -76,22 +76,16 @@ const DME_ROLES = {
 	// declaration's CEDS mapping edges (12,681 of them sat on DmeSupport nodes before this role) and no text or vector of
 	// its own, so every forge that mints one declares the role non-embeddable.
 	INSTANCE: 'DmeInstance',
-	// ⟪lane DES, cedsRichness-101226, 2026-10-12; COPPER_RIVER ruling⟫ the SIX LAYER ROLES. A node in one of these roles
+	// ⟪lane DES, cedsRichness-101226, 2026-10-12; COPPER_RIVER ruling; lane UNDES, 2026-10-13⟫ the THREE LAYER ROLES. A node in one of these roles
 	// lives in a `layer` block (SCHEMA_BLOCK_KIND.LAYER): a separately published companion of one standard. None is a data
 	// role, so the hub derivation, the CEDS RDF compiler (role-scoped, gate L-4), the DME's browse and the mapping counts
 	// never see one; none is embedded. LAYER_ROLE_LIST below is the list the DME excludes from search and counts.
 	LAYER_ROOT: 'DmeLayerRoot',
-	AREA: 'DmeArea',
-	LAYER_ELEMENT: 'DmeLayerElement',
-	PLACEMENT: 'DmePlacement',
 	CONCEPT: 'DmeConcept',
 	TEXT_REPAIR: 'DmeTextRepair',
 };
 const LAYER_ROLE_LIST = Object.freeze([
 	DME_ROLES.LAYER_ROOT,
-	DME_ROLES.AREA,
-	DME_ROLES.LAYER_ELEMENT,
-	DME_ROLES.PLACEMENT,
 	DME_ROLES.CONCEPT,
 	DME_ROLES.TEXT_REPAIR,
 ]);
@@ -143,17 +137,8 @@ const EDGE_TYPES = {
 	// ⟪forgeClean lane CLEAN, G19, 2026-10-08⟫ schema file to a top-level definition it declares that no other edge owns
 	// (PESC: named code lists, named data types, global elements), so every definition is reachable from the root
 	HAS_DEFINITION: 'HAS_DEFINITION',
-	// ⟪lane DES, 2026-10-12⟫ LAYER EDGES. "Domain" already means the rdfs domain (the CLASS) in this graph (HAS_CEDS_DOMAIN,
-	// HubReference.domainName), so the DES ownership edges carry DES in their names (COPPER_RIVER amendment A).
+	// ⟪lane DES, 2026-10-12⟫ LAYER EDGES.
 	HAS_LAYER: 'HAS_LAYER',
-	HAS_DES_DOMAIN: 'HAS_DES_DOMAIN',
-	HAS_DES_ENTITY: 'HAS_DES_ENTITY',
-	HAS_DES_CATEGORY: 'HAS_DES_CATEGORY',
-	HAS_DES_PLACEMENT: 'HAS_DES_PLACEMENT',
-	PLACES_ELEMENT: 'PLACES_ELEMENT',
-	PLACES_PROPERTY: 'PLACES_PROPERTY',
-	SAME_GLOBAL_ID_PROPERTY: 'SAME_GLOBAL_ID_PROPERTY',
-	DECLARES_ELEMENT: 'DECLARES_ELEMENT',
 	HAS_PRIMARY_CONCEPT: 'HAS_PRIMARY_CONCEPT',
 	HAS_SECONDARY_CONCEPT: 'HAS_SECONDARY_CONCEPT',
 	HAS_EVENT_DATE_CONCEPT: 'HAS_EVENT_DATE_CONCEPT',
@@ -245,8 +230,8 @@ const CLASSIFICATION_EDGE_TYPES = {
 // ⟪lane DES, cedsRichness-101226, 2026-10-12; COPPER_RIVER ruling Q1⟫ THE TAXONOMY GAINS ONE KIND, `layer`, by ruling: a
 // separately published, separately versioned companion of ONE standard. Its nodes are its own; its edges may land on that
 // standard's base nodes (resolved by stableId, as relationship edges are); it requires exactly that standard's base block;
-// it never relates the standard to another standard (FBB-001). The first layers are CEDS's Domain Entity Schema V13, the
-// Ontology Guide V14 Appendix A and the U+FFFD text repairs. Before this ruling the list was LOCKED at three, and it stays
+// it never relates the standard to another standard (FBB-001). CEDS's layers are the Ontology Guide V14 Appendix A and
+// the U+FFFD text repairs. Before this ruling the list was LOCKED at three, and it stays
 // locked: a fourth kind arrived by ruling, not by a caller extending it.
 const SCHEMA_BLOCK_KIND = {
 	STANDARD_BASE: 'standardBase',

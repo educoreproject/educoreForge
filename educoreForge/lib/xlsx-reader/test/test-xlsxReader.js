@@ -2,7 +2,8 @@
 'use strict';
 
 // test-xlsxReader.js — the xlsx reader against an INDEPENDENT oracle (lane DES, 2026-10-12): every non-empty cell of CEDS's
-// own V13 element workbook (the des layer's committed source, forges/ceds/layers/des/assets/layerSourceData/01) as openpyxl
+// own V13 element workbook (fixtures/cedsV13Workbook, a reader fixture since lane UNDES removed the layer that forged it:
+// it is the one workbook in the tree with formula cells, which the V14 workbook gate D reads has none of) as openpyxl
 // 3.1.5 reads it (fixtures/cedsV13.openpyxl.jsonl.gz, written by fixtures/openpyxlDump.py), compared cell by cell. ONE declared
 // mapping between the two: openpyxl leaves an OOXML `_x000D_` escape undecoded and this reader decodes it (ECMA-376 §22.4.2.4).
 // Twins (each OBSERVED red): drop the XML 1.0 §2.11 line-ending normalization; keep a formula cell's cached value instead of
@@ -28,7 +29,7 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 
 const READER_PATH = path.join(__dirname, '..', 'xlsx-reader.js');
-const WORKBOOK_PATH = path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'layers', 'des', 'assets', 'layerSourceData', '01', 'CEDS-V13.0.0.0.xlsx');
+const WORKBOOK_PATH = path.join(__dirname, 'fixtures', 'cedsV13Workbook', 'CEDS-V13.0.0.0.xlsx');
 const ORACLE_PATH = path.join(__dirname, 'fixtures', 'cedsV13.openpyxl.jsonl.gz');
 
 const oracleCellList = zlib.gunzipSync(fs.readFileSync(ORACLE_PATH)).toString('utf8').split('\n').filter(Boolean).map((oneLine) => JSON.parse(oneLine));

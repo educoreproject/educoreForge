@@ -46,11 +46,11 @@ const addBaseThenLayer = ({ editorModule, layerOverride }, done) => {
 		const baseBlock = blockOf({ blockType: 'standardBase', marker: `base${databaseSequence}` });
 		manifest.add({ subject: 'ceds@14_0_0_0_base', kind: 'standardBase', version: '14.0.0.0', description: 'the base', schemaBlock: baseBlock }, (baseError) => {
 			const layerArgs = {
-				subject: 'ceds@14_0_0_0_layer_des@13',
+				subject: 'ceds@14_0_0_0_layer_guide@14',
 				kind: 'layer',
 				version: '14.0.0.0',
 				requires: [baseBlock.blockId],
-				description: 'layer schema block for ceds@14_0_0_0_layer_des@13 (layer test), forged by recipe layerTest',
+				description: 'layer schema block for ceds@14_0_0_0_layer_guide@14 (layer test), forged by recipe layerTest',
 				schemaBlock: blockOf({ blockType: 'layer', marker: `layer${databaseSequence}` }),
 				...(layerOverride ? layerOverride({ baseBlock }) : {}),
 			};

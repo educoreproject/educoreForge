@@ -142,7 +142,7 @@ const ATTESTATION_FIELD_LIST = Object.freeze([
 	{ name: 'roundTripClean', type: 'boolean', channel: 'channelA', gateList: ['roundTrip'], meaning: 'true when every standard that ran round-tripped clean, losing and inventing nothing' },
 	{ name: 'lostTotal', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'source statements the round trip could not find again, summed over the standards that ran' },
 	{ name: 'explicitlyOmittedTotal', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'source statements a forge declares it does not carry, summed over the standards that ran' },
-	{ name: 'explicitOmissionDeclarationList', type: 'stringList', channel: 'channelA', gateList: ['roundTrip'], meaning: 'one line per standard that ran, and one per standard LAYER that ran (token \'<standard>:<layerKey>\', e.g. \'ceds:des\'; lane DES): what its round trip omitted by declaration, by kind with counts, the rule (module) that declares it, and the rule\'s caveat — e.g. "pesccollegetranscript1v8v0: whitespace 28,428, comment 907, processingInstruction 4 (rule: lib/pesc-release-forge/roundTripPair.js); comments may carry content (PLAN G20)" (G21)' },
+	{ name: 'explicitOmissionDeclarationList', type: 'stringList', channel: 'channelA', gateList: ['roundTrip'], meaning: 'one line per standard that ran, and one per standard LAYER that ran (token \'<standard>:<layerKey>\', e.g. \'ceds:guide\'; lane DES): what its round trip omitted by declaration, by kind with counts, the rule (module) that declares it, and the rule\'s caveat — e.g. "pesccollegetranscript1v8v0: whitespace 28,428, comment 907, processingInstruction 4 (rule: lib/pesc-release-forge/roundTripPair.js); comments may carry content (PLAN G20)" (G21)' },
 	{ name: 'standardCount', type: 'integer', channel: 'channelA', gateList: ['roundTrip'], meaning: 'how many standards the round trip ran over; a standard\'s layers are not counted (they add lines to explicitOmissionDeclarationList)' },
 	{ name: 'exemplarCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'], meaning: 'usage-pattern exemplars re-executed against the finished graph' },
 	{ name: 'verifiedCount', type: 'integer', channel: 'channelB', gateList: ['usagePatternVerification'], meaning: 'exemplars that returned rows against the finished graph' },
@@ -413,7 +413,7 @@ const layerScopeRule = () => {
 		layerLabel: STANDARD_LAYER_LABEL,
 		layerRoleList: LAYER_ROLE_LIST.slice(),
 		schemaBlockKindList: SCHEMA_BLOCK_KINDS.slice(),
-		rule: 'a node labelled StandardLayer belongs to a LAYER of its standard (a separately published companion such as the CEDS Domain Entity Schema V13), not to the standard itself: exclude it from a standard\'s counts, searches and name lookups, and reach it through the layer edges (HAS_LAYER, HAS_DES_*, PLACES_PROPERTY, REPAIRS_TEXT_OF)',
+		rule: 'a node labelled StandardLayer belongs to a LAYER of its standard (a separately published companion such as the CEDS Ontology Guide V14 Appendix A), not to the standard itself: exclude it from a standard\'s counts, searches and name lookups, and reach it through the layer edges (HAS_LAYER, HAS_PRIMARY_CONCEPT, HAS_SECONDARY_CONCEPT, HAS_EVENT_DATE_CONCEPT, REPAIRS_TEXT_OF)',
 	};
 };
 

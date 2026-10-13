@@ -1,18 +1,17 @@
 {
-  // cedsLayersRoundTrip — CEDS with its hub AND its three LAYERS (lane DES, campaign cedsRichness-101226, 2026-10-12):
-  // the Domain Entity Schema V13 (des), the Ontology Guide V14 Appendix A (guide) and the U+FFFD text repairs (textRepair),
-  // each its own block of kind 'layer' beside the byte-identical CEDS base. roundTripStage true runs CEDS's round trip
+  // cedsLayersRoundTrip — CEDS with its hub AND its two LAYERS (lane DES, campaign cedsRichness-101226, 2026-10-12; the
+  // third, the V13 structure layer, was removed by lane UNDES, 2026-10-13): the Ontology Guide V14 Appendix A (guide) and the
+  // U+FFFD text repairs (textRepair), each its own block of kind 'layer' beside the byte-identical CEDS base. roundTripStage true runs CEDS's round trip
   // (with gate D, the V14 Elements workbook, inside it) AND each layer's own round trip against the materialized graph.
-  // The smallest build that proves the layer machinery end to end; the gold recipe goldJevCt17Layers adds the rest.
+  // The smallest build that proves the layer machinery end to end; the gold recipe goldJevCt17Concepts adds the rest.
   "schemaVersion": "1.0.0",
   "recipeName": "cedsLayersRoundTrip",
   "kind": "dev",
-  "description": "Forge CEDS with its hub and its three layers (des V13, guide V14 Appendix A, textRepair from IDS v14), and round-trip-validate the base and every layer against the materialized graph.",
+  "description": "Forge CEDS with its hub and its two layers (guide V14 Appendix A, textRepair from IDS v14), and round-trip-validate the base and every layer against the materialized graph.",
   "roundTripStage": true,
   "standards": [ { "token": "ceds", "version": "current" } ],
   "hubs": [ { "standard": "ceds" } ],
   "layers": [
-    { "standard": "ceds", "layer": "des" },
     { "standard": "ceds", "layer": "guide" },
     { "standard": "ceds", "layer": "textRepair" }
   ],

@@ -132,7 +132,7 @@ const openGraphReader = ({ boltUrl, user, password, standardSource } = {}, callb
 // plus the BASE endpoints those edges reach, read as identities only (stableId, role, labels, cedsId) — never the base's
 // vectors. Same leaf discipline as openGraphReader: the driver's Promises resolve to the callback here and nowhere else.
 //
-//   reader.readLayer(callback(errString, { nodes, edges, baseEndpointByStableId, basePropertyCedsIdList, baseQueryRowListByName }))
+//   reader.readLayer(callback(errString, { nodes, edges, baseEndpointByStableId, baseQueryRowListByName }))
 // baseQueryList (optional) = [{ queryName, cypherText }]: further READ queries a layer's validator needs over the BASE (run in a
 // READ session, parameters $source and $layerKey bound), each answered as rows of plain objects under its queryName.
 //   reader.close(callback(errString))
@@ -187,28 +187,22 @@ const openLayerGraphReader = ({ boltUrl, user, password, standardSource, layerKe
 							});
 							return { type: oneRecord.get('type'), fromStableId: oneRecord.get('fromStableId'), toStableId: oneRecord.get('toStableId'), properties: unwrapProperties(oneRecord.get('props')) };
 						});
-						// the base's property identities (cedsId only), so a validator can prove an id join COMPLETE, not only correct
-						return session
-							.run(`MATCH (p:StandardBase {_source:$source, role:'DmeProperty'}) RETURN p.cedsId AS cedsId ORDER BY cedsId`, parameterMap)
-							.then((propertyResult) => {
-								const basePropertyCedsIdList = propertyResult.records.map((oneRecord) => oneRecord.get('cedsId'));
-								const baseQueryRowListByName = {};
-								const runBaseQuery = (queryIndex) => {
-									if (queryIndex >= baseQueryList.length) {
-										finish('', { nodes, edges, baseEndpointByStableId, basePropertyCedsIdList, baseQueryRowListByName });
-										return;
-									}
-									const oneQuery = baseQueryList[queryIndex];
-									session
-										.run(oneQuery.cypherText, parameterMap)
-										.then((queryResult) => {
-											baseQueryRowListByName[oneQuery.queryName] = queryResult.records.map((oneRecord) => unwrapProperties(oneRecord.toObject()));
-											runBaseQuery(queryIndex + 1);
-										})
-										.catch((queryError) => finish(`${moduleName} base query '${oneQuery.queryName}' failed: ${queryError.message}`));
-								};
-								runBaseQuery(0);
-							});
+						const baseQueryRowListByName = {};
+						const runBaseQuery = (queryIndex) => {
+							if (queryIndex >= baseQueryList.length) {
+								finish('', { nodes, edges, baseEndpointByStableId, baseQueryRowListByName });
+								return;
+							}
+							const oneQuery = baseQueryList[queryIndex];
+							session
+								.run(oneQuery.cypherText, parameterMap)
+								.then((queryResult) => {
+									baseQueryRowListByName[oneQuery.queryName] = queryResult.records.map((oneRecord) => unwrapProperties(oneRecord.toObject()));
+									runBaseQuery(queryIndex + 1);
+								})
+								.catch((queryError) => finish(`${moduleName} base query '${oneQuery.queryName}' failed: ${queryError.message}`));
+						};
+						runBaseQuery(0);
 					});
 			})
 			.catch((readError) => finish(`${moduleName} layer read failed: ${readError.message}`));

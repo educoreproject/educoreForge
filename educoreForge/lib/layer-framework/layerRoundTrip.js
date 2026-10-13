@@ -6,7 +6,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // cedsRichness-101226, 2026-10-12). A layer's validator supplies two pure-ish functions and gets the RT-13 entry point:
 //
 //   sourceStatementsOf({ snapshotPath, layerGraph }, callback(errString, Map<statementKey, statement>)) — from the SOURCE
-//       bytes; layerGraph is handed in ONLY for the base's identities (basePropertyCedsIdList), which a join statement needs
+//       bytes; layerGraph is handed in ONLY for what the reader read of the BASE (baseEndpointByStableId, baseQueryRowListByName)
 //   graphStatementsOf({ layerGraph }) -> { error } | { graphStatements: Map }               — re-emitted from the GRAPH
 //
 //   validatorFor({ standardSource, layerKey, verdictVersion, semanticValidationLimit, sourceStatementsOf, graphStatementsOf,
@@ -138,7 +138,6 @@ const layerGraphOfStampedGraph = ({ stampedGraph, baseNodeEdges }) => {
 		nodes: stampedGraph.nodes.map((oneNode) => ({ stableId: oneNode.stableId, labels: oneNode.labels.slice(), role: oneNode.properties.role, properties: { ...oneNode.properties, stableId: oneNode.stableId } })),
 		edges,
 		baseEndpointByStableId,
-		basePropertyCedsIdList: (baseNodeEdges.nodes || []).filter((oneNode) => unwrap(oneNode.properties.role) === 'DmeProperty').map((oneNode) => unwrap(oneNode.properties.cedsId)),
 	};
 };
 

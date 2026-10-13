@@ -47,12 +47,12 @@ const runForgeSection = (done) => {
 		const nodeList = forged.stampedGraph.nodes;
 		const rootNode = nodeList.find((oneNode) => oneNode.properties.role === vocabulary.DME_ROLES.LAYER_ROOT);
 		harness.equal('the framework minted the layer root at the namespace + key + version', rootNode && rootNode.stableId, `${LAYER_NAMESPACE}toy/1/`);
-		harness.equal('the root carries the producer\'s counts', rootNode && rootNode.properties.areaCount, 2);
-		harness.equal('the root carries the snapshot\'s verified checksum', rootNode && JSON.parse(rootNode.properties.sourceFileChecksumText)['toyAreaList.txt'].length, 64);
+		harness.equal('the root carries the producer\'s counts', rootNode && rootNode.properties.repairCount, 2);
+		harness.equal('the root carries the snapshot\'s verified checksum', rootNode && JSON.parse(rootNode.properties.sourceFileChecksumText)['toyRepairList.txt'].length, 64);
 		harness.ok('every layer node carries _source, layerKey, layerVersion, uri and the ForgedNode + layer labels', nodeList.every((oneNode) => oneNode.properties._source === 'TOY' && oneNode.properties.layerKey === 'toy' && oneNode.properties.layerVersion === '1' && oneNode.properties.uri === oneNode.stableId && oneNode.labels.indexOf('ForgedNode') !== -1 && oneNode.labels.indexOf('ToyLayer') !== -1));
 		harness.ok('HAS_LAYER runs from the standard root to the layer root', forged.stampedGraph.edges.some((oneEdge) => oneEdge.type === 'HAS_LAYER' && oneEdge.fromRef.id === 'https://example.invalid/toyKit/' && oneEdge.toRef.id === rootNode.stableId));
-		harness.equal('the harvest edge types are HAS_LAYER plus the declared types', forged.harvestEdgeTypeList.join(','), 'HAS_LAYER,HAS_DES_DOMAIN,PLACES_PROPERTY');
-		harness.equal('layer stats count roles', JSON.stringify(forged.layerStats.nodeCountByRole), JSON.stringify({ DmeLayerRoot: 1, DmeArea: 2 }));
+		harness.equal('the harvest edge types are HAS_LAYER plus the declared types', forged.harvestEdgeTypeList.join(','), 'HAS_LAYER,DECLARES_REPAIR,REPAIRS_TEXT_OF');
+		harness.equal('layer stats count roles', JSON.stringify(forged.layerStats.nodeCountByRole), JSON.stringify({ DmeLayerRoot: 1, DmeTextRepair: 2 }));
 		done();
 	});
 };
@@ -85,16 +85,16 @@ const runIntegritySection = (done) => {
 	harness.section('integrity refusals — each driven by a produced graph that breaks exactly it');
 	const baseIndex = layerFramework.buildBaseIndex({ baseNodeEdges: toyBaseNodeEdges });
 	const layerIdentity = layerFramework.layerIdentityFor({ resolvedLayer: { layerKey: 'toy', layerVersion: '1', layerLabel: 'ToyLayer' }, standardName: 'TOY', layerNamespace: LAYER_NAMESPACE });
-	const layerDeclaration = { roleList: [vocabulary.DME_ROLES.AREA], edgeTypeList: [vocabulary.EDGE_TYPES.HAS_DES_DOMAIN, vocabulary.EDGE_TYPES.PLACES_PROPERTY] };
-	const goodNode = { stableId: layerIdentity.stableIdFor('area', 'Alpha'), role: vocabulary.DME_ROLES.AREA, properties: { name: 'Alpha' } };
-	const goodEdge = { type: 'PLACES_PROPERTY', fromStableId: goodNode.stableId, toStableId: 'https://example.invalid/toyKit/P1', properties: { provenanceTier: 'spec-authoritative' } };
+	const layerDeclaration = { roleList: [vocabulary.DME_ROLES.TEXT_REPAIR], edgeTypeList: [vocabulary.EDGE_TYPES.DECLARES_REPAIR, vocabulary.EDGE_TYPES.REPAIRS_TEXT_OF] };
+	const goodNode = { stableId: layerIdentity.stableIdFor('repair', 'Alpha'), role: vocabulary.DME_ROLES.TEXT_REPAIR, properties: { name: 'Alpha' } };
+	const goodEdge = { type: 'REPAIRS_TEXT_OF', fromStableId: goodNode.stableId, toStableId: 'https://example.invalid/toyKit/P1', properties: { provenanceTier: 'spec-authoritative' } };
 	const refusalOf = ({ nodes, edges }) => layerFramework.integrityRefusal({ produced: { nodes, edges }, layerDeclaration, layerIdentity, baseIndex });
 	harness.equal('a well-formed graph passes', refusalOf({ nodes: [goodNode], edges: [goodEdge] }), '');
 	const caseList = [
 		['a node outside the id root', { nodes: [{ ...goodNode, stableId: 'https://elsewhere.invalid/x' }], edges: [] }, /outside the layer's id root/],
 		['a node minted twice', { nodes: [goodNode, goodNode], edges: [] }, /minted twice/],
 		['a data role (DmeProperty)', { nodes: [{ ...goodNode, role: 'DmeProperty' }], edges: [] }, /not a layer role/],
-		['a layer role the layer does not declare', { nodes: [{ ...goodNode, role: vocabulary.DME_ROLES.PLACEMENT }], edges: [] }, /not a layer role this layer declares/],
+		['a layer role the layer does not declare', { nodes: [{ ...goodNode, role: vocabulary.DME_ROLES.CONCEPT }], edges: [] }, /not a layer role this layer declares/],
 		['a node stamping a framework-owned property', { nodes: [{ ...goodNode, properties: { ...goodNode.properties, _source: 'X' } }], edges: [] }, /stamps '_source'/],
 		['a node with no name', { nodes: [{ ...goodNode, properties: {} }], edges: [] }, /carries no name/],
 		['a node with a null value', { nodes: [{ ...goodNode, properties: { name: 'A', definition: null } }], edges: [] }, /carries 'definition' with no value/],
@@ -108,19 +108,19 @@ const runIntegritySection = (done) => {
 };
 
 // the -goldEvalCheck certificate names, per round-trip token, the block it certified: a LAYER token its layer block
-// (RED FIRST on the real gold: evidence/DES/desCt17Layers-goldEvalCheck.log refused 'ceds:des' with NO standardBase member)
+// (RED FIRST on the real gold: evidence/DES/desCt17Layers-goldEvalCheck.log refused a layer token with NO standardBase member)
 const runCertificateSection = (done) => {
 	harness.section('certificate: a layer token names its LAYER block, read off the manifest member');
 	const { readBaseBlockIdByToken } = require('../../../apps/graph-builder/lib/certificate-enrichment');
 	const manifest = { refId: 'm1', members: [
 		{ kind: 'standardBase', subject: 'ceds@14_0_0_0_base', schemaBlockRefId: 'baseRefId' },
-		{ kind: 'layer', subject: 'ceds@14_0_0_0_layer_des@13', schemaBlockRefId: 'desLayerRefId' },
 		{ kind: 'layer', subject: 'ceds@14_0_0_0_layer_guide@14', schemaBlockRefId: 'guideLayerRefId' },
+		{ kind: 'layer', subject: 'ceds@14_0_0_0_layer_textRepair@14_0_0_0', schemaBlockRefId: 'textRepairLayerRefId' },
 	] };
-	const verdict = readBaseBlockIdByToken({ manifest, declaredTokenList: ['ceds', 'ceds:des', 'ceds:guide'] });
-	harness.equal('ceds -> its base; ceds:des and ceds:guide -> their layer blocks', JSON.stringify(verdict.value), JSON.stringify({ ceds: 'baseRefId', 'ceds:des': 'desLayerRefId', 'ceds:guide': 'guideLayerRefId' }));
-	const missing = readBaseBlockIdByToken({ manifest, declaredTokenList: ['ceds:textRepair'] });
-	harness.match('a layer token with no layer member is refused by name', missing.refusalMessage || '', /'ceds:textRepair' has NO layer member/);
+	const verdict = readBaseBlockIdByToken({ manifest, declaredTokenList: ['ceds', 'ceds:guide', 'ceds:textRepair'] });
+	harness.equal('ceds -> its base; ceds:guide and ceds:textRepair -> their layer blocks', JSON.stringify(verdict.value), JSON.stringify({ ceds: 'baseRefId', 'ceds:guide': 'guideLayerRefId', 'ceds:textRepair': 'textRepairLayerRefId' }));
+	const missing = readBaseBlockIdByToken({ manifest, declaredTokenList: ['ceds:ids'] });
+	harness.match('a layer token with no layer member is refused by name', missing.refusalMessage || '', /'ceds:ids' has NO layer member/);
 	done();
 };
 

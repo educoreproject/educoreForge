@@ -89,11 +89,12 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // ⟪forgeClean lane FIX, Fix 3, 2026-10-09 (PRISM_SHARD)⟫ +1 more, unrelated to V1: StandardDefinition.descriptionSource (TQ: the
 // provenance of each standard's description text), projected as one selfDocField member (measured: the member diff against
 // main 2fbbca10 is exactly that one row).
-// ⟪lane DES, cedsRichness-101226, 2026-10-12 (RADIANT_HORIZON)⟫ +27 more, unrelated to V1: the 15 layer edge types (HAS_LAYER,
-// the four HAS_DES_*, PLACES_ELEMENT, PLACES_PROPERTY, SAME_GLOBAL_ID_PROPERTY, DECLARES_ELEMENT, HAS_PRIMARY/SECONDARY_CONCEPT,
-// HAS_EVENT_DATE_CONCEPT, DECLARES_CONCEPT, REPAIRS_TEXT_OF, DECLARES_REPAIR), and the six layer roles projected twice each (a
-// dmeRole member and a DME role nodeLabel member, as DmeInstance is): 15 + 12 = 27, measured 316 -> 343.
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 27;
+// ⟪lane DES, cedsRichness-101226, 2026-10-12 (RADIANT_HORIZON); lane UNDES, 2026-10-13 (GRANITE_BEACON)⟫ +13 more, unrelated to
+// V1: the 7 layer edge types (HAS_LAYER, HAS_PRIMARY/SECONDARY_CONCEPT, HAS_EVENT_DATE_CONCEPT, DECLARES_CONCEPT, REPAIRS_TEXT_OF,
+// DECLARES_REPAIR) and the 3 layer roles projected twice each (a dmeRole member and a DME role nodeLabel member, as DmeInstance
+// is): 7 + 6 = 13. Lane DES added 27 (measured 316 -> 343); lane UNDES removed the V13 structure layer's 8 edge types and 3
+// roles, 8 + 6 = 14 (measured 343 -> 329).
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13;
 // ⟪campaign P3, W-C-2⟫ rows RETIRED from V1's own five: the real registry is AFTER_V1 + added − retired, and the pre-V1
 // reading (the remaining V1 rows removed) is BEFORE_V1 + added, unchanged.
 const SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1 = RETIRED_V1_EDGE_TYPE_NAME_LIST.length;
