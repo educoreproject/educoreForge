@@ -856,7 +856,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // test/test-sifEdgeVocabulary.js 6/5 (a54c85f7: the V13 structure layer's 8 edge types and 3 roles removed) and
 // lib/bridge-framework/test/test-bgNosub.js 17/3 (622bf9e7: lane UNDES's first re-anchor, which this gate watches and the first
 // sweep did not run). No bridge-framework source, no bridge-maker, build.js or interfaces.js.
-const P1_BASELINE_COMMIT = 'postUndesPescCompose-101326'; // re-anchored by GRANITE_BEACON (lane UNDES); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-13 (TWILIGHT_ORBIT; cedsRichness lane QUAL; pre-authorised) ═══ BG-COMPOSE-PESC postUndesPescCompose-101326 ->
+// postQualPescCompose-101326, tag cut ON this commit. Found red by the fleet at 37a43b5c (195/197; evidence/QUAL/fleet-qual37a43b5c.log,
+// redFirst-bgComposePesc-qual37a43b5c.log). CENSUS over this gate's paths (numstat from the old tag, 3 paths, all lane QUAL's):
+// lib/bridge-framework/evidenceRenderer.js 97/8 and bridge-framework.js 19/6 (ac3d329f, 6d0495a6, 37a43b5c: CEDS qualifiers in the
+// judge card name, identical rendered cards collapsed, a collapsed pick resolving to every member) and
+// lib/bridge-framework/test/test-bgQualifier.js 244/0 (21e5ca2a, 37a43b5c: the gate for it). No plugin, bridge-maker, build.js,
+// interfaces.js or vocabulary change: PESC still composes through the same seam with no plugin edit.
+const P1_BASELINE_COMMIT = 'postQualPescCompose-101326'; // re-anchored by TWILIGHT_ORBIT (lane QUAL); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
