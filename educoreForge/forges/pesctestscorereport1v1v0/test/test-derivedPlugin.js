@@ -265,6 +265,9 @@ const forgedGraphToDouble = ({ forged, scopeStableIdSet }) => {
 	// spread-reduce), so a double carrying all 8,997 forged nodes cannot materialise 1,367 edges in a test's time. The
 	// forge's whole graph stays the reference every forge-side literal below is read from.
 	const keptPescStableIdSet = new Set(pescNodeList.filter((oneNode) => scopeStableIdSet.has(oneNode.stableId) || oneNode.labels.indexOf(OCCURRENCE_LABEL) !== -1).map((oneNode) => oneNode.stableId));
+	// ⟪lane JEVQ⟫ the derived run now also reads each in-scope declaration's OWNER (parentId): its definition goes into Jev's
+	// question (owningConstructDefinitionSource), and an owner the run cannot read is refused by name, never skipped
+	pescNodeList.filter((oneNode) => scopeStableIdSet.has(oneNode.stableId) && typeof oneNode.properties.parentId === 'string').forEach((oneNode) => keptPescStableIdSet.add(oneNode.properties.parentId));
 	pescEdgeList.filter((oneEdge) => oneEdge.type === EDGE_TYPES.EMBEDS_TEXT_OF && keptPescStableIdSet.has(oneEdge.toStableId)).forEach((oneEdge) => keptPescStableIdSet.add(oneEdge.fromStableId));
 	const RUN_EDGE_TYPE_LIST = [EDGE_TYPES.HAS_INSTANCE, EDGE_TYPES.EMBEDS_TEXT_OF];
 	const runDouble = {

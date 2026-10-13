@@ -64,7 +64,10 @@ const RETIRED_CSV_FILE_NAME_LIST = Object.freeze(['EdFiEntityDescriptorsToCEDS.c
 // dd4cd021…); RE-ANCHORED 2026-10-06 by campaign P3 (W-B-5, CARDINAL_HORIZON): the plugin gained exactly the two opt-ins
 // its gold siblings declare (promptIdentifierScan with the hub id list, blockRecordsJudgeConfig) and nothing else — still
 // no channel (the second DERIVED check). The bytes stay pinned rather than trusted.
-const DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A = '272dd5ac50b63aaf1710f17cb09b4616638845b6b91406192fffa45be04dd7f7';
+// RE-ANCHORED 2026-10-13 by cedsRichness lane JEVQ (LUNAR_PEAK; pre-authorised; observed red at 01f2bb01, 16/17): 272dd5ac… ->
+// 9759ee02…. Census (numstat from main 317cba12, 6/1): judgePromptVariant 'derivedJudgeSlot' -> 'derivedJudgeSlotOwningDefinition'
+// and the owningConstructDefinitionSource declaration (owner by parentId, its description), with their comment. Still no channel.
+const DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A = '9759ee02b8ef25ce415506e353db89460433fe39ead83175c002026298829b0b';
 
 // a node property naming CEDS, or a cross-reference of any kind, can only have come from a crosswalk:
 // Ed-Fi's own MetaEd publishes no CEDS anchor (the walk's scan uses the same rule)
