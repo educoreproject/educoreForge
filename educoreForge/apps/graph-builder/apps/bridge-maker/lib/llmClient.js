@@ -751,7 +751,11 @@ const moduleFunction =
 		// is this client's own extra and is not part of the contract; test-build.js and test-useDebugJudge read
 		// it. wireModel is exposed rather than hidden so an operator can SEE what went on the wire — it is
 		// internal to the transport, not a secret.
-		return { name: PROVIDER_NAME, wireModel: cfg.wireModel, model: namespacedModel, maxConcurrency, rerank, describe, keySource: cfg.keySource, judgeConfig };
+		// ⟪lane JEVQ, ruling COPPER_RIVER⟫ modelForChoiceQuestionForm — this provider reads the TEXT prompt, which every split-question
+		// form renders identically, so its identity does not depend on the form (the variant's rendererVersion and promptHash
+		// keep the forms' cache rows apart). JUDGE_PROVIDER_SHAPE requires every provider to answer it.
+		const modelForChoiceQuestionForm = () => ({ model: namespacedModel });
+		return { name: PROVIDER_NAME, wireModel: cfg.wireModel, model: namespacedModel, maxConcurrency, rerank, describe, modelForChoiceQuestionForm, keySource: cfg.keySource, judgeConfig };
 	};
 
 // END OF moduleFunction() ============================================================

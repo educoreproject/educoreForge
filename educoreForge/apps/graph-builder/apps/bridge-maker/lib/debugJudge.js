@@ -409,6 +409,10 @@ const moduleFunction =
 			maxConcurrency: DEBUG_JUDGE_MAX_CONCURRENCY,
 			rerank,
 			describe,
+			// ⟪lane JEVQ, ruling COPPER_RIVER⟫ modelForChoiceQuestionForm — this provider reads the TEXT prompt (its rule digests it), which every split-question
+			// form renders identically, so its identity does not depend on the form (the variant's rendererVersion and promptHash
+			// keep the forms' cache rows apart). JUDGE_PROVIDER_SHAPE requires every provider to answer it.
+			modelForChoiceQuestionForm: () => ({ model: modelIdentifier }),
 			ruleName,
 			keySource: 'none',
 			decisionAlgorithm: DEBUG_MARK,

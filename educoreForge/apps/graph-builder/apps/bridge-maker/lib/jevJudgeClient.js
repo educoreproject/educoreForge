@@ -37,11 +37,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // The choice-question TEXTS are the renderer's and live in its promptHash preimage, not here (same-directory rule).
 //
 // ⟪THE QUESTION'S FORM IS PART OF THE IDENTITY⟫ (lane JEVQ, 2026-10-13, G11 lesson) The renderer builds the split question in
-// one of two forms (evidenceRenderer.js): today's, with Claude's system prompt in the state as matchingInstructions, or the
-// owning-definition form, with the owning construct's definition on the source element and no instructions. They are two
-// different questions, so a Jev configured for one ([jevJudge] choiceQuestionFormName) REFUSES the other by name, and the
-// configured form is hashed into the identity: a verdict on the new question can never be served as, or stamped as, the
-// old judge's. CHOICE_QUESTION_FORM_REGISTRY is the one place each form's shape is read.
+// one of two forms (evidenceRenderer.js): the instruction form, with Claude's system prompt in the state as
+// matchingInstructions, or the owning-definition form, with the owning construct's definition on the source element and no
+// instructions. They are two different questions under two identities. ⟪ruling COPPER_RIVER, 2026-10-13⟫ The form is chosen
+// PER BRIDGE (the plugin declares choiceQuestionFormName), so ONE Jev answers both: rerank takes the form by name with every
+// question and refuses a question whose shape disagrees, and modelForChoiceQuestionForm names the identity each form's
+// verdicts travel under. The instruction form's identity is the one Jev has always had (its preimage adds nothing); the
+// owning-definition form's preimage adds the form's name, so a verdict on one can never be served as the other's.
+// CHOICE_QUESTION_FORM_REGISTRY is the one place each form's shape and identity contribution are read.
 //
 // ⟪CATEGORY AND RATIONALE ARE DERIVED, AND SAY SO⟫ Jev reports a confidence, not a category, so the category
 // comes from configured confidence floors. The rationale is written HERE from Jev's own numbers and names the
@@ -70,23 +73,35 @@ const RELATION_DESCRIPTION_CONFIG_SUFFIX = 'Description';
 const CONFIG_IDENTITY_HASH_LENGTH = 12;
 // JEV_IDENTITY_CONFIG_KEY_LIST — the configured values the identity hashes, in this order (an array of [name, value]
 // pairs, so the preimage is canonical without a sort). Adding a value that changes an answer means adding it here.
-const JEV_IDENTITY_CONFIG_KEY_LIST = Object.freeze(['wireModel', 'requestForm', 'strongMinConfidence', 'moderateMinConfidence', 'relationInstructionText', 'relationDescriptionByPredicate', 'choiceQuestionFormName']);
-// CHOICE_QUESTION_FORM_REGISTRY — the split question's forms (lane JEVQ). questionFormNameOf reads which form a question is:
-// the owning-definition form stamps questionFormName; today's form carries no stamp (its split question keeps exactly the
-// members it always had), so an unstamped question IS the instruction form. relationSourceElementOf is what the relation
-// question asks about: the same source element in both forms, WITHOUT the owning definition, because the relation
-// question is not this lane's to change.
+const JEV_IDENTITY_CONFIG_KEY_LIST = Object.freeze(['wireModel', 'requestForm', 'strongMinConfidence', 'moderateMinConfidence', 'relationInstructionText', 'relationDescriptionByPredicate']);
+// CHOICE_QUESTION_FORM_REGISTRY — the split question's forms (lane JEVQ), by the name rerank is handed with each question.
+//   questionStampName       what the split question's own questionFormName member must hold: the owning-definition form
+//                           stamps its name; the instruction form carries no stamp (its split question keeps exactly the
+//                           members it always had), so for it the member must be ABSENT. A disagreement is refused.
+//   identityPreimagePairList  what the form adds to the identity preimage after JEV_IDENTITY_CONFIG_KEY_LIST's pairs: nothing
+//                           for the instruction form (the identity Jev has always had), the form's name for the other
+//   relationSourceElementOf what the relation question asks about: the same source element in both forms, WITHOUT the
+//                           owning definition, because the relation question is not this lane's to change
 const CHOICE_QUESTION_FORM_NAME_INSTRUCTION_STATE = 'matchingInstructionsState';
+const CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE = 'owningConstructDefinitionState';
 const CHOICE_QUESTION_FORM_REGISTRY = Object.freeze({
 	[CHOICE_QUESTION_FORM_NAME_INSTRUCTION_STATE]: Object.freeze({
+		questionStampName: undefined,
+		identityPreimagePairList: Object.freeze([]),
 		relationSourceElementOf: (choiceQuestion) => choiceQuestion.stateObject.sourceElement,
 	}),
-	owningConstructDefinitionState: Object.freeze({
+	[CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE]: Object.freeze({
+		questionStampName: CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE,
+		identityPreimagePairList: Object.freeze([Object.freeze(['choiceQuestionFormName', CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE])]),
 		relationSourceElementOf: (choiceQuestion) => choiceQuestion.relationStateSourceElement,
 	}),
 });
 const CHOICE_QUESTION_FORM_NAME_LIST = Object.freeze(Object.keys(CHOICE_QUESTION_FORM_REGISTRY));
-const questionFormNameOf = (choiceQuestion) => (choiceQuestion.questionFormName === undefined ? CHOICE_QUESTION_FORM_NAME_INSTRUCTION_STATE : choiceQuestion.questionFormName);
+// RETIRED_CONFIG_KEY_REASON_BY_NAME — keys this section no longer reads, refused by name rather than ignored, because an
+// operator who sets one believes it decides something
+const RETIRED_CONFIG_KEY_REASON_BY_NAME = Object.freeze({
+	choiceQuestionFormName: 'the split question\'s form is declared PER BRIDGE in the bridge plugin (choiceQuestionFormName), and Jev answers every registered form under its own identity (ruling COPPER_RIVER, 2026-10-13); remove the key',
+});
 const ABSTAIN_OPTION_NAME = 'NONE';
 const ABSTAIN_CATEGORY_NAME = 'none';
 const REQUEST_FORM_NAME_LIST = Object.freeze(['data', 'string']);
@@ -95,7 +110,10 @@ const REQUEST_FORM_NAME_LIST = Object.freeze(['data', 'string']);
 // SIF run was killed by a single 520 after one attempt (2026-10-01), so they are retried like the 50x family.
 // 529 is Jev's own 'system_overloaded' ("try again later"); leftovers lane R's metaBuild1 SIF run was killed by a single 529
 // after one attempt (2026-10-05), so it is retried the same way (VIOLET_VALLEY).
-const RETRYABLE_STATUS_CODE_LIST = Object.freeze([429, 500, 502, 503, 504, 520, 521, 522, 523, 524, 529]);
+// 499 is Jev's 'internal_error' ("Unable to complete this request"); lane JEVQ's first gold build died on a single one in its
+// SIF bridge (2026-10-13, request req_01a136cd…), so it is retried the same way (ruling COPPER_RIVER). Every retry is bounded
+// by maxAttempts and LOGGED (retryNote), so a run that survived one says so.
+const RETRYABLE_STATUS_CODE_LIST = Object.freeze([429, 499, 500, 502, 503, 504, 520, 521, 522, 523, 524, 529]);
 
 const requiredValueOrThrow = (sectionConfig, configKeyName, configFilePath) => {
 	const rawValue = sectionConfig[configKeyName];
@@ -138,9 +156,9 @@ const resolveConfigOrThrow = (configFilePath) => {
 	if (REQUEST_FORM_NAME_LIST.indexOf(requestForm) === -1) {
 		throw new Error(`${moduleName}: [${CONFIG_SECTION_NAME}].requestForm is '${requestForm}' in ${configFilePath}; the forms are: ${REQUEST_FORM_NAME_LIST.join(', ')}.`);
 	}
-	const choiceQuestionFormName = requiredValueOrThrow(sectionConfig, 'choiceQuestionFormName', configFilePath);
-	if (CHOICE_QUESTION_FORM_NAME_LIST.indexOf(choiceQuestionFormName) === -1) {
-		throw new Error(`${moduleName}: [${CONFIG_SECTION_NAME}].choiceQuestionFormName is '${choiceQuestionFormName}' in ${configFilePath}; the forms are: ${CHOICE_QUESTION_FORM_NAME_LIST.join(', ')}.`);
+	const retiredKeyList = Object.keys(RETIRED_CONFIG_KEY_REASON_BY_NAME).filter((configKeyName) => sectionConfig[configKeyName] !== undefined);
+	if (retiredKeyList.length) {
+		throw new Error(`${moduleName}: [${CONFIG_SECTION_NAME}] in ${configFilePath} sets retired key(s): ${retiredKeyList.map((configKeyName) => `${configKeyName} (${RETIRED_CONFIG_KEY_REASON_BY_NAME[configKeyName]})`).join('; ')}.`);
 	}
 	const strongMinConfidence = unitIntervalOrThrow(requiredValueOrThrow(sectionConfig, 'strongMinConfidence', configFilePath), 'strongMinConfidence', configFilePath);
 	const moderateMinConfidence = unitIntervalOrThrow(requiredValueOrThrow(sectionConfig, 'moderateMinConfidence', configFilePath), 'moderateMinConfidence', configFilePath);
@@ -166,7 +184,6 @@ const resolveConfigOrThrow = (configFilePath) => {
 		requestForm,
 		strongMinConfidence,
 		moderateMinConfidence,
-		choiceQuestionFormName,
 	};
 };
 
@@ -222,14 +239,15 @@ const rationaleFor = ({ choiceQuestion, answer, model }) => {
 // configIdentityHashFor — JEV_IDENTITY_CONFIG_KEY_LIST's values, hashed for the model identity (no cache key carries
 // them, so the identity must). relationDescriptionByPredicate is read in PICK_PREDICATE_ENUM order for the same reason
 // the pairs are an array: the preimage must not depend on object member order.
-const configIdentityHashFor = (cfg) =>
+// The question form's pairs follow (CHOICE_QUESTION_FORM_REGISTRY.identityPreimagePairList).
+const configIdentityHashFor = (cfg, choiceQuestionFormName) =>
 	crypto
 		.createHash('sha256')
 		.update(
 			JSON.stringify(
 				JEV_IDENTITY_CONFIG_KEY_LIST.map((oneConfigName) =>
 					oneConfigName === 'relationDescriptionByPredicate' ? [oneConfigName, PICK_PREDICATE_ENUM.map((predicateName) => [predicateName, cfg.relationDescriptionByPredicate[predicateName]])] : [oneConfigName, cfg[oneConfigName]],
-				),
+				).concat(CHOICE_QUESTION_FORM_REGISTRY[choiceQuestionFormName].identityPreimagePairList),
 			),
 		)
 		.digest('hex')
@@ -237,9 +255,9 @@ const configIdentityHashFor = (cfg) =>
 
 // buildRelationPayload — the second question: the source element and the ONE candidate Jev chose, and the four
 // relations as options. Both objects come from choiceQuestion and are shaped by the same requestForm.
-const buildRelationPayload = ({ choiceQuestion, chosenOptionName, wireModel, requestForm, relationInstructionText, relationDescriptionByPredicate }) => {
+const buildRelationPayload = ({ choiceQuestion, choiceQuestionFormName, chosenOptionName, wireModel, requestForm, relationInstructionText, relationDescriptionByPredicate }) => {
 	const shape = requestForm === 'string' ? asFieldLines : (fieldObject) => fieldObject;
-	const relationSourceElement = CHOICE_QUESTION_FORM_REGISTRY[questionFormNameOf(choiceQuestion)].relationSourceElementOf(choiceQuestion);
+	const relationSourceElement = CHOICE_QUESTION_FORM_REGISTRY[choiceQuestionFormName].relationSourceElementOf(choiceQuestion);
 	return {
 		state: { sourceElement: shape(relationSourceElement), chosenCandidate: shape(choiceQuestion.criteriaByChoice[chosenOptionName]) },
 		model: wireModel,
@@ -308,8 +326,19 @@ const answerRefusal = ({ answer, choiceEnum, questionId }) => {
 const moduleFunction = (constructionOptions = {}) => {
 	const { configFilePath = defaultConfigFilePath, componentOverrides = {} } = constructionOptions;
 	const cfg = resolveConfigOrThrow(configFilePath);
-	const configIdentityHash = configIdentityHashFor(cfg);
-	const namespacedModel = `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${cfg.wireModel}${MODEL_NAMESPACE_SEPARATOR}${cfg.requestForm}${MODEL_NAMESPACE_SEPARATOR}cfg-${configIdentityHash}`;
+	// modelByChoiceQuestionFormName — one identity per form. `model` (the provider's identity, JUDGE_PROVIDER_SHAPE) is the
+	// instruction form's: the identity this Jev has always had, and the one every question of a single-form variant gets.
+	const modelByChoiceQuestionFormName = CHOICE_QUESTION_FORM_NAME_LIST.reduce(
+		(soFar, choiceQuestionFormName) => ({ ...soFar, [choiceQuestionFormName]: `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${cfg.wireModel}${MODEL_NAMESPACE_SEPARATOR}${cfg.requestForm}${MODEL_NAMESPACE_SEPARATOR}cfg-${configIdentityHashFor(cfg, choiceQuestionFormName)}` }),
+		{},
+	);
+	const namespacedModel = modelByChoiceQuestionFormName[CHOICE_QUESTION_FORM_NAME_INSTRUCTION_STATE];
+	const modelForChoiceQuestionForm = (choiceQuestionFormName) =>
+		modelByChoiceQuestionFormName[choiceQuestionFormName] === undefined
+			? { error: `${moduleName}: no choice-question form '${choiceQuestionFormName}'; the forms are: ${CHOICE_QUESTION_FORM_NAME_LIST.join(', ')}` }
+			: { model: modelByChoiceQuestionFormName[choiceQuestionFormName] };
+	// retryNote — one line per retried attempt, so a run that survived a transient fault says which and how often
+	const retryNote = componentOverrides.retryNote || ((noteText) => process.stderr.write(`${noteText}\n`));
 
 	const realPostOnce = ({ payload }, postCallback) => {
 		const body = JSON.stringify(payload);
@@ -355,6 +384,7 @@ const moduleFunction = (constructionOptions = {}) => {
 				const statusCode = postResult ? postResult.statusCode : null;
 				const isRetryable = !!postError || RETRYABLE_STATUS_CODE_LIST.indexOf(statusCode) !== -1;
 				if (isRetryable && attemptNumber < cfg.maxAttempts) {
+					retryNote(`${moduleName}: '${questionId}' attempt ${attemptNumber} of ${cfg.maxAttempts} failed (${postError ? `${postError}`.slice(0, 200) : `HTTP ${statusCode}: ${`${postResult.responseText}`.slice(0, 200)}`}); retrying`);
 					attemptOnce(attemptNumber + 1);
 					return;
 				}
@@ -389,7 +419,7 @@ const moduleFunction = (constructionOptions = {}) => {
 	// Under a rule with no slot (categoryTable-v1) the verdict carries NO predicate key: judgeComponent counts a
 	// present key as discarded. On NONE the slot holds the rule's abstain value and no second call is made.
 	const rerank = (rerankOptions = {}, callback) => {
-		const { choiceQuestion, choiceEnum, predicateRule } = rerankOptions;
+		const { choiceQuestion, choiceQuestionFormName, choiceEnum, predicateRule } = rerankOptions;
 		if (!choiceQuestion || !choiceQuestion.stateObject || !choiceQuestion.instructionText || !choiceQuestion.criteriaByChoice) {
 			callback(`${moduleName}: rerank received no choiceQuestion {stateObject, instructionText, criteriaByChoice}. The renderer's variant must declare subjectData and candidateData for Jev to judge it; there is no text parse to fall back to.`);
 			return;
@@ -398,10 +428,16 @@ const moduleFunction = (constructionOptions = {}) => {
 			callback(`${moduleName}: rerank received no choiceEnum.`);
 			return;
 		}
-		if (questionFormNameOf(choiceQuestion) !== cfg.choiceQuestionFormName) {
-			callback(`${moduleName}: rerank received a '${questionFormNameOf(choiceQuestion)}' split question, and this Jev is configured to answer '${cfg.choiceQuestionFormName}' ([${CONFIG_SECTION_NAME}].choiceQuestionFormName). They are different questions under different identities; set the form the renderer's variant builds.`);
+		const formRow = CHOICE_QUESTION_FORM_REGISTRY[choiceQuestionFormName];
+		if (formRow === undefined) {
+			callback(`${moduleName}: rerank received choiceQuestionFormName ${JSON.stringify(choiceQuestionFormName)}; the forms are: ${CHOICE_QUESTION_FORM_NAME_LIST.join(', ')}. The framework hands every question its bridge's form; there is no default.`);
 			return;
 		}
+		if (choiceQuestion.questionFormName !== formRow.questionStampName) {
+			callback(`${moduleName}: rerank was told the split question is '${choiceQuestionFormName}', and the question's own questionFormName is ${JSON.stringify(choiceQuestion.questionFormName)} (that form's is ${JSON.stringify(formRow.questionStampName)}). They are different questions under different identities; refused rather than answered as either.`);
+			return;
+		}
+		const formModel = modelByChoiceQuestionFormName[choiceQuestionFormName];
 		if (PREDICATE_RULE_NAME_LIST.indexOf(predicateRule) === -1) {
 			callback(`${moduleName}.rerank: ${unknownPredicateRuleRefusalText(predicateRule)}`);
 			return;
@@ -419,8 +455,8 @@ const moduleFunction = (constructionOptions = {}) => {
 			const pickVerdict = {
 				choice,
 				category: categoryFor({ choice, confidence: answer.confidence, strongMinConfidence: cfg.strongMinConfidence, moderateMinConfidence: cfg.moderateMinConfidence }),
-				rationale: rationaleFor({ choiceQuestion, answer, model: namespacedModel }),
-				model: namespacedModel,
+				rationale: rationaleFor({ choiceQuestion, answer, model: formModel }),
+				model: formModel,
 				attempts: pickResult.attempts,
 				usage: pickResult.usage,
 				// ⟪campaign P3, W-B-3 (V1-C08, G7)⟫ Jev's OWN numbers in the declared shape (vocabulary JUDGE_SUMMARY_FIELD_LIST),
@@ -437,7 +473,7 @@ const moduleFunction = (constructionOptions = {}) => {
 				callback('', { ...pickVerdict, [predicateField.fieldName]: predicateField.abstainValue });
 				return;
 			}
-			const relationPayload = buildRelationPayload({ choiceQuestion, chosenOptionName: choice, wireModel: cfg.wireModel, requestForm: cfg.requestForm, relationInstructionText: cfg.relationInstructionText, relationDescriptionByPredicate: cfg.relationDescriptionByPredicate });
+			const relationPayload = buildRelationPayload({ choiceQuestion, choiceQuestionFormName, chosenOptionName: choice, wireModel: cfg.wireModel, requestForm: cfg.requestForm, relationInstructionText: cfg.relationInstructionText, relationDescriptionByPredicate: cfg.relationDescriptionByPredicate });
 			askJev({ payload: relationPayload, questionId: RELATION_QUESTION_ID, offeredOptionList: predicateField.pickValueList }, (relationError, relationResult) => {
 				if (relationError) {
 					callback(`${moduleName}: Jev picked '${choice}' but the relation question failed: ${relationError}`);
@@ -467,6 +503,7 @@ const moduleFunction = (constructionOptions = {}) => {
 		// categoryFloorByCategory — the confidence floors the bands came from (W-B-6): Jev reports a number, the
 		// category is derived here, so a frozen block must say which floors derived it.
 		judgeConfig: Object.freeze({ temperaturePolicy: 'notOffered', maxTokens: null, categoryFloorByCategory: Object.freeze({ strong: cfg.strongMinConfidence, moderate: cfg.moderateMinConfidence }) }),
+		modelForChoiceQuestionForm,
 		rerank,
 		describe,
 	};

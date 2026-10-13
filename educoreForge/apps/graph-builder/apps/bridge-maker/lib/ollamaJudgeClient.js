@@ -678,6 +678,10 @@ const moduleFunction =
 				maxConcurrency: cfg.maxConcurrency,
 				rerank,
 				describe,
+				// ⟪lane JEVQ, ruling COPPER_RIVER⟫ modelForChoiceQuestionForm — this provider reads the TEXT prompt, which every split-question
+				// form renders identically, so its identity does not depend on the form (the variant's rendererVersion and promptHash
+				// keep the forms' cache rows apart). JUDGE_PROVIDER_SHAPE requires every provider to answer it.
+				modelForChoiceQuestionForm: () => ({ model: namespacedModel }),
 				endpoint: `${cfg.endpointHostName}:${cfg.endpointPortNumber}`,
 				// judgeConfig — what rerank sends besides the prompts: temperature 0 always, and numPredict as the token budget
 				judgeConfig: Object.freeze({ temperaturePolicy: 'zero', maxTokens: cfg.numPredict }),

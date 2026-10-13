@@ -462,6 +462,11 @@ const JUDGE_PROVIDER_SHAPE = Object.freeze({
 		maxConcurrency: 'positiveInteger',
 		rerank: 'function',
 		describe: 'function',
+		// ⟪lane JEVQ, ruling COPPER_RIVER 2026-10-13⟫ modelForChoiceQuestionForm(choiceQuestionFormName) → { model } | { error }:
+		// the identity this provider's verdicts on THAT split-question form travel under. The form is chosen per bridge, so
+		// the framework asks once per bridge and judges that bridge under the answer (bridge-framework.js). A provider that
+		// reads only the text prompt answers its own model for every form; Jev answers one identity per form.
+		modelForChoiceQuestionForm: 'function',
 		// judgeConfig — what the provider sends besides the prompts, a FROZEN { temperaturePolicy, maxTokens }: a
 		// non-empty string and a positive integer, or null when there is no wire (the debug judge). A plugin that
 		// declares blockRecordsJudgeConfig copies it into the decision block header (lib/bridge-framework/

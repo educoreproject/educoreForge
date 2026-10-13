@@ -64,11 +64,12 @@ const bridgeDeclaration = Object.freeze({
 		subject: ['name', 'description', 'relativePath', 'contextText', 'instanceCount', 'objectNameSampleList', 'objectDomain'],
 		candidate: ['name', 'propertyDefinition', 'domainName', 'domainDefinition', 'rangeOptionSetName', 'rangeOptionSetDefinition', 'rangeClassName', 'rangeClassDefinition', 'componentIdeaList'],
 	},
-	judgePromptVariant: 'derivedJudgeSlotOwningDefinition',
-	// ⟪lane JEVQ, 2026-10-13⟫ SIF publishes no definition for its objects, so Jev's split question carries none, and every
-	// SIF judgment records why. Measured on GOLD_EVAL_261013_cedsConcepts: 0 of 159 Sif260928Object nodes carry a
-	// description (or any definition text), and a Question's parent is the standard root, not an object. Never borrowed.
-	owningConstructDefinitionSource: { kind: 'none', reason: 'SIF 260928 publishes no definition text for its objects (0 of 159 Sif260928Object nodes carry one)' },
+	judgePromptVariant: 'derivedJudgeSlot',
+	// ⟪lane JEVQ, ruling COPPER_RIVER 2026-10-13⟫ THE SPLIT QUESTION'S FORM, per bridge. SIF keeps the instruction form (Claude's
+	// prompt as matchingInstructions) and the judge identity it has always had: SIF publishes no definition for its objects
+	// (0 of 159 Sif260928Object nodes carry one), so the owning-definition form would only remove the instructions, and the
+	// gate measured that SIF then picks more and is wrong more often (DEVLOG-JEVQ §5.2, §5.3, §5C).
+	choiceQuestionFormName: 'matchingInstructionsState',
 	// the judge names the relation itself through the tool's predicate slot, so no category table is declared
 	predicateSource: { kind: 'judge', predicateRule: 'judgeSlot-v1' },
 	mappingTool: { name: 'educoreForge bridge-framework derived', version: '1.0.0' },

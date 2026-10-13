@@ -42,8 +42,10 @@ process.env[TEST_KEY_VARIABLE_NAME] = 'test-key-not-real';
 
 const scratchDirectoryPath = fs.mkdtempSync(path.join(os.tmpdir(), 'jevJudgeClientTest-'));
 
+const iniValueByKey = {};
 const iniTextFor = (overrideByKey = {}) => {
 	const valueByKey = Object.assign(
+		{},
 		{
 			endpointHostName: 'api.example.invalid',
 			endpointPath: '/v1/systemone',
@@ -60,11 +62,13 @@ const iniTextFor = (overrideByKey = {}) => {
 			closeMatchDescription: 'Close match: similar enough for most contexts.',
 			broadMatchDescription: 'Broad match: the chosen candidate is more general.',
 			narrowMatchDescription: 'Narrow match: the chosen candidate is more specific.',
-			// lane JEVQ: this suite's choiceQuestion is today's form; the owning-definition form has its own cases below
-			choiceQuestionFormName: 'matchingInstructionsState',
 		},
 		overrideByKey,
 	);
+	// lane JEVQ: the base values, kept once, for the identity cases' independent preimage
+	if (Object.keys(overrideByKey).length === 0 && Object.keys(iniValueByKey).length === 0) {
+		Object.assign(iniValueByKey, valueByKey);
+	}
 	return ['[jevJudge]']
 		.concat(Object.keys(valueByKey).filter((oneKey) => valueByKey[oneKey] !== null).map((oneKey) => `${oneKey}=${valueByKey[oneKey]}`))
 		.join('\n');
@@ -125,10 +129,14 @@ const choiceQuestion = {
 	},
 };
 const choiceEnum = ['1', '2', 'NONE'];
-// lane JEVQ: the same question in the owning-definition form, shaped as evidenceRenderer's owningDefinitionChoiceStateFor
-// builds it (questionFormName stamp, state { sourceElement + definition }, relationStateSourceElement without it)
+// ⟪lane JEVQ, ruling COPPER_RIVER 2026-10-13⟫ the split question's form is per bridge and travels with every question by name.
+// The cases above this lane's ask in the instruction form; the owning-definition form has its own cases below.
+const INSTRUCTION_FORM = 'matchingInstructionsState';
+const OWNING_DEFINITION_FORM = 'owningConstructDefinitionState';
+// the same question in the owning-definition form, shaped as evidenceRenderer's owningDefinitionChoiceStateFor builds it
+// (questionFormName stamp, state { sourceElement + definition }, relationStateSourceElement without it)
 const owningDefinitionChoiceQuestion = {
-	questionFormName: 'owningConstructDefinitionState',
+	questionFormName: OWNING_DEFINITION_FORM,
 	stateObject: { sourceElement: { ...choiceQuestion.stateObject.sourceElement, owningConstructDefinition: 'An organization that provides educational services.' } },
 	relationStateSourceElement: choiceQuestion.stateObject.sourceElement,
 	instructionText: choiceQuestion.instructionText,
@@ -170,14 +178,12 @@ harness.ok('rewording the relation instruction moves the identity', reinstructed
 harness.section('W-B-6: THE IDENTITY COVERS THE CATEGORY FLOORS AND EVERY RELATION DESCRIPTION');
 const moduleDouble = require(path.join(__dirname, '..', '..', '..', 'lib', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 const JEV_CLIENT_PATH = path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'jevJudgeClient.js');
-const KEY_LIST_FIND = "const JEV_IDENTITY_CONFIG_KEY_LIST = Object.freeze(['wireModel', 'requestForm', 'strongMinConfidence', 'moderateMinConfidence', 'relationInstructionText', 'relationDescriptionByPredicate', 'choiceQuestionFormName']);";
+const KEY_LIST_FIND = "const JEV_IDENTITY_CONFIG_KEY_LIST = Object.freeze(['wireModel', 'requestForm', 'strongMinConfidence', 'moderateMinConfidence', 'relationInstructionText', 'relationDescriptionByPredicate']);";
 const identityPairFor = (clientLib, overrideByKey) => [clientLib({ configFilePath: iniFilePathFor({}) }).model, clientLib({ configFilePath: iniFilePathFor(overrideByKey) }).model];
 [
 	{ label: 'strongMinConfidence', overrideByKey: { strongMinConfidence: '0.85' }, twinReplace: KEY_LIST_FIND.replace("'strongMinConfidence', ", '') },
 	{ label: 'moderateMinConfidence', overrideByKey: { moderateMinConfidence: '0.45' }, twinReplace: KEY_LIST_FIND.replace("'moderateMinConfidence', ", '') },
 	{ label: 'exactMatchDescription', overrideByKey: { exactMatchDescription: 'Exact match: reworded.' }, twinReplace: KEY_LIST_FIND.replace(", 'relationDescriptionByPredicate'", '') },
-	// lane JEVQ (G11 lesson): the split question's form is a different question, so it is a different judge
-	{ label: 'choiceQuestionFormName', overrideByKey: { choiceQuestionFormName: 'owningConstructDefinitionState' }, twinReplace: KEY_LIST_FIND.replace(", 'choiceQuestionFormName'", '') },
 ].forEach((oneCase) => {
 	const [baseModel, movedModel] = identityPairFor(jevJudgeClientLib, oneCase.overrideByKey);
 	harness.ok(`changing ONLY ${oneCase.label} moves the identity`, baseModel !== movedModel && MODEL_IDENTITY_RE.test(movedModel), `${baseModel} vs ${movedModel}`);
@@ -193,13 +199,28 @@ harness.match('moderate above strong is refused', constructionErrorFor({ moderat
 harness.match('an out-of-range confidence floor is refused', constructionErrorFor({ strongMinConfidence: '1.5' }), /must be a number from 0 to 1/);
 harness.match('an absent relation description is refused naming its key', constructionErrorFor({ narrowMatchDescription: null }), /\[jevJudge\]\.narrowMatchDescription is not configured/);
 harness.match('an absent relation instruction is refused naming its key', constructionErrorFor({ relationInstructionText: null }), /\[jevJudge\]\.relationInstructionText is not configured/);
-harness.match('an absent choiceQuestionFormName is refused naming its key (lane JEVQ)', constructionErrorFor({ choiceQuestionFormName: null }), /\[jevJudge\]\.choiceQuestionFormName is not configured/);
-harness.match('an unknown choiceQuestionFormName is refused listing the forms (lane JEVQ)', constructionErrorFor({ choiceQuestionFormName: 'claudePrompt' }), /choiceQuestionFormName is 'claudePrompt'.*matchingInstructionsState, owningConstructDefinitionState/);
+harness.match('lane JEVQ: the retired [jevJudge].choiceQuestionFormName is refused by name, saying the form is per bridge', constructionErrorFor({ choiceQuestionFormName: OWNING_DEFINITION_FORM }), /sets retired key\(s\): choiceQuestionFormName \(the split question's form is declared PER BRIDGE/);
+
+harness.section('LANE JEVQ: ONE IDENTITY PER SPLIT-QUESTION FORM; THE INSTRUCTION FORM KEEPS THE IDENTITY JEV HAS ALWAYS HAD');
+// identityHashFor — the identity preimage as main (before lane JEVQ) computed it, plus the form's pairs: written out here so
+// the client's own derivation is checked against an independent statement of it, not against itself
+const identityHashFor = (formPairList) => {
+	const relationDescriptionPairList = ['exactMatch', 'closeMatch', 'broadMatch', 'narrowMatch'].map((predicateName) => [predicateName, iniValueByKey[`${predicateName}Description`]]);
+	const pairList = [['wireModel', iniValueByKey.wireModel], ['requestForm', iniValueByKey.requestForm], ['strongMinConfidence', Number(iniValueByKey.strongMinConfidence)], ['moderateMinConfidence', Number(iniValueByKey.moderateMinConfidence)], ['relationInstructionText', iniValueByKey.relationInstructionText], ['relationDescriptionByPredicate', relationDescriptionPairList]].concat(formPairList);
+	return require('crypto').createHash('sha256').update(JSON.stringify(pairList)).digest('hex').slice(0, 12);
+};
+const instructionModelResult = dataProvider.modelForChoiceQuestionForm(INSTRUCTION_FORM);
+const owningModelResult = dataProvider.modelForChoiceQuestionForm(OWNING_DEFINITION_FORM);
+harness.equal('the instruction form answers the provider\'s own model', instructionModelResult.model, dataProvider.model);
+harness.equal('that model hashes exactly the pre-JEVQ preimage (so every verdict cached before the lane is still served)', dataProvider.model, `jev:jev-1.13.0:data:cfg-${identityHashFor([])}`);
+harness.equal('the owning-definition form answers the preimage plus its own name', owningModelResult.model, `jev:jev-1.13.0:data:cfg-${identityHashFor([['choiceQuestionFormName', OWNING_DEFINITION_FORM]])}`);
+harness.ok('the two forms are two identities', owningModelResult.model !== instructionModelResult.model && MODEL_IDENTITY_RE.test(owningModelResult.model), `${instructionModelResult.model} vs ${owningModelResult.model}`);
+harness.match('an unknown form is refused listing the forms', (dataProvider.modelForChoiceQuestionForm('claudePrompt') || {}).error, /no choice-question form 'claudePrompt'; the forms are: matchingInstructionsState, owningConstructDefinitionState/);
 harness.match('an unset key variable is refused naming the variable', constructionErrorFor({ apiKeyEnvironmentVariableName: 'JEV_JUDGE_CLIENT_TEST_KEY_UNSET' }), /JEV_JUDGE_CLIENT_TEST_KEY_UNSET .* is empty or unset/);
 
 const pickCase = ({ label, confidence, expectedCategory }) => (done) => {
 	const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence, probabilities: { 1: confidence, 2: 0.1, NONE: 0.05 } }) }]);
-	provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+	provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, systemPrompt: 's', userPrompt: 'u', choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
 		harness.section(label);
 		harness.ok('no error', !rerankError, rerankError);
 		harness.equal('choice is the pick', verdict && verdict.choice, '1');
@@ -221,7 +242,7 @@ const caseList = [
 	pickCase({ label: 'A PICK BELOW moderateMinConfidence IS weakButReal', confidence: 0.3, expectedCategory: 'weakButReal' }),
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, () => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, () => {
 			harness.section('THE data FORM SENDS OBJECTS');
 			const payload = transport.sentPayloadList[0];
 			harness.equal('a candidate is an object', typeof payload.questions.matchingCandidate.criteria['1'], 'object');
@@ -233,7 +254,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({ requestForm: 'string' }, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, () => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, () => {
 			harness.section('THE string FORM SENDS THE SAME FIELDS AS name: value LINES');
 			const payload = transport.sentPayloadList[0];
 			harness.equal('a candidate is a string', typeof payload.questions.matchingCandidate.criteria['1'], 'string');
@@ -244,7 +265,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: 'NONE', confidence: 0.5, probabilities: { 1: 0.3, 2: 0.1, NONE: 0.6 } }) }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('AN ABSTENTION IS CATEGORY none WITH A RATIONALE');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('choice NONE', verdict && verdict.choice, 'NONE');
@@ -255,7 +276,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '7', confidence: 0.9, probabilities: { 7: 0.9 } }) }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
 			harness.section('AN ANSWER OUTSIDE THE OFFERED OPTIONS IS REFUSED');
 			harness.match('refused by name', rerankError, /Jev chose '7' for 'matchingCandidate', which is not one of the offered options/);
 			done();
@@ -266,7 +287,7 @@ const caseList = [
 			{ statusCode: 429, responseBody: { error: 'rate limited' } },
 			{ statusCode: 200, responseBody: answerBody({ choice: '2', confidence: 0.9, probabilities: { 1: 0.05, 2: 0.9, NONE: 0.05 } }) },
 		]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('A 429 IS RETRIED');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('two calls were made', transport.sentPayloadList.length, 2);
@@ -282,7 +303,7 @@ const caseList = [
 			{ statusCode: edgeStatusCode, responseBody: { error: `error code: ${edgeStatusCode}` } },
 			{ statusCode: 200, responseBody: answerBody({ choice: '2', confidence: 0.9, probabilities: { 1: 0.05, 2: 0.9, NONE: 0.05 } }) },
 		]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section(`A ${edgeStatusCode} (${edgeStatusCode === 529 ? 'JEV OVERLOADED' : 'THE EDGE PROXY'}) IS RETRIED`);
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('two calls were made', transport.sentPayloadList.length, 2);
@@ -292,7 +313,7 @@ const caseList = [
 	}),
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 400, responseBody: { error: 'bad request' } }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
 			harness.section('A 400 IS NOT RETRIED');
 			harness.match('refused naming the status', rerankError, /HTTP 400 after 1 attempt/);
 			harness.equal('one call only', transport.sentPayloadList.length, 1);
@@ -301,7 +322,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 503, responseBody: { error: 'down' } }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
 			harness.section('RETRIES STOP AT maxAttempts');
 			harness.match('refused after three attempts', rerankError, /HTTP 503 after 3 attempt/);
 			harness.equal('three calls', transport.sentPayloadList.length, 3);
@@ -310,7 +331,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9 } }) }]);
-		provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum, predicateRule: 'categoryTable-v1' }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, systemPrompt: 's', userPrompt: 'u', choiceEnum, predicateRule: 'categoryTable-v1' }, (rerankError) => {
 			harness.section('A QUESTION WITHOUT choiceQuestion IS REFUSED — THERE IS NO TEXT PARSE');
 			harness.match('refused by name', rerankError, /rerank received no choiceQuestion/);
 			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
@@ -323,7 +344,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
 			{ statusCode: 200, responseBody: relationBody({ choice: 'broadMatch', confidence: 0.55, probabilities: RELATION_PROBABILITIES }) },
 		]);
-		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('judgeSlot-v1 WITH A PICK: A SECOND CALL NAMES THE RELATION');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('two calls were made', transport.sentPayloadList.length, 2);
@@ -360,7 +381,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '2', confidence: 0.9, probabilities: { 1: 0.05, 2: 0.9, NONE: 0.05 } }) },
 			{ statusCode: 200, responseBody: relationBody({ choice: 'exactMatch', confidence: 0.8, probabilities: RELATION_PROBABILITIES }) },
 		]);
-		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('THE RELATION QUESTION FOLLOWS requestForm');
 			harness.ok('no error', !rerankError, rerankError);
 			const relationPayload = transport.sentPayloadList[1] || { state: {} };
@@ -372,7 +393,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: 'NONE', confidence: 0.7, probabilities: { 1: 0.2, 2: 0.1, NONE: 0.7 } }) }]);
-		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('judgeSlot-v1 WITH NONE: THE ABSTAIN VALUE, NO SECOND CALL');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('ONE call only', transport.sentPayloadList.length, 1);
@@ -386,7 +407,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
 			{ statusCode: 200, responseBody: relationBody({ choice: 'relatedMatch', confidence: 0.9, probabilities: { relatedMatch: 0.9 } }) },
 		]);
-		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError) => {
 			harness.section('A RELATION OUTSIDE THE FOUR IS REFUSED, NEVER MAPPED');
 			harness.match('refused by name', rerankError, /picked '1' but the relation question failed: .*Jev chose 'relatedMatch' for 'relationToChosenCandidate'/);
 			done();
@@ -397,7 +418,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
 			{ statusCode: 400, responseBody: { error: 'bad request' } },
 		]);
-		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('A FAILED RELATION CALL FAILS THE JUDGMENT — NO PREDICATE-LESS PICK');
 			harness.match('refused naming the status', rerankError, /relation question failed: .*HTTP 400 after 1 attempt/);
 			harness.equal('no verdict', verdict, undefined);
@@ -405,65 +426,10 @@ const caseList = [
 			done();
 		});
 	},
-	// ── lane JEVQ (2026-10-13): the owning-definition form of the split question ──
-	(done) => {
-		const { provider, transport } = providerFor({ choiceQuestionFormName: 'owningConstructDefinitionState' }, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
-			harness.section('LANE JEVQ: A JEV CONFIGURED FOR THE OWNING-DEFINITION FORM REFUSES TODAY\'S FORM BY NAME');
-			harness.match('refused naming both forms', rerankError, /received a 'matchingInstructionsState' split question, and this Jev is configured to answer 'owningConstructDefinitionState'/);
-			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
-			harness.equal('no verdict', verdict, undefined);
-			done();
-		});
-	},
-	(done) => {
-		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion: owningDefinitionChoiceQuestion }, (rerankError) => {
-			harness.section('LANE JEVQ: A JEV CONFIGURED FOR TODAY\'S FORM REFUSES THE OWNING-DEFINITION FORM BY NAME');
-			harness.match('refused naming both forms', rerankError, /received a 'owningConstructDefinitionState' split question, and this Jev is configured to answer 'matchingInstructionsState'/);
-			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
-			done();
-		});
-	},
-	(done) => {
-		const { provider, transport } = providerFor({ choiceQuestionFormName: 'owningConstructDefinitionState' }, [
-			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
-			{ statusCode: 200, responseBody: relationBody({ choice: 'closeMatch', confidence: 0.7, probabilities: RELATION_PROBABILITIES }) },
-		]);
-		provider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion: owningDefinitionChoiceQuestion }, (rerankError, verdict) => {
-			harness.section('LANE JEVQ: THE OWNING-DEFINITION FORM SENDS THE DEFINITION, NO INSTRUCTIONS, AND LEAVES THE RELATION QUESTION AS IT WAS');
-			harness.ok('no error', !rerankError, rerankError);
-			const pickPayload = transport.sentPayloadList[0] || { state: {} };
-			const relationPayload = transport.sentPayloadList[1] || { state: {} };
-			harness.equal('the pick state is exactly { sourceElement }: no matchingInstructions', Object.keys(pickPayload.state).join(','), 'sourceElement');
-			harness.equal('the pick state source element carries the owning construct definition', pickPayload.state.sourceElement && pickPayload.state.sourceElement.owningConstructDefinition, 'An organization that provides educational services.');
-			harness.equal('neither the form stamp nor the relation source rides to Jev in the pick payload', JSON.stringify(pickPayload).indexOf('questionFormName') + JSON.stringify(pickPayload).indexOf('relationStateSourceElement'), -2);
-			harness.equal('the relation state source element is the source WITHOUT the definition (relation question unchanged)', JSON.stringify(relationPayload.state.sourceElement), JSON.stringify(choiceQuestion.stateObject.sourceElement));
-			harness.equal('the relation state keeps its two members', Object.keys(relationPayload.state).join(','), 'sourceElement,chosenCandidate');
-			harness.equal('predicate carried', verdict && verdict.predicate, 'closeMatch');
-			done();
-		});
-	},
-	(done) => {
-		// TWIN: a client whose owning-definition row reads the relation source from the PICK state would send the definition
-		// into the relation question; observed red on the conjunct above
-		const twinLib = moduleDouble.loadWithMutations({ modulePath: JEV_CLIENT_PATH, mutationList: [{ modulePath: JEV_CLIENT_PATH, find: 'relationSourceElementOf: (choiceQuestion) => choiceQuestion.relationStateSourceElement,', replace: 'relationSourceElementOf: (choiceQuestion) => choiceQuestion.stateObject.sourceElement,' }] });
-		const transport = scriptedTransport([
-			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
-			{ statusCode: 200, responseBody: relationBody({ choice: 'closeMatch', confidence: 0.7, probabilities: RELATION_PROBABILITIES }) },
-		]);
-		const twinProvider = twinLib({ configFilePath: iniFilePathFor({ choiceQuestionFormName: 'owningConstructDefinitionState' }), componentOverrides: { postOnce: transport.postOnce } });
-		twinProvider.rerank({ choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion: owningDefinitionChoiceQuestion }, () => {
-			harness.section('LANE JEVQ TWIN: RELATION SOURCE READ FROM THE PICK STATE');
-			const relationPayload = transport.sentPayloadList[1] || { state: {} };
-			harness.ok('TWIN observed RED: the relation question now carries the owning definition', JSON.stringify(relationPayload.state.sourceElement) !== JSON.stringify(choiceQuestion.stateObject.sourceElement), JSON.stringify(relationPayload.state.sourceElement));
-			done();
-		});
-	},
 	// W-B-3 (campaign P3): a probability map that does not name exactly the offered options is refused by name
 	(done) => {
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, NONE: 0.1 } }) }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('W-B-3: A PARTIAL PROBABILITY MAP IS REFUSED BY NAME');
 			harness.match('refused naming the options', rerankError, /probabilities for 'matchingCandidate' name \[1, NONE\], not exactly the offered options \[1, 2, NONE\]/);
 			harness.equal('no verdict', verdict, undefined);
@@ -475,7 +441,7 @@ const caseList = [
 	(done) => {
 		const partialUsageBody = { ...answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }), usage: { input_tokens: 100 } };
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: partialUsageBody }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('W-B-8: A WIRE USAGE WITHOUT BOTH INTEGER COUNTS IS REFUSED BY NAME');
 			harness.match('refused naming the usage', rerankError, /usage for 'matchingCandidate' is \{"input_tokens":100\}; input_tokens and output_tokens must be non-negative integers/);
 			harness.equal('no verdict', verdict, undefined);
@@ -484,7 +450,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('W-B-8: A ONE-CALL VERDICT CARRIES USAGE IN THE DECLARED SHAPE');
 			harness.equal('usage is { inputTokens, outputTokens }', JSON.stringify(verdict && verdict.usage), JSON.stringify({ inputTokens: 100, outputTokens: 10 }));
 			done();
@@ -492,10 +458,119 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9 } }) }]);
-		provider.rerank({ choiceEnum, choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, choiceQuestion }, (rerankError) => {
 			harness.section('AN ABSENT predicateRule IS REFUSED BY NAME');
 			harness.match('refused listing the known rules', rerankError, /predicateRule undefined names no select_candidate schema\. The known rules are: categoryTable-v1, judgeSlot-v1/);
 			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
+			done();
+		});
+	},
+	// ── lane JEVQ (2026-10-13; per-bridge form, ruling COPPER_RIVER): the form travels with every question ──
+	(done) => {
+		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+			harness.section('LANE JEVQ: A QUESTION WITHOUT ITS FORM IS REFUSED BY NAME (NO DEFAULT FORM)');
+			harness.match('refused naming the forms', rerankError, /rerank received choiceQuestionFormName undefined; the forms are: matchingInstructionsState, owningConstructDefinitionState/);
+			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
+			done();
+		});
+	},
+	(done) => {
+		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
+		provider.rerank({ choiceQuestionFormName: OWNING_DEFINITION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+			harness.section('LANE JEVQ: AN INSTRUCTION-FORM QUESTION TOLD IT IS THE OWNING-DEFINITION FORM IS REFUSED');
+			harness.match('refused naming both', rerankError, /told the split question is 'owningConstructDefinitionState', and the question's own questionFormName is undefined/);
+			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
+			harness.equal('no verdict', verdict, undefined);
+			done();
+		});
+	},
+	(done) => {
+		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion: owningDefinitionChoiceQuestion }, (rerankError) => {
+			harness.section('LANE JEVQ: AN OWNING-DEFINITION QUESTION TOLD IT IS THE INSTRUCTION FORM IS REFUSED');
+			harness.match('refused naming both', rerankError, /told the split question is 'matchingInstructionsState', and the question's own questionFormName is "owningConstructDefinitionState"/);
+			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
+			done();
+		});
+	},
+	(done) => {
+		const { provider, transport } = providerFor({}, [
+			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
+			{ statusCode: 200, responseBody: relationBody({ choice: 'closeMatch', confidence: 0.7, probabilities: RELATION_PROBABILITIES }) },
+		]);
+		provider.rerank({ choiceQuestionFormName: OWNING_DEFINITION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion: owningDefinitionChoiceQuestion }, (rerankError, verdict) => {
+			harness.section('LANE JEVQ: THE OWNING-DEFINITION FORM SENDS THE DEFINITION, NO INSTRUCTIONS, UNDER ITS OWN IDENTITY; THE RELATION QUESTION IS UNCHANGED');
+			harness.ok('no error', !rerankError, rerankError);
+			const pickPayload = transport.sentPayloadList[0] || { state: {} };
+			const relationPayload = transport.sentPayloadList[1] || { state: {} };
+			harness.equal('the pick state is exactly { sourceElement }: no matchingInstructions', Object.keys(pickPayload.state).join(','), 'sourceElement');
+			harness.equal('the pick state source element carries the owning construct definition', pickPayload.state.sourceElement && pickPayload.state.sourceElement.owningConstructDefinition, 'An organization that provides educational services.');
+			harness.equal('neither the form stamp nor the relation source rides to Jev in the pick payload', JSON.stringify(pickPayload).indexOf('questionFormName') + JSON.stringify(pickPayload).indexOf('relationStateSourceElement'), -2);
+			harness.equal('the relation state source element is the source WITHOUT the definition (relation question unchanged)', JSON.stringify(relationPayload.state.sourceElement), JSON.stringify(choiceQuestion.stateObject.sourceElement));
+			harness.equal('the relation state keeps its two members', Object.keys(relationPayload.state).join(','), 'sourceElement,chosenCandidate');
+			harness.equal('predicate carried', verdict && verdict.predicate, 'closeMatch');
+			harness.equal('the verdict travels under the owning-definition identity', verdict && verdict.model, provider.modelForChoiceQuestionForm(OWNING_DEFINITION_FORM).model);
+			harness.ok('which is NOT the provider\'s instruction-form model', verdict && verdict.model !== provider.model, verdict && verdict.model);
+			done();
+		});
+	},
+	(done) => {
+		// TWIN: a client whose owning-definition row reads the relation source from the PICK state would send the definition
+		// into the relation question; observed red on the conjunct above
+		const twinLib = moduleDouble.loadWithMutations({ modulePath: JEV_CLIENT_PATH, mutationList: [{ modulePath: JEV_CLIENT_PATH, find: 'relationSourceElementOf: (choiceQuestion) => choiceQuestion.relationStateSourceElement,', replace: 'relationSourceElementOf: (choiceQuestion) => choiceQuestion.stateObject.sourceElement,' }] });
+		const transport = scriptedTransport([
+			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
+			{ statusCode: 200, responseBody: relationBody({ choice: 'closeMatch', confidence: 0.7, probabilities: RELATION_PROBABILITIES }) },
+		]);
+		const twinProvider = twinLib({ configFilePath: iniFilePathFor({}), componentOverrides: { postOnce: transport.postOnce } });
+		twinProvider.rerank({ choiceQuestionFormName: OWNING_DEFINITION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion: owningDefinitionChoiceQuestion }, () => {
+			harness.section('LANE JEVQ TWIN: RELATION SOURCE READ FROM THE PICK STATE');
+			const relationPayload = transport.sentPayloadList[1] || { state: {} };
+			harness.ok('TWIN observed RED: the relation question now carries the owning definition', JSON.stringify(relationPayload.state.sourceElement) !== JSON.stringify(choiceQuestion.stateObject.sourceElement), JSON.stringify(relationPayload.state.sourceElement));
+			done();
+		});
+	},
+	// ── lane JEVQ (ruling COPPER_RIVER): HTTP 499 internal_error is retried, bounded and logged ──
+	(done) => {
+		const retryNoteList = [];
+		const transport = scriptedTransport([
+			{ statusCode: 499, responseBody: { detail: { error_type: 'internal_error', message: 'Unable to complete this request.' } } },
+			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
+		]);
+		const provider = jevJudgeClientLib({ configFilePath: iniFilePathFor({}), componentOverrides: { postOnce: transport.postOnce, retryNote: (noteText) => retryNoteList.push(noteText) } });
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+			harness.section('LANE JEVQ: A 499 (JEV INTERNAL ERROR) IS RETRIED, AND THE RETRY IS LOGGED');
+			harness.ok('no error', !rerankError, rerankError);
+			harness.equal('two attempts', verdict && verdict.attempts, 2);
+			harness.equal('one retry note', retryNoteList.length, 1);
+			harness.match('the note names the attempt, the bound and the status', retryNoteList[0], /'matchingCandidate' attempt 1 of 3 failed \(HTTP 499: .*internal_error.*\); retrying/);
+			done();
+		});
+	},
+	(done) => {
+		const retryNoteList = [];
+		const transport = scriptedTransport([{ statusCode: 499, responseBody: { detail: { error_type: 'internal_error' } } }]);
+		const provider = jevJudgeClientLib({ configFilePath: iniFilePathFor({}), componentOverrides: { postOnce: transport.postOnce, retryNote: (noteText) => retryNoteList.push(noteText) } });
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+			harness.section('LANE JEVQ: A PERSISTENT 499 IS BOUNDED BY maxAttempts');
+			harness.match('refused after three attempts', rerankError, /HTTP 499 after 3 attempt/);
+			harness.equal('three posts', transport.sentPayloadList.length, 3);
+			harness.equal('two retry notes', retryNoteList.length, 2);
+			done();
+		});
+	},
+	(done) => {
+		// TWIN: 499 taken off the retryable list; observed red on the retry conjunct above
+		const twinLib = moduleDouble.loadWithMutations({ modulePath: JEV_CLIENT_PATH, mutationList: [{ modulePath: JEV_CLIENT_PATH, find: '[429, 499, 500,', replace: '[429, 500,' }] });
+		const transport = scriptedTransport([
+			{ statusCode: 499, responseBody: { detail: { error_type: 'internal_error' } } },
+			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
+		]);
+		const twinProvider = twinLib({ configFilePath: iniFilePathFor({}), componentOverrides: { postOnce: transport.postOnce, retryNote: () => {} } });
+		twinProvider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+			harness.section('LANE JEVQ TWIN: 499 NOT RETRYABLE');
+			harness.ok('TWIN observed RED: the single 499 now kills the question', /HTTP 499 after 1 attempt/.test(`${rerankError}`), rerankError);
 			done();
 		});
 	},

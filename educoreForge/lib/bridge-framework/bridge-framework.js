@@ -74,6 +74,7 @@ const judgeConfigRecordLib = require('./judgeConfigRecord');
 const judgmentPartitionLib = require('./judgmentPartition');
 const materialisationFanoutLib = require('./materialisationFanout');
 const owningConstructDefinitionLib = require('./owningConstructDefinition');
+const { judgeClientBoundToChoiceQuestionForm } = require('./judgeClientForChoiceQuestionForm');
 
 const { RELATIONSHIP_PRODUCER_SUFFIX, SKOS_EDGE_TYPES, MAPPING_PROPERTIES } = vocabularyLib;
 const {
@@ -348,7 +349,21 @@ const moduleFunction =
 			const pairKeyPrefix = `${hubToken}@${hubVersion}::${sourceToken}@${sourceVersion}`;
 			const pairKey = `${pairKeyPrefix}::${bridgeDeclaration.bridgeName}::${bridgeDeclaration.producerKind}`;
 			const mode = spec.rebridge ? MODE_REJUDGE : MODE_MATERIALISE;
-			const judgeClient = spec.rebridge && spec.inferenceConfig && spec.inferenceConfig.llmClient ? spec.inferenceConfig.llmClient : null;
+			const providerJudgeClient = spec.rebridge && spec.inferenceConfig && spec.inferenceConfig.llmClient ? spec.inferenceConfig.llmClient : null;
+			// the rendering variant comes from VARIANT_BY_BASIS_AND_PREDICATE_RULE (and, for a variant with more than one split-question
+			// form, the bridge's declared choiceQuestionFormName), which registration has already checked, so the pair always has a row here
+			const judgePromptVariant = bridgePluginContractLib.judgePromptVariantFor({ bridgeDeclaration }).judgePromptVariant;
+			// ⟪lane JEVQ, ruling COPPER_RIVER⟫ THE JUDGE, BOUND TO THIS BRIDGE'S SPLIT-QUESTION FORM. The form is per bridge, and a
+			// judge's identity may be per form (JUDGE_PROVIDER_SHAPE.modelForChoiceQuestionForm), so the provider is asked once,
+			// here, and every judgment of this bridge travels under that answer: the cache key, the frozen record's judgeModel, the
+			// header's judgeKind and the edge's judge name all read judgeClient.model below. rerank is handed the form by name with
+			// every question; nothing guesses it from the question's shape.
+			const boundJudge = judgeClientBoundToChoiceQuestionForm({ judgeClient: providerJudgeClient, choiceQuestionFormName: evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant].choiceQuestionFormName });
+			if (boundJudge.error) {
+				callback(refuse.byName({ moduleName, what: `bridge ${bridgeDeclaration.bridgeName}: ${boundJudge.error}`, where: 'the judge names an identity for every split-question form it is asked (JUDGE_PROVIDER_SHAPE.modelForChoiceQuestionForm)' }).message);
+				return;
+			}
+			const judgeClient = boundJudge.judgeClient;
 			// blockRecordsJudgeConfig (SPEC §9 A12): the judge's configuration in the header and each rationale in its record
 			// (judgeConfigRecord.js). Absent, both are omitted and the block text is what it was.
 			const recordsJudgeConfig = bridgeDeclaration.blockRecordsJudgeConfig === true;
@@ -376,9 +391,6 @@ const moduleFunction =
 				callback(refuse.byName({ moduleName, what: `matchBasis '${bridgeDeclaration.matchBasis}' names no SOURCE_ACQUISITION_REGISTRY row`, where: 'the row declares how a basis acquires subjects and pools; a basis without one cannot be run' }).message);
 				return;
 			}
-			// the rendering variant comes from VARIANT_BY_BASIS_AND_PREDICATE_RULE, which registration has already
-			// checked, so the pair always has a row here
-			const judgePromptVariant = bridgePluginContractLib.judgePromptVariantFor({ bridgeDeclaration }).judgePromptVariant;
 			const runRendererVersion = evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant].rendererVersion;
 			// WHICH subject-node properties become rendered material is a member of the VARIANT row, not a constant
 			// in this file: the crosswalk variant names its seven by name (byte-frozen), the derived variant takes

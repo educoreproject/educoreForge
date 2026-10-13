@@ -79,9 +79,21 @@ const moduleFunction = (constructionOptions = {}) => {
 	// The two judges. A test hands in doubles; production constructs the real providers from their own configs.
 	const jevProvider = componentOverrides.jevProvider || jevJudgeClientLib({ configFilePath: cfg.jevConfigFilePath });
 	const anthropicProvider = componentOverrides.anthropicProvider || llmClientLib({ configFilePath: cfg.anthropicConfigFilePath });
-	const namespacedModel = `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${identitySuffixFor(jevProvider.model)}@${cfg.escalateBelowConfidence}+${anthropicProvider.model}`;
+	const cascadeModelFor = (jevModel) => `${PROVIDER_NAME}${MODEL_NAMESPACE_SEPARATOR}${identitySuffixFor(jevModel)}@${cfg.escalateBelowConfidence}+${anthropicProvider.model}`;
+	const namespacedModel = cascadeModelFor(jevProvider.model);
+	// ⟪lane JEVQ, ruling COPPER_RIVER⟫ the cascade's identity follows its Jev leg's, per split-question form
+	const modelForChoiceQuestionForm = (choiceQuestionFormName) => {
+		const jevModelResult = jevProvider.modelForChoiceQuestionForm(choiceQuestionFormName);
+		return jevModelResult.error ? { error: `${moduleName}: ${jevModelResult.error}` } : { model: cascadeModelFor(jevModelResult.model) };
+	};
 
 	const rerank = (rerankOptions = {}, callback) => {
+		const formModelResult = modelForChoiceQuestionForm(rerankOptions.choiceQuestionFormName);
+		if (formModelResult.error) {
+			callback(formModelResult.error);
+			return;
+		}
+		const formModel = formModelResult.model;
 		jevProvider.rerank(rerankOptions, (jevError, jevVerdict) => {
 			if (jevError) {
 				callback(`${moduleName}: the Jev judge refused, and a cascade does not escalate a failure: ${jevError}`);
@@ -97,7 +109,7 @@ const moduleFunction = (constructionOptions = {}) => {
 				callback('', {
 					...jevVerdict,
 					rationale: `${jevVerdict.rationale} [jevOpus: Jev answered at confidence ${jevPickConfidence} (cut ${cfg.escalateBelowConfidence}); Opus not asked.]`,
-					model: namespacedModel,
+					model: formModel,
 					answeredBy: jevProvider.name,
 				});
 				return;
@@ -110,7 +122,7 @@ const moduleFunction = (constructionOptions = {}) => {
 				callback('', {
 					...anthropicVerdict,
 					rationale: `${anthropicVerdict.rationale} [jevOpus: escalated; Jev's confidence ${jevPickConfidence} is below the cut ${cfg.escalateBelowConfidence}. Jev's view: ${jevVerdict.rationale}]`,
-					model: namespacedModel,
+					model: formModel,
 					attempts: (jevVerdict.attempts || 0) + (anthropicVerdict.attempts || 0),
 					answeredBy: anthropicProvider.name,
 					// the answer is Opus's, so the summary is Opus's (it reports no numbers: null); Jev's view rides beside it
@@ -134,6 +146,7 @@ const moduleFunction = (constructionOptions = {}) => {
 			temperaturePolicy: `${jevProvider.name}:${jevProvider.judgeConfig.temperaturePolicy}+${anthropicProvider.name}:${anthropicProvider.judgeConfig.temperaturePolicy}`,
 			maxTokens: anthropicProvider.judgeConfig.maxTokens,
 		}),
+		modelForChoiceQuestionForm,
 		rerank,
 		describe,
 	};

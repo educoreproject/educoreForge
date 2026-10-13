@@ -88,6 +88,8 @@ const makeCountingAnthropicRow = () => {
 				maxConcurrency: 4,
 				rerank: () => {},
 				describe: () => ({ provider: 'anthropic', model: 'anthropic:FAKE-REAL-CLIENT', version: 'fake-v1' }),
+				// lane JEVQ: JUDGE_PROVIDER_SHAPE's eighth member (a text-prompt double: one identity for every form)
+				modelForChoiceQuestionForm: () => ({ model: 'anthropic:FAKE-REAL-CLIENT' }),
 				keySource: 'fake',
 				judgeConfig: Object.freeze({ temperaturePolicy: 'fakeNoWire', maxTokens: null }),
 			});

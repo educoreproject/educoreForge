@@ -1180,6 +1180,8 @@ const stageRebridgeWiring = () => {
 			maxConcurrency: 4,
 			rerank: () => {},
 			describe: () => ({ provider: 'anthropic', model: 'anthropic:sentinel', version: 'sentinel-v1' }),
+			// lane JEVQ: JUDGE_PROVIDER_SHAPE's eighth member (a text-prompt double: one identity for every form)
+			modelForChoiceQuestionForm: () => ({ model: 'anthropic:sentinel' }),
 			// (phase M1) B2 made judgeConfig a required, frozen, primitives-only member of JUDGE_PROVIDER_SHAPE; this
 			// double predated it and was refused by name. Same form as test-judgeProviderRegistry's double.
 			judgeConfig: Object.freeze({ temperaturePolicy: 'testNoWire', maxTokens: null }),

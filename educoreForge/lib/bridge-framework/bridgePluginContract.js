@@ -170,9 +170,20 @@ const NO_JUDGE_PREDICATE_RULE = '—';
 const VARIANT_BY_BASIS_AND_PREDICATE_RULE = Object.freeze({
 	standard: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),
 	crosswalk: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),
-	// ⟪lane JEVQ, 2026-10-13⟫ judgeSlot-v1 now renders the owning-definition split question (was 'derivedJudgeSlot')
-	derived: Object.freeze({ [PREDICATE_RULE_CATEGORY_TABLE_V1]: 'derived', [PREDICATE_RULE_JUDGE_SLOT_V1]: 'derivedJudgeSlotOwningDefinition' }),
+	derived: Object.freeze({ [PREDICATE_RULE_CATEGORY_TABLE_V1]: 'derived', [PREDICATE_RULE_JUDGE_SLOT_V1]: 'derivedJudgeSlot' }),
 });
+
+// ---------------------------------------------------------------------
+// ⟪lane JEVQ, ruling COPPER_RIVER 2026-10-13⟫ VARIANT_BY_CHOICE_QUESTION_FORM — the split question's FORM is chosen PER BRIDGE.
+// A variant named here by VARIANT_BY_BASIS_AND_PREDICATE_RULE has more than one form, so a declaration resolving to it MUST
+// declare choiceQuestionFormName, and the form names the variant that renders it. A declaration resolving to any other
+// variant must NOT declare one (its variant has one form; the key would be read by nothing). There is no default form: a
+// bridge that names none is refused, and no subject ever switches form on its own.
+// ---------------------------------------------------------------------
+const VARIANT_BY_CHOICE_QUESTION_FORM = Object.freeze({
+	derivedJudgeSlot: Object.freeze({ matchingInstructionsState: 'derivedJudgeSlot', owningConstructDefinitionState: 'derivedJudgeSlotOwningDefinition' }),
+});
+const CHOICE_QUESTION_FORM_NAME_LIST = Object.freeze(Array.from(new Set(Object.keys(VARIANT_BY_CHOICE_QUESTION_FORM).reduce((soFar, variantName) => soFar.concat(Object.keys(VARIANT_BY_CHOICE_QUESTION_FORM[variantName])), []))));
 
 // judgePromptVariantFor — { judgePromptVariant } | { error: text } for a declaration whose matchBasis and
 // predicateSource have already passed their own rows
@@ -182,7 +193,17 @@ const judgePromptVariantFor = ({ bridgeDeclaration }) => {
 	if (!Object.prototype.hasOwnProperty.call(variantByPredicateRule, predicateRule)) {
 		return { error: `(matchBasis '${bridgeDeclaration.matchBasis}', predicateRule '${predicateRule}') names no VARIANT_BY_BASIS_AND_PREDICATE_RULE row` };
 	}
-	return { judgePromptVariant: variantByPredicateRule[predicateRule] };
+	const baseVariantName = variantByPredicateRule[predicateRule];
+	const variantByForm = VARIANT_BY_CHOICE_QUESTION_FORM[baseVariantName];
+	if (variantByForm === undefined) {
+		return bridgeDeclaration.choiceQuestionFormName === undefined
+			? { judgePromptVariant: baseVariantName }
+			: { error: `declares choiceQuestionFormName '${bridgeDeclaration.choiceQuestionFormName}', and its variant '${baseVariantName}' has one form only (VARIANT_BY_CHOICE_QUESTION_FORM names no row for it); remove the key` };
+	}
+	if (!Object.prototype.hasOwnProperty.call(variantByForm, bridgeDeclaration.choiceQuestionFormName)) {
+		return { error: `resolves to '${baseVariantName}', whose split question has forms ${Object.keys(variantByForm).join(', ')}, and declares choiceQuestionFormName ${JSON.stringify(bridgeDeclaration.choiceQuestionFormName)}; declare one of them (per bridge, no default)` };
+	}
+	return { judgePromptVariant: variantByForm[bridgeDeclaration.choiceQuestionFormName] };
 };
 // RENDERING_NEVER_NAME_LIST — property names that may never appear in a renderingAllowList on EITHER side,
 // refused at declaration time. Measured on the live schema (D0 review §C1/§C2 re-verified by GRANITE_VALLEY
@@ -390,6 +411,9 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	// ⟪lane JEVQ⟫ where the owning construct's definition is read (owningConstructDefinition.js). Its presence is ruled by the
 	// resolved variant (OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST, cross-key rule below), so the walk treats it as optional.
 	owningConstructDefinitionSource: Object.freeze({ optional: true, kind: 'owningConstructDefinitionSource' }),
+	// ⟪lane JEVQ, ruling COPPER_RIVER⟫ the split question's form, per bridge. Its presence is ruled by the base variant
+	// (VARIANT_BY_CHOICE_QUESTION_FORM, in judgePromptVariantFor), so the walk treats it as optional.
+	choiceQuestionFormName: Object.freeze({ optional: true, kind: 'choiceQuestionFormName' }),
 	// REQUIRED iff predicateSource.predicateRule is categoryTable-v1, FORBIDDEN otherwise: under judgeSlot-v1 the judge
 	// names the relation and a table would be read by nothing; a documentary source declares no rule at all.
 	predicateByCategory: Object.freeze({ required: false, kind: 'predicateByCategory', presentIff: Object.freeze({ key: 'predicateSource', member: 'predicateRule', value: PREDICATE_RULE_CATEGORY_TABLE_V1 }) }),
@@ -429,8 +453,9 @@ const DERIVED_PLUGIN_PER_STANDARD_KEY_LIST = Object.freeze([
 	'bridgeName', 'standardKey', 'sourceCuriePrefix', 'subjectCuriePrefix', 'subjectSource', 'candidateRetrieval', 'renderingAllowList',
 	'blindingDeclaration', 'evidenceHooksDeclared', 'globalGuidanceList', 'materialisationFanout', 'judgmentPartition',
 	'promptIdentifierScan.identifierListPath',
-	// ⟪lane JEVQ⟫ each standard says where ITS owning constructs are defined, or that they are not
-	'owningConstructDefinitionSource',
+	// ⟪lane JEVQ⟫ each standard says where ITS owning constructs are defined, or that they are not; and (ruling COPPER_RIVER)
+	// which form its split question takes, and so which variant renders it
+	'owningConstructDefinitionSource', 'choiceQuestionFormName', 'judgePromptVariant',
 ]);
 
 const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
@@ -997,6 +1022,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 	},
 	judgePromptVariant: (value, { propertyName }) => closedValueReason(value, JUDGE_PROMPT_VARIANT_LIST, propertyName),
 	owningConstructDefinitionSource: (value) => owningConstructDefinitionLib.owningConstructDefinitionSourceReason(value),
+	choiceQuestionFormName: (value, { propertyName }) => closedValueReason(value, CHOICE_QUESTION_FORM_NAME_LIST, propertyName),
 	// predicateByCategory — the v1 category→predicate table (RULING §11.7 (a)). EVERY judge category must be
 	// named and nothing else: a category the table forgets would otherwise reach the edge builder with no
 	// relation and be defaulted, which is the failure this whole contract exists to prevent.
@@ -1441,6 +1467,8 @@ module.exports = {
 	NO_JUDGE_PREDICATE_RULE,
 	VARIANT_BY_BASIS_AND_PREDICATE_RULE,
 	OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST,
+	VARIANT_BY_CHOICE_QUESTION_FORM,
+	CHOICE_QUESTION_FORM_NAME_LIST,
 	judgePromptVariantFor,
 	RENDERING_NEVER_NAME_LIST,
 	PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY,

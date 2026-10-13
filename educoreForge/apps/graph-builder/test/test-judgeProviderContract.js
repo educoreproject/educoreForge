@@ -151,10 +151,12 @@ const REGISTERED_PROVIDER_LIST = [
 harness.section('G1-a — THE SHAPE IS EXPORTED AND EVERY PROVIDER SATISFIES IT');
 // =====================================================================
 
+// RE-ANCHORED 2026-10-13 (lane JEVQ, ruling COPPER_RIVER): an eighth member, modelForChoiceQuestionForm — the identity a
+// provider's verdicts on one split-question form travel under (the form is per bridge; Jev's identity is per form)
 harness.equal(
-	'JUDGE_PROVIDER_SHAPE declares exactly the seven contract members',
+	'JUDGE_PROVIDER_SHAPE declares exactly the eight contract members',
 	Object.keys(JUDGE_PROVIDER_SHAPE.MEMBER_KIND_BY_NAME).sort().join(','),
-	'describe,judgeConfig,maxConcurrency,model,name,rerank,wireModel',
+	'describe,judgeConfig,maxConcurrency,model,modelForChoiceQuestionForm,name,rerank,wireModel',
 );
 harness.ok('the shape is frozen (a contract nothing can edit at run time)', Object.isFrozen(JUDGE_PROVIDER_SHAPE));
 
@@ -206,7 +208,7 @@ Object.keys(JUDGE_PROVIDER_SHAPE.MEMBER_KIND_BY_NAME).forEach((oneMemberName) =>
 harness.match(
 	'a provider that is not an object at all is refused, naming every member it should have had',
 	judgeProviderViolation(null, { providerLabel: 'twin' }),
-	/is null — a judge provider must be an object satisfying JUDGE_PROVIDER_SHAPE \(name, wireModel, model, maxConcurrency, rerank, describe, judgeConfig\)/,
+	/is null — a judge provider must be an object satisfying JUDGE_PROVIDER_SHAPE \(name, wireModel, model, maxConcurrency, rerank, describe, modelForChoiceQuestionForm, judgeConfig\)/,
 );
 harness.match(
 	'maxConcurrency 0 is refused (positive integer, not merely a number)',

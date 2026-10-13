@@ -11,9 +11,15 @@
 //       source WITHOUT the definition
 //   (b) the old judge (derivedJudgeSlot) renders byte-identically to main 317cba12 (pinned below)
 //   (c) a source with no owning definition renders without one and records why; the resolver's refusals are by name
-//   (d) the contract: the variant requires owningConstructDefinitionSource, every other variant forbids it, the kinds are
-//       checked, and the contract's list agrees with the renderer's rows; the shipped plugins declare what was measured
+//   (d) the contract: the split question's FORM is declared PER BRIDGE (ruling COPPER_RIVER, 2026-10-13) and picks the variant,
+//       with no default form; the owning-definition variant requires owningConstructDefinitionSource, every other variant
+//       forbids it, the kinds are checked, and the contract's lists agree with the renderer's rows; the shipped plugins
+//       declare what was ruled: Ed-Fi and PESC the owning-definition form, SIF the instruction form
 //   (e) the identifier scan reads the split question, where the definition is the only new text
+//   (f) end to end: a toy run in the owning-definition form resolves each subject's owner
+//   (g) the judge is BOUND to the bridge's form: every question carries the form by name, and every frozen record, the
+//       header's judgeKind and the cache rows carry the identity the judge names for that form
+//       (judgeClientForChoiceQuestionForm.js)
 //
 // Every conjunct was observed RED before it was made to pass (DEVLOG-JEVQ.md, "gates observed red").
 //
@@ -138,7 +144,17 @@ const rowRequiringVariantList = Object.keys(evidenceRendererLib.JUDGE_PROMPT_VAR
 harness.equal('the contract\'s OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST is exactly the renderer rows that require it', JSON.stringify(bridgePluginContractLib.OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST.slice().sort()), JSON.stringify(rowRequiringVariantList));
 harness.equal('every renderer row says whether it requires it (no row leaves it undefined)', Object.keys(evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY).filter((variantName) => typeof evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[variantName].requiresOwningConstructDefinitionSource !== 'boolean').join(','), '');
 harness.equal('the renderer registry and the contract list name the same variants', JSON.stringify(Object.keys(evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY).sort()), JSON.stringify(bridgePluginContractLib.JUDGE_PROMPT_VARIANT_LIST.slice().sort()));
-harness.equal('(derived, judgeSlot-v1) resolves to the owning-definition variant', bridgePluginContractLib.VARIANT_BY_BASIS_AND_PREDICATE_RULE.derived['judgeSlot-v1'], NEW_VARIANT_NAME);
+harness.equal('(derived, judgeSlot-v1) names the base variant derivedJudgeSlot, as before the lane', bridgePluginContractLib.VARIANT_BY_BASIS_AND_PREDICATE_RULE.derived['judgeSlot-v1'], 'derivedJudgeSlot');
+const formRowFaultList = Object.keys(bridgePluginContractLib.VARIANT_BY_CHOICE_QUESTION_FORM).reduce((soFar, baseVariantName) => {
+	const variantByForm = bridgePluginContractLib.VARIANT_BY_CHOICE_QUESTION_FORM[baseVariantName];
+	return soFar.concat(Object.keys(variantByForm).filter((formName) => (evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[variantByForm[formName]] || {}).choiceQuestionFormName !== formName).map((formName) => `${baseVariantName}.${formName} -> ${variantByForm[formName]}`));
+}, []);
+harness.equal('every form the contract maps names a renderer row that builds THAT form', formRowFaultList.join(', '), '');
+harness.equal('the contract\'s form list is the renderer\'s', JSON.stringify(bridgePluginContractLib.CHOICE_QUESTION_FORM_NAME_LIST.slice().sort()), JSON.stringify(evidenceRendererLib.CHOICE_QUESTION_FORM_NAME_LIST.slice().sort()));
+const variantOrErrorFor = (bridgeDeclaration) => {
+	const resolved = bridgePluginContractLib.judgePromptVariantFor({ bridgeDeclaration });
+	return resolved.error ? `ERROR ${resolved.error}` : resolved.judgePromptVariant;
+};
 const edfiPluginPath = path.join(TREE_ROOT, 'forges', 'edfi', 'bridges', 'edfiCedsDerivedPlugin.js');
 const edfiBundleDirPath = path.join(TREE_ROOT, 'forges', 'edfi');
 const edfiDeclaration = () => cloneJson(require(edfiPluginPath).bridgeDeclaration);
@@ -147,6 +163,23 @@ const validationRefusalFor = (bridgeDeclaration) => {
 	return validated && validated.error ? validated.error.message : '';
 };
 harness.equal('the shipped Ed-Fi declaration validates', validationRefusalFor(edfiDeclaration()), '');
+harness.equal('the owning-definition form resolves to the owning-definition variant', variantOrErrorFor(edfiDeclaration()), NEW_VARIANT_NAME);
+const instructionFormDeclaration = edfiDeclaration();
+instructionFormDeclaration.choiceQuestionFormName = 'matchingInstructionsState';
+harness.equal('the instruction form resolves to derivedJudgeSlot', variantOrErrorFor(instructionFormDeclaration), 'derivedJudgeSlot');
+const formlessDeclaration = edfiDeclaration();
+delete formlessDeclaration.choiceQuestionFormName;
+harness.match('a judgeSlot-v1 derived declaration that names NO form is refused (no default form)', variantOrErrorFor(formlessDeclaration), /^ERROR resolves to 'derivedJudgeSlot', whose split question has forms matchingInstructionsState, owningConstructDefinitionState, and declares choiceQuestionFormName undefined; declare one of them \(per bridge, no default\)/);
+harness.match('…and registration refuses it by name', validationRefusalFor(formlessDeclaration), /declares choiceQuestionFormName undefined/);
+const unknownFormDeclaration = edfiDeclaration();
+unknownFormDeclaration.choiceQuestionFormName = 'claudePrompt';
+harness.match('an unknown form is refused at registration, listing the forms', validationRefusalFor(unknownFormDeclaration), /choiceQuestionFormName.*claudePrompt/);
+const formOnSingleFormVariant = edfiDeclaration();
+formOnSingleFormVariant.predicateSource = { kind: 'judge', predicateRule: 'categoryTable-v1' };
+formOnSingleFormVariant.predicateByCategory = { strong: 'exactMatch', moderate: 'closeMatch', weakButReal: 'closeMatch' };
+formOnSingleFormVariant.judgePromptVariant = 'derived';
+delete formOnSingleFormVariant.owningConstructDefinitionSource;
+harness.match('a form declared on a single-form variant is refused (it would be read by nothing)', variantOrErrorFor(formOnSingleFormVariant), /^ERROR declares choiceQuestionFormName 'owningConstructDefinitionState', and its variant 'derived' has one form only/);
 const withoutSource = edfiDeclaration();
 delete withoutSource.owningConstructDefinitionSource;
 harness.match('a judgeSlot-v1 derived declaration WITHOUT owningConstructDefinitionSource is refused by name', validationRefusalFor(withoutSource), /resolves to variant 'derivedJudgeSlotOwningDefinition', which renders the owning construct's definition, and declares no owningConstructDefinitionSource/);
@@ -154,14 +187,17 @@ const onCategoryTable = edfiDeclaration();
 onCategoryTable.predicateSource = { kind: 'judge', predicateRule: 'categoryTable-v1' };
 onCategoryTable.predicateByCategory = { strong: 'exactMatch', moderate: 'closeMatch', weakButReal: 'closeMatch' };
 onCategoryTable.judgePromptVariant = 'derived';
+delete onCategoryTable.choiceQuestionFormName;
 harness.match('a declaration whose variant does not render it, carrying it, is refused by name', validationRefusalFor(onCategoryTable), /declares owningConstructDefinitionSource, and its variant 'derived' does not render an owning-construct definition/);
 harness.match('an unknown kind is refused listing the kinds', owningConstructDefinitionLib.owningConstructDefinitionSourceReason({ kind: 'borrowByName' }), /kind "borrowByName" is not one of ownerNodeProperty, none/);
 harness.match('kind none without a reason is refused', owningConstructDefinitionLib.owningConstructDefinitionSourceReason({ kind: 'none' }), /needs a non-blank reason/);
 harness.match('a stray member is refused by name', owningConstructDefinitionLib.owningConstructDefinitionSourceReason({ ...OWNER_SOURCE, fallbackPropertyName: 'documentation' }), /carries undeclared member\(s\) fallbackPropertyName/);
 harness.match('ownerNodeProperty without its property names is refused', owningConstructDefinitionLib.owningConstructDefinitionSourceReason({ kind: 'ownerNodeProperty', ownerReferencePropertyName: 'parentId' }), /needs a non-blank ownerReferencePropertyName and definitionPropertyName/);
+// ruling COPPER_RIVER 2026-10-13: Ed-Fi and every per-release PESC bridge take the owning-definition form and read the owner's
+// description; SIF keeps the instruction form, so it declares no source (its variant would read none)
 const SHIPPED_SOURCE_BY_PLUGIN_PATH = {
 	'forges/edfi/bridges/edfiCedsDerivedPlugin.js': OWNER_SOURCE,
-	'forges/sif260928/bridges/sif260928CedsDerivedPlugin.js': { kind: 'none' },
+	'forges/sif260928/bridges/sif260928CedsDerivedPlugin.js': null,
 	'forges/pesccollegetranscript1v8v0/bridges/pescCollegeTranscript1v8v0CedsDerivedPlugin.js': OWNER_SOURCE,
 	'forges/pesccollegetranscript1v7v0/bridges/pescCollegeTranscript1v7v0CedsDerivedPlugin.js': OWNER_SOURCE,
 	'forges/peschighschooltranscript1v6v0/bridges/pescHighSchoolTranscript1v6v0CedsDerivedPlugin.js': OWNER_SOURCE,
@@ -172,12 +208,14 @@ const SHIPPED_SOURCE_BY_PLUGIN_PATH = {
 	'forges/pescacademiceportfolio1v0v0/bridges/pescAcademicEportfolio1v0v0CedsDerivedPlugin.js': OWNER_SOURCE,
 };
 const shippedFaultList = Object.keys(SHIPPED_SOURCE_BY_PLUGIN_PATH).map((pluginPath) => {
-	const declared = require(path.join(TREE_ROOT, pluginPath)).bridgeDeclaration.owningConstructDefinitionSource || {};
+	const shippedDeclaration = require(path.join(TREE_ROOT, pluginPath)).bridgeDeclaration;
 	const expected = SHIPPED_SOURCE_BY_PLUGIN_PATH[pluginPath];
-	const agrees = Object.keys(expected).every((memberName) => declared[memberName] === expected[memberName]) && owningConstructDefinitionLib.owningConstructDefinitionSourceReason(declared) === '';
-	return agrees ? null : `${pluginPath}: ${JSON.stringify(declared)}`;
+	const declared = shippedDeclaration.owningConstructDefinitionSource;
+	const expectedFormName = expected === null ? 'matchingInstructionsState' : 'owningConstructDefinitionState';
+	const sourceAgrees = expected === null ? declared === undefined : declared !== undefined && Object.keys(expected).every((memberName) => declared[memberName] === expected[memberName]) && owningConstructDefinitionLib.owningConstructDefinitionSourceReason(declared) === '';
+	return sourceAgrees && shippedDeclaration.choiceQuestionFormName === expectedFormName ? null : `${pluginPath}: form ${JSON.stringify(shippedDeclaration.choiceQuestionFormName)}, source ${JSON.stringify(declared)}`;
 }).filter((oneFault) => oneFault !== null);
-harness.equal('the ten shipped judgeSlot plugins declare what was measured: Ed-Fi and PESC read parentId.description, SIF declares none with its reason', shippedFaultList.join(' | '), '');
+harness.equal('the ten shipped judgeSlot plugins declare what was ruled: Ed-Fi and PESC the owning-definition form reading parentId.description, SIF the instruction form and no source', shippedFaultList.join(' | '), '');
 
 harness.section('(e) THE IDENTIFIER SCAN READS THE SPLIT QUESTION');
 const { compiledScan } = promptIdentifierScanLib.compileScan({ scanDeclaration: { identifierPatternList: [{ patternName: 'cedsPropertyId', regexSource: 'P\\d{6}' }] }, identifierList: null });
@@ -191,6 +229,7 @@ harness.section('(f) END TO END THROUGH THE FRAMEWORK: A TOY judgeSlot-v1 RUN RE
 // The toy standard's property nodes gain an owner reference to their construct node; Student and School carry a
 // definition, Course does not. A capturing judge (the debug judge, wrapped) records the split question each subject reached.
 const scenarioLib = require('./testSupport/toyBridgeScenario');
+const { blockOf } = require('./testSupport/bridgeTwinFactories');
 const debugJudgeLib = require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'debugJudge'));
 const TOY_DEFINITION_BY_CONSTRUCT_STABLE_ID = Object.freeze({ 'toy:construct/Student': 'A person enrolled in a school.', 'toy:construct/School': 'An institution that teaches students.' });
 const toyRunScenario = scenarioLib.makeScenario();
@@ -205,15 +244,24 @@ toyRunScenario.graph.nodeList = toyRunScenario.graph.nodeList.map((oneNode) => {
 const toyDerivedDeclaration = cloneJson(require(path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyDerivedPlugin.js')).bridgeDeclaration);
 toyDerivedDeclaration.predicateSource = { kind: 'judge', predicateRule: 'judgeSlot-v1' };
 toyDerivedDeclaration.judgePromptVariant = NEW_VARIANT_NAME;
+toyDerivedDeclaration.choiceQuestionFormName = 'owningConstructDefinitionState';
 toyDerivedDeclaration.owningConstructDefinitionSource = { ...OWNER_SOURCE };
 delete toyDerivedDeclaration.predicateByCategory;
 toyRunScenario.pluginModuleOverrides.toyDerivedPlugin = { bridgeDeclaration: toyDerivedDeclaration };
 const capturedChoiceQuestionList = [];
+const capturedFormNameList = [];
 const debugJudge = debugJudgeLib({ ruleName: 'digest' });
-toyRunScenario.judgeClientOverride = { ...debugJudge, rerank: (rerankOptions, rerankCallback) => {
-	capturedChoiceQuestionList.push(rerankOptions.choiceQuestion);
-	debugJudge.rerank(rerankOptions, rerankCallback);
-} };
+// (g) a judge whose identity differs by form, as Jev's does: the instruction form keeps the debug judge's own model
+const OWNING_FORM_TOY_MODEL = `${debugJudge.model}-owningForm`;
+toyRunScenario.judgeClientOverride = {
+	...debugJudge,
+	modelForChoiceQuestionForm: (choiceQuestionFormName) => ({ model: choiceQuestionFormName === 'owningConstructDefinitionState' ? OWNING_FORM_TOY_MODEL : debugJudge.model }),
+	rerank: (rerankOptions, rerankCallback) => {
+		capturedChoiceQuestionList.push(rerankOptions.choiceQuestion);
+		capturedFormNameList.push(rerankOptions.choiceQuestionFormName);
+		debugJudge.rerank(rerankOptions, (rerankError, verdict) => rerankCallback(rerankError, verdict && { ...verdict, model: OWNING_FORM_TOY_MODEL }));
+	},
+};
 scenarioLib.runScenario(toyRunScenario, (unusedError, outcome) => {
 	harness.ok('the toy run completes', outcome && !outcome.runError && !outcome.constructionError && !outcome.thrownFromRun, outcome && (outcome.runError || outcome.constructionError || outcome.thrownFromRun));
 	const definitionByOwnerName = capturedChoiceQuestionList.reduce((soFar, oneChoiceQuestion) => ({ ...soFar, [oneChoiceQuestion.stateObject.sourceElement.owningConstructName]: oneChoiceQuestion.stateObject.sourceElement.owningConstructDefinition === undefined ? '(none)' : oneChoiceQuestion.stateObject.sourceElement.owningConstructDefinition }), {});
@@ -223,5 +271,13 @@ scenarioLib.runScenario(toyRunScenario, (unusedError, outcome) => {
 	const coverage = outcome && outcome.runReport && outcome.runReport.counts ? outcome.runReport.counts.owningConstructDefinitionCoverage : undefined;
 	const courseQuestionCount = capturedChoiceQuestionList.filter((oneChoiceQuestion) => oneChoiceQuestion.stateObject.sourceElement.owningConstructName === 'Course').length;
 	harness.equal('the run report counts rendered and absent-by-reason, and they add up to the questions asked', JSON.stringify(coverage), JSON.stringify({ renderedCount: capturedChoiceQuestionList.length - courseQuestionCount, absentCountByReason: { [owningConstructDefinitionLib.ABSENT_REASON_OWNER_HAS_NO_DEFINITION]: courseQuestionCount } }));
+
+	harness.section('(g) THE JUDGE IS BOUND TO THE BRIDGE\'S FORM');
+	harness.equal('every question reached the judge with the bridge\'s form, by name', Array.from(new Set(capturedFormNameList)).join(','), 'owningConstructDefinitionState');
+	const block = outcome && !outcome.runError ? blockOf(outcome) : { header: {}, decisionRecordList: [] };
+	const judgedRecordList = block.decisionRecordList.filter((oneRecord) => oneRecord.judge !== undefined);
+	harness.ok('the run froze judged records', judgedRecordList.length > 0, judgedRecordList.length);
+	harness.equal('every frozen record names the form\'s identity', Array.from(new Set(judgedRecordList.map((oneRecord) => oneRecord.judge.judgeModel))).join(','), OWNING_FORM_TOY_MODEL);
+	harness.equal('the header\'s judgeKind is the form\'s identity', block.header.judgeKind, OWNING_FORM_TOY_MODEL);
 	harness.report();
 });

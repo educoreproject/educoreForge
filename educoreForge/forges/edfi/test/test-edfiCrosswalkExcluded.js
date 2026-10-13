@@ -67,7 +67,9 @@ const RETIRED_CSV_FILE_NAME_LIST = Object.freeze(['EdFiEntityDescriptorsToCEDS.c
 // RE-ANCHORED 2026-10-13 by cedsRichness lane JEVQ (LUNAR_PEAK; pre-authorised; observed red at 01f2bb01, 16/17): 272dd5ac… ->
 // 9759ee02…. Census (numstat from main 317cba12, 6/1): judgePromptVariant 'derivedJudgeSlot' -> 'derivedJudgeSlotOwningDefinition'
 // and the owningConstructDefinitionSource declaration (owner by parentId, its description), with their comment. Still no channel.
-const DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A = '9759ee02b8ef25ce415506e353db89460433fe39ead83175c002026298829b0b';
+// RE-ANCHORED AGAIN 2026-10-13 (lane JEVQ, ruling COPPER_RIVER: the split question's form is declared per bridge): 9759ee02… ->
+// 1a305c20…; the plugin adds choiceQuestionFormName 'owningConstructDefinitionState' and its comment (numstat from main 317cba12, 8/1).
+const DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A = '1a305c20188519c971059f6c68caf289858a3954245a9028172e9923eeb2da1b';
 
 // a node property naming CEDS, or a cross-reference of any kind, can only have come from a crosswalk:
 // Ed-Fi's own MetaEd publishes no CEDS anchor (the walk's scan uses the same rule)

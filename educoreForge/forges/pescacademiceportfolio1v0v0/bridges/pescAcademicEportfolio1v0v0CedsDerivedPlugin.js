@@ -64,6 +64,8 @@ const bridgeDeclaration = Object.freeze({
 		candidate: ['name', 'propertyDefinition', 'domainName', 'domainDefinition', 'rangeOptionSetName', 'rangeOptionSetDefinition', 'rangeClassName', 'rangeClassDefinition', 'componentIdeaList'],
 	},
 	judgePromptVariant: 'derivedJudgeSlotOwningDefinition',
+	// ⟪lane JEVQ, ruling COPPER_RIVER 2026-10-13⟫ the split question's form, per bridge: the owning-definition form
+	choiceQuestionFormName: 'owningConstructDefinitionState',
 	// ⟪lane JEVQ, 2026-10-13⟫ WHAT THE SOURCE ELEMENT BELONGS TO, in PESC's own words, for Jev's split question only (the text
 	// prompt is unchanged). The subject names its owner by parentId; the owner carries its published definition in
 	// description. Measured on GOLD_EVAL_261013_cedsConcepts: only 685 of the 1,916 Element owner links carry one (named types 655 of 1,853, groups 30 of 46, anonymous types 0 of 17). An owner without one renders

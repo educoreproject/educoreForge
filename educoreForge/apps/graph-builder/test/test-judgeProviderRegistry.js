@@ -101,6 +101,8 @@ const conformingProvider = ({ name = 'alpha', wireModel = 'w-1', model, maxConcu
 		maxConcurrency,
 		rerank: (rerankOptions, rerankCallback) => rerankCallback('', {}),
 		describe: () => ({ provider: name, model: resolvedModel, version: `${name}-vTest` }),
+		// lane JEVQ: JUDGE_PROVIDER_SHAPE's eighth member (a text-prompt double: one identity for every form)
+		modelForChoiceQuestionForm: () => ({ model: resolvedModel }),
 		judgeConfig: Object.freeze({ temperaturePolicy: 'testNoWire', maxTokens: null }),
 	};
 };

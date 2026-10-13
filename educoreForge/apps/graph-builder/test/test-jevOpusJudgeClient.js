@@ -47,6 +47,11 @@ const iniFilePathFor = (escalateBelowConfidence) => {
 	return iniFilePath;
 };
 
+// lane JEVQ (ruling COPPER_RIVER, 2026-10-13): the split question's form is per bridge and travels with every question; the
+// cascade's identity follows its Jev leg's per form. This suite's questions are the instruction form unless a case says otherwise.
+const INSTRUCTION_FORM = 'matchingInstructionsState';
+const OWNING_DEFINITION_FORM = 'owningConstructDefinitionState';
+const JEV_DOUBLE_MODEL_BY_FORM = Object.freeze({ [INSTRUCTION_FORM]: 'jev:jev-1.13.0:data', [OWNING_DEFINITION_FORM]: 'jev:jev-1.13.0:data:owningForm' });
 // jevDouble — answers with the scripted verdict (or error) and counts its calls.
 const jevDouble = ({ verdict, error }) => {
 	const callCountHolder = { count: 0 };
@@ -59,6 +64,8 @@ const jevDouble = ({ verdict, error }) => {
 			maxConcurrency: 4,
 			judgeConfig: Object.freeze({ temperaturePolicy: 'notOffered', maxTokens: null }),
 			describe: () => ({ provider: 'jev', model: 'jev:jev-1.13.0:data', version: 'double' }),
+			// lane JEVQ: one identity per split-question form, as the real Jev answers
+			modelForChoiceQuestionForm: (choiceQuestionFormName) => (JEV_DOUBLE_MODEL_BY_FORM[choiceQuestionFormName] === undefined ? { error: `no form '${choiceQuestionFormName}'` } : { model: JEV_DOUBLE_MODEL_BY_FORM[choiceQuestionFormName] }),
 			rerank: (rerankOptions, callback) => {
 				callCountHolder.count += 1;
 				setImmediate(() => callback(error || '', verdict));
@@ -80,6 +87,7 @@ const anthropicDouble = ({ predicate } = {}) => {
 			maxConcurrency: 8,
 			judgeConfig: Object.freeze({ temperaturePolicy: 'zero', maxTokens: 16000 }),
 			describe: () => ({ provider: 'anthropic', model: 'anthropic:claude-opus-5', version: 'double' }),
+			modelForChoiceQuestionForm: () => ({ model: 'anthropic:claude-opus-5' }),
 			rerank: (rerankOptions, callback) => {
 				callCountHolder.count += 1;
 				receivedOptionsList.push(rerankOptions);
@@ -115,8 +123,6 @@ fs.writeFileSync(
 		`apiKeyEnvironmentVariableName=${TEST_KEY_VARIABLE_NAME}`, 'maxConcurrency=4', 'requestTimeoutMs=1000', 'maxAttempts=1', 'requestForm=data',
 		'strongMinConfidence=0.8', 'moderateMinConfidence=0.5', 'relationInstructionText=How does the source element relate?',
 		'exactMatchDescription=same', 'closeMatchDescription=close', 'broadMatchDescription=broader', 'narrowMatchDescription=narrower',
-		// lane JEVQ: the question form this Jev answers; this suite's questions are today's (instruction) form
-		'choiceQuestionFormName=matchingInstructionsState',
 	].join('\n'),
 );
 const realJevWithTransport = (responseBodyList) => {
@@ -157,7 +163,7 @@ const caseList = [
 	(done) => {
 		const jev = jevDouble({ verdict: jevVerdictAt(0.7) });
 		const anthropic = anthropicDouble();
-		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'] }, (rerankError, verdict) => {
+		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'] }, (rerankError, verdict) => {
 			harness.section('AT THE CUT, JEV ANSWERS AND OPUS IS NOT ASKED');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal("Jev's choice stands", verdict && verdict.choice, '1');
@@ -171,7 +177,7 @@ const caseList = [
 	(done) => {
 		const jev = jevDouble({ verdict: jevVerdictAt(0.85, 'NONE') });
 		const anthropic = anthropicDouble();
-		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'] }, (rerankError, verdict) => {
+		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'] }, (rerankError, verdict) => {
 			harness.section('A CONFIDENT NONE IS AN ANSWER');
 			harness.equal('NONE stands', verdict && verdict.choice, 'NONE');
 			harness.equal('Opus was not called', anthropic.callCountHolder.count, 0);
@@ -181,7 +187,7 @@ const caseList = [
 	(done) => {
 		const jev = jevDouble({ verdict: jevVerdictAt(0.69) });
 		const anthropic = anthropicDouble();
-		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'] }, (rerankError, verdict) => {
+		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'] }, (rerankError, verdict) => {
 			harness.section('BELOW THE CUT, OPUS ANSWERS');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal("Opus's choice stands", verdict && verdict.choice, '2');
@@ -199,7 +205,7 @@ const caseList = [
 	(done) => {
 		const jev = jevDouble({ error: 'jevJudgeClient: HTTP 503 after 3 attempt(s)' });
 		const anthropic = anthropicDouble();
-		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'] }, (rerankError) => {
+		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'] }, (rerankError) => {
 			harness.section('A JEV FAILURE IS REFUSED, NEVER ESCALATED');
 			harness.match('refused by name', rerankError, /the Jev judge refused, and a cascade does not escalate a failure: jevJudgeClient: HTTP 503/);
 			harness.equal('Opus was not called', anthropic.callCountHolder.count, 0);
@@ -209,7 +215,7 @@ const caseList = [
 	(done) => {
 		const jev = jevDouble({ verdict: { ...jevVerdictAt(0.9), judgeSummary: null } });
 		const anthropic = anthropicDouble();
-		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'] }, (rerankError) => {
+		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'] }, (rerankError) => {
 			harness.section('A JEV VERDICT WITHOUT A CONFIDENCE IS REFUSED');
 			harness.match('refused by name', rerankError, /carries no judgeSummary\.judgePickConfidence/);
 			done();
@@ -220,7 +226,7 @@ const caseList = [
 		const jev = realJevWithTransport([pickBody(0.9), relationBody('closeMatch')]);
 		const anthropic = anthropicDouble();
 		const cascade = cascadeFor({ jev, anthropic });
-		cascade.rerank({ choiceEnum: ['1', '2', 'NONE'], predicateRule: 'judgeSlot-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
+		cascade.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'], predicateRule: 'judgeSlot-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
 			harness.section("judgeSlot-v1, JEV ANSWERS: THE CASCADE CARRIES THE JEV LEG'S PREDICATE");
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('answeredBy is jev', verdict && verdict.answeredBy, 'jev');
@@ -234,7 +240,7 @@ const caseList = [
 	(done) => {
 		const jev = realJevWithTransport([pickBody(0.9)]);
 		const anthropic = anthropicDouble();
-		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'], predicateRule: 'categoryTable-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
+		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'], predicateRule: 'categoryTable-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
 			harness.section('categoryTable-v1, JEV ANSWERS: NO PREDICATE KEY THROUGH THE CASCADE');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('no predicate key', verdict && Object.prototype.hasOwnProperty.call(verdict, 'predicate'), false);
@@ -245,13 +251,32 @@ const caseList = [
 	(done) => {
 		const jev = realJevWithTransport([pickBody(0.5), relationBody('broadMatch')]);
 		const anthropic = anthropicDouble({ predicate: 'exactMatch' });
-		cascadeFor({ jev, anthropic }).rerank({ choiceEnum: ['1', '2', 'NONE'], predicateRule: 'judgeSlot-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
+		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'], predicateRule: 'judgeSlot-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
 			harness.section('judgeSlot-v1, ESCALATED: OPUS GETS predicateRule AND ITS PREDICATE STANDS');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('the Anthropic leg received predicateRule', anthropic.receivedOptionsList[0] && anthropic.receivedOptionsList[0].predicateRule, 'judgeSlot-v1');
 			harness.equal("Opus's predicate stands, not Jev's", verdict && verdict.predicate, 'exactMatch');
 			harness.equal('answeredBy is anthropic', verdict && verdict.answeredBy, 'anthropic');
 			done();
+		});
+	},
+	// lane JEVQ (ruling COPPER_RIVER): the cascade's identity follows its Jev leg's, per split-question form
+	(done) => {
+		const jev = jevDouble({ verdict: jevVerdictAt(0.9) });
+		const anthropic = anthropicDouble();
+		const cascade = cascadeFor({ jev, anthropic });
+		harness.section('LANE JEVQ: ONE CASCADE IDENTITY PER SPLIT-QUESTION FORM, FOLLOWING THE JEV LEG');
+		harness.equal('the instruction form answers the cascade model', cascade.modelForChoiceQuestionForm(INSTRUCTION_FORM).model, cascade.model);
+		harness.equal('the owning-definition form answers the cascade over the Jev leg\'s owning-definition identity', cascade.modelForChoiceQuestionForm(OWNING_DEFINITION_FORM).model, 'jevOpus:jev-1.13.0:data:owningForm@0.7+anthropic:claude-opus-5');
+		harness.match('an unknown form is refused, naming the Jev leg\'s refusal', cascade.modelForChoiceQuestionForm('claudePrompt').error, /jevOpusJudgeClient: no form 'claudePrompt'/);
+		cascade.rerank({ choiceQuestionFormName: OWNING_DEFINITION_FORM, choiceEnum: ['1', '2', 'NONE'] }, (rerankError, verdict) => {
+			harness.ok('no error', !rerankError, rerankError);
+			harness.equal('the verdict travels under the owning-definition cascade identity', verdict && verdict.model, 'jevOpus:jev-1.13.0:data:owningForm@0.7+anthropic:claude-opus-5');
+			cascade.rerank({ choiceEnum: ['1', '2', 'NONE'] }, (formlessError) => {
+				harness.match('a question without its form is refused by name before any leg is asked', formlessError, /no form 'undefined'/);
+				harness.equal('only the first question reached the Jev leg', jev.callCountHolder.count, 1);
+				done();
+			});
 		});
 	},
 ];

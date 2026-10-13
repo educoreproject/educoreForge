@@ -363,6 +363,9 @@ const DERIVED_VARIANT_ROW = Object.freeze({
 	// ⟪lane JEVQ⟫ the split question's state form, whether the framework must resolve the owning construct's definition
 	// for it, and what of the split state the promptHash covers (nothing beyond the texts, for this form)
 	choiceStateFor: instructionChoiceStateFor,
+	// ⟪lane JEVQ, ruling COPPER_RIVER⟫ the form's NAME, which the framework hands the judge with every question of this
+	// variant (the judge's identity is per form). The split question itself stays unstamped in this form.
+	choiceQuestionFormName: CHOICE_QUESTION_FORM_NAME_INSTRUCTION_STATE,
 	requiresOwningConstructDefinitionSource: false,
 	choiceStatePreimageSegmentListFor: () => [],
 	subjectMaterialNameListFor: ({ bridgeDeclaration }) => bridgeDeclaration.renderingAllowList.subject,
@@ -400,8 +403,9 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		answerLineSuffix: '.',
 		collapsesIdenticalCards: false,
 		judgePredicateRule: 'categoryTable-v1',
-		// ⟪lane JEVQ⟫ no split question here (no subjectData), so no state form and nothing of it to hash
+		// ⟪lane JEVQ⟫ no split question here (no subjectData), so no state form, no form name and nothing of it to hash
 		requiresOwningConstructDefinitionSource: false,
+		choiceQuestionFormName: null,
 		choiceStatePreimageSegmentListFor: () => [],
 	}),
 	derived: DERIVED_VARIANT_ROW,
@@ -413,19 +417,41 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		rendererVersion: DERIVED_JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION,
 		judgePredicateRule: 'judgeSlot-v1',
 		choiceStateFor: owningDefinitionChoiceStateFor,
+		choiceQuestionFormName: CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE,
 		requiresOwningConstructDefinitionSource: true,
 		choiceStatePreimageSegmentListFor: ({ choiceQuestion }) => [JSON.stringify(choiceQuestion.stateObject)],
 	}),
 });
 // ⟪lane QUAL⟫ VARIANT_ROW_BOOLEAN_MEMBER_LIST — the switches every variant row DECLARES, true or false. An absent member would
 // read as false and quietly decide a variant's rendering, so a row without one is refused when this module loads.
-const VARIANT_ROW_BOOLEAN_MEMBER_LIST = Object.freeze(['requiresRenderingAllowList', 'collapsesIdenticalCards']);
+const VARIANT_ROW_BOOLEAN_MEMBER_LIST = Object.freeze(['requiresRenderingAllowList', 'collapsesIdenticalCards', 'requiresOwningConstructDefinitionSource']);
 const undeclaredVariantMemberList = Object.keys(JUDGE_PROMPT_VARIANT_REGISTRY).reduce(
 	(soFar, variantName) => soFar.concat(VARIANT_ROW_BOOLEAN_MEMBER_LIST.filter((memberName) => typeof JUDGE_PROMPT_VARIANT_REGISTRY[variantName][memberName] !== 'boolean').map((memberName) => `${variantName}.${memberName}`)),
 	[],
 );
 if (undeclaredVariantMemberList.length > 0) {
 	throw new Error(`${moduleName} REFUSED AT LOAD: JUDGE_PROMPT_VARIANT_REGISTRY row(s) declare no boolean for ${undeclaredVariantMemberList.join(', ')}; every row states each of ${VARIANT_ROW_BOOLEAN_MEMBER_LIST.join(', ')}`);
+}
+// ⟪lane JEVQ⟫ every row names its split question's form: a registered form when the row builds one (subjectData), null when
+// it builds none. A row that built a split question without naming its form would leave the judge to guess it.
+// FORM_MEMBER_BY_FORM_NAME — what a row naming each form must also carry, so the NAME the judge is handed and the STATE the
+// row builds can never disagree (a row that spread the derived row and overrode its builder but not its name would otherwise
+// build one form under the other's identity).
+const FORM_MEMBER_BY_FORM_NAME = Object.freeze({
+	[CHOICE_QUESTION_FORM_NAME_INSTRUCTION_STATE]: Object.freeze({ choiceStateFor: instructionChoiceStateFor, requiresOwningConstructDefinitionSource: false }),
+	[CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE]: Object.freeze({ choiceStateFor: owningDefinitionChoiceStateFor, requiresOwningConstructDefinitionSource: true }),
+});
+const CHOICE_QUESTION_FORM_NAME_LIST = Object.freeze(Object.keys(FORM_MEMBER_BY_FORM_NAME));
+const misnamedFormVariantList = Object.keys(JUDGE_PROMPT_VARIANT_REGISTRY).filter((variantName) => {
+	const variantRow = JUDGE_PROMPT_VARIANT_REGISTRY[variantName];
+	if (variantRow.subjectData === undefined) {
+		return variantRow.choiceQuestionFormName !== null;
+	}
+	const formMember = FORM_MEMBER_BY_FORM_NAME[variantRow.choiceQuestionFormName];
+	return formMember === undefined || Object.keys(formMember).some((memberName) => variantRow[memberName] !== formMember[memberName]);
+});
+if (misnamedFormVariantList.length > 0) {
+	throw new Error(`${moduleName} REFUSED AT LOAD: JUDGE_PROMPT_VARIANT_REGISTRY row(s) ${misnamedFormVariantList.join(', ')} name no valid choiceQuestionFormName, or name one whose builder and switches they do not carry; a row that builds a split question names one of ${CHOICE_QUESTION_FORM_NAME_LIST.join(', ')} with FORM_MEMBER_BY_FORM_NAME's members, a row that builds none says null`);
 }
 
 // renderedBlockRefusal — the POSITIVE half of the id gate, applied to the bytes actually produced. The
@@ -594,6 +620,7 @@ module.exports = {
 	DERIVED_JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION,
 	CHOICE_QUESTION_FORM_NAME_INSTRUCTION_STATE,
 	CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE,
+	CHOICE_QUESTION_FORM_NAME_LIST,
 	SYSTEM_PROMPT,
 	DERIVED_SYSTEM_PROMPT,
 	JUDGE_PROMPT_VARIANT_REGISTRY,
