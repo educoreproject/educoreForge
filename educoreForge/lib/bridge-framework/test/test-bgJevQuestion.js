@@ -9,7 +9,7 @@
 //   (a) the owning-definition variant's split question carries the definition and no instructions; its TEXT prompts are
 //       derivedJudgeSlot's byte for byte; the definition text keys its promptHash; the relation question's source is the
 //       source WITHOUT the definition
-//   (b) the old judge (derivedJudgeSlot) renders byte-identically to main a07ea515 (pinned below)
+//   (b) the old judge (derivedJudgeSlot) renders byte-identically to main 317cba12 (pinned below)
 //   (c) a source with no owning definition renders without one and records why; the resolver's refusals are by name
 //   (d) the contract: the variant requires owningConstructDefinitionSource, every other variant forbids it, the kinds are
 //       checked, and the contract's list agrees with the renderer's rows; the shipped plugins declare what was measured
@@ -45,9 +45,10 @@ const OLD_JUDGE_RENDER_INPUT = require('./fixtures/jevQuestion/oldJudgeRenderInp
 const sha256 = (text) => crypto.createHash('sha256').update(String(text), 'utf8').digest('hex');
 const cloneJson = (value) => JSON.parse(JSON.stringify(value));
 
-// PINNED on main a07ea515 (before lane JEVQ), from the fixture above: the whole renderQuestion result as JSON, and its
-// promptHash. The old judge must render exactly this.
-const OLD_JUDGE_RESULT_SHA256 = '842ca8d26a3285cea1b24f9418d91dee01d9446d37a30fec784f961d81d7eedd';
+// PINNED on main 317cba12 (lane QUAL merged, before lane JEVQ), from the fixture above: the whole renderQuestion result as
+// JSON, and its promptHash. The old judge must render exactly this. (First pinned on a07ea515 as 842ca8d2…; QUAL added
+// cardCollapseList and qualifiedCardStableIdList to the result, re-pinned on the rebase; promptHash did not move.)
+const OLD_JUDGE_RESULT_SHA256 = '8ad81534ceadcff2992895478e490c28da67d9c205ac12ef51dc6ece770d2cef';
 const OLD_JUDGE_PROMPT_HASH = 'c0a8a9fa7442bb87a086bba61e2fc1e5ca97f0de9d69bbecd644b58bad432d7b';
 const NEW_VARIANT_NAME = 'derivedJudgeSlotOwningDefinition';
 const NEW_RENDERER_VERSION_LITERAL = 'bridgeEvidenceRenderer-derivedJudgeSlotOwningDefinition-v1';
@@ -67,7 +68,7 @@ const renderedOrNull = (renderInput) => {
 	return rendered.error ? null : rendered;
 };
 
-harness.section('(b) THE OLD JUDGE RENDERS BYTE-IDENTICALLY TO main a07ea515');
+harness.section('(b) THE OLD JUDGE RENDERS BYTE-IDENTICALLY TO main 317cba12');
 const oldRendered = evidenceRendererLib.renderQuestion(renderInputFor({ judgePromptVariant: 'derivedJudgeSlot' }));
 harness.ok('the old variant renders', !oldRendered.error, oldRendered.error && oldRendered.error.message);
 harness.equal('the whole result, as JSON, hashes to the pin', sha256(JSON.stringify(oldRendered)), OLD_JUDGE_RESULT_SHA256);
