@@ -88,10 +88,10 @@ const MIN_IDENTIFYING_TOKEN_LENGTH = 4;
 // before, so their hashes are exactly what they were; the owning-definition row adds its split state, because that state
 // carries text (the owning construct's definition) the text prompt does not, and a cache key that did not cover it would
 // serve a verdict given on an old definition.
+const textPreimageSegmentListFor = ({ variantRow, systemPrompt, userPrompt }) =>
+	[variantRow.rendererVersion, systemPrompt, userPrompt].concat(variantRow.subjectData && variantRow.candidateData ? [CHOICE_QUESTION_INSTRUCTION_TEXT, CHOICE_QUESTION_ABSTAIN_TEXT] : []);
 const promptHashPreimageSegmentListFor = ({ variantRow, systemPrompt, userPrompt, choiceQuestion }) =>
-	[variantRow.rendererVersion, systemPrompt, userPrompt]
-		.concat(variantRow.subjectData && variantRow.candidateData ? [CHOICE_QUESTION_INSTRUCTION_TEXT, CHOICE_QUESTION_ABSTAIN_TEXT] : [])
-		.concat(variantRow.choiceStatePreimageSegmentListFor({ choiceQuestion }));
+	textPreimageSegmentListFor({ variantRow, systemPrompt, userPrompt }).concat(variantRow.choiceStatePreimageSegmentListFor({ choiceQuestion }));
 
 const SYSTEM_PROMPT =
 	'You are matching ONE source element to AT MOST ONE candidate card from a hub of canonical properties. ' +

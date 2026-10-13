@@ -115,6 +115,8 @@ fs.writeFileSync(
 		`apiKeyEnvironmentVariableName=${TEST_KEY_VARIABLE_NAME}`, 'maxConcurrency=4', 'requestTimeoutMs=1000', 'maxAttempts=1', 'requestForm=data',
 		'strongMinConfidence=0.8', 'moderateMinConfidence=0.5', 'relationInstructionText=How does the source element relate?',
 		'exactMatchDescription=same', 'closeMatchDescription=close', 'broadMatchDescription=broader', 'narrowMatchDescription=narrower',
+		// lane JEVQ: the question form this Jev answers; this suite's questions are today's (instruction) form
+		'choiceQuestionFormName=matchingInstructionsState',
 	].join('\n'),
 );
 const realJevWithTransport = (responseBodyList) => {

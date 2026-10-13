@@ -1,0 +1,189 @@
+#!/usr/bin/env node
+'use strict';
+
+// test-bgJevQuestion.js — BG-JEVQUESTION: Jev's better choice question (lane JEVQ, cedsRichness-101226, 2026-10-13).
+//
+// The deep dive (deepDive-101326 §4.3) measured that Jev answers better when the source element carries its owning
+// construct's definition and Claude's system prompt is NOT in its state. This suite holds the three things the work order
+// names, and the seams that make them true:
+//   (a) the owning-definition variant's split question carries the definition and no instructions; its TEXT prompts are
+//       derivedJudgeSlot's byte for byte; the definition text keys its promptHash; the relation question's source is the
+//       source WITHOUT the definition
+//   (b) the old judge (derivedJudgeSlot) renders byte-identically to main a07ea515 (pinned below)
+//   (c) a source with no owning definition renders without one and records why; the resolver's refusals are by name
+//   (d) the contract: the variant requires owningConstructDefinitionSource, every other variant forbids it, the kinds are
+//       checked, and the contract's list agrees with the renderer's rows; the shipped plugins declare what was measured
+//   (e) the identifier scan reads the split question, where the definition is the only new text
+//
+// Every conjunct was observed RED before it was made to pass (DEVLOG-JEVQ.md, "gates observed red").
+//
+// Run: node lib/bridge-framework/test/test-bgJevQuestion.js [-verbose]
+
+const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
+const helpText = () => `
+NAME
+     ${moduleName} -- BG-JEVQUESTION, the owning-definition split question for Jev
+
+SYNOPSIS
+     ${moduleName} [-verbose] [-quiet] [-help]
+
+EXIT STATUS
+     0 every conjunct PASS;  1 otherwise.
+`;
+require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
+const harness = require('../../../test/testLib/harness')(moduleName);
+
+const path = require('path');
+const crypto = require('crypto');
+const evidenceRendererLib = require('../evidenceRenderer');
+const bridgePluginContractLib = require('../bridgePluginContract');
+const owningConstructDefinitionLib = require('../owningConstructDefinition');
+const promptIdentifierScanLib = require('../promptIdentifierScan');
+
+const TREE_ROOT = path.join(__dirname, '..', '..', '..');
+const OLD_JUDGE_RENDER_INPUT = require('./fixtures/jevQuestion/oldJudgeRenderInput.json');
+const sha256 = (text) => crypto.createHash('sha256').update(String(text), 'utf8').digest('hex');
+const cloneJson = (value) => JSON.parse(JSON.stringify(value));
+
+// PINNED on main a07ea515 (before lane JEVQ), from the fixture above: the whole renderQuestion result as JSON, and its
+// promptHash. The old judge must render exactly this.
+const OLD_JUDGE_RESULT_SHA256 = '842ca8d26a3285cea1b24f9418d91dee01d9446d37a30fec784f961d81d7eedd';
+const OLD_JUDGE_PROMPT_HASH = 'c0a8a9fa7442bb87a086bba61e2fc1e5ca97f0de9d69bbecd644b58bad432d7b';
+const NEW_VARIANT_NAME = 'derivedJudgeSlotOwningDefinition';
+const NEW_RENDERER_VERSION_LITERAL = 'bridgeEvidenceRenderer-derivedJudgeSlotOwningDefinition-v1';
+const SURVEY_DEFINITION = 'A survey to identified or anonymous respondents.';
+
+const renderInputFor = ({ judgePromptVariant, owningConstructDefinition, owningConstructDefinitionAbsentReason }) => {
+	const renderInput = cloneJson(OLD_JUDGE_RENDER_INPUT);
+	renderInput.judgePromptVariant = judgePromptVariant;
+	if (owningConstructDefinition !== undefined) {
+		renderInput.sourceElement.owningConstructDefinition = owningConstructDefinition;
+		renderInput.sourceElement.owningConstructDefinitionAbsentReason = owningConstructDefinitionAbsentReason;
+	}
+	return renderInput;
+};
+const renderedOrNull = (renderInput) => {
+	const rendered = evidenceRendererLib.renderQuestion(renderInput);
+	return rendered.error ? null : rendered;
+};
+
+harness.section('(b) THE OLD JUDGE RENDERS BYTE-IDENTICALLY TO main a07ea515');
+const oldRendered = evidenceRendererLib.renderQuestion(renderInputFor({ judgePromptVariant: 'derivedJudgeSlot' }));
+harness.ok('the old variant renders', !oldRendered.error, oldRendered.error && oldRendered.error.message);
+harness.equal('the whole result, as JSON, hashes to the pin', sha256(JSON.stringify(oldRendered)), OLD_JUDGE_RESULT_SHA256);
+harness.equal('its promptHash is the pinned one', oldRendered.promptHash, OLD_JUDGE_PROMPT_HASH);
+harness.equal('its split state is still { matchingInstructions: <system prompt>, sourceElement }', Object.keys(oldRendered.choiceQuestion.stateObject).join(','), 'matchingInstructions,sourceElement');
+harness.equal('its split question carries no form stamp', Object.prototype.hasOwnProperty.call(oldRendered.choiceQuestion, 'questionFormName'), false);
+harness.equal('its result carries no owningConstructDefinitionRecord', Object.prototype.hasOwnProperty.call(oldRendered, 'owningConstructDefinitionRecord'), false);
+
+harness.section('(a) THE OWNING-DEFINITION VARIANT: DEFINITION IN, INSTRUCTIONS OUT, TEXT UNCHANGED');
+const newRendered = renderedOrNull(renderInputFor({ judgePromptVariant: NEW_VARIANT_NAME, owningConstructDefinition: SURVEY_DEFINITION, owningConstructDefinitionAbsentReason: null }));
+harness.ok('the new variant renders', newRendered !== null);
+const newState = newRendered ? newRendered.choiceQuestion.stateObject : {};
+harness.equal('the state is exactly { sourceElement }: matchingInstructions is gone', Object.keys(newState).join(','), 'sourceElement');
+harness.equal('the source element carries the owning construct definition, as its last member', newState.sourceElement && Object.keys(newState.sourceElement).slice(-1)[0] + '=' + newState.sourceElement.owningConstructDefinition, `owningConstructDefinition=${SURVEY_DEFINITION}`);
+harness.equal('…and otherwise the same allow-listed members, in the same order, as the old state', newState.sourceElement && JSON.stringify({ ...newState.sourceElement, owningConstructDefinition: undefined }), JSON.stringify(oldRendered.choiceQuestion.stateObject.sourceElement));
+harness.equal('the question is stamped with its form', newRendered && newRendered.choiceQuestion.questionFormName, evidenceRendererLib.CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE);
+harness.equal('the relation question source is the source WITHOUT the definition (the relation question is unchanged)', newRendered && JSON.stringify(newRendered.choiceQuestion.relationStateSourceElement), JSON.stringify(oldRendered.choiceQuestion.stateObject.sourceElement));
+harness.equal('the instruction text and the candidates are the old ones', newRendered && JSON.stringify([newRendered.choiceQuestion.instructionText, newRendered.choiceQuestion.criteriaByChoice]), JSON.stringify([oldRendered.choiceQuestion.instructionText, oldRendered.choiceQuestion.criteriaByChoice]));
+harness.equal('the SYSTEM prompt is the old one byte for byte (every text judge reads the same)', newRendered && newRendered.systemPrompt, oldRendered.systemPrompt);
+harness.equal('the USER prompt is the old one byte for byte', newRendered && newRendered.userPrompt, oldRendered.userPrompt);
+harness.equal('its renderer version is its own', newRendered && newRendered.rendererVersion, NEW_RENDERER_VERSION_LITERAL);
+harness.equal('its predicate rule is still judgeSlot-v1', newRendered && newRendered.judgePredicateRule, 'judgeSlot-v1');
+harness.ok('its promptHash is not the old one (new cache keys)', newRendered && newRendered.promptHash !== oldRendered.promptHash, newRendered && newRendered.promptHash);
+const rewordedRendered = renderedOrNull(renderInputFor({ judgePromptVariant: NEW_VARIANT_NAME, owningConstructDefinition: `${SURVEY_DEFINITION} Reworded.`, owningConstructDefinitionAbsentReason: null }));
+harness.ok('rewording ONLY the definition moves the promptHash (the definition text keys the cache)', rewordedRendered && newRendered && rewordedRendered.promptHash !== newRendered.promptHash && rewordedRendered.userPrompt === newRendered.userPrompt, rewordedRendered && rewordedRendered.promptHash);
+harness.equal('the record says the definition was rendered', newRendered && JSON.stringify(newRendered.owningConstructDefinitionRecord), JSON.stringify({ rendered: true, absentReason: null }));
+
+harness.section('(c) NO OWNING DEFINITION: NONE RENDERED, AND WHY IS RECORDED');
+const absentReasonText = 'declaredNone: SIF 260928 publishes no definition text for its objects';
+const absentRendered = renderedOrNull(renderInputFor({ judgePromptVariant: NEW_VARIANT_NAME, owningConstructDefinition: null, owningConstructDefinitionAbsentReason: absentReasonText }));
+harness.ok('it renders', absentRendered !== null);
+harness.equal('the state source element carries no owningConstructDefinition member at all', absentRendered && Object.prototype.hasOwnProperty.call(absentRendered.choiceQuestion.stateObject.sourceElement, 'owningConstructDefinition'), false);
+harness.equal('…and still no matchingInstructions', absentRendered && Object.keys(absentRendered.choiceQuestion.stateObject).join(','), 'sourceElement');
+harness.equal('the record says none was rendered, and why', absentRendered && JSON.stringify(absentRendered.owningConstructDefinitionRecord), JSON.stringify({ rendered: false, absentReason: absentReasonText }));
+const refusalTextFor = (renderInput) => {
+	const rendered = evidenceRendererLib.renderQuestion(renderInput);
+	return rendered.error ? rendered.error.message : '';
+};
+harness.match('the new variant with neither the text nor a reason is refused by name', refusalTextFor(renderInputFor({ judgePromptVariant: NEW_VARIANT_NAME })), /needs the source element to carry owningConstructDefinition \(text\) or owningConstructDefinitionAbsentReason/);
+harness.match('…with both is refused by name', refusalTextFor(renderInputFor({ judgePromptVariant: NEW_VARIANT_NAME, owningConstructDefinition: SURVEY_DEFINITION, owningConstructDefinitionAbsentReason: 'x' })), /exactly one, the other null/);
+harness.match('…with a blank text and no reason is refused by name', refusalTextFor(renderInputFor({ judgePromptVariant: NEW_VARIANT_NAME, owningConstructDefinition: '  ', owningConstructDefinitionAbsentReason: null })), /exactly one, the other null/);
+harness.match('the OLD variant handed a definition refuses it rather than dropping it silently', refusalTextFor(renderInputFor({ judgePromptVariant: 'derivedJudgeSlot', owningConstructDefinition: SURVEY_DEFINITION, owningConstructDefinitionAbsentReason: null })), /does not render an owning-construct definition, and the source element carries one/);
+
+// the resolver, over a small node set shaped like the forge's (stableId + properties)
+const nodeByStableId = {
+	'edfi:domainEntity/Survey': { stableId: 'edfi:domainEntity/Survey', properties: { name: 'Survey', description: `  ${SURVEY_DEFINITION}  ` } },
+	'edfi:domainEntityExtension/Student': { stableId: 'edfi:domainEntityExtension/Student', properties: { name: 'Student', description: null } },
+	'edfi:property/Survey.SurveyCategory': { stableId: 'edfi:property/Survey.SurveyCategory', properties: { name: 'SurveyCategory', parentId: 'edfi:domainEntity/Survey' } },
+	'edfi:property/StudentExt.Thing': { stableId: 'edfi:property/StudentExt.Thing', properties: { name: 'Thing', parentId: 'edfi:domainEntityExtension/Student' } },
+	'edfi:property/Orphan.Thing': { stableId: 'edfi:property/Orphan.Thing', properties: { name: 'Thing', parentId: 'edfi:domainEntity/NotThere' } },
+	'edfi:property/NoParent.Thing': { stableId: 'edfi:property/NoParent.Thing', properties: { name: 'Thing' } },
+};
+const OWNER_SOURCE = Object.freeze({ kind: 'ownerNodeProperty', ownerReferencePropertyName: 'parentId', definitionPropertyName: 'description' });
+const resolvedFor = (subjectStableId, owningConstructDefinitionSource) => owningConstructDefinitionLib.owningConstructDefinitionFor({ subjectNode: nodeByStableId[subjectStableId], subjectNodeByStableId: nodeByStableId, owningConstructDefinitionSource });
+harness.equal('ownerNodeProperty: the owner\'s definition, trimmed', JSON.stringify(resolvedFor('edfi:property/Survey.SurveyCategory', OWNER_SOURCE)), JSON.stringify({ owningConstructDefinition: SURVEY_DEFINITION, absentReason: null }));
+harness.equal('ownerNodeProperty: an owner without the text gives none and the reason (never borrowed from a same-named node)', JSON.stringify(resolvedFor('edfi:property/StudentExt.Thing', OWNER_SOURCE)), JSON.stringify({ owningConstructDefinition: null, absentReason: owningConstructDefinitionLib.ABSENT_REASON_OWNER_HAS_NO_DEFINITION }));
+harness.equal('none: every subject gives none, under the declared reason', JSON.stringify(resolvedFor('edfi:property/Survey.SurveyCategory', { kind: 'none', reason: 'no definitions published' })), JSON.stringify({ owningConstructDefinition: null, absentReason: 'declaredNone: no definitions published' }));
+const resolverRefusalFor = (subjectStableId, owningConstructDefinitionSource) => {
+	const resolved = resolvedFor(subjectStableId, owningConstructDefinitionSource);
+	return resolved.error ? resolved.error.message : '';
+};
+harness.match('an owner reference naming no node is refused by name', resolverRefusalFor('edfi:property/Orphan.Thing', OWNER_SOURCE), /names owner 'edfi:domainEntity\/NotThere', which is not a node of the source standard/);
+harness.match('a subject without the owner reference is refused by name', resolverRefusalFor('edfi:property/NoParent.Thing', OWNER_SOURCE), /carries no 'parentId'/);
+
+harness.section('(d) THE CONTRACT: REQUIRED FOR THE VARIANT, FORBIDDEN ELSEWHERE, KINDS CHECKED');
+const rowRequiringVariantList = Object.keys(evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY).filter((variantName) => evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[variantName].requiresOwningConstructDefinitionSource === true).sort();
+harness.equal('the contract\'s OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST is exactly the renderer rows that require it', JSON.stringify(bridgePluginContractLib.OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST.slice().sort()), JSON.stringify(rowRequiringVariantList));
+harness.equal('every renderer row says whether it requires it (no row leaves it undefined)', Object.keys(evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY).filter((variantName) => typeof evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[variantName].requiresOwningConstructDefinitionSource !== 'boolean').join(','), '');
+harness.equal('the renderer registry and the contract list name the same variants', JSON.stringify(Object.keys(evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY).sort()), JSON.stringify(bridgePluginContractLib.JUDGE_PROMPT_VARIANT_LIST.slice().sort()));
+harness.equal('(derived, judgeSlot-v1) resolves to the owning-definition variant', bridgePluginContractLib.VARIANT_BY_BASIS_AND_PREDICATE_RULE.derived['judgeSlot-v1'], NEW_VARIANT_NAME);
+const edfiPluginPath = path.join(TREE_ROOT, 'forges', 'edfi', 'bridges', 'edfiCedsDerivedPlugin.js');
+const edfiBundleDirPath = path.join(TREE_ROOT, 'forges', 'edfi');
+const edfiDeclaration = () => cloneJson(require(edfiPluginPath).bridgeDeclaration);
+const validationRefusalFor = (bridgeDeclaration) => {
+	const validated = bridgePluginContractLib.validateBridgeDeclaration({ bridgeDeclaration, bundleDirPath: edfiBundleDirPath });
+	return validated && validated.error ? validated.error.message : '';
+};
+harness.equal('the shipped Ed-Fi declaration validates', validationRefusalFor(edfiDeclaration()), '');
+const withoutSource = edfiDeclaration();
+delete withoutSource.owningConstructDefinitionSource;
+harness.match('a judgeSlot-v1 derived declaration WITHOUT owningConstructDefinitionSource is refused by name', validationRefusalFor(withoutSource), /resolves to variant 'derivedJudgeSlotOwningDefinition', which renders the owning construct's definition, and declares no owningConstructDefinitionSource/);
+const onCategoryTable = edfiDeclaration();
+onCategoryTable.predicateSource = { kind: 'judge', predicateRule: 'categoryTable-v1' };
+onCategoryTable.predicateByCategory = { strong: 'exactMatch', moderate: 'closeMatch', weakButReal: 'closeMatch' };
+onCategoryTable.judgePromptVariant = 'derived';
+harness.match('a declaration whose variant does not render it, carrying it, is refused by name', validationRefusalFor(onCategoryTable), /declares owningConstructDefinitionSource, and its variant 'derived' does not render an owning-construct definition/);
+harness.match('an unknown kind is refused listing the kinds', owningConstructDefinitionLib.owningConstructDefinitionSourceReason({ kind: 'borrowByName' }), /kind "borrowByName" is not one of ownerNodeProperty, none/);
+harness.match('kind none without a reason is refused', owningConstructDefinitionLib.owningConstructDefinitionSourceReason({ kind: 'none' }), /needs a non-blank reason/);
+harness.match('a stray member is refused by name', owningConstructDefinitionLib.owningConstructDefinitionSourceReason({ ...OWNER_SOURCE, fallbackPropertyName: 'documentation' }), /carries undeclared member\(s\) fallbackPropertyName/);
+harness.match('ownerNodeProperty without its property names is refused', owningConstructDefinitionLib.owningConstructDefinitionSourceReason({ kind: 'ownerNodeProperty', ownerReferencePropertyName: 'parentId' }), /needs a non-blank ownerReferencePropertyName and definitionPropertyName/);
+const SHIPPED_SOURCE_BY_PLUGIN_PATH = {
+	'forges/edfi/bridges/edfiCedsDerivedPlugin.js': OWNER_SOURCE,
+	'forges/sif260928/bridges/sif260928CedsDerivedPlugin.js': { kind: 'none' },
+	'forges/pesccollegetranscript1v8v0/bridges/pescCollegeTranscript1v8v0CedsDerivedPlugin.js': OWNER_SOURCE,
+	'forges/pesccollegetranscript1v7v0/bridges/pescCollegeTranscript1v7v0CedsDerivedPlugin.js': OWNER_SOURCE,
+	'forges/peschighschooltranscript1v6v0/bridges/pescHighSchoolTranscript1v6v0CedsDerivedPlugin.js': OWNER_SOURCE,
+	'forges/pesctestscorereport1v1v0/bridges/pescTestScoreReport1v1v0CedsDerivedPlugin.js': OWNER_SOURCE,
+	'forges/pesclearningrecord1v0v0/bridges/pescLearningRecord1v0v0CedsDerivedPlugin.js': OWNER_SOURCE,
+	'forges/pescdocumentrequest1v0v0/bridges/pescDocumentRequest1v0v0CedsDerivedPlugin.js': OWNER_SOURCE,
+	'forges/pescdocumentresponse1v0v0/bridges/pescDocumentResponse1v0v0CedsDerivedPlugin.js': OWNER_SOURCE,
+	'forges/pescacademiceportfolio1v0v0/bridges/pescAcademicEportfolio1v0v0CedsDerivedPlugin.js': OWNER_SOURCE,
+};
+const shippedFaultList = Object.keys(SHIPPED_SOURCE_BY_PLUGIN_PATH).map((pluginPath) => {
+	const declared = require(path.join(TREE_ROOT, pluginPath)).bridgeDeclaration.owningConstructDefinitionSource || {};
+	const expected = SHIPPED_SOURCE_BY_PLUGIN_PATH[pluginPath];
+	const agrees = Object.keys(expected).every((memberName) => declared[memberName] === expected[memberName]) && owningConstructDefinitionLib.owningConstructDefinitionSourceReason(declared) === '';
+	return agrees ? null : `${pluginPath}: ${JSON.stringify(declared)}`;
+}).filter((oneFault) => oneFault !== null);
+harness.equal('the ten shipped judgeSlot plugins declare what was measured: Ed-Fi and PESC read parentId.description, SIF declares none with its reason', shippedFaultList.join(' | '), '');
+
+harness.section('(e) THE IDENTIFIER SCAN READS THE SPLIT QUESTION');
+const { compiledScan } = promptIdentifierScanLib.compileScan({ scanDeclaration: { identifierPatternList: [{ patternName: 'cedsPropertyId', regexSource: 'P\\d{6}' }] }, identifierList: null });
+const leakingRendered = renderedOrNull(renderInputFor({ judgePromptVariant: NEW_VARIANT_NAME, owningConstructDefinition: `${SURVEY_DEFINITION} See P000206.`, owningConstructDefinitionAbsentReason: null }));
+const leakScan = leakingRendered ? promptIdentifierScanLib.scanSurfaces({ compiledScan, surfaceTextByName: promptIdentifierScanLib.questionSurfaceTextByName({ predicateRule: 'judgeSlot-v1', question: leakingRendered }) }) : { hit: null };
+harness.equal('an identifier in the owning definition is a hit, on the choiceQuestionText surface (no text prompt carries it)', leakScan.hit && `${leakScan.hit.surfaceName}:${leakScan.hit.matchedText}`, 'choiceQuestionText:P000206');
+const cleanScan = promptIdentifierScanLib.scanSurfaces({ compiledScan, surfaceTextByName: promptIdentifierScanLib.questionSurfaceTextByName({ predicateRule: 'judgeSlot-v1', question: newRendered }) });
+harness.equal('the clean question has no hit', cleanScan.hit, null);
+
+harness.report();

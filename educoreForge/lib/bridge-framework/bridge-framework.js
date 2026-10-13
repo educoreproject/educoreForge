@@ -1439,7 +1439,7 @@ const moduleFunction =
 					}
 					const identifierList = scanDeclaration.identifierListPath === null ? null : promptIdentifierScanLib.readIdentifierList({ filePath: promptIdentifierScanLib.identifierListFilePathFor({ identifierListPath: scanDeclaration.identifierListPath, forgesDirPath: registry.forgesDirPath, standardKey: bridgeDeclaration.standardKey }) });
 					const { compiledScan } = promptIdentifierScanLib.compileScan({ scanDeclaration, identifierList });
-					say(`prompt identifier scan: ${compiledScan.compiledPatternList.map((onePattern) => onePattern.patternName).join(', ')}${identifierList === null ? '' : ` (${identifierList.length} listed identifier(s))`} over the system prompt, user prompt, tool text and any re-ask prompt; one hit refuses the run`);
+					say(`prompt identifier scan: ${compiledScan.compiledPatternList.map((onePattern) => onePattern.patternName).join(', ')}${identifierList === null ? '' : ` (${identifierList.length} listed identifier(s))`} over the system prompt, user prompt, tool text, the split question (Jev) and any re-ask prompt; one hit refuses the run`);
 					next('', { ...args, compiledPromptScan: compiledScan });
 				});
 
