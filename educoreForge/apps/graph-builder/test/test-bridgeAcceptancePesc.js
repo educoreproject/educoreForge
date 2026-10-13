@@ -850,7 +850,13 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // lane DES's own commits 0f9713b8 (lib/layer-framework/layerRoundTrip.js: a layer verdict records the endpoint it read;
 // certificate-enrichment.js: a layer token names its layer block) and 4681cf0b (self-audit: interfaces.js ForgeReport and the forger
 // resultKeys declare layerReportList; build.js reads it without a silent '|| []'; forger doubles in test-build.js and test-replay.js); and test-bgNosub.js (its re-anchors, this commit). No bridge-framework source.
-const P1_BASELINE_COMMIT = 'postDesLayersAuditPescCompose-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
+// ═══ RE-ANCHOR (2), 2026-10-13 (GRANITE_BEACON; cedsRichness lane UNDES; pre-authorised) ═══ BG-COMPOSE-PESC postDesLayersAuditPescCompose-101226 ->
+// postUndesPescCompose-101326, tag cut ON this commit. CENSUS over this gate's paths (numstat from the old tag, 6 paths, all lane UNDES's):
+// lib/vocabulary/vocabulary.js 4/19, vocabulary-definitions.js 2/13, graph-contract.js 2/2, test/test-layerBlockKind.js 17/18,
+// test/test-sifEdgeVocabulary.js 6/5 (a54c85f7: the V13 structure layer's 8 edge types and 3 roles removed) and
+// lib/bridge-framework/test/test-bgNosub.js 17/3 (622bf9e7: lane UNDES's first re-anchor, which this gate watches and the first
+// sweep did not run). No bridge-framework source, no bridge-maker, build.js or interfaces.js.
+const P1_BASELINE_COMMIT = 'postUndesPescCompose-101326'; // re-anchored by GRANITE_BEACON (lane UNDES); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
