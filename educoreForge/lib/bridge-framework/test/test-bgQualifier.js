@@ -11,7 +11,8 @@
 //                 only in their qualifier do NOT collapse; (e) a pick on a collapsed card resolves to EVERY member, and
 //                 an uncollapsed pick to itself; (f) the crosswalk variant neither collapses nor renders the qualifier;
 //                 (g) a malformed qualifierNames is refused by name; (h) through a real bridge run, a pick on a collapsed
-//                 card freezes one decision record per member, each carrying the collapse.
+//                 card freezes one decision record per member, each carrying the collapse; (i) every variant row declares
+//                 its collapse switch, or the renderer refuses to load.
 //
 // Run: node lib/bridge-framework/test/test-bgQualifier.js [-verbose]
 
@@ -151,6 +152,20 @@ const qualifierConjunctList = [
 		},
 	}),
 	pureConjunct({
+		conjunctId: 'i_everyVariantRowDeclaresItsSwitches',
+		title: 'the renderer loads only when every variant row declares requiresRenderingAllowList and collapsesIdenticalCards as booleans',
+		twinNameList: ['crosswalkRowOmitsCollapseSwitch'],
+		judge: (scenario) => {
+			let loadRefusal = '';
+			try {
+				rendererLibFor(scenario);
+			} catch (loadError) {
+				loadRefusal = loadError.message;
+			}
+			return { pass: loadRefusal === '', detail: loadRefusal === '' ? 'loads' : loadRefusal.slice(0, 220) };
+		},
+	}),
+	pureConjunct({
 		conjunctId: 'g_malformedQualifierNamesRefused',
 		title: 'a qualifierNames that is not a list of non-blank names is refused by name, never rendered',
 		twinNameList: ['qualifierNamesRefusalDeleted'],
@@ -169,6 +184,7 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'c_
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'd_qualifiersKeepTwinsApart', twinName: 'qualifierDroppedFromNameForCollapse', fileName: RENDERER_FILE, find: RENDERED_NAME_FIND, replace: '	card.name;' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'e_collapsedPickResolvesToEveryMember', twinName: 'collapsedPickResolvesToRepresentativeOnly', fileName: RENDERER_FILE, find: '	return collapseEntry === undefined ? [chosenCardStableId] : collapseEntry.memberStableIdList.slice();', replace: '	return [chosenCardStableId];' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'f_crosswalkNeitherCollapsesNorQualifies', twinName: 'crosswalkRowCollapses', fileName: RENDERER_FILE, find: '		collapsesIdenticalCards: false,\n', replace: '		collapsesIdenticalCards: true,\n		candidateData: ({ oneSeat }) => ({ name: oneSeat.card.name }),\n' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'i_everyVariantRowDeclaresItsSwitches', twinName: 'crosswalkRowOmitsCollapseSwitch', fileName: RENDERER_FILE, find: '		collapsesIdenticalCards: false,\n', replace: '' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: GATE_ID, conjunctId: 'g_malformedQualifierNamesRefused', twinName: 'qualifierNamesRefusalDeleted', fileName: RENDERER_FILE, find: '		if (qualifierNamesRefusal) {', replace: '		if (false) {' });
 
 // ---------------------------------------------------------------------
@@ -223,6 +239,6 @@ const gateDeclarationList = [
 ];
 
 runGateFamily(
-	{ harness, familyName: 'BG-QUALIFIER+BG-QUALIFIER-RUN', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 7 + 1 },
+	{ harness, familyName: 'BG-QUALIFIER+BG-QUALIFIER-RUN', gateDeclarationList, twinRegistry, makeSubject: scenarioLib.makeScenario, cloneSubject: scenarioLib.cloneScenario, expectedConjunctCount: 8 + 1 },
 	() => harness.report(),
 );

@@ -1682,14 +1682,14 @@ const moduleFunction =
 						// hole from any OTHER cause cannot hide in this filter.
 						// a judged task yields ONE record, or (lane QUAL) a LIST of them for a pick on a collapsed card, one per member;
 						// concat takes either
-						const yieldedTaskRecordListList = judgedRecordList.filter((oneRecordList) => oneRecordList !== undefined && oneRecordList !== null);
+						const yieldedTaskYieldList = judgedRecordList.filter((oneTaskYield) => oneTaskYield !== undefined && oneTaskYield !== null);
 						const namedRefusalCount = report.refusalList.filter((oneRefusal) => oneRefusal.kind === 'rationaleFormRefusedTwice').length;
-						if (judgedRecordList.length - yieldedTaskRecordListList.length !== namedRefusalCount) {
-							next(refuse.byName({ moduleName, what: `${judgedRecordList.length - yieldedTaskRecordListList.length} judged task(s) yielded no record but only ${namedRefusalCount} subject(s) are named in refusalList`, where: 'every missing decision record must be accounted for by a NAMED refusal; an unexplained hole is refused, never filtered away' }).message);
+						if (judgedRecordList.length - yieldedTaskYieldList.length !== namedRefusalCount) {
+							next(refuse.byName({ moduleName, what: `${judgedRecordList.length - yieldedTaskYieldList.length} judged task(s) yielded no record but only ${namedRefusalCount} subject(s) are named in refusalList`, where: 'every missing decision record must be accounted for by a NAMED refusal; an unexplained hole is refused, never filtered away' }).message);
 							return;
 						}
-						const yieldedRecordList = yieldedTaskRecordListList.reduce((soFar, oneTaskYield) => soFar.concat(oneTaskYield), []);
-						say(`judged: ${yieldedTaskRecordListList.length} (asked ${report.judgeSpend.asked}, cache ${report.judgeSpend.servedFromCache}, abstained ${report.judgeSpend.abstained}, rationaleForm refused ${namedRefusalCount}; judge ${judgeKind})`);
+						const yieldedRecordList = yieldedTaskYieldList.reduce((soFar, oneTaskYield) => soFar.concat(oneTaskYield), []);
+						say(`judged: ${yieldedTaskYieldList.length} (asked ${report.judgeSpend.asked}, cache ${report.judgeSpend.servedFromCache}, abstained ${report.judgeSpend.abstained}, rationaleForm refused ${namedRefusalCount}; judge ${judgeKind})`);
 						next('', { ...args, judgedRecordList: yieldedRecordList, judgeKind });
 					});
 				});

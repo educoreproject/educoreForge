@@ -302,8 +302,6 @@ const DERIVED_VARIANT_ROW = Object.freeze({
 	candidateData: derivedCandidateData,
 	// ⟪lane QUAL⟫ identical rendered cards collapse into one choice (collapsedPoolFor); the crosswalk row says false.
 	collapsesIdenticalCards: true,
-	// ⟪lane QUAL⟫ derivedCandidateData renders a qualified card's qualifierNames into its name (renderedCardNameFor).
-	rendersQualifierInName: true,
 	subjectMaterialNameListFor: ({ bridgeDeclaration }) => bridgeDeclaration.renderingAllowList.subject,
 	// ⟪v11, 2026-09-13 — TQ⟫ GUIDANCE MOVES TO THE SYSTEM PROMPT. The guidance is still DECLARED by the
 	// plugin (it is the plugin's taste, not the framework's) — only its PLACEMENT changes here, so the A2
@@ -338,12 +336,21 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		candidateListHeadingWord: 'CANDIDATES',
 		answerLineSuffix: '.',
 		collapsesIdenticalCards: false,
-		rendersQualifierInName: false,
 		judgePredicateRule: 'categoryTable-v1',
 	}),
 	derived: DERIVED_VARIANT_ROW,
 	derivedJudgeSlot: Object.freeze({ ...DERIVED_VARIANT_ROW, rendererVersion: DERIVED_JUDGE_SLOT_RENDERER_VERSION, judgePredicateRule: 'judgeSlot-v1' }),
 });
+// ⟪lane QUAL⟫ VARIANT_ROW_BOOLEAN_MEMBER_LIST — the switches every variant row DECLARES, true or false. An absent member would
+// read as false and quietly decide a variant's rendering, so a row without one is refused when this module loads.
+const VARIANT_ROW_BOOLEAN_MEMBER_LIST = Object.freeze(['requiresRenderingAllowList', 'collapsesIdenticalCards']);
+const undeclaredVariantMemberList = Object.keys(JUDGE_PROMPT_VARIANT_REGISTRY).reduce(
+	(soFar, variantName) => soFar.concat(VARIANT_ROW_BOOLEAN_MEMBER_LIST.filter((memberName) => typeof JUDGE_PROMPT_VARIANT_REGISTRY[variantName][memberName] !== 'boolean').map((memberName) => `${variantName}.${memberName}`)),
+	[],
+);
+if (undeclaredVariantMemberList.length > 0) {
+	throw new Error(`${moduleName} REFUSED AT LOAD: JUDGE_PROMPT_VARIANT_REGISTRY row(s) declare no boolean for ${undeclaredVariantMemberList.join(', ')}; every row states each of ${VARIANT_ROW_BOOLEAN_MEMBER_LIST.join(', ')}`);
+}
 
 // renderedBlockRefusal — the POSITIVE half of the id gate, applied to the bytes actually produced. The
 // allow-list makes a leak structurally impossible; this asserts it anyway, because "impossible by
@@ -409,9 +416,11 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	const noteByStableId = perCandidateNoteByStableId === undefined ? {} : perCandidateNoteByStableId;
 	// ⟪lane QUAL⟫ from here on the judge sees the COLLAPSED pool; the A2 gate above swept every card, collapsed or not
 	const { collapsedPool, cardCollapseList } = collapsedPoolFor({ candidatePool, variantRow, renderingAllowList });
-	const qualifiedCardStableIdList = variantRow.rendersQualifierInName
-		? candidatePool.filter((oneSeat) => renderedCardNameFor(oneSeat.card) !== oneSeat.card.name).map((oneSeat) => oneSeat.card.stableId).sort()
-		: [];
+	// read off what was RENDERED, not off a switch: a card whose rendered name differs from its own name carried its
+	// qualifier to the judge (a variant without candidateData, the crosswalk, renders no such name and lists none)
+	const qualifiedCardStableIdList = variantRow.candidateData === undefined
+		? []
+		: candidatePool.filter((oneSeat) => { const renderedName = variantRow.candidateData({ oneSeat, renderingAllowList }).name; return renderedName !== undefined && renderedName !== oneSeat.card.name; }).map((oneSeat) => oneSeat.card.stableId).sort();
 	const renderedPoolStableIdList = collapsedPool.map((oneSeat) => oneSeat.card.stableId);
 	const lineList = [];
 	lineList.push(...variantRow.subjectLineList({ sourceElement, renderingAllowList }));
