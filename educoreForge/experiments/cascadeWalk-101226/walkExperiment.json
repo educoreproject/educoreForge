@@ -1,0 +1,65 @@
+{
+	"_comment": "Configuration for the step-4 walk experiment (campaign cedsRichness-101226, lane WALK, DESIGN-WALK-cascadeWalkExperiment-101226.md). Every value is required; the harness refuses by name when one is absent. Widths and pool size are the design's starting point (section 2, section 3).",
+	"goldContainerName": "GOLD_EVAL_261012_cedsLayers",
+	"goldDecisionStoreFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/des_101226/desCt17Layers2/desCt17Layers2.decisions.sqlite3",
+	"goldEdfiBlockFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/walk_101226/goldEdfiBlock.json",
+	"goldEdfiBlockHash": "a60a667be67e9930506c8576db5367ba5512f8d43438514eabeaa5107387c6b3",
+	"forgesDirPathRelativeToTree": "forges",
+	"judgeProviderName": "jev",
+	"judgeConfigFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/configs/instanceSpecific/qbook/jevJudge.ini",
+	"bridgeRunByLabel": {
+		"edfi": {
+			"bridgeName": "edfiCedsDerivedPlugin",
+			"sourceToken": "edfi",
+			"hubToken": "ceds",
+			"sourceStandardName": "EdFi",
+			"sourceVersion": "5.2.0",
+			"hubVersion": "14.0.0.0",
+			"subjectSetFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/bridgeAcceptance/edfiEval/edfiEvalSubjectSet-100-047b5685cabd.json"
+		},
+		"sif": {
+			"bridgeName": "sif260928CedsDerivedPlugin",
+			"sourceToken": "sif260928",
+			"hubToken": "ceds",
+			"sourceStandardName": "SIF260928",
+			"sourceVersion": "4.3",
+			"hubVersion": "14.0.0.0",
+			"goldBlockFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/walk_101226/goldSifBlock.json",
+			"regressionTargetPropertyStableIdBySubjectName": {
+				"PreferredName": "https://w3id.org/CEDStandards/terms/P000206",
+				"StateProvinceId": "https://w3id.org/CEDStandards/terms/P001572"
+			}
+		}
+	},
+	"proxyTruthFilePath": "/Users/tqwhite/Documents/webdev/educoreForge/system/management/zNotesPlansDocs/jevJudge/evidence-093026/perSubject.json",
+	"poolCardCount": 15,
+	"walkWidth": {
+		"conceptTopCount": 2,
+		"classTopCount": 3,
+		"desDomainTopCount": 2,
+		"desEntityTopCount": 3
+	},
+	"choiceSegmentSize": 255,
+	"choiceQuestionByKind": {
+		"concept": {
+			"rendererVersion": "walkHarness-conceptChoice-v1",
+			"instructionText": "Which concept of the CEDS Conceptual Model does the source element describe?"
+		},
+		"class": {
+			"rendererVersion": "walkHarness-classChoice-v1",
+			"instructionText": "Which CEDS class would hold the source element as one of its properties?"
+		},
+		"desDomain": {
+			"rendererVersion": "walkHarness-desDomainChoice-v1",
+			"instructionText": "Which domain of the CEDS Data Element Specification covers the source element?"
+		},
+		"desEntity": {
+			"rendererVersion": "walkHarness-desEntityChoice-v1",
+			"instructionText": "Which entity of the CEDS Data Element Specification holds the source element?"
+		}
+	},
+	"jevUsdPerMillionInputTokens": 0.0422,
+	"jevUsdPerMillionOutputTokens": 0.0422,
+	"spendStopUsd": 25,
+	"plannedRunCount": 3
+}
