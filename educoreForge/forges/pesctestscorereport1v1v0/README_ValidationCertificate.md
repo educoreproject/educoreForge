@@ -10,6 +10,7 @@ an independent XML reader. Nothing was missed and nothing was invented. The rege
 |---|---|
 | standard | PESC Test Score Report 1.1.0 (bundle `pesctestscorereport1v1v0`, `_source` `PESC-TestScoreReport-1.1.0`, DME title `PESC Test Score Report v1.1.0`) |
 | source | `assets/standardSourceData/01/`: `AcademicRecord_v1.11.0.xsd`, `CoreMain_v1.17.0.xsd`, `TestScoreReport_v1.1.0.xsd`, `iso_3166-1_v1.0.0.xsd` (CoreMain `f4b05efd…`), and the expander's `releaseManifestEntry.json`, every file checked against `SHA256SUMS` at every build. Provenance: `README_PROVENANCE.md` |
+| source URL | **Published on** `https://pesc.org/test-score/` (the link "EdTestScoreReport v 1.1"): the root schema it serves has the same sha256 as ours, `038d796b…` (checked 2026-10-15) |
 | graph | `DEV_pescTestScoreReport1v1v0` (a scratch graph; bolt 7821; STOPPED after these checks under the PESC memory budget, `docker start` it to look), 2026-10-01 |
 | build | recipe `recipes/pesctestscorereport1v1v0Only.recipe.jsonc` (the release alone, `roundTripStage: true`), manifest `b5de0a44…9d77be8c`, standardBase block **`7bad009abb4861d3b2216f09ef5953f4f2aa6fcce6ff6c22373afebddf82339a`** |
 | reproduced | the same block and manifest from **two** builds of the recipe (`f6Build1` at head `675739f`, `f6Build2b` at head `d3e048f`, the second's graph `DEV_pescTestScoreReport1v1v0_repro`, stopped); the certifying build is the first |

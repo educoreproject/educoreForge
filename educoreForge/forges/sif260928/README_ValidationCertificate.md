@@ -7,6 +7,7 @@
 |---|---|
 | standard | SIF 4.3 Implementation Specification (bundle `sif260928`, `_source` `SIF260928`) |
 | source | `assets/standardSourceData/01/ImplementationSpecification_031326.tsv`, sha256 `6814727786bd…` (plus `refIdResolutionMap.tsv`, `7ca182bc…`) |
+| source URL | **Derived from** `https://files.a4l.org/Implementation/NA/4.3/ImplementationSpecification.xlsx`: the TSV is our flattening of that spreadsheet, so the bytes cannot be compared; its 159 table names equal the sheet names (recorded 2026-10-15) |
 | graph | `DEV_sif260928Hub` (a scratch graph, built beside the CEDS hub), 2026-09-29 |
 | build | recipe `recipes/sif260928WithHub.recipe.jsonc`, manifest `f7e5b0c8…`, sif260928 block `576db654…` |
 | commit | built at A7 from `f203498` on branch `sifReplacement/A7` (this certificate and the recipe were committed after that build, as `92a503b`). **Re-measured at the merge gate M1** by a fresh build of the same recipe on `sifReplacement/main` at `68bf388`, 2026-09-29: the same manifest `f7e5b0c8…` and block `576db654…`, the same verdict, and the same census (39,268 nodes, 72,953 edges scoped `SIF260928`). That M1 graph was disposed after the check. |
@@ -80,7 +81,7 @@ Further live checks, measured against the forge's own output on this graph:
 
 ## Where the data came from
 
-The single TSV is SIF's Implementation Specification spreadsheet, byte-copied from the incumbent forge's snapshot `01` with its `SHA256SUMS` entry. The RefId map is a hand-kept table carried with the snapshot. `assets/standardSourceData/01/README_PROVENANCE.md` has the full record.
+The single TSV is SIF's Implementation Specification spreadsheet, byte-copied from the incumbent forge's snapshot `01` with its `SHA256SUMS` entry. The RefId map is a hand-kept table carried with the snapshot. `assets/standardSourceData/01/README_PROVENANCE.md` has the full record. The spreadsheet itself is at the source URL above; the TSV is derived from it, never downloaded as it stands.
 
 ---
 

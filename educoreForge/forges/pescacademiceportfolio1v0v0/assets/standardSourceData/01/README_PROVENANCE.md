@@ -27,6 +27,9 @@ sourceCorpus by the scaffold tool (run into a scratch root; its donor files, SHA
 copied into the bundle; every other file it wrote is byte-identical to the committed bundle). They are read
 for borrowed element text only and are never part of the release's graph.
 
+Where PESC serves these files, and how its bytes relate to ours, is on the `sourceUrl` lines of
+`standardSourceLocation` beside this file (written from `lib/pesc-release-forge/releaseSourceUrlTable.json`).
+
 The command:
 
 ```

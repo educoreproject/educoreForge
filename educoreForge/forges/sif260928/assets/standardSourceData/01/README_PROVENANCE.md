@@ -91,3 +91,11 @@ so the bytes cannot be verified against the publisher.
 `SHA256SUMS` lists the source data only (the TSV and, since A4, the map). `standardSourceLocation` and this README are not
 listed, following the incumbent's convention. Listing `standardSourceLocation` would also make a
 deleted version line fail the checksum before the version guard could fire.
+
+## Source URL (recorded 2026-10-15)
+
+`standardSourceLocation` now carries `sourceUrl` lines (WORKORDER-sourceUrls-101526): the address is
+`https://files.a4l.org/Implementation/NA/4.3/ImplementationSpecification.xlsx`, relation **derivedFrom**. Our TSV
+is a flattening of that spreadsheet (the recipe above), so the two cannot be compared byte for byte; what was checked
+is the 159/159 match of table names to sheet names (BRONZE_LATTICE, 2026-10-15). The download pages show it as
+"Derived from", never "Downloaded from".

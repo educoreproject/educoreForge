@@ -20,6 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { NOT_RECORDED_TEXT: SOURCE_URL_NOT_RECORDED_TEXT } = require(path.join(__dirname, '..', '..', '..', 'lib', 'snapshot-provenance', 'source-url-record'));
 
 const FACET_SOURCE = 'source';
 const FACET_GRAPH = 'graph';
@@ -29,7 +30,10 @@ const DOWNLOAD_README_FILE_NAME = 'README_DOWNLOAD.md';
 const VERDICT_FILE_NAME = 'roundTripVerdict.json';
 const REPORT_FILE_NAME = 'roundTrip.report.txt';
 const STATEMENT_LISTING_FILE_NAME = 'statementListing.jsonl';
-const MANIFEST_FORMAT = 'educoreStandardDownloads/1';
+// /2 (WORKORDER-sourceUrls-101526): every entry carries its source's address and how it relates to the bytes
+const MANIFEST_FORMAT = 'educoreStandardDownloads/2';
+// the source URL fields an entry carries, exactly as the snapshot's standardSourceLocation states them (null when not recorded)
+const ENTRY_SOURCE_URL_FIELD_NAME_LIST = Object.freeze(['sourceUrl', 'sourceUrlRelation', 'sourceUrlRelationText', 'sourceUrlPage', 'sourceUrlNote']);
 const NOT_IN_GRAPH_REASON = 'not in this graph';
 
 const sha256Of = (contentBuffer) => crypto.createHash('sha256').update(contentBuffer).digest('hex');
@@ -101,8 +105,9 @@ const rulesFaultOf = ({ rules, graphEmissionKindList }) => {
 //   resolvedBundleByToken  { <token>: { bundleDir, standardName, snapshotDirPath, forgeDeclaration } }
 //   standardDefinitionRowList  the golden's StandardDefinition rows { sourceKey, standardKey, standardFamily, version }
 //   declaredTokenList  the golden's declared round-trip tokens (the build's stage summary)
+//   sourceUrlRecordByToken  { <token>: the snapshot's source URL record (lib/snapshot-provenance/source-url-record.js) }
 // -> { offeredStandardList } | { error }
-const offeredStandardListFor = ({ rules, resolvedBundleByToken, standardDefinitionRowList, declaredTokenList }) => {
+const offeredStandardListFor = ({ rules, resolvedBundleByToken, standardDefinitionRowList, declaredTokenList, sourceUrlRecordByToken }) => {
 	const faultList = [];
 	const definitionBySourceKey = {};
 	standardDefinitionRowList.forEach((oneRow) => {
@@ -122,6 +127,11 @@ const offeredStandardListFor = ({ rules, resolvedBundleByToken, standardDefiniti
 			return null;
 		}
 		const declaration = resolvedBundle.forgeDeclaration;
+		const sourceUrlRecord = sourceUrlRecordByToken[oneRow.bundleToken];
+		if (!sourceUrlRecord) {
+			faultList.push(`offered bundle '${oneRow.bundleToken}' has no source URL record (its standardSourceLocation was not read)`);
+			return null;
+		}
 		const graphDefinition = definitionBySourceKey[resolvedBundle.standardName];
 		const inGraph = declaredTokenList.includes(oneRow.bundleToken);
 		if (inGraph && !graphDefinition) {
@@ -152,6 +162,7 @@ const offeredStandardListFor = ({ rules, resolvedBundleByToken, standardDefiniti
 			layerTokenList,
 			bundleDir: resolvedBundle.bundleDir,
 			snapshotDirPath: resolvedBundle.snapshotDirPath,
+			sourceUrlRecord,
 		};
 	});
 	standardDefinitionRowList
@@ -401,6 +412,19 @@ const snapshotIdentityLineOf = ({ oneStandard, sumsFileSha256 }) => {
 	return `forges/${relativeSnapshotPath} (its SHA256SUMS file has sha256 \`${sumsFileSha256}\`)`;
 };
 
+// sourceUrlLineOf — PURE: the README line saying where the source came from, worded by its relation; an unrecorded address
+// is said to be unrecorded, never replaced by a publisher's home page
+const sourceUrlLineOf = ({ entryPlan }) => {
+	const sourceUrlRecord = entryPlan.standard.sourceUrlRecord;
+	const labelText = entryPlan.facet === FACET_SOURCE ? 'Where this came from' : 'Where the source came from';
+	if (sourceUrlRecord.sourceUrl === null) {
+		return `- ${labelText}: ${SOURCE_URL_NOT_RECORDED_TEXT}`;
+	}
+	const pageText = sourceUrlRecord.sourceUrlPage ? ` (linked from <${sourceUrlRecord.sourceUrlPage}>)` : '';
+	const noteText = sourceUrlRecord.sourceUrlNote ? ` Note: ${sourceUrlRecord.sourceUrlNote}` : '';
+	return `- ${labelText}: ${sourceUrlRecord.sourceUrlRelationText} <${sourceUrlRecord.sourceUrl}>${pageText}.${noteText}`;
+};
+
 const headerLineListOf = ({ entryPlan, graphName, graphContractSha256, generatedAt, snapshotIdentityLine }) => {
 	const oneStandard = entryPlan.standard;
 	return [
@@ -412,6 +436,7 @@ const headerLineListOf = ({ entryPlan, graphName, graphContractSha256, generated
 		`- Graph contract sha256: \`${graphContractSha256}\``,
 		`- Generated: ${generatedAt}`,
 		`- Source snapshot: ${snapshotIdentityLine}`,
+		sourceUrlLineOf({ entryPlan }),
 		'',
 	];
 };
@@ -498,6 +523,7 @@ const manifestEntryFor = ({ entryPlan, zipBuffer, verdict }) => {
 		description: `${entryPlan.facet === FACET_SOURCE ? 'Source as ingested' : 'Written back out of the graph, with validation files'}: ${oneStandard.descriptionText}`,
 		available: entryPlan.available,
 		unavailableReason: entryPlan.available ? null : entryPlan.unavailableReason,
+		...ENTRY_SOURCE_URL_FIELD_NAME_LIST.reduce((soFar, fieldName) => ({ ...soFar, [fieldName]: oneStandard.sourceUrlRecord[fieldName] }), {}),
 	};
 };
 
@@ -514,6 +540,7 @@ module.exports = {
 	sourceReadmeTextFor,
 	graphReadmeTextFor,
 	snapshotIdentityLineOf,
+	sourceUrlLineOf,
 	manifestFor,
 	manifestEntryFor,
 	parsedJsonFileOf,
@@ -526,4 +553,5 @@ module.exports = {
 	VERDICT_FILE_NAME,
 	NOT_IN_GRAPH_REASON,
 	MANIFEST_FORMAT,
+	ENTRY_SOURCE_URL_FIELD_NAME_LIST,
 };

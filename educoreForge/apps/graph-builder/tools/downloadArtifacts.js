@@ -25,6 +25,10 @@ DESCRIPTION
        source  the bundle's pinned snapshot, every file checked against the snapshot's SHA256SUMS first;
        graph   the standard written back out of the graph by its own round-trip validator, with this run's verdict,
                the bundle's round-trip contract READMEs and its earlier validation certificate.
+     Every entry, and every zip's README_DOWNLOAD.md, says where the source came from: the address and its relation
+     (downloadedFrom, publishedOn, republishedAs, derivedFrom) as the snapshot's standardSourceLocation states them on
+     its sourceUrl lines (lib/snapshot-provenance/source-url-record.js). A snapshot that states none gets null fields
+     and the README says the address is not recorded; a half-stated one refuses the run.
      A graph entry for a bundle the golden does not hold, and any entry under a licence hold, is listed as unavailable
      with its reason.
 
@@ -75,6 +79,7 @@ const roundTripStageLib = roundTripStageModule();
 const { resolveBundle } = require(path.join(__dirname, '..', 'apps', 'forger'));
 const layerFramework = require(path.join(TREE_ROOT, 'lib', 'layer-framework', 'layer-framework'))();
 const sourceVerificationLib = require(path.join(TREE_ROOT, 'lib', 'forge-framework', 'sourceVerification'));
+const { readSourceUrlRecord } = require(path.join(TREE_ROOT, 'lib', 'snapshot-provenance', 'source-url-record'));
 const { resolveContainerBolt } = require(path.join(TREE_ROOT, 'forges', 'ceds', 'lib', 'roundTripCompiler'))();
 
 const RULES_FILE_PATH = path.join(__dirname, '..', 'lib', 'downloadArtifactsRules.json');
@@ -177,6 +182,7 @@ taskList.push((args, next) => {
 // every offered bundle resolved from its own descriptor, with its forge declaration
 taskList.push((args, next) => {
 	const resolvedBundleByToken = {};
+	const sourceUrlRecordByToken = {};
 	const faultList = [];
 	rules.offeredBundleList.forEach((oneRow) => {
 		const resolved = resolveBundle({ standard: oneRow.bundleToken });
@@ -189,12 +195,19 @@ taskList.push((args, next) => {
 			return;
 		}
 		resolvedBundleByToken[oneRow.bundleToken] = { ...resolved, forgeDeclaration: require(path.join(resolved.bundleDir, oneRow.forgeDeclarationRelativePath)) };
+		// where the source came from: the snapshot's own standardSourceLocation is the one place it is recorded
+		const sourceUrlRead = readSourceUrlRecord({ snapshotDirPath: resolved.snapshotDirPath });
+		if (sourceUrlRead.refusalMessage) {
+			faultList.push(`${oneRow.bundleToken}: ${sourceUrlRead.refusalMessage}`);
+			return;
+		}
+		sourceUrlRecordByToken[oneRow.bundleToken] = sourceUrlRead.sourceUrlRecord;
 	});
 	if (faultList.length) {
 		next(`${moduleName}: ${faultList.join('; ')}`);
 		return;
 	}
-	const offer = downloadArtifacts.offeredStandardListFor({ rules, resolvedBundleByToken, standardDefinitionRowList: args.standardDefinitionRowList, declaredTokenList });
+	const offer = downloadArtifacts.offeredStandardListFor({ rules, resolvedBundleByToken, standardDefinitionRowList: args.standardDefinitionRowList, declaredTokenList, sourceUrlRecordByToken });
 	if (offer.error) {
 		next(`${moduleName}: ${offer.error}`);
 		return;

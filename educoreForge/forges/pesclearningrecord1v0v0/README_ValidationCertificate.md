@@ -10,6 +10,7 @@ an independent XML reader. Nothing was missed and nothing was invented. The rege
 |---|---|
 | standard | PESC Learning Record 1.0.0 (bundle `pesclearningrecord1v0v0`, `_source` `PESC-LearningRecord-1.0.0`, DME title `PESC Learning Record v1.0.0`) |
 | source | `assets/standardSourceData/01/`: `AcademicRecord_v1.12.0.xsd`, `CoreMain_v1.18.0.xsd`, `LearningRecord_v1.0.0.xsd`, `iso_3166-1_v1.0.0.xsd` (CoreMain `a50f5029…`), and the expander's `releaseManifestEntry.json`, every file checked against `SHA256SUMS` at every build. Provenance: `README_PROVENANCE.md` |
+| source URL | **Published on** `https://pesc.org/credential-and-experiential-learning/` (the link "XML Schema"): the root schema it serves has the same sha256 as ours, `62b74c15…` (checked 2026-10-15) |
 | graph | `DEV_pescLearningRecord1v0v0` (a scratch graph; bolt 7829; STOPPED after these checks under the PESC memory budget, `docker start` it to look), 2026-10-01 |
 | build | recipe `recipes/pesclearningrecord1v0v0Only.recipe.jsonc` (the release alone, `roundTripStage: true`), manifest `5fe39c9a…a86cac5a`, standardBase block **`b0a1592dd2d02e332734176394c5477d0975d240ace591a8f609e1dfbf6b7ba0`** |
 | reproduced | the same block and manifest from **two** builds of the recipe (`f6Build1` at head `9f2d3b8`, `f6Build2` at head `9f2d3b8`, the second's graph `DEV_pescLearningRecord1v0v0_repro`, stopped); the certifying build is the first |

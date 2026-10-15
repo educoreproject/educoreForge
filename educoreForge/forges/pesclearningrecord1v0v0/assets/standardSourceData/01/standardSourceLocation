@@ -1,5 +1,9 @@
 standard: forge-pesclearningrecord1v0v0
 publishedVersion: 1.0.0
 publishedVersionEvidence: the version of PESC release LearningRecord_v1.0.0 as pescReleaseExpander's manifest entry states it (releaseEntry.version, copied into releaseManifestEntry.json beside this file); it is also the version token of the root schema's targetNamespace urn:org:pesc:message:LearningRecord:v1.0.0. Written by the scaffold tool. Keep the publishedVersion line bare: deriveVersionStamp takes the whole rest of that line as the version.
-upstreamUrl: unknown (publisher: Postsecondary Electronic Standards Council, https://www.pesc.org; a release is our closure of PESC files, never a PESC artifact, and has no URL of its own)
+upstreamUrl: recorded on the sourceUrl lines below (publisher: Postsecondary Electronic Standards Council, https://www.pesc.org; a release is our closure of PESC files, never a PESC artifact, so those lines say where PESC serves these files and how its bytes relate to ours)
+sourceUrl: https://pesc.org/credential-and-experiential-learning/
+sourceUrlRelation: publishedOn
+sourceUrlNote: the link is labelled "XML Schema"
+sourceUrlVerification: 2026-10-15, BRONZE_LATTICE: the root schema served by that link has sha256 62b74c15..., equal to ours
 copiedFrom: see README_PROVENANCE.md

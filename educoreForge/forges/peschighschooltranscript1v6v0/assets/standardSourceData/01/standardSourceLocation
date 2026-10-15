@@ -1,5 +1,10 @@
 standard: forge-peschighschooltranscript1v6v0
 publishedVersion: 1.6.0
 publishedVersionEvidence: the version of PESC release HighSchoolTranscript_v1.6.0 as pescReleaseExpander's manifest entry states it (releaseEntry.version, copied into releaseManifestEntry.json beside this file); it is also the version token of the root schema's targetNamespace urn:org:pesc:message:HighSchoolTranscript:v1.6.0. Written by the scaffold tool. Keep the publishedVersion line bare: deriveVersionStamp takes the whole rest of that line as the version.
-upstreamUrl: unknown (publisher: Postsecondary Electronic Standards Council, https://www.pesc.org; a release is our closure of PESC files, never a PESC artifact, and has no URL of its own)
+upstreamUrl: recorded on the sourceUrl lines below (publisher: Postsecondary Electronic Standards Council, https://www.pesc.org; a release is our closure of PESC files, never a PESC artifact, so those lines say where PESC serves these files and how its bytes relate to ours)
+sourceUrl: https://pesc.org/wp-content/uploads/2026/10/HighschoolTranscript_v1.6.0.zip
+sourceUrlRelation: republishedAs
+sourceUrlPage: https://pesc.org/high-school-transcript/
+sourceUrlNote: PESC re-published this zip in October 2026; its schemas differ from ours only in comments and whitespace. Our bytes came from PESC's earlier per-file links, which are gone.
+sourceUrlVerification: 2026-10-15, BRONZE_LATTICE: the zip's xsds compared with ours after normalising comments and whitespace, 0 lines differ
 copiedFrom: see README_PROVENANCE.md

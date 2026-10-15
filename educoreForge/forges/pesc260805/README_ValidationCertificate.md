@@ -10,6 +10,7 @@ both sets of files and reached the same result on every one.
 |---|---|
 | standard | PESC, aggregate version `01` — a set assembled here, not a PESC release (see below) |
 | source | `assets/standardSourceData/01/` — 64 XSD files, 9,733,713 bytes, digest `92e9a632…` |
+| source URL | **Derived from** `https://pesc.org/approved-standards/` and the nine standards pages beneath it (`assets/acquisition/acquirePescCorpus.js`): an aggregate of our own, so no single URL serves it (recorded 2026-10-15) |
 | graph | `DEV_pesc260805`, built 2026-08-07 |
 | commit | `dfe97d3`, branch `architecture-improvement` |
 

@@ -20,8 +20,12 @@
 //       a statement listing's README says it is not the native format
 //   (i) the statement listing is one JSON line per statement, sorted by statementKey
 //   (j) the read-only guard forces every session to READ mode and refuses a second install
+//   (k) every entry carries where its source came from (WORKORDER-sourceUrls-101526): the address, the relation and its
+//       wording, the page and the note, null on every field when none is recorded; each README says it, worded by
+//       relation, and an unrecorded address is said to be unrecorded, never replaced by a publisher's address; an offered
+//       bundle whose record was not read is refused by name
 // RED TWINS (in memory, module double): totalIgnored -> (g); strayAccepted -> (f); holdIgnored -> (d); familyRetyped -> (c);
-// unofferedTokenIgnored -> (c); sortDropped -> (a).
+// unofferedTokenIgnored -> (c); sortDropped -> (a); sourceUrlDropped -> (k); unrecordedGivenAHomePage -> (k).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -75,6 +79,13 @@ const TOY_DEFINITION_ROWS = [
 	{ sourceKey: 'EdFi', standardKey: 'edfitoy', standardFamily: 'EdFi', version: '5.2.0' },
 ];
 const TOY_TOKENS = ['pesctoy1v0v0', 'edfitoy'];
+const sourceUrlRecordLib = require('../../../lib/snapshot-provenance/source-url-record');
+const toySourceUrlRecordOf = (provenanceText) => sourceUrlRecordLib.sourceUrlRecordOfText({ provenanceText, describedAs: 'toy' }).sourceUrlRecord;
+const TOY_SOURCE_URLS = {
+	pesctoy1v0v0: toySourceUrlRecordOf('sourceUrl: https://toy.example/transcript/\nsourceUrlRelation: publishedOn\nsourceUrlVerification: toy\n'),
+	pesctoyaggregate: toySourceUrlRecordOf('sourceUrl: https://toy.example/standards/\nsourceUrlRelation: derivedFrom\nsourceUrlNote: our own aggregate\nsourceUrlVerification: toy\n'),
+	edfitoy: toySourceUrlRecordOf('standard: forge-edfitoy\n'),
+};
 const TOY_VERDICT = { inventedTotal: 0, lostTotal: 0, contentGapTotal: 0, explicitlyOmittedTotal: 7, roundTripClean: true, semanticValidationLimit: 'TOY LIMIT: statements of the toy grammar only' };
 
 const conjunctJudgeByRefId = {
@@ -103,12 +114,12 @@ const conjunctJudgeByRefId = {
 	},
 	c_offerReadsFamilyFromTheGraph: (mutationList, done) => {
 		const lib = libFor(mutationList);
-		const offer = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: TOY_TOKENS });
+		const offer = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: TOY_TOKENS, sourceUrlRecordByToken: TOY_SOURCE_URLS });
 		const byToken = {};
 		(offer.offeredStandardList || []).forEach((oneStandard) => { byToken[oneStandard.bundleToken] = oneStandard; });
-		const unoffered = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: [...TOY_TOKENS, 'siftoy'] });
-		const unclaimed = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: [...TOY_DEFINITION_ROWS, { sourceKey: 'SIFTOY', standardKey: 'siftoy', standardFamily: 'SIF', version: '4.3' }], declaredTokenList: TOY_TOKENS });
-		const disagreeing = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: [TOY_DEFINITION_ROWS[0], { ...TOY_DEFINITION_ROWS[1], standardFamily: 'Ed-Fi' }], declaredTokenList: TOY_TOKENS });
+		const unoffered = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: [...TOY_TOKENS, 'siftoy'], sourceUrlRecordByToken: TOY_SOURCE_URLS });
+		const unclaimed = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: [...TOY_DEFINITION_ROWS, { sourceKey: 'SIFTOY', standardKey: 'siftoy', standardFamily: 'SIF', version: '4.3' }], declaredTokenList: TOY_TOKENS, sourceUrlRecordByToken: TOY_SOURCE_URLS });
+		const disagreeing = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: [TOY_DEFINITION_ROWS[0], { ...TOY_DEFINITION_ROWS[1], standardFamily: 'Ed-Fi' }], declaredTokenList: TOY_TOKENS, sourceUrlRecordByToken: TOY_SOURCE_URLS });
 		done({
 			pass: !offer.error && byToken.edfitoy.family === 'EdFi' && byToken.edfitoy.version === '5.2.0' && byToken.pesctoy1v0v0.inGraph === true
 				&& byToken.pesctoyaggregate.inGraph === false && byToken.pesctoyaggregate.family === 'PESC' && byToken.pesctoyaggregate.version === 'aggregate 01'
@@ -120,7 +131,7 @@ const conjunctJudgeByRefId = {
 	},
 	d_manifestEntries: (mutationList, done) => {
 		const lib = libFor(mutationList);
-		const offer = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: TOY_TOKENS });
+		const offer = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: TOY_TOKENS, sourceUrlRecordByToken: TOY_SOURCE_URLS });
 		const planList = lib.entryPlanListFor({ rules: TOY_RULES, offeredStandardList: offer.offeredStandardList || [] });
 		const zipBuffer = Buffer.from('a toy zip');
 		const entryList = planList.map((entryPlan) => lib.manifestEntryFor({ entryPlan, zipBuffer: entryPlan.available ? zipBuffer : null, verdict: entryPlan.standard.inGraph ? TOY_VERDICT : null }));
@@ -187,7 +198,7 @@ const conjunctJudgeByRefId = {
 	},
 	h_readmeWording: (mutationList, done) => {
 		const lib = libFor(mutationList);
-		const offer = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: TOY_TOKENS });
+		const offer = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: TOY_TOKENS, sourceUrlRecordByToken: TOY_SOURCE_URLS });
 		const planById = {};
 		lib.entryPlanListFor({ rules: TOY_RULES, offeredStandardList: offer.offeredStandardList }).forEach((onePlan) => { planById[onePlan.downloadId] = onePlan; });
 		const stamp = { graphName: 'GOLD_EVAL_toy', graphContractSha256: 'c'.repeat(64), generatedAt: '2026-10-15', snapshotIdentityLine: 'forges/pesctoy1v0v0/assets/standardSourceData/01' };
@@ -210,6 +221,33 @@ const conjunctJudgeByRefId = {
 		const lineList = listing.statementListingText.trimEnd().split('\n');
 		done({ pass: listing.statementCount === 3 && lineList.map((oneLine) => JSON.parse(oneLine).statementKey).join() === 'file|x.tsv,row|/a,row|/b' && JSON.parse(lineList[1]).statement.cell === 1, detail: listing.statementListingText });
 	},
+	k_sourceUrlCarried: (mutationList, done) => {
+		const lib = libFor(mutationList);
+		const offer = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: TOY_TOKENS, sourceUrlRecordByToken: TOY_SOURCE_URLS });
+		const unread = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: TOY_TOKENS, sourceUrlRecordByToken: { pesctoy1v0v0: TOY_SOURCE_URLS.pesctoy1v0v0, edfitoy: TOY_SOURCE_URLS.edfitoy } });
+		const planById = {};
+		lib.entryPlanListFor({ rules: TOY_RULES, offeredStandardList: offer.offeredStandardList || [] }).forEach((onePlan) => { planById[onePlan.downloadId] = onePlan; });
+		const entryOf = (downloadId) => lib.manifestEntryFor({ entryPlan: planById[downloadId], zipBuffer: planById[downloadId].available ? Buffer.from('z') : null, verdict: planById[downloadId].standard.inGraph ? TOY_VERDICT : null });
+		const publishedEntry = entryOf('pesctoy1v0v0-graph');
+		const derivedEntry = entryOf('pesctoyaggregate-source');
+		const heldEntry = entryOf('edfitoy-source');
+		const fieldList = ['sourceUrl', 'sourceUrlRelation', 'sourceUrlRelationText', 'sourceUrlPage', 'sourceUrlNote'];
+		const stamp = { graphName: 'GOLD_EVAL_toy', graphContractSha256: 'c'.repeat(64), generatedAt: '2026-10-15', snapshotIdentityLine: 'forges/x/01' };
+		const sourceText = lib.sourceReadmeTextFor({ entryPlan: planById['pesctoy1v0v0-source'], ...stamp, snapshotReportList: [], semanticValidationLimit: 'L' });
+		const aggregateText = lib.sourceReadmeTextFor({ entryPlan: planById['pesctoyaggregate-source'], ...stamp, snapshotReportList: [], semanticValidationLimit: '' });
+		const unrecordedLine = lib.sourceUrlLineOf({ entryPlan: planById['edfitoy-source'] });
+		done({
+			pass: !offer.error && fieldList.every((fieldName) => fieldName in publishedEntry && fieldName in derivedEntry && fieldName in heldEntry)
+				&& publishedEntry.sourceUrl === 'https://toy.example/transcript/' && publishedEntry.sourceUrlRelation === 'publishedOn' && publishedEntry.sourceUrlRelationText === 'Published on' && publishedEntry.sourceUrlNote === null
+				&& derivedEntry.sourceUrlRelationText === 'Derived from' && derivedEntry.sourceUrlNote === 'our own aggregate'
+				&& fieldList.every((fieldName) => heldEntry[fieldName] === null)
+				&& sourceText.includes('- Where this came from: Published on <https://toy.example/transcript/>.')
+				&& aggregateText.includes('- Where this came from: Derived from <https://toy.example/standards/>. Note: our own aggregate')
+				&& unrecordedLine === `- Where this came from: ${sourceUrlRecordLib.NOT_RECORDED_TEXT}` && !/https?:/.test(unrecordedLine)
+				&& /offered bundle 'pesctoyaggregate' has no source URL record/.test(unread.error),
+			detail: `${offer.error || ''} | ${JSON.stringify(publishedEntry)} | ${JSON.stringify(heldEntry)} | ${unrecordedLine} | ${unread.error}`,
+		});
+	},
 	j_readOnlyGuard: (mutationList, done) => {
 		const sessionConfigList = [];
 		const fakeDriverModule = { session: { READ: 'READ', WRITE: 'WRITE' }, driver: () => ({ session: (sessionConfig) => { sessionConfigList.push(sessionConfig); return {}; } }) };
@@ -228,6 +266,8 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'd_manifestEntries', twinName: 'holdIgnored', libraryName: 'lib', find: "			const licenceHold = holdOf(oneStandard.bundleToken, facet);", replace: '			const licenceHold = undefined;' },
 	{ conjunctRefId: 'c_offerReadsFamilyFromTheGraph', twinName: 'familyRetyped', libraryName: 'lib', find: "			family: graphDefinition ? graphDefinition.standardFamily : declaration.standardFamily,", replace: "			family: declaration.standardFamily === 'EdFi' ? 'Ed-Fi' : declaration.standardFamily," },
 	{ conjunctRefId: 'c_offerReadsFamilyFromTheGraph', twinName: 'unofferedTokenIgnored', libraryName: 'lib', find: "		.forEach((oneToken) => faultList.push(`the golden declares round-trip token '${oneToken}', which no offered bundle names (as a bundle or a layer) in downloadArtifactsRules.json`));", replace: '		.forEach(() => {});' },
+	{ conjunctRefId: 'k_sourceUrlCarried', twinName: 'sourceUrlDropped', libraryName: 'lib', find: '		...ENTRY_SOURCE_URL_FIELD_NAME_LIST.reduce(', replace: '		...[].reduce(' },
+	{ conjunctRefId: 'k_sourceUrlCarried', twinName: 'unrecordedGivenAHomePage', libraryName: 'lib', find: '		return `- ${labelText}: ${SOURCE_URL_NOT_RECORDED_TEXT}`;', replace: '		return `- ${labelText}: Published on <https://www.ed-fi.org>`;' },
 	{ conjunctRefId: 'a_zipIsDeterministic', twinName: 'sortDropped', libraryName: 'zip', find: "	const sortedEntryList = zipEntryList.slice().sort((leftEntry, rightEntry) => Buffer.compare(Buffer.from(leftEntry.entryPath, 'utf8'), Buffer.from(rightEntry.entryPath, 'utf8')));", replace: '	const sortedEntryList = zipEntryList.slice();' },
 ];
 

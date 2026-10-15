@@ -155,11 +155,12 @@ const releaseCensusText = ({ releaseName, releaseCensus }) =>
 		census: releaseCensus,
 	});
 
-const standardSourceLocationText = ({ releaseNames, releaseName, rootTargetNamespace }) => `standard: forge-${releaseNames.standardKey}
+// releaseSourceUrl is releaseSourceUrl.js's answer for this release (the row of releaseSourceUrlTable.json, as lines)
+const standardSourceLocationText = ({ releaseNames, releaseName, rootTargetNamespace, releaseSourceUrl }) => `standard: forge-${releaseNames.standardKey}
 publishedVersion: ${releaseNames.version}
 publishedVersionEvidence: the version of PESC release ${releaseName} as pescReleaseExpander's manifest entry states it (releaseEntry.version, copied into releaseManifestEntry.json beside this file); it is also the version token of the root schema's targetNamespace ${rootTargetNamespace}. Written by the scaffold tool. Keep the publishedVersion line bare: deriveVersionStamp takes the whole rest of that line as the version.
-upstreamUrl: unknown (publisher: Postsecondary Electronic Standards Council, https://www.pesc.org; a release is our closure of PESC files, never a PESC artifact, and has no URL of its own)
-copiedFrom: see README_PROVENANCE.md
+upstreamUrl: ${releaseSourceUrl.upstreamUrlText}
+${releaseSourceUrl.sourceUrlLineText}copiedFrom: see README_PROVENANCE.md
 `;
 
 const checksumFileText = ({ shaByRelativePath }) =>
@@ -190,6 +191,9 @@ files it names. It is ours, never a PESC artifact. Each .xsd file was copied byt
 (COPYFILE_EXCL) and never edited. \`releaseManifestEntry.json\` holds the release's entry from
 \`releaseManifest.json\`, verbatim, under \`releaseEntry\`, and two manifest-level facts under
 \`copiedFromManifest\`.
+
+Where PESC serves these files, and how its bytes relate to ours, is on the \`sourceUrl\` lines of
+\`standardSourceLocation\` beside this file (written from \`lib/pesc-release-forge/releaseSourceUrlTable.json\`).
 
 The command:
 

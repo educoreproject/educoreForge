@@ -1,7 +1,11 @@
 standard: forge-pesc260805
 publishedVersion: aggregate-01
 publishedVersionEvidence: educoreForge AGGREGATE version, cut 2026-08-05 (session VELVET_COMPASS) — PESC publishes NO coherent whole-family release, so this token is OURS (ruling R-ACQ-7) and must never be read as a PESC edition; every constituent is recorded in manifest.json at its own real published version. Recorded here so deriveVersionStamp resolves versionSource 'provenance-file' — the truthful value — rather than 'spec' (which would claim the source self-describes a whole-family version it does not publish) or 'unknown' (which would discard the aggregate version from the block subject).
-upstreamUrl: unknown (publisher: Postsecondary Electronic Standards Council — https://www.pesc.org; per-artifact URLs recorded in README_PROVENANCE.md, no bundle URL exists)
+upstreamUrl: no single URL (publisher: Postsecondary Electronic Standards Council — https://www.pesc.org; per-artifact URLs recorded in README_PROVENANCE.md, no bundle URL exists). The page set the aggregate was collected from is on the sourceUrl lines below (recorded 2026-10-15; until then this line began: unknown).
+sourceUrl: https://pesc.org/approved-standards/
+sourceUrlRelation: derivedFrom
+sourceUrlNote: our own aggregate: 64 schemas collected from this page and the nine standards pages beneath it that assets/acquisition/acquirePescCorpus.js lists, plus one PESC zip and one OCAS mirror (README_PROVENANCE.md). No single URL serves this set.
+sourceUrlVerification: 2026-10-15, BRONZE_LATTICE: an aggregate has no byte check; the page set is the one acquirePescCorpus.js names
 copiedFrom: the 64-file PESC XSD aggregate assembled by the composition rule in README_PROVENANCE.md
 copiedDate: 2026-08-05
 note: ADDED 2026-08-29 in the hub-kit-role Phase 4 migration (RULING FJ-P4-7). PESC was the only one of the four snapshots without this file; ceds, edfi and sif have carried one since 2026-05-28. The bespoke forge never called deriveVersionStamp — it stamped its own version directly — so the omission was invisible until the framework introduced the stamp.

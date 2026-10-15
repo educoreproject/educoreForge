@@ -42,6 +42,20 @@ this file exists partly as the record of what it costs not to.
 
 ---
 
+## Update 2026-10-15: the address, found afterwards
+
+The harvest is still unrecorded, but the address of these exact bytes has since been found by matching them
+(BRONZE_LATTICE, FINDINGS-standardSourceUrls-101526.md; re-checked by CARDINAL_TIDE the same day):
+`https://github.com/CEDStandards/CEDS-Ontology/blob/2cbe23964a373c37ec9dcd0620d6a97cbfa40074/src/CEDS-Ontology.rdf`.
+The git blob at commit `2cbe2396` (2026-03-02, "Updating IRIs from ceds.ed.gov to w3id.org") equals
+`CEDS-Ontology.rdf` byte for byte, so the relation is **downloadedFrom**. GitHub `main` is one commit ahead
+(`4ef15304`, 2026-05-17, a blank space in one `skos:notation`): these bytes are one commit behind.
+`standardSourceLocation` now records this on its `sourceUrl` lines, and its `upstreamUrl` line says so; the warning
+above stands as the history of how the address was missing, and the quotation in it is the line as it read until
+this date.
+
+---
+
 ## What this snapshot is
 
 | file | bytes | sha256 | role |

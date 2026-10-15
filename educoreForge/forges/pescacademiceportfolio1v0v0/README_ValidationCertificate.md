@@ -10,6 +10,7 @@ an independent XML reader. Nothing was missed and nothing was invented. The rege
 |---|---|
 | standard | PESC Academic ePortfolio 1.0.0 (bundle `pescacademiceportfolio1v0v0`, `_source` `PESC-AcademicEportfolio-1.0.0`, DME title `PESC Academic ePortfolio v1.0.0`) |
 | source | `assets/standardSourceData/01/`: `AcademicEportfolio_v1.0.0.xsd`, `AcademicRecord_v1.10.0.xsd`, `AdmissionsRecord_v1.4.0.xsd`, `CoreMain_v1.16.0.xsd` (CoreMain `870c3577…`), and the expander's `releaseManifestEntry.json`, every file checked against `SHA256SUMS` at every build. Provenance: `README_PROVENANCE.md` |
+| source URL | **Published on** `https://pesc.org/eportfolio/` (the link "AcademicePortofolio v 1.0"): the root schema it serves has the same sha256 as ours, `5aeefa06…` (checked 2026-10-15) |
 | graph | `DEV_pescAcademicEportfolio1v0v0` (a scratch graph; bolt 7827; STOPPED after these checks under the PESC memory budget, `docker start` it to look), 2026-10-01 |
 | build | recipe `recipes/pescacademiceportfolio1v0v0Only.recipe.jsonc` (the release alone, `roundTripStage: true`), manifest `b996688d…f6834b13`, standardBase block **`6e2bad9a7fe01939e4159b71087966fda9d6192efc809abe9d3b0d19f9f663cd`** |
 | reproduced | the same block and manifest from **two** builds of the recipe (`f6Build1` at head `d3e048f`, `f6Build2` at head `d3e048f`, the second's graph `DEV_pescAcademicEportfolio1v0v0_repro`, stopped); the certifying build is the first |

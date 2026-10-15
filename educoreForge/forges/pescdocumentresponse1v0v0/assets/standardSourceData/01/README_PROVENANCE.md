@@ -21,6 +21,9 @@ files it names. It is ours, never a PESC artifact. Each .xsd file was copied byt
 `releaseManifest.json`, verbatim, under `releaseEntry`, and two manifest-level facts under
 `copiedFromManifest`.
 
+Where PESC serves these files, and how its bytes relate to ours, is on the `sourceUrl` lines of
+`standardSourceLocation` beside this file (written from `lib/pesc-release-forge/releaseSourceUrlTable.json`).
+
 The command:
 
 ```

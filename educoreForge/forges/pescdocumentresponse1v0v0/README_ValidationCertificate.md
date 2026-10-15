@@ -10,6 +10,7 @@ an independent XML reader. Nothing was missed and nothing was invented. The rege
 |---|---|
 | standard | PESC Document Response 1.0.0 (bundle `pescdocumentresponse1v0v0`, `_source` `PESC-DocumentResponse-1.0.0`, DME title `PESC Document Response v1.0.0`) |
 | source | `assets/standardSourceData/01/`: `AcademicRecord_v1.14.0.xsd`, `CoreMain_v1.19.1.xsd`, `DocumentResponse_v1.0.0.xsd`, `iso_3166-1_v1.0.0.xsd` (CoreMain `5ade5560…`), and the expander's `releaseManifestEntry.json`, every file checked against `SHA256SUMS` at every build. Provenance: `README_PROVENANCE.md` |
+| source URL | **Downloaded from** `https://pesc.org/wp-content/uploads/2025/11/Academic-College-Transcript-Request-Response-v1.0.zip`: all 5 schemas in the zip equal ours byte for byte (checked 2026-10-15). The per-file links on the PESC page return `asset-not-found` |
 | graph | `DEV_pescDocumentResponse1v0v0` (a scratch graph; bolt 7827; STOPPED after these checks under the PESC memory budget, `docker start` it to look), 2026-10-01 |
 | build | recipe `recipes/pescdocumentresponse1v0v0Only.recipe.jsonc` (the release alone, `roundTripStage: true`), manifest `5a043a78…9949b63d`, standardBase block **`e0a35e773d79ccbd5cea27d2f0e1dda387e1e681bc85c5d2b9c86df69ab1a79b`** |
 | reproduced | the same block and manifest from **two** builds of the recipe (`f6Build1` at head `9f2d3b8`, `f6Build2c` at head `d3e048f`, whose materialise graph failed to provision (Docker under load) after the block was composed); the certifying build is the first |

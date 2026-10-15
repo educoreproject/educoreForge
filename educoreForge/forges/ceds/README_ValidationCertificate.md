@@ -11,6 +11,7 @@ both files and reached the same result.
 |---|---|
 | standard | CEDS **14.0.0.0**, read from `owl:versionInfo` inside the ontology |
 | source | `assets/standardSourceData/01/CEDS-Ontology.rdf` |
+| source URL | **Downloaded from** `https://github.com/CEDStandards/CEDS-Ontology/blob/2cbe23964a373c37ec9dcd0620d6a97cbfa40074/src/CEDS-Ontology.rdf`: the git blob at commit `2cbe2396` equals the ontology byte for byte (checked 2026-10-15; found afterwards, not recorded at harvest). GitHub `main` is one commit ahead (`4ef15304`, 2026-05-17) |
 | graph | `DEV_FourWithNewPesc`, built 2026-08-07 |
 | commit | branch `architecture-improvement`, recipe at `a0a4a90` |
 
@@ -64,11 +65,12 @@ collapse into one. A consumer needing byte-level fidelity to the published file 
 
 **The publisher is the US Department of Education CEDS programme, `https://ceds.ed.gov`.**
 
-**The download URL was never recorded.** `standardSourceLocation` reads `upstreamUrl: unknown`; the
-bytes were copied on 2026-05-28 from a local working directory. There is no reacquisition recipe for
-this snapshot, and none has been invented. The `SHA256SUMS` beside the ontology was created later, on
-2026-08-04 — it proves the file has not changed since that date and proves nothing about where it
-came from.
+**The download URL was not recorded at harvest; it was found afterwards.** The bytes were copied on
+2026-05-28 from a local working directory. On 2026-10-15 they were matched byte for byte to commit
+`2cbe2396` of `CEDStandards/CEDS-Ontology` on GitHub (the source URL above), and `standardSourceLocation`
+now records that address. Nothing else about the harvest has been invented. The `SHA256SUMS` beside
+the ontology was created later, on 2026-08-04 — it proves the file has not changed since that date
+and proves nothing about where it came from.
 
 The ontology itself is committed, so a clone has the exact bytes this certificate describes. A future
 CEDS release becomes a new snapshot directory with its own provenance record capturing the URL.

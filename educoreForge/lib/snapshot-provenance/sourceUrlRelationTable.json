@@ -1,0 +1,30 @@
+{
+	"tableNote": "How a snapshot's recorded source URL relates to the bytes we hold (WORKORDER-sourceUrls-101526; FINDINGS-standardSourceUrls-101526.md). A snapshot's standardSourceLocation records the URL on its sourceUrl lines and names ONE of these relations on its sourceUrlRelation line; source-url-record.js refuses any other name. The relations are deliberately distinct and must never be merged: downloadedFrom promises identical bytes, publishedOn promises a publisher PAGE whose link serves identical bytes, republishedAs promises only that the publisher now serves a different file whose differences are stated in the note, derivedFrom promises only that our file was made from the one named. displayText is the wording every reader shows (download READMEs, downloads.json, the DME pages); requiredFieldNameList names the sourceUrl lines the relation cannot be stated without.",
+	"sourceUrlRelationList": [
+		{
+			"relationName": "downloadedFrom",
+			"displayText": "Downloaded from",
+			"meaningText": "the file at this address is byte for byte the file we hold",
+			"requiredFieldNameList": []
+		},
+		{
+			"relationName": "publishedOn",
+			"displayText": "Published on",
+			"meaningText": "the publisher's page at this address links to files byte for byte the files we hold; the page is named, never the file's own (CDN) address",
+			"requiredFieldNameList": []
+		},
+		{
+			"relationName": "republishedAs",
+			"displayText": "Re-published by the publisher as",
+			"meaningText": "the publisher now serves this file in place of the one we took; it differs from ours in the ways the note states, and our own bytes are no longer served",
+			"requiredFieldNameList": ["sourceUrlPage", "sourceUrlNote"]
+		},
+		{
+			"relationName": "derivedFrom",
+			"displayText": "Derived from",
+			"meaningText": "our file was made from the file or pages at this address and cannot be compared with them byte for byte",
+			"requiredFieldNameList": ["sourceUrlNote"]
+		}
+	],
+	"notRecordedText": "The address this source was obtained from is not recorded."
+}

@@ -39,6 +39,7 @@ const { deriveReleaseNames } = require('../releaseNames');
 const { parseJsonText } = require('../jsonText');
 const documentationDonorSet = require('../documentationDonorSet');
 const bundleTemplates = require('./bundleTemplates');
+const { releaseSourceUrlFor } = require('../releaseSourceUrl');
 
 const XSD_FILE_NAME_RE = /\.xsd$/i;
 const SNAPSHOT_RELATIVE_DIR = path.join('assets', 'standardSourceData', '01');
@@ -189,6 +190,16 @@ const scaffoldReleaseBundle = (scaffoldArgs, callback) => {
 		next('', { ...args, donorFileNameList });
 	});
 
+	// 5c. SOURCE URL — where PESC serves the release's files (releaseSourceUrlTable.json); a release with no row is refused
+	taskList.push((args, next) => {
+		const sourceUrlLookup = releaseSourceUrlFor({ releaseName: args.releaseEntry.releaseName });
+		if (sourceUrlLookup.refusalMessage) {
+			next(sourceUrlLookup.refusalMessage);
+			return;
+		}
+		next('', { ...args, releaseSourceUrl: sourceUrlLookup.releaseSourceUrl });
+	});
+
 	// 6. WRITE — callback fs throughout, so a failed write is a refusal and never a throw. The
 	// non-recursive mkdir of the bundle directory is the atomic claim: if step 5's check was raced,
 	// it fails here with EEXIST rather than writing into someone else's bundle.
@@ -221,6 +232,7 @@ const scaffoldReleaseBundle = (scaffoldArgs, callback) => {
 						releaseName,
 						releaseCensus: args.releaseCensus,
 						rootTargetNamespace: args.rootTargetNamespace,
+						releaseSourceUrl: args.releaseSourceUrl,
 						manifestEntryDocument,
 						shaByRelativePath,
 						releaseFolderPath: args.releaseFolderPath,

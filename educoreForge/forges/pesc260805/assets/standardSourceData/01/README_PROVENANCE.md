@@ -89,3 +89,10 @@ twelve message standards entirely.
 Governing documents:
 `system/management/zNotesPlansDocs/pescForgeRebuild-080526/SPEC-pescForgeRebuild-080526.md`
 and `WORKORDER-pescForgeRebuild-080526.md`.
+
+## Source URL (recorded 2026-10-15)
+
+`standardSourceLocation` now carries `sourceUrl` lines (WORKORDER-sourceUrls-101526): the address is
+`https://pesc.org/approved-standards/`, relation **derivedFrom**. This set is our own aggregate, so no single URL
+serves it; the page named is where the collection began, and the nine standards pages beneath it are the ones
+`assets/acquisition/acquirePescCorpus.js` lists. The download pages show it as "Derived from".
