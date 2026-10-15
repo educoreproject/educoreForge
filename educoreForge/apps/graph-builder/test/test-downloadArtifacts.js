@@ -24,8 +24,11 @@
 //       wording, the page and the note, null on every field when none is recorded; each README says it, worded by
 //       relation, and an unrecorded address is said to be unrecorded, never replaced by a publisher's address; an offered
 //       bundle whose record was not read is refused by name
+//   (l) the graph facet, the download that is not the original, says "experimental" in its README heading and its manifest
+//       description; the source facet says it in neither (TQ 2026-10-15, WORKORDER-experimentalLabel-101526)
 // RED TWINS (in memory, module double): totalIgnored -> (g); strayAccepted -> (f); holdIgnored -> (d); familyRetyped -> (c);
-// unofferedTokenIgnored -> (c); sortDropped -> (a); sourceUrlDropped -> (k); unrecordedGivenAHomePage -> (k).
+// unofferedTokenIgnored -> (c); sortDropped -> (a); sourceUrlDropped -> (k); unrecordedGivenAHomePage -> (k);
+// experimentalDropped -> (l); experimentalOnSource -> (l).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -248,6 +251,24 @@ const conjunctJudgeByRefId = {
 			detail: `${offer.error || ''} | ${JSON.stringify(publishedEntry)} | ${JSON.stringify(heldEntry)} | ${unrecordedLine} | ${unread.error}`,
 		});
 	},
+	l_graphFacetTitledExperimental: (mutationList, done) => {
+		const lib = libFor(mutationList);
+		const offer = lib.offeredStandardListFor({ rules: TOY_RULES, resolvedBundleByToken: TOY_RESOLVED, standardDefinitionRowList: TOY_DEFINITION_ROWS, declaredTokenList: TOY_TOKENS, sourceUrlRecordByToken: TOY_SOURCE_URLS });
+		const planById = {};
+		lib.entryPlanListFor({ rules: TOY_RULES, offeredStandardList: offer.offeredStandardList || [] }).forEach((onePlan) => { planById[onePlan.downloadId] = onePlan; });
+		const stamp = { graphName: 'GOLD_EVAL_toy', graphContractSha256: 'c'.repeat(64), generatedAt: '2026-10-15', snapshotIdentityLine: 'forges/x/01' };
+		const sourceHeading = lib.sourceReadmeTextFor({ entryPlan: planById['pesctoy1v0v0-source'], ...stamp, snapshotReportList: [], semanticValidationLimit: 'L' }).split('\n')[0];
+		const graphHeading = lib.graphReadmeTextFor({ entryPlan: planById['pesctoy1v0v0-graph'], ...stamp, verdict: TOY_VERDICT, layerVerdictList: [], emissionNoteText: 'graph/ holds 1 XSD.', documentationFileNameList: [], rules: RULES }).split('\n')[0];
+		const sourceDescription = lib.manifestEntryFor({ entryPlan: planById['pesctoy1v0v0-source'], zipBuffer: Buffer.from('z'), verdict: null }).description;
+		const graphDescription = lib.manifestEntryFor({ entryPlan: planById['pesctoy1v0v0-graph'], zipBuffer: Buffer.from('z'), verdict: TOY_VERDICT }).description;
+		done({
+			pass: /\bexperimental\b/i.test(graphHeading) && /\bexperimental\b/i.test(graphDescription)
+				&& !/experimental/i.test(sourceHeading) && !/experimental/i.test(sourceDescription)
+				&& graphHeading === '# PESC-Toy-1.0.0 — written back out of the graph (experimental)'
+				&& graphDescription === 'Written back out of the graph (experimental), with validation files: a toy release',
+			detail: `${graphHeading} | ${graphDescription} | ${sourceHeading} | ${sourceDescription}`,
+		});
+	},
 	j_readOnlyGuard: (mutationList, done) => {
 		const sessionConfigList = [];
 		const fakeDriverModule = { session: { READ: 'READ', WRITE: 'WRITE' }, driver: () => ({ session: (sessionConfig) => { sessionConfigList.push(sessionConfig); return {}; } }) };
@@ -268,6 +289,8 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'c_offerReadsFamilyFromTheGraph', twinName: 'unofferedTokenIgnored', libraryName: 'lib', find: "		.forEach((oneToken) => faultList.push(`the golden declares round-trip token '${oneToken}', which no offered bundle names (as a bundle or a layer) in downloadArtifactsRules.json`));", replace: '		.forEach(() => {});' },
 	{ conjunctRefId: 'k_sourceUrlCarried', twinName: 'sourceUrlDropped', libraryName: 'lib', find: '		...ENTRY_SOURCE_URL_FIELD_NAME_LIST.reduce(', replace: '		...[].reduce(' },
 	{ conjunctRefId: 'k_sourceUrlCarried', twinName: 'unrecordedGivenAHomePage', libraryName: 'lib', find: '		return `- ${labelText}: ${SOURCE_URL_NOT_RECORDED_TEXT}`;', replace: '		return `- ${labelText}: Published on <https://www.ed-fi.org>`;' },
+	{ conjunctRefId: 'l_graphFacetTitledExperimental', twinName: 'experimentalDropped', libraryName: 'lib', find: "readmeHeadingText: 'written back out of the graph (experimental)', manifestDescriptionText: 'Written back out of the graph (experimental), with validation files' }", replace: "readmeHeadingText: 'written back out of the graph', manifestDescriptionText: 'Written back out of the graph, with validation files' }" },
+	{ conjunctRefId: 'l_graphFacetTitledExperimental', twinName: 'experimentalOnSource', libraryName: 'lib', find: "manifestDescriptionText: 'Source as ingested' }", replace: "manifestDescriptionText: 'Source as ingested (experimental)' }" },
 	{ conjunctRefId: 'a_zipIsDeterministic', twinName: 'sortDropped', libraryName: 'zip', find: "	const sortedEntryList = zipEntryList.slice().sort((leftEntry, rightEntry) => Buffer.compare(Buffer.from(leftEntry.entryPath, 'utf8'), Buffer.from(rightEntry.entryPath, 'utf8')));", replace: '	const sortedEntryList = zipEntryList.slice();' },
 ];
 

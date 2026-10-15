@@ -35,6 +35,12 @@ const MANIFEST_FORMAT = 'educoreStandardDownloads/2';
 // the source URL fields an entry carries, exactly as the snapshot's standardSourceLocation states them (null when not recorded)
 const ENTRY_SOURCE_URL_FIELD_NAME_LIST = Object.freeze(['sourceUrl', 'sourceUrlRelation', 'sourceUrlRelationText', 'sourceUrlPage', 'sourceUrlNote']);
 const NOT_IN_GRAPH_REASON = 'not in this graph';
+// each facet's titles (TQ 2026-10-15, WORKORDER-experimentalLabel-101526): the download that is not the original, the graph
+// facet, says "experimental" in every title; the source facet is the original and never does
+const FACET_TITLE_BY_FACET = Object.freeze({
+	[FACET_SOURCE]: Object.freeze({ readmeHeadingText: 'source, as the forge ingested it', manifestDescriptionText: 'Source as ingested' }),
+	[FACET_GRAPH]: Object.freeze({ readmeHeadingText: 'written back out of the graph (experimental)', manifestDescriptionText: 'Written back out of the graph (experimental), with validation files' }),
+});
 
 const sha256Of = (contentBuffer) => crypto.createHash('sha256').update(contentBuffer).digest('hex');
 const downloadIdOf = ({ standardKey, facet }) => `${standardKey}-${facet}`;
@@ -428,7 +434,7 @@ const sourceUrlLineOf = ({ entryPlan }) => {
 const headerLineListOf = ({ entryPlan, graphName, graphContractSha256, generatedAt, snapshotIdentityLine }) => {
 	const oneStandard = entryPlan.standard;
 	return [
-		`# ${oneStandard.standardName} — ${entryPlan.facet === FACET_SOURCE ? 'source, as the forge ingested it' : 'written back out of the graph'}`,
+		`# ${oneStandard.standardName} — ${FACET_TITLE_BY_FACET[entryPlan.facet].readmeHeadingText}`,
 		'',
 		`${oneStandard.descriptionText}. Family ${oneStandard.family}, group ${oneStandard.groupName}, version ${oneStandard.version}, standardKey \`${oneStandard.standardKey}\`.`,
 		'',
@@ -520,7 +526,7 @@ const manifestEntryFor = ({ entryPlan, zipBuffer, verdict }) => {
 		byteSize: entryPlan.available ? zipBuffer.length : null,
 		sha256: entryPlan.available ? sha256Of(zipBuffer) : null,
 		roundTrip: roundTripTotals,
-		description: `${entryPlan.facet === FACET_SOURCE ? 'Source as ingested' : 'Written back out of the graph, with validation files'}: ${oneStandard.descriptionText}`,
+		description: `${FACET_TITLE_BY_FACET[entryPlan.facet].manifestDescriptionText}: ${oneStandard.descriptionText}`,
 		available: entryPlan.available,
 		unavailableReason: entryPlan.available ? null : entryPlan.unavailableReason,
 		...ENTRY_SOURCE_URL_FIELD_NAME_LIST.reduce((soFar, fieldName) => ({ ...soFar, [fieldName]: oneStandard.sourceUrlRecord[fieldName] }), {}),
@@ -548,6 +554,7 @@ module.exports = {
 	zipFileNameOf,
 	FACET_SOURCE,
 	FACET_GRAPH,
+	FACET_TITLE_BY_FACET,
 	MANIFEST_FILE_NAME,
 	DOWNLOAD_README_FILE_NAME,
 	VERDICT_FILE_NAME,
