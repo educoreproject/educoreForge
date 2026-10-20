@@ -31,7 +31,7 @@ const harness = require(path.join(TREE_ROOT, 'test', 'testLib', 'harness'))(modu
 const { runRealSnapshotSuite } = require(path.join(TREE_ROOT, 'lib', 'ctdl-family-forge', 'test', 'realSnapshotSuite'));
 
 // ⟪P2b⟫ the rows the suite expects the profile to carry, written FIRST at each row's commit (red-first)
-const INTENDED_ENRICHMENT_LIST = Object.freeze(['E2', 'E3', 'E4']);
+const INTENDED_ENRICHMENT_LIST = Object.freeze(['E2', 'E3', 'E4', 'E7']);
 const ENRICHMENT_EFFECT_BY_ROW = Object.freeze({
  "E2": {
   "edgeType": "TOP_CONCEPT_OF",
