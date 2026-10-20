@@ -57,11 +57,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // @property {function(BaseNodeEdges, function(errString, HubForgeResult))} forgeHub — R7 error-first
 //     callback even though the derivation is synchronous and pure.
 // @property {function(Object): string} addressSignatureFor
+// @property {function({termIri: string}): string} termAddressSignatureFor — ctdlHub P3, the term tier's signature
 // @property {string} hubDefinitionStableId
 //
 // @typedef {Object} HubForgeResult
-// @property {Array<Object>} nodes — HubReference cards + the one HubDefinition, sorted by stableId
-// @property {Array<Object>} edges — HAS_<HUB>_* decomposition + IN_HUB, sorted
+// @property {Array<Object>} nodes — HubReference cards (every tier the hub declares) + the one HubDefinition, sorted by stableId
+// @property {Array<Object>} edges — HAS_<HUB>_* decomposition + IN_HUB (+ HAS_TERM_REFERENCE when the hub mints both
+//     the term and property tiers), sorted
 // @property {Array<Object>} divergenceReport   explicitly [] when there are none
 // @property {Array<Object>} skipReport         explicitly [] when nothing was skipped
 // @property {Object} counts
