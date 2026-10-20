@@ -44,7 +44,7 @@ const scratchRootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'ctdlForgeTest-'))
 // the snapshot-01 measurements (dataStores/ctdlHub_101926/oracle/*.json, P0) — the counts this forge must reproduce
 const EXPECTED = Object.freeze({
 	nodeCountByRole: { DmeStandardRoot: 1, DmeClass: 136, DmeProperty: 378, DmeOptionSet: 34, DmeOptionValue: 445 },
-	edgeCount: 10131,
+	edgeCount: 10131, // + the enrichment rows' edges (enrichedCountOf('edgeDelta'))
 	domainlessPropertyRootEdgeCount: 12,
 	crossRefTotal: 562,
 	declaredCorrespondenceTotal: 53,
@@ -54,6 +54,33 @@ const EXPECTED = Object.freeze({
 	foreignTermEntryCount: 20,
 	explicitlyOmittedByKind: { changeHistory: 993, secondaryDescription: 265, usageNoteOffProperty: 62, unresolvedNativePrefixReference: 21, nativeReferenceNotModelled: 942, schemeStatus: 34 },
 });
+
+// ⟪P2b⟫ THE ENRICHMENT THIS SUITE EXPECTS, row by row (WORKORDER-P2b E-rows). INTENDED_ENRICHMENT_LIST is the suite's own statement of
+// what the bundle carries — written FIRST at each P2b commit, so the suite goes red until the profile turns the row on (red-first).
+// Each row's effect: the edges it adds, the omitted statements it retires (by kind), the crossRefs it adds, and three named examples
+// from the source. E9 and E12 widen the profile's status / usageNote lists rather than naming a row in enrichmentKindList.
+const INTENDED_ENRICHMENT_LIST = Object.freeze(['E1']);
+const ENRICHMENT_EFFECT_BY_ROW = Object.freeze({
+	E1: { edgeType: 'BROADER_CONCEPT', edgeDelta: 98, omittedDelta: { nativeReferenceNotModelled: 196 }, exampleEdgeList: [['accommodation:AccessibleHousing', 'accommodation:FacilityAccommodation'], ['accommodation:AccessibleParking', 'accommodation:FacilityAccommodation'], ['accommodation:AccessibleRestroom', 'accommodation:FacilityAccommodation']] },
+	E1a: { anomalyList: [['costType:PersonalExpenses', 'skos:broader', 'ceterms:CostType']], omittedDelta: { nativeReferenceNotModelled: 1 } },
+	E2: { edgeType: 'TOP_CONCEPT_OF', edgeDelta: 346, omittedDelta: { nativeReferenceNotModelled: 692 }, exampleEdgeList: [['accommodation:FacilityAccommodation', 'ceterms:Accommodation'], ['accommodation:ResourceAndServiceAccommodation', 'ceterms:Accommodation'], ['actionStat:ActiveActionStatus', 'ceterms:ActionStatus']] },
+	E3: { edgeType: 'SUBPROPERTY_OF', edgeDelta: 37, omittedDelta: { nativeReferenceNotModelled: 37 }, exampleEdgeList: [['ceterms:alignmentDate', 'ceterms:temporalCoverage'], ['ceterms:assesses', 'ceterms:targetCompetency'], ['ceterms:assessmentDeliveryType', 'ceterms:deliveryType']] },
+	E4: { edgeType: 'INVERSE_OF', edgeDelta: 12, omittedDelta: { nativeReferenceNotModelled: 12 }, exampleEdgeList: [['ceterms:conditionManifestOf', 'ceterms:hasConditionManifest'], ['ceterms:hasConditionManifest', 'ceterms:conditionManifestOf']] },
+	E5: { edgeType: 'REFERENCES', edgeLocator: 'meta:targetScheme', edgeDelta: 3, omittedDelta: { nativeReferenceNotModelled: 3 }, exampleEdgeList: [['ceterms:industryType', 'ceterms:IndustryClassification'], ['ceterms:instructionalProgramType', 'ceterms:InstructionalProgramClassification'], ['ceterms:occupationType', 'ceterms:OccupationClassification']] },
+	E6: { anomalyList: [['ceterms:honorificSuffix', 'owl:equivalentProperty', 'ceterms:ContactPoint']], omittedDelta: { nativeReferenceNotModelled: 1 } },
+	E7: { carriedPropertyName: 'rdfsComment', carriedCount: 162, omittedDelta: { secondaryDescription: 162 }, exampleIdList: ['ceterms:AcademicCertificate', 'ceterms:AccreditAction', 'ceterms:AdvancedStandingAction'] },
+	E8: { carriedPropertyName: 'skosDefinition', carriedCount: 103, omittedDelta: { secondaryDescription: 103 }, exampleIdList: ['accommodation:AlternativeFormats', 'accommodation:ColorBlindness', 'accommodation:Communication'] },
+	E9: { carriedPropertyName: 'status', carriedRole: 'DmeOptionSet', carriedCount: 34, omittedDelta: { schemeStatus: 34 }, exampleIdList: ['ceterms:Accommodation', 'ceterms:ActionStatus', 'ceterms:AgentSector'] },
+	E10: { carriedPropertyName: 'changeHistoryUrl', carriedCount: 993, omittedDelta: { changeHistory: 993 }, exampleIdList: ['ceterms:AcademicCertificate', 'ceterms:alignmentDate', 'accommodation:AccessibleHousing'] },
+	E11: { crossRefDelta: 21, omittedDelta: { unresolvedNativePrefixReference: 21 } },
+	E12: { carriedPropertyName: 'usageNote', carriedRole: 'nonProperty', carriedCount: 62, omittedDelta: { usageNoteOffProperty: 62 }, exampleIdList: ['ceterms:AggregateDataProfile', 'ceterms:AlignmentObject', 'ceterms:AssessmentProfile'] },
+});
+const enrichedCountOf = (fieldName) => INTENDED_ENRICHMENT_LIST.reduce((total, oneRow) => total + (ENRICHMENT_EFFECT_BY_ROW[oneRow][fieldName] || 0), 0);
+const omittedAfterEnrichment = (baseCounts) => {
+	const remaining = { ...baseCounts };
+	INTENDED_ENRICHMENT_LIST.forEach((oneRow) => Object.keys(ENRICHMENT_EFFECT_BY_ROW[oneRow].omittedDelta).forEach((kind) => { remaining[kind] -= ENRICHMENT_EFFECT_BY_ROW[oneRow].omittedDelta[kind]; }));
+	return Object.keys(remaining).filter((kind) => remaining[kind] !== 0).reduce((kept, kind) => ({ ...kept, [kind]: remaining[kind] }), {});
+};
 
 const forgeSource = ({ sourceFilePath }, callback) => bundle.forge({ sourcePath: sourceFilePath, owner: 'test', skipEmbedding: true }, callback);
 const validateDouble = ({ forgeResult, outputPath, snapshotPath }, callback) => {
@@ -112,9 +139,10 @@ taskList.push((args, next) => forgeSource({ sourceFilePath: SOURCE_FILE_PATH }, 
 	}
 	const nodeCountByRole = forgeResult.nodes.reduce((counts, oneNode) => ({ ...counts, [oneNode.role]: (counts[oneNode.role] || 0) + 1 }), {});
 	harness.equal('node count by role = the July oracle (994)', JSON.stringify(nodeCountByRole), JSON.stringify(EXPECTED.nodeCountByRole));
-	harness.equal('edge count = the oracle graph 10,119 (the July forge emitted 10,128 with 9 duplicates) + 12 root HAS_PROPERTY (A6)', forgeResult.edges.length, EXPECTED.edgeCount);
+	harness.equal('edge count = the oracle graph 10,119 (the July forge emitted 10,128 with 9 duplicates) + 12 root HAS_PROPERTY (A6) + the P2b rows', forgeResult.edges.length, EXPECTED.edgeCount + enrichedCountOf('edgeDelta'));
 	harness.equal('A6: every property with no native domain hangs from the root by HAS_PROPERTY (12)', forgeResult.edges.filter((oneEdge) => oneEdge.type === 'HAS_PROPERTY' && oneEdge.fromRef.id === 'ctdl:root').length, EXPECTED.domainlessPropertyRootEdgeCount);
-	['crossRefTotal', 'declaredCorrespondenceTotal', 'duplicateEdgeSuppressedCount', 'unresolvedNativePrefixReferenceCount'].forEach((statName) => harness.equal(`stats.${statName}`, forgeResult.stats[statName], EXPECTED[statName]));
+	['declaredCorrespondenceTotal', 'duplicateEdgeSuppressedCount', 'unresolvedNativePrefixReferenceCount'].forEach((statName) => harness.equal(`stats.${statName}`, forgeResult.stats[statName], EXPECTED[statName]));
+	harness.equal('stats.crossRefTotal (+ E11)', forgeResult.stats.crossRefTotal, EXPECTED.crossRefTotal + enrichedCountOf('crossRefDelta'));
 	const rootNode = forgeResult.nodes.find((oneNode) => oneNode.role === 'DmeStandardRoot');
 	harness.equal('root foreignTermEntryList carries the 20 foreign entries (A5)', JSON.parse(rootNode.properties.foreignTermEntryList).length, EXPECTED.foreignTermEntryCount);
 	harness.equal('root publishedVersion read from standardSourceLocation, never hard-coded', `${rootNode.properties.publishedVersion}|${rootNode.properties.versionSource}`, 'Release 20260327|provenance-file');
@@ -128,6 +156,27 @@ taskList.push((args, next) => forgeSource({ sourceFilePath: SOURCE_FILE_PATH }, 
 	harness.equal('seam declarations sit on 52 nodes (A2)', seamCarrierList.length, EXPECTED.declaredCorrespondenceNodeTotal);
 	const seamPredicateCounts = seamCarrierList.reduce((counts, oneNode) => JSON.parse(oneNode.properties.declaredCorrespondenceList).reduce((innerCounts, oneEntry) => ({ ...innerCounts, [oneEntry.predicate]: (innerCounts[oneEntry.predicate] || 0) + 1 }), counts), {});
 	harness.equal('seam declarations by predicate, verbatim: 26 owl:equivalentClass, 22 skos:narrowMatch, 5 skos:relatedMatch', JSON.stringify(seamPredicateCounts, Object.keys(seamPredicateCounts).sort()), JSON.stringify({ 'owl:equivalentClass': 26, 'skos:narrowMatch': 22, 'skos:relatedMatch': 5 }));
+	harness.section('SECTION 1b — the P2b enrichment rows the suite expects, each with its count and named examples');
+	const profile = require(path.join(__dirname, '..', 'lib', 'ctdlVocabularyProfile.json'));
+	const profileRowList = profile.enrichmentKindList.concat(profile.statusCarriedByTermKindList.indexOf('optionSet') !== -1 ? ['E9'] : [], profile.usageNoteCarriedByTermKindList.length > 1 ? ['E12'] : []).sort();
+	harness.equal('the profile carries exactly the rows the suite expects', JSON.stringify(profileRowList), JSON.stringify(INTENDED_ENRICHMENT_LIST.slice().sort()));
+	const nodeById = forgeResult.nodes.reduce((byId, oneNode) => ({ ...byId, [oneNode.stableId]: oneNode }), {});
+	INTENDED_ENRICHMENT_LIST.forEach((oneRow) => {
+		const effect = ENRICHMENT_EFFECT_BY_ROW[oneRow];
+		if (effect.edgeType !== undefined) {
+			const rowEdgeList = forgeResult.edges.filter((oneEdge) => oneEdge.type === effect.edgeType && oneEdge.properties.locator === effect.edgeLocator);
+			harness.equal(`${oneRow}: ${effect.edgeType}${effect.edgeLocator ? ` (locator ${effect.edgeLocator})` : ''} edges`, rowEdgeList.length, effect.edgeDelta);
+			effect.exampleEdgeList.forEach(([fromId, toId]) => harness.ok(`${oneRow}: ${fromId} -[${effect.edgeType}]-> ${toId}`, rowEdgeList.some((oneEdge) => oneEdge.fromRef.id === fromId && oneEdge.toRef.id === toId)));
+		}
+		if (effect.anomalyList !== undefined) {
+			effect.anomalyList.forEach(([fromId, predicateName, toId]) => harness.ok(`${oneRow}: ${fromId} carries ${predicateName} ${toId} in nativeDeclarationAnomalyList`, JSON.parse(nodeById[fromId].properties.nativeDeclarationAnomalyList || '[]').some((oneEntry) => oneEntry.predicate === predicateName && oneEntry.target === toId)));
+		}
+		if (effect.carriedPropertyName !== undefined) {
+			const carrierList = forgeResult.nodes.filter((oneNode) => oneNode.properties[effect.carriedPropertyName] !== undefined && (effect.carriedRole === undefined || (effect.carriedRole === 'nonProperty' ? oneNode.role !== 'DmeProperty' : oneNode.role === effect.carriedRole)));
+			harness.equal(`${oneRow}: ${effect.carriedPropertyName} carried on ${effect.carriedRole || 'any role'}`, carrierList.length, effect.carriedCount);
+			effect.exampleIdList.forEach((oneId) => harness.ok(`${oneRow}: ${oneId} carries ${effect.carriedPropertyName}`, nodeById[oneId].properties[effect.carriedPropertyName] !== undefined));
+		}
+	});
 	next('', { ...args, forgeResult });
 }));
 
@@ -142,7 +191,8 @@ taskList.push((args, next) => validateDouble({ forgeResult: args.forgeResult, ou
 	harness.equal('inventedTotal 0', verdict.inventedTotal, 0);
 	harness.equal('lostTotal 0', verdict.lostTotal, 0);
 	harness.equal('roundTripClean', verdict.roundTripClean, true);
-	harness.equal('explicitly omitted, by declared kind (ruling 2026-10-20; retired in P2b)', JSON.stringify(countOmittedByKind(verdict), Object.keys(EXPECTED.explicitlyOmittedByKind).sort()), JSON.stringify(EXPECTED.explicitlyOmittedByKind, Object.keys(EXPECTED.explicitlyOmittedByKind).sort()));
+	const expectedOmitted = omittedAfterEnrichment(EXPECTED.explicitlyOmittedByKind);
+	harness.equal('explicitly omitted, by declared kind, after the P2b rows', JSON.stringify(countOmittedByKind(verdict), Object.keys(countOmittedByKind(verdict)).sort()), JSON.stringify(expectedOmitted, Object.keys(expectedOmitted).sort()));
 	next('', { ...args, cleanVerdict: verdict });
 }));
 
