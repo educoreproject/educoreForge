@@ -62,6 +62,16 @@ const TERM_DEFINITIONS = {
 		REFERENCES_OBJECT:
 			'A reference field to the object it names: a field whose value is another object\'s identifier, linked to that object. It runs from the FIELD, which is the "via" of the reference, so one object referring to another through several fields keeps one edge per field. Introduced for the sif260928 forge (a RefId Field to an Object); SPEC §9 A24 admits only a curated-map resolution or an exact <Object>RefId name match, and gives an unresolved field no edge.',
 		REFERENCES: 'Generic intra-standard reference between structural nodes.',
+		BROADER_CONCEPT:
+			'Concept (option value) to the broader concept it narrows, within one standard: the source\'s skos:broader, one edge per pair. Its inverse, skos:narrower, is derivable by reading the edge backwards, so it is not stored twice (measured exact for CTDL and CTDL-QData, ctdlHub-101926 P2b). Introduced for the CTDL-family forges.',
+		TOP_CONCEPT_OF:
+			'Concept (option value) to the concept scheme (option set) it heads: the source\'s skos:topConceptOf, one edge per pair. Its inverse, skos:hasTopConcept, is derivable by reading the edge backwards (measured exact in all three CTDL-family sources). It is not membership, which is HAS_VALUE: a scheme\'s top concepts are a subset of its values. Introduced for the CTDL-family forges.',
+		SUBPROPERTY_OF:
+			'Property to the property it specializes within one standard: the source\'s rdfs:subPropertyOf where both ends are the standard\'s own terms. The property counterpart of SUBCLASS_OF. Introduced for the CTDL-family forges.',
+		INVERSE_OF:
+			'Property to the property the source declares its inverse: owl:inverseOf, one edge per stated statement in the direction stated (the CTDL-family sources state every inverse in both directions, so each pair appears as two edges). Introduced for the CTDL-family forges.',
+		RELATED_CONCEPT:
+			'Concept to a concept of the same standard the source declares related: skos:relatedMatch between two of the standard\'s own concepts, one edge per stated statement (CTDL-QData states each of its five pairs both ways). Intra-standard structure, never a mapping: it is deliberately not RELATED_MATCH, which is a judged cross-standard relation (ruling R6). Introduced for the CTDL-QData forge.',
 		HAS_SUPPORT: 'Node to producer-specific supporting material (documentation fragments, examples).',
 		REFERENCES_TYPE: 'Property/field to the type it references within its own standard: a named type, or (PESC, since forgeClean lane CLEAN G19) the anonymous complex or simple type written inside the declaration, which it owns.',
 		HAS_DEFINITION:

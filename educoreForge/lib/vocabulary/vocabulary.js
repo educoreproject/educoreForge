@@ -145,6 +145,14 @@ const EDGE_TYPES = {
 	DECLARES_CONCEPT: 'DECLARES_CONCEPT',
 	REPAIRS_TEXT_OF: 'REPAIRS_TEXT_OF',
 	DECLARES_REPAIR: 'DECLARES_REPAIR',
+	// ⟪ctdlHub-101926 P2b, 2026-10-20; SCARLET_ARROW⟫ the CTDL-family enrichment: a standard's own statements about its own terms
+	// that the July forges dropped (concept hierarchy, top concepts, property hierarchy, inverse properties, related concepts).
+	// Intra-standard structure only: none of these is a mapping edge, and RELATED_CONCEPT is deliberately not RELATED_MATCH.
+	BROADER_CONCEPT: 'BROADER_CONCEPT',
+	TOP_CONCEPT_OF: 'TOP_CONCEPT_OF',
+	SUBPROPERTY_OF: 'SUBPROPERTY_OF',
+	INVERSE_OF: 'INVERSE_OF',
+	RELATED_CONCEPT: 'RELATED_CONCEPT',
 };
 
 // ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE ⟪campaign P3, W-C-1 (V1-C28, G5)⟫ — the table a forge reads a root-parented node's ownership
