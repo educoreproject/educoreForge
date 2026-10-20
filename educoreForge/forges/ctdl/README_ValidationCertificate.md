@@ -13,10 +13,11 @@ Accuracy was checked two ways:
 | standard | CTDL Release 20260327 (bundle `ctdl`, `_source` `CTDL`, family `CTDL`, DME title `Credential Transparency Description Language (CTDL)`) |
 | source | `assets/standardSourceData/01/ctdl-schema.json`, sha256 `03715222…49eb42`, checked against `SHA256SUMS` at every build. Provenance: `assets/standardSourceData/01/README_PROVENANCE.md` |
 | source URL | `https://credreg.net/ctdl/schema/encoding/json` (retrieved 2026-06-23) |
-| graph | `DEV_gb_materialize_29392_2`, a scratch graph built 2026-10-20 and disposed after its census |
-| build | recipe `recipes/ctdlOnlyRoundTrip.recipe.jsonc`, `--vectorize=false`, manifest `d841e13b…54ee4dcc`, standardBase block **`3d8b12186d70d44a03c03c6dceb4b0b8dc13960b3d766182543b26639b375458`** |
+| graph | `DEV_gb_materialize_92105_2`, a scratch graph built 2026-10-20 and disposed after its census |
+| build | recipe `recipes/ctdlOnlyRoundTrip.recipe.jsonc`, `--vectorize=false`, manifest `2625a7d2…a667094d5`, standardBase block **`4ef79cec9bffec73c4e0b89f92df2903bd22933b4ac480da4018e07a04deb4af`** (it was `3d8b1218…` before the 12 root edges, ruling A6) |
 | certification | `graphBuilder -goldEvalCheck` on the build's run directory: **PASS** (1 declared validator, inventedTotal 0; no bridge, no judged edge) |
 | oracle | `apps/graph-builder/tools/oracleDiff.js` against `dataStores/ctdlHub_101926/oracle/CTDL.census.json`: **PASS, 0 unexplained differences** |
+| structure | `apps/graph-builder/tools/graphStructureCheck.js`: all five checks **PASS**; every one of the 993 content nodes is reachable from the root |
 | commit | branch `ctdlHub/forges` (ctdlHub-101926 phase P1) |
 
 ---
