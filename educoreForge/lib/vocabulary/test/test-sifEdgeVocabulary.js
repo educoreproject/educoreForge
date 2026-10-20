@@ -94,7 +94,10 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // DECLARES_REPAIR) and the 3 layer roles projected twice each (a dmeRole member and a DME role nodeLabel member, as DmeInstance
 // is): 7 + 6 = 13. Lane DES added 27 (measured 316 -> 343); lane UNDES removed the V13 structure layer's 8 edge types and 3
 // roles, 8 + 6 = 14 (measured 343 -> 329).
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13;
+// ⟪ctdlHub P3, 2026-10-20 (TWILIGHT_MEADOW; re-anchor approved by SCARLET_ARROW)⟫ +5 more, unrelated to V1: the rangeAsMeaning
+// list-valued names rangeClassIdList, rangeClassNameList, rangeOptionSetIdList, rangeOptionSetNameList, rangeDatatypeList
+// (graph-contract §1), each projected as one list-valued-name member (measured 329 -> 334).
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13 + 5;
 // ⟪campaign P3, W-C-2⟫ rows RETIRED from V1's own five: the real registry is AFTER_V1 + added − retired, and the pre-V1
 // reading (the remaining V1 rows removed) is BEFORE_V1 + added, unchanged.
 const SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1 = RETIRED_V1_EDGE_TYPE_NAME_LIST.length;
