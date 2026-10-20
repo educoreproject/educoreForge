@@ -59,7 +59,7 @@ const EXPECTED = Object.freeze({
 // what the bundle carries — written FIRST at each P2b commit, so the suite goes red until the profile turns the row on (red-first).
 // Each row's effect: the edges it adds, the omitted statements it retires (by kind), the crossRefs it adds, and three named examples
 // from the source. E9 and E12 widen the profile's status / usageNote lists rather than naming a row in enrichmentKindList.
-const INTENDED_ENRICHMENT_LIST = Object.freeze(['E1', 'E1a', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8']);
+const INTENDED_ENRICHMENT_LIST = Object.freeze(['E1', 'E1a', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9']);
 const ENRICHMENT_EFFECT_BY_ROW = Object.freeze({
 	E1: { edgeType: 'BROADER_CONCEPT', edgeDelta: 98, omittedDelta: { nativeReferenceNotModelled: 196 }, exampleEdgeList: [['accommodation:AccessibleHousing', 'accommodation:FacilityAccommodation'], ['accommodation:AccessibleParking', 'accommodation:FacilityAccommodation'], ['accommodation:AccessibleRestroom', 'accommodation:FacilityAccommodation']] },
 	E1a: { anomalyList: [['costType:PersonalExpenses', 'skos:broader', 'ceterms:CostType']], omittedDelta: { nativeReferenceNotModelled: 1 } },

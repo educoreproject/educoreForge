@@ -97,7 +97,8 @@
 	"statusCarriedByTermKindList": [
 		"class",
 		"property",
-		"optionValue"
+		"optionValue",
+		"optionSet"
 	],
 	"usageNotePredicate": "vann:usageNote",
 	"usageNoteCarriedByTermKindList": [
