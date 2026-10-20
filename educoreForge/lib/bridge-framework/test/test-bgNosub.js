@@ -896,7 +896,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // ═══ RE-ANCHOR (2), 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P1 rulings A6 + shared lib; standing authorisation) ═══ seamDiffEmpty:
 // postCtdlP1SeamDiffEmpty-102026 -> postCtdlP1bSeamDiffEmpty-102026, tag cut ON this commit. CENSUS: forges/ctdl/lib/ctdlHooks.js +5/-3 ONLY
 // (requires the loader and walk from lib/ctdl-family-forge/, commit 7ff03e25). No build.js, forger, replay, replay-manager or framework source.
-const PHASE3_ANCHOR_TAG = 'postCtdlP1bSeamDiffEmpty-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1, re-anchor 2); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P2; standing authorisation) ═══ seamDiffEmpty: postCtdlP1bSeamDiffEmpty-102026 ->
+// postCtdlP2SeamDiffEmpty-102026, tag cut ON this commit together with BG-COMPOSE-PESC's (which watches this file). CENSUS (commit 3f58f004):
+// the two NEW forge bundles matched by the seam globs — forges/ctdlasn/forgeCtdlasn.js +19/-0, lib/ctdlasnForgeDeclaration.js +56/-0,
+// lib/ctdlasnHooks.js +9/-0; forges/ctdlqdata/forgeCtdlqdata.js +19/-0, lib/ctdlqdataForgeDeclaration.js +56/-0, lib/ctdlqdataHooks.js +9/-0 —
+// and forges/ctdl/lib/ctdlHooks.js +3/-62 (its body moved to lib/ctdl-family-forge/jsonLdVocabularyHooks.js). No build.js, forger, replay,
+// replay-manager or framework source.
+const PHASE3_ANCHOR_TAG = 'postCtdlP2SeamDiffEmpty-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P2); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
