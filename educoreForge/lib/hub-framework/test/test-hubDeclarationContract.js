@@ -187,12 +187,13 @@ const withoutKey = (oneName) => {
 };
 
 harness.ok(
-	'HUB_DECLARATION_CONTRACT is frozen and names the eight §4.4 fields',
+	'HUB_DECLARATION_CONTRACT is frozen and names the eight §4.4 fields plus the four ctdlHub P3 fields',
 	Object.isFrozen(contract.HUB_DECLARATION_CONTRACT) &&
 		JSON.stringify(contract.HUB_DECLARATION_KEY_LIST) ===
 			JSON.stringify([
 				'hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted',
 				'sourceIdFieldName', 'baseFieldNames', 'qualifiedReference', 'provenanceLabel',
+				'tierList', 'rangeAddressing', 'rootFieldNames', 'embedTextTemplateByTier',
 			]),
 	JSON.stringify(contract.HUB_DECLARATION_KEY_LIST),
 );
@@ -217,7 +218,7 @@ harness.match(
 );
 
 harness.section('H1 DECLARATION — REFUSAL CLASS 2: a missing REQUIRED key, one per field');
-['hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted', 'sourceIdFieldName', 'baseFieldNames', 'provenanceLabel'].forEach(
+['hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted', 'sourceIdFieldName', 'baseFieldNames', 'provenanceLabel', 'tierList', 'rangeAddressing', 'rootFieldNames', 'embedTextTemplateByTier'].forEach(
 	(oneName) => {
 		harness.match(
 			`a declaration missing '${oneName}' is REFUSED BY NAME (absent is absent, never defaulted)`,
@@ -257,6 +258,51 @@ harness.match(
 	),
 	/unknown base field name 'notAField'/,
 );
+
+harness.section('H1 DECLARATION — ⟪ctdlHub P3⟫ tierList, rangeAddressing, rootFieldNames, embedTextTemplateByTier');
+const withDeclared = (overrideObject) => Object.assign({}, liveDeclaration, overrideObject);
+harness.equal('CONTROL: CEDS declares exactly the two tiers it minted before P3 (its term tier is P9)', JSON.stringify(liveDeclaration.tierList), JSON.stringify(['property', 'value']));
+harness.equal('CONTROL: CEDS declares singleRangeSlot (the pre-P3 range rule)', liveDeclaration.rangeAddressing, 'singleRangeSlot');
+harness.equal(
+	'CONTROL: a CTDL-shaped declaration (term tier, rangeAsMeaning, a term template) is ADMITTED',
+	declarationRefusalFor(withDeclared({
+		tierList: ['term', 'property', 'value'],
+		rangeAddressing: 'rangeAsMeaning',
+		embedTextTemplateByTier: Object.assign({}, liveDeclaration.embedTextTemplateByTier, { term: [['termName'], ['termDefinition']], property: [['domainName'], ['propertyName'], ['rangeClassNameList']] }),
+	})),
+	'',
+);
+harness.match('an unknown tier is REFUSED BY NAME', declarationRefusalFor(withDeclared({ tierList: ['property', 'value', 'concept'] })), /names tier "concept"/);
+harness.match('an empty tierList is REFUSED', declarationRefusalFor(withDeclared({ tierList: [] })), /must be a non-empty array of reference tiers/);
+harness.match('a repeated tier is REFUSED', declarationRefusalFor(withDeclared({ tierList: ['property', 'property', 'value'] })), /names tier 'property' twice/);
+harness.match('an unknown rangeAddressing mode is REFUSED, listing the admissible ones', declarationRefusalFor(withDeclared({ rangeAddressing: 'rangeAsHash' })), /must be one of singleRangeSlot, rangeAsMeaning/);
+harness.match(
+	'a rootFieldNames map MISSING a root field is REFUSED — it is read into sourceProvenance, which is block bytes',
+	declarationRefusalFor(withDeclared({ rootFieldNames: (({ sourceUrl, ...rest }) => rest)(liveDeclaration.rootFieldNames) })),
+	/missing required root field name\(s\): sourceUrl/,
+);
+harness.match('an UNKNOWN root field name is REFUSED', declarationRefusalFor(withDeclared({ rootFieldNames: Object.assign({}, liveDeclaration.rootFieldNames, { releaseDate: 'x' }) })), /unknown root field name 'releaseDate'/);
+harness.match(
+	'a template MISSING for a declared tier is REFUSED (every tier composes from its own declared template)',
+	declarationRefusalFor(withDeclared({ tierList: ['term', 'property', 'value'] })),
+	/has no template for declared tier 'term'/,
+);
+harness.match(
+	'a template for an UNDECLARED tier is REFUSED',
+	declarationRefusalFor(withDeclared({ embedTextTemplateByTier: Object.assign({}, liveDeclaration.embedTextTemplateByTier, { term: [['termName']] }) })),
+	/template for tier 'term', which tierList does not declare/,
+);
+harness.match(
+	'a template naming a field that is not a MEANING field of that tier is REFUSED BY NAME (valueName on a property card)',
+	declarationRefusalFor(withDeclared({ embedTextTemplateByTier: Object.assign({}, liveDeclaration.embedTextTemplateByTier, { property: [['propertyName'], ['valueName']] }) })),
+	/names 'valueName', which is not a meaning field of a property card/,
+);
+harness.match(
+	'a rangeAsMeaning list field in the template of a singleRangeSlot hub is REFUSED (the row does not reach that hub)',
+	declarationRefusalFor(withDeclared({ embedTextTemplateByTier: Object.assign({}, liveDeclaration.embedTextTemplateByTier, { property: [['propertyName'], ['rangeClassNameList']] }) })),
+	/names 'rangeClassNameList'/,
+);
+harness.match('an empty slot is REFUSED', declarationRefusalFor(withDeclared({ embedTextTemplateByTier: Object.assign({}, liveDeclaration.embedTextTemplateByTier, { value: [['valueName'], []] }) })), /a slot is a non-empty array of card field names/);
 
 harness.section('H1 DECLARATION — provenanceLabel carries BLOCK BYTES');
 harness.match(

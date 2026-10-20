@@ -5,17 +5,25 @@
 // hashed rows ARE the vocabulary's ADDRESS_SIGNATURE_FIELD_ORDER. PURE: synthetic cards, no forge.
 // (test-cedsHubForge G-9 holds the same rules over EVERY card of the real forged hub.)
 //
-//   a  slotProfileFromFieldTable serialises the table whole: fieldList deep-equals it, version 3, the signature order kept
-//   b  the table's hashed slots (hashSlot or fieldName, deduplicated) are EXACTLY ADDRESS_SIGNATURE_FIELD_ORDER's slots
+//   a  slotProfileFromFieldTable serialises the HUB'S VIEW of the table (hubFieldTableOf): fieldList deep-equals it,
+//      version 3, the signature order kept; and ⟪ctdlHub P3⟫ the CEDS view's profile text equals, character for
+//      character, the FROZEN profile captured at 087550f9 before P3 touched the framework
+//      (fixtures/cedsSlotProfile-frozen-087550f9.json)
+//   b  per tier family, the hashed slots (hashSlot or fieldName, deduplicated) are EXACTLY that family's signature order:
+//      property/value rows ADDRESS_SIGNATURE_FIELD_ORDER, term rows TERM_ADDRESS_SIGNATURE_FIELD_ORDER
 //   c  a well-formed qualified property card and a value card pass cardFieldRefusal; an undeclared field, a missing
 //      'always' field, a value-tier qualifierNames and a forger stamp at emit time are each refused by name
 //   d  the table's own shape: names unique, presence in the declared grammar
+//   e  ⟪ctdlHub P3⟫ a rangeAsMeaning row reaches only a rangeAsMeaning hub; a term card passes only under a term hub
 //
 // RED TWINS (each a changed COPY of the table, nothing written):
 //   qualifierNamesRowDeleted        -> c red (a qualified card now carries an undeclared field)
 //   referenceTierHashed             -> b red (a slot the signature never reads)
 //   duplicateRow                    -> d red
 //   fieldListRetyped                -> a red (a profile built from anything but the table)
+//   cedsRowPerturbed                -> a red (one CEDS row changed: the frozen literal catches it)
+//   filterIgnoresTierList           -> a red (term rows leak into the CEDS profile)
+//   rangeModeAttributeDropped       -> e red (the rangeAsMeaning rows lose their mode and reach CEDS)
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -31,11 +39,22 @@ EXIT STATUS
 require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
 const harness = require('../../../test/testLib/harness')(moduleName);
 
+const fs = require('fs');
 const path = require('path');
 const tableLib = require('../hubCardFieldTable');
-const { ADDRESS_SIGNATURE_FIELD_ORDER } = require(path.join(__dirname, '..', '..', 'vocabulary', 'vocabulary'));
+const { ADDRESS_SIGNATURE_FIELD_ORDER, TERM_ADDRESS_SIGNATURE_FIELD_ORDER } = require(path.join(__dirname, '..', '..', 'vocabulary', 'vocabulary'));
 
-const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, hashedSlotNameListOf, slotProfileFromFieldTable, cardFieldRefusal, fieldTableShapeRefusal } = tableLib;
+const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, hashedSlotNameListOf, hubFieldTableOf, slotProfileFromFieldTable, cardFieldRefusal, fieldTableShapeRefusal } = tableLib;
+
+// the scope CEDS declares (forges/ceds/lib/cedsHubDeclaration.js) and the scope a CTDL-shaped hub declares
+const CEDS_SCOPE = Object.freeze({ tierList: Object.freeze(['property', 'value']), rangeAddressing: 'singleRangeSlot' });
+const TERM_HUB_SCOPE = Object.freeze({ tierList: Object.freeze(['term', 'property', 'value']), rangeAddressing: 'rangeAsMeaning' });
+const FROZEN_CEDS_PROFILE = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'cedsSlotProfile-frozen-087550f9.json'), 'utf8'));
+const TERM_CARD = Object.freeze({
+	_source: 'CTDL', role: 'HubReference', name: 'name', hubName: 'CTDL', hubVersion: '20260327', referenceTier: 'term',
+	termIri: 'ceterms:name', addressSignature: 'c'.repeat(64), uri: 'https://x/card3', termName: 'name', termKind: 'property',
+	anchorUri: 'ceterms:name', embedText: 'name',
+});
 
 const QUALIFIED_PROPERTY_CARD = Object.freeze({
 	_source: 'CEDS', role: 'HubReference', name: 'Birthdate', hubName: 'CEDS', hubVersion: '14.0.0.0', referenceTier: 'property',
@@ -50,17 +69,31 @@ const VALUE_CARD = Object.freeze({
 	anchorUri: 'https://x/Female', domainUri: 'https://x/C200275', propertyUri: 'https://x/P000255', rangeUri: 'https://x/C000255',
 	valueUri: 'https://x/Female', embedText: 'Person: Sex: Female',
 });
-const refusalFor = (fieldTable, card) => cardFieldRefusal({ fieldTable, referenceTier: card.referenceTier, cardPropertyNameList: Object.keys(card) });
+const refusalFor = (fieldTable, card, hubScope = CEDS_SCOPE) => cardFieldRefusal({ fieldTable, referenceTier: card.referenceTier, cardPropertyNameList: Object.keys(card), ...hubScope });
+const profileFor = ({ fieldTable, profileBuilder, filter, hubScope }) =>
+	profileBuilder({ cardStructureVersion: HUB_CARD_STRUCTURE_VERSION, fieldTable, addressSignatureFieldOrder: ADDRESS_SIGNATURE_FIELD_ORDER, termAddressSignatureFieldOrder: TERM_ADDRESS_SIGNATURE_FIELD_ORDER, ...hubScope, filter });
 
 const judgeByConjunct = {
-	a_profileIsTheTable: ({ fieldTable, profileBuilder }) => {
-		const profile = profileBuilder({ cardStructureVersion: HUB_CARD_STRUCTURE_VERSION, fieldTable: HUB_CARD_FIELD_TABLE, addressSignatureFieldOrder: ADDRESS_SIGNATURE_FIELD_ORDER });
-		const pass = JSON.stringify(profile.fieldList) === JSON.stringify(fieldTable) && profile.cardStructureVersion === 3 && JSON.stringify(profile.addressSignatureFieldOrder) === JSON.stringify(ADDRESS_SIGNATURE_FIELD_ORDER);
-		return { pass, detail: `version ${profile.cardStructureVersion}; fieldList ${(profile.fieldList || []).length} rows` };
+	a_profileIsTheTable: ({ fieldTable, profileBuilder, filter }) => {
+		const cedsProfile = profileFor({ fieldTable, profileBuilder, filter, hubScope: CEDS_SCOPE });
+		const termHubProfile = profileFor({ fieldTable, profileBuilder, filter, hubScope: TERM_HUB_SCOPE });
+		const viewIsTheFilteredTable =
+			JSON.stringify(cedsProfile.fieldList) === JSON.stringify(hubFieldTableOf({ fieldTable: HUB_CARD_FIELD_TABLE, ...CEDS_SCOPE }))
+			&& JSON.stringify(termHubProfile.fieldList) === JSON.stringify(hubFieldTableOf({ fieldTable: HUB_CARD_FIELD_TABLE, ...TERM_HUB_SCOPE }));
+		const cedsEqualsFrozen = JSON.stringify(cedsProfile) === FROZEN_CEDS_PROFILE.slotProfileText;
+		const termOrderOnlyForTermHub = cedsProfile.termAddressSignatureFieldOrder === undefined
+			&& JSON.stringify(termHubProfile.termAddressSignatureFieldOrder) === JSON.stringify(TERM_ADDRESS_SIGNATURE_FIELD_ORDER);
+		const pass = viewIsTheFilteredTable && cedsEqualsFrozen && termOrderOnlyForTermHub && cedsProfile.cardStructureVersion === 3
+			&& JSON.stringify(cedsProfile.addressSignatureFieldOrder) === JSON.stringify(ADDRESS_SIGNATURE_FIELD_ORDER);
+		return { pass, detail: `view is the filtered table: ${viewIsTheFilteredTable}; CEDS profile equals the frozen 087550f9 text: ${cedsEqualsFrozen}; term order only for a term hub: ${termOrderOnlyForTermHub}; CEDS fieldList ${(cedsProfile.fieldList || []).length} rows, term hub ${(termHubProfile.fieldList || []).length}` };
 	},
 	b_hashedRowsAreTheSignatureOrder: ({ fieldTable }) => {
-		const hashedSlotNameList = hashedSlotNameListOf(fieldTable);
-		return { pass: JSON.stringify(hashedSlotNameList.slice().sort()) === JSON.stringify(ADDRESS_SIGNATURE_FIELD_ORDER.slice().sort()), detail: `table [${hashedSlotNameList.join(', ')}] vs order [${ADDRESS_SIGNATURE_FIELD_ORDER.join(', ')}]` };
+		const tupleHashedSlotNameList = hashedSlotNameListOf(hubFieldTableOf({ fieldTable, ...CEDS_SCOPE }));
+		const termHashedSlotNameList = hashedSlotNameListOf(hubFieldTableOf({ fieldTable, tierList: ['term'], rangeAddressing: 'rangeAsMeaning' }));
+		const sortedText = (nameList) => JSON.stringify(nameList.slice().sort());
+		const pass = sortedText(tupleHashedSlotNameList) === sortedText(ADDRESS_SIGNATURE_FIELD_ORDER) && sortedText(termHashedSlotNameList) === sortedText(TERM_ADDRESS_SIGNATURE_FIELD_ORDER)
+			&& sortedText(tupleHashedSlotNameList) === sortedText(FROZEN_CEDS_PROFILE.hashedSlotNameList);
+		return { pass, detail: `property/value [${tupleHashedSlotNameList.join(', ')}] vs [${ADDRESS_SIGNATURE_FIELD_ORDER.join(', ')}]; term [${termHashedSlotNameList.join(', ')}] vs [${TERM_ADDRESS_SIGNATURE_FIELD_ORDER.join(', ')}]` };
 	},
 	c_cardsCheckedByTier: ({ fieldTable }) => {
 		const qualifiedRefusal = refusalFor(fieldTable, QUALIFIED_PROPERTY_CARD);
@@ -80,14 +113,30 @@ const judgeByConjunct = {
 		const refusal = fieldTableShapeRefusal(fieldTable);
 		return { pass: refusal === '', detail: refusal || 'well formed' };
 	},
+	e_scopeAdmitsOnlyItsRows: ({ fieldTable }) => {
+		const rangeListNameList = ['rangeClassIdList', 'rangeClassNameList', 'rangeOptionSetIdList', 'rangeOptionSetNameList', 'rangeDatatypeList'];
+		const namesIn = (hubScope) => hubFieldTableOf({ fieldTable, ...hubScope }).map((fieldRow) => fieldRow.fieldName);
+		const cedsNameList = namesIn(CEDS_SCOPE);
+		const termHubNameList = namesIn(TERM_HUB_SCOPE);
+		const rangeListsOnlyUnderMeaning = rangeListNameList.every((fieldName) => cedsNameList.indexOf(fieldName) === -1 && termHubNameList.indexOf(fieldName) !== -1);
+		const termCardUnderTermHub = refusalFor(fieldTable, TERM_CARD, TERM_HUB_SCOPE);
+		const termCardUnderCeds = refusalFor(fieldTable, TERM_CARD, CEDS_SCOPE);
+		const pass = rangeListsOnlyUnderMeaning && termCardUnderTermHub === '' && /is not in this hub's tierList/.test(termCardUnderCeds);
+		return { pass, detail: `range lists only under rangeAsMeaning: ${rangeListsOnlyUnderMeaning}; term card under a term hub: ${termCardUnderTermHub || 'admitted'}; under CEDS: ${termCardUnderCeds}` };
+	},
 };
 
 const shippedSubject = () => ({ fieldTable: HUB_CARD_FIELD_TABLE, profileBuilder: slotProfileFromFieldTable });
+// a profile builder that ignores the hub's tierList (the pre-P3 shape): every row reaches every hub
+const unfilteredProfileBuilder = (args) => ({ ...slotProfileFromFieldTable(args), fieldList: args.fieldTable.map((fieldRow) => ({ ...fieldRow, tierList: fieldRow.tierList.slice() })) });
 const TWIN_LIST = [
 	{ conjunctRefId: 'c_cardsCheckedByTier', twinName: 'qualifierNamesRowDeleted', subject: () => ({ ...shippedSubject(), fieldTable: HUB_CARD_FIELD_TABLE.filter((fieldRow) => fieldRow.fieldName !== 'qualifierNames') }) },
 	{ conjunctRefId: 'b_hashedRowsAreTheSignatureOrder', twinName: 'referenceTierHashed', subject: () => ({ ...shippedSubject(), fieldTable: HUB_CARD_FIELD_TABLE.map((fieldRow) => (fieldRow.fieldName === 'referenceTier' ? { ...fieldRow, hashed: true } : fieldRow)) }) },
 	{ conjunctRefId: 'd_tableShape', twinName: 'duplicateRow', subject: () => ({ ...shippedSubject(), fieldTable: HUB_CARD_FIELD_TABLE.concat([HUB_CARD_FIELD_TABLE[0]]) }) },
 	{ conjunctRefId: 'a_profileIsTheTable', twinName: 'fieldListRetyped', subject: () => ({ ...shippedSubject(), profileBuilder: (args) => ({ ...slotProfileFromFieldTable(args), fieldList: args.fieldTable.map((fieldRow) => fieldRow.fieldName) }) }) },
+	{ conjunctRefId: 'a_profileIsTheTable', twinName: 'cedsRowPerturbed', subject: () => ({ ...shippedSubject(), fieldTable: HUB_CARD_FIELD_TABLE.map((fieldRow) => (fieldRow.fieldName === 'propertyNotation' ? { ...fieldRow, presence: 'conditional:the property has a notation, perturbed' } : fieldRow)) }) },
+	{ conjunctRefId: 'a_profileIsTheTable', twinName: 'filterIgnoresTierList', subject: () => ({ ...shippedSubject(), profileBuilder: unfilteredProfileBuilder }) },
+	{ conjunctRefId: 'e_scopeAdmitsOnlyItsRows', twinName: 'rangeModeAttributeDropped', subject: () => ({ ...shippedSubject(), fieldTable: HUB_CARD_FIELD_TABLE.map((fieldRow) => (fieldRow.rangeAddressing === undefined ? fieldRow : (({ rangeAddressing, ...rest }) => rest)(fieldRow))) }) },
 ];
 
 harness.section('BASELINE — the shipped table passes every conjunct');

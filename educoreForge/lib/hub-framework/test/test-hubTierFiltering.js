@@ -28,7 +28,7 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 
 const path = require('path');
 const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, slotProfileFromFieldTable, cardFieldRefusal } = require('../hubCardFieldTable');
-const { ADDRESS_SIGNATURE_FIELD_ORDER } = require(path.join(__dirname, '..', '..', 'vocabulary', 'vocabulary'));
+const { ADDRESS_SIGNATURE_FIELD_ORDER, TERM_ADDRESS_SIGNATURE_FIELD_ORDER } = require(path.join(__dirname, '..', '..', 'vocabulary', 'vocabulary'));
 
 const CEDS_TIER_LIST = Object.freeze(['property', 'value']);
 const TERM_HUB_TIER_LIST = Object.freeze(['term', 'property', 'value']);
@@ -36,7 +36,7 @@ const DUMMY_TERM_ROW = Object.freeze({ fieldName: 'dummyTermOnlyField', group: '
 const TABLE_WITH_DUMMY_TERM_ROW = Object.freeze(HUB_CARD_FIELD_TABLE.concat([DUMMY_TERM_ROW]));
 
 const profileTextOf = ({ fieldTable, tierList }) =>
-	JSON.stringify(slotProfileFromFieldTable({ cardStructureVersion: HUB_CARD_STRUCTURE_VERSION, fieldTable, addressSignatureFieldOrder: ADDRESS_SIGNATURE_FIELD_ORDER, tierList }));
+	JSON.stringify(slotProfileFromFieldTable({ cardStructureVersion: HUB_CARD_STRUCTURE_VERSION, fieldTable, addressSignatureFieldOrder: ADDRESS_SIGNATURE_FIELD_ORDER, termAddressSignatureFieldOrder: TERM_ADDRESS_SIGNATURE_FIELD_ORDER, tierList, rangeAddressing: 'singleRangeSlot' }));
 
 harness.section('a — a term-tier row does not reach the profile of a hub that mints no term cards');
 const profileWithoutDummy = profileTextOf({ fieldTable: HUB_CARD_FIELD_TABLE, tierList: CEDS_TIER_LIST });
@@ -54,9 +54,11 @@ harness.ok(
 
 harness.section('b — a term card is refused by a hub that does not declare the term tier');
 const termCardPropertyNameList = ['dummyTermOnlyField'];
-const refusalUnderCeds = cardFieldRefusal({ fieldTable: TABLE_WITH_DUMMY_TERM_ROW, referenceTier: 'term', cardPropertyNameList: termCardPropertyNameList, tierList: CEDS_TIER_LIST });
-const refusalUnderTermHub = cardFieldRefusal({ fieldTable: TABLE_WITH_DUMMY_TERM_ROW, referenceTier: 'term', cardPropertyNameList: termCardPropertyNameList, tierList: TERM_HUB_TIER_LIST });
+const refusalUnderCeds = cardFieldRefusal({ fieldTable: TABLE_WITH_DUMMY_TERM_ROW, referenceTier: 'term', cardPropertyNameList: termCardPropertyNameList, tierList: CEDS_TIER_LIST, rangeAddressing: 'singleRangeSlot' });
+const refusalUnderTermHub = cardFieldRefusal({ fieldTable: TABLE_WITH_DUMMY_TERM_ROW, referenceTier: 'term', cardPropertyNameList: termCardPropertyNameList, tierList: TERM_HUB_TIER_LIST, rangeAddressing: 'singleRangeSlot' });
 harness.match('b_termCardRefusedWithoutTermTier', refusalUnderCeds, /referenceTier 'term' is not in this hub's tierList/);
-harness.equal('b_termCardAdmittedWithTermTier (control)', refusalUnderTermHub, '');
+// control: under a term hub the TIER is admitted, so whatever the card is then told concerns its fields, not its tier
+// (the real term rows make this one-field dummy card incomplete, which is beside this conjunct's point)
+harness.ok('b_termTierAdmittedWithTermTier (control)', !/is not in this hub's tierList/.test(refusalUnderTermHub), refusalUnderTermHub);
 
 harness.report();

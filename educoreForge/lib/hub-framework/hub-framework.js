@@ -85,11 +85,14 @@ const {
 	// by calling both rather than by citing the earlier verification (SPEC §3.4, STANDDOWN-P1 A.1).
 	hubEdgeType,
 	HUB_DECOMPOSITION_SLOTS,
+	HUB_TERM_DECOMPOSITION_SLOTS,
 	// the base ownership edges this derivation walks — the constants, not the literals they used to be
 	// (SPEC §4.8(4)).
 	EDGE_TYPES,
 	IN_HUB_EDGE_TYPE,
+	HUB_TERM_REFERENCE_EDGE_TYPE,
 	ADDRESS_SIGNATURE_FIELD_ORDER,
+	TERM_ADDRESS_SIGNATURE_FIELD_ORDER,
 	PROVENANCE_TIER,
 	DME_ROLES,
 } = vocab;
@@ -97,6 +100,7 @@ const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const {
 	validateHubDeclaration,
 	validateHubHooks,
+	RANGE_ADDRESSING_MODE_LIST,
 } = require(path.join(__dirname, 'hubDeclarationContract'));
 // ⟪campaign P3, W-C-5⟫ the ONE declaration of a card's fields: it builds the slotProfile and checks every emitted card
 const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, slotProfileFromFieldTable, cardFieldRefusal } = require(path.join(__dirname, 'hubCardFieldTable'));
@@ -104,11 +108,115 @@ const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, slotProfileFromFieldTa
 // slot NAME -> slot NAME, derived from the vocabulary's own roster so the five slot tokens are never
 // re-typed here as literals. HUB_DECOMPOSITION_SLOTS is the single source of the slot vocabulary.
 const HUB_DECOMPOSITION_SLOTS_BY_NAME = Object.freeze(
-	HUB_DECOMPOSITION_SLOTS.reduce(
+	HUB_DECOMPOSITION_SLOTS.concat(HUB_TERM_DECOMPOSITION_SLOTS).reduce(
 		(soFar, oneSlot) => Object.assign(soFar, { [oneSlot]: oneSlot }),
 		{},
 	),
 );
+
+// ⟪ctdlHub P3 step 5⟫ a term card's termKind, by the DME role of the base node it addresses. A registry, not a branch:
+// a role absent here mints no term card, and the term pass walks exactly these roles.
+const TERM_KIND_BY_ROLE = Object.freeze({
+	[DME_ROLES.CLASS]: 'class',
+	[DME_ROLES.PROPERTY]: 'property',
+	[DME_ROLES.OPTION_SET]: 'optionSet',
+	[DME_ROLES.OPTION_VALUE]: 'value',
+});
+
+// ⟪ctdlHub P3 step 3⟫ RANGE_ADDRESSING_REGISTRY — THE POLYMORPHIC SEAM behind hubDeclaration.rangeAddressing.
+//
+// @interface RangeAddressingMode — (rangeIndexes) -> rangeShapeOf, where rangeIndexes is
+//     { baseFieldNames, classByDomainId, optionSetNodeOfProperty, optionSetNodeListOfProperty,
+//       referencedClassNodeListOfProperty, recordDerivationFault }
+//   and rangeShapeOf(propertyNode) returns
+//     { propertyCardRange, valueCardRangeList } | undefined (undefined: a refusal was recorded by name)
+//   propertyCardRange  the range arguments of the property card's emitReference call
+//                      ({ rangeOptionSetId, rangeClassId, rangeDatatype, optionSetNode, classRangeNode, rangeMeaning })
+//   valueCardRangeList one { rangeOptionSetId, optionSetNode } per option set whose values become value cards
+//
+// The contract (hubDeclarationContract RANGE_ADDRESSING_MODE_LIST) names the admissible modes; this registry must
+// implement exactly those, which is checked at load below rather than discovered at the first hub that names one.
+const RANGE_ADDRESSING_REGISTRY = Object.freeze({
+	// TODAY'S BEHAVIOUR, MOVED AND NOT CHANGED (CEDS). One range, the XOR of three shapes, hashed into 'range'. The
+	// option set is the LAST HAS_OPTION_SET edge seen (optionSetNodeOfProperty); that is PLAN §2.4 H-c, and it stays
+	// exactly as it was because it is block bytes for CEDS.
+	singleRangeSlot: ({ baseFieldNames, classByDomainId, optionSetNodeOfProperty }) => (propertyNode) => {
+		const propertyProps = propertyNode.properties;
+		const optionSetNode = optionSetNodeOfProperty[propertyNode.stableId];
+		const rangeOptionSetId = optionSetNode
+			? v1(optionSetNode.properties[baseFieldNames.rangeOptionSetId])
+			: undefined;
+		const rangeClassId = optionSetNode
+			? undefined
+			: v1(propertyProps[baseFieldNames.rangeClassId]);
+		const classRangeNode = rangeClassId
+			? classByDomainId[rangeClassId]
+			: undefined;
+		const rangeDatatype =
+			optionSetNode || rangeClassId
+				? undefined
+				: v1(propertyProps[baseFieldNames.rangeDatatype]);
+		return {
+			propertyCardRange: { rangeOptionSetId, rangeClassId, rangeDatatype, optionSetNode, classRangeNode },
+			valueCardRangeList: optionSetNode ? [{ rangeOptionSetId, optionSetNode }] : [],
+		};
+	},
+	// CTDL. Every declared range is MEANING: the property card's address carries no range at all (the 'range' slot
+	// encodes empty), and its ranges ride as parallel, id-sorted lists. Classes come from the base's REFERENCES edges and
+	// option sets from its HAS_OPTION_SET edges (all of them, not the last); datatypes from the declared rangeDatatype
+	// base field read list-agnostically. Value cards: one per (domain, property, option set, value), with that option set
+	// hashed into the value card's 'range' slot so a value two of the property's option sets share stays two cards.
+	rangeAsMeaning: ({ baseFieldNames, optionSetNodeListOfProperty, referencedClassNodeListOfProperty, recordDerivationFault }) => (propertyNode) => {
+		const propertyProps = propertyNode.properties;
+		const rangeEntryListOf = ({ rangeNodeList, rangeIdFieldName, rangeKindLabel }) =>
+			rangeNodeList.map((rangeNode) => ({
+				rangeNode,
+				rangeId: v1(rangeNode.properties[rangeIdFieldName]),
+				rangeName: v1(rangeNode.properties[baseFieldNames.name]),
+				rangeKindLabel,
+			}));
+		const classEntryList = rangeEntryListOf({ rangeNodeList: referencedClassNodeListOfProperty[propertyNode.stableId] || [], rangeIdFieldName: baseFieldNames.domainId, rangeKindLabel: 'range class' });
+		const optionSetEntryList = rangeEntryListOf({ rangeNodeList: optionSetNodeListOfProperty[propertyNode.stableId] || [], rangeIdFieldName: baseFieldNames.rangeOptionSetId, rangeKindLabel: 'range option set' });
+		// the lists are positionally parallel (ids and names), so an entry with no id or no name is refused by name,
+		// never carried as a hole that would shift every later name onto the wrong id
+		const faultyEntry = classEntryList.concat(optionSetEntryList).find((oneEntry) => !hasProse(oneEntry.rangeId) || !hasProse(oneEntry.rangeName));
+		if (faultyEntry) {
+			recordDerivationFault(
+				`${moduleName}: REFUSED — ${faultyEntry.rangeKindLabel} '${faultyEntry.rangeNode.stableId}' of property ` +
+					`'${propertyNode.stableId}' has ${hasProse(faultyEntry.rangeId) ? 'no name' : 'no id'}; rangeAsMeaning carries ` +
+					`ids and names as parallel lists.`,
+			);
+			return undefined;
+		}
+		const byRangeId = (left, right) => compareText(left.rangeId, right.rangeId) || compareText(left.rangeNode.stableId, right.rangeNode.stableId);
+		const sortedClassEntryList = uniqueByStableId(classEntryList).sort(byRangeId);
+		const sortedOptionSetEntryList = uniqueByStableId(optionSetEntryList).sort(byRangeId);
+		const rangeDatatypeList = domainListOf(propertyProps[baseFieldNames.rangeDatatype])
+			.filter((oneDatatype, datatypeIndex, datatypeList) => datatypeList.indexOf(oneDatatype) === datatypeIndex)
+			.sort(compareText);
+		return {
+			propertyCardRange: {
+				rangeMeaning: {
+					rangeClassIdList: sortedClassEntryList.map((oneEntry) => oneEntry.rangeId),
+					rangeClassNameList: sortedClassEntryList.map((oneEntry) => oneEntry.rangeName),
+					rangeOptionSetIdList: sortedOptionSetEntryList.map((oneEntry) => oneEntry.rangeId),
+					rangeOptionSetNameList: sortedOptionSetEntryList.map((oneEntry) => oneEntry.rangeName),
+					rangeDatatypeList,
+					rangeNodeList: sortedClassEntryList.concat(sortedOptionSetEntryList).map((oneEntry) => oneEntry.rangeNode),
+				},
+			},
+			valueCardRangeList: sortedOptionSetEntryList.map((oneEntry) => ({ rangeOptionSetId: oneEntry.rangeId, optionSetNode: oneEntry.rangeNode })),
+		};
+	},
+});
+const unimplementedModeList = RANGE_ADDRESSING_MODE_LIST.filter((modeName) => RANGE_ADDRESSING_REGISTRY[modeName] === undefined);
+const unadmittedModeList = Object.keys(RANGE_ADDRESSING_REGISTRY).filter((modeName) => RANGE_ADDRESSING_MODE_LIST.indexOf(modeName) === -1);
+if (unimplementedModeList.length || unadmittedModeList.length) {
+	throw new Error(
+		`${moduleName}: REFUSED AT LOAD — RANGE_ADDRESSING_REGISTRY implements [${Object.keys(RANGE_ADDRESSING_REGISTRY).join(', ')}] ` +
+			`but the declaration contract admits [${RANGE_ADDRESSING_MODE_LIST.join(', ')}]; they must be the same list.`,
+	);
+}
 
 // single-element PG-JSON array -> scalar. The replay engine scalarizes single-element arrays,
 // so the same property reads back as an array from a fresh forge and as a bare value from a
@@ -134,6 +242,12 @@ const collapseWhitespace = (text) => String(text).replace(/\s+/g, ' ').trim();
 // definition" and "we failed to copy it" remain distinguishable.
 const hasProse = (scalar) =>
 	scalar !== undefined && scalar !== null && !(typeof scalar === 'string' && scalar === '');
+
+const compareText = (left, right) => (String(left) < String(right) ? -1 : String(left) > String(right) ? 1 : 0);
+
+// one entry per base node: two base edges to the same range node are one range
+const uniqueByStableId = (entryList) =>
+	entryList.filter((oneEntry, entryIndex) => entryList.findIndex((otherEntry) => otherEntry.rangeNode.stableId === oneEntry.rangeNode.stableId) === entryIndex);
 
 // FORMAL INTERFACE (polyArch2 — the seam's contract in one place).
 //
@@ -204,7 +318,14 @@ const moduleFunction =
 			baseFieldNames,
 			qualifiedReference,
 			provenanceLabel,
+			tierList,
+			rangeAddressing,
+			rootFieldNames,
+			embedTextTemplateByTier,
 		} = hubDeclaration;
+		const mintsTermTier = tierList.indexOf(REFERENCE_TIER.TERM) !== -1;
+		const mintsPropertyTier = tierList.indexOf(REFERENCE_TIER.PROPERTY) !== -1;
+		const mintsValueTier = tierList.indexOf(REFERENCE_TIER.VALUE) !== -1;
 
 		// INVARIANT I12 ([R2 F6]) — ASSERTED BY NAME, not assumed. Hub cards carry `_source: hubName`
 		// while base nodes carry the forge's `standardSource`; before Phase 2c those were TWO
@@ -295,53 +416,43 @@ const moduleFunction =
 			return sha256Hex(encoded);
 		};
 
+		// ⟪ctdlHub P3 step 5⟫ the TERM-tier signature: the same encoding over TERM_ADDRESS_SIGNATURE_FIELD_ORDER
+		// (hubName · termIri · hubVersion). A term card's address is the term's own IRI and nothing else.
+		const termAddressSignatureFor = ({ termIri }) => {
+			const fieldValues = {
+				hubName,
+				termIri: encodeSignatureSlot(termIri),
+				hubVersion,
+			};
+			return sha256Hex(
+				TERM_ADDRESS_SIGNATURE_FIELD_ORDER.map((oneField) => fieldValues[oneField]).join('|'),
+			);
+		};
+
 		// =====================================================================
-		// embedText composition — §4, BOTH tiers, one scheme. Composed from the CARD's own
+		// embedText composition — §4, every tier, one scheme. Composed from the CARD's own
 		// fields so what was embedded is recomputable byte-for-byte from the card (G-6).
+		// ⟪ctdlHub P3 step 4⟫ The slots are DECLARED (hubDeclaration.embedTextTemplateByTier), not written here: a slot's
+		// carried fields are joined ' · ' (a list-valued field contributes its items, joined ' · '), empty slots drop
+		// out, slots are joined ' · '. CEDS's declared templates reproduce the pre-P3 composition exactly, including
+		// "the value tier's context is its option set", which is now CEDS's statement rather than the framework's.
 		// =====================================================================
 		const composeEmbedText = ({ referenceTier, cardProperties }) => {
-			const tierSlots =
-				referenceTier === REFERENCE_TIER.VALUE
-					? [
-							// slot 1 CONTEXT: domainName · propertyName · rangeOptionSetName
-							[
-								cardProperties.domainName,
-								cardProperties.propertyName,
-								cardProperties.rangeOptionSetName,
-							]
-								.filter(hasProse)
-								.join(' · '),
-							// slot 2 NAME
-							cardProperties.valueName,
-							// slot 3 DEFINITION (absent for 77% of values — slot simply empty; measured on
-							// GOLD_EVAL_261006_jevContract: 21,114 of 91,825 value cards carry one)
-							cardProperties.valueDefinition,
-							// slot 4 CONTEXT DEF — option-set definition; the range on value tier IS an
-							// option set (stated rule, full stop — not a chain)
-							cardProperties.rangeOptionSetDefinition,
-						]
-					: [
-							// slot 1 CONTEXT
-							cardProperties.domainName,
-							// slot 2 NAME
-							cardProperties.propertyName,
-							// slot 3 DEFINITION
-							cardProperties.propertyDefinition,
-							// slot 4 CONTEXT DEF
-							cardProperties.domainDefinition,
-						];
-			// slot 5 QUALIFIER — qualified cards regardless of tier (SPEC §4 as amended by
-			// R-P1-1's companion ruling)
-			// qualifierNames exists only on qualified cards (documented shape); its absence
-			// IS "no qualifier slot", stated explicitly
-			const qualifierSlot = (
-				Array.isArray(cardProperties.qualifierNames)
-					? cardProperties.qualifierNames
-					: []
-			).join(' · ');
-			const allSlots = tierSlots.concat([qualifierSlot]);
-			return collapseWhitespace(allSlots.filter(hasProse).join(' · '));
+			const slotTextList = embedTextTemplateByTier[referenceTier].map((slotFieldNameList) =>
+				slotFieldNameList
+					.map((fieldName) =>
+						Array.isArray(cardProperties[fieldName])
+							? cardProperties[fieldName].join(' · ')
+							: cardProperties[fieldName],
+					)
+					.filter(hasProse)
+					.join(' · '),
+			);
+			return collapseWhitespace(slotTextList.filter(hasProse).join(' · '));
 		};
+
+		// the hub's view of the field table: what its slotProfile serialises and what every card is checked against
+		const hubFieldScope = { tierList, rangeAddressing };
 
 		// =====================================================================
 		// forgeHub — R7 callback shape; pure, deterministic, no I/O.
@@ -390,7 +501,7 @@ const moduleFunction =
 					nodesByRole[role].push(oneNode);
 				}
 				if (role === DME_ROLES.CLASS) {
-					classByDomainId[v1(oneNode.properties.domainId)] = oneNode;
+					classByDomainId[v1(oneNode.properties[baseFieldNames.domainId])] = oneNode;
 				}
 				if (role === DME_ROLES.STANDARD_ROOT) {
 					rootNode = oneNode;
@@ -409,6 +520,10 @@ const moduleFunction =
 			const optionSetNodeOfProperty = {};
 			const valueNodesOfOptionSet = {};
 			const propertyNodesOfClass = {};
+			// ⟪ctdlHub P3⟫ read only by rangeAsMeaning: EVERY option set a property targets (not the last edge's), and
+			// every native class it REFERENCES. Building them for a singleRangeSlot hub changes nothing it emits.
+			const optionSetNodeListOfProperty = {};
+			const referencedClassNodeListOfProperty = {};
 			baseEdges.forEach((oneEdge) => {
 				const fromNode = nodeByStableId[oneEdge.fromRef.id];
 				const toNode = nodeByStableId[oneEdge.toRef.id];
@@ -420,10 +535,24 @@ const moduleFunction =
 						propertyNodesOfClass[fromNode.stableId] || []).push(toNode);
 				} else if (oneEdge.type === EDGE_TYPES.HAS_OPTION_SET) {
 					optionSetNodeOfProperty[fromNode.stableId] = toNode;
+					(optionSetNodeListOfProperty[fromNode.stableId] =
+						optionSetNodeListOfProperty[fromNode.stableId] || []).push(toNode);
 				} else if (oneEdge.type === EDGE_TYPES.HAS_VALUE) {
 					(valueNodesOfOptionSet[fromNode.stableId] =
 						valueNodesOfOptionSet[fromNode.stableId] || []).push(toNode);
+				} else if (oneEdge.type === EDGE_TYPES.REFERENCES && v1(toNode.properties.role) === DME_ROLES.CLASS) {
+					(referencedClassNodeListOfProperty[fromNode.stableId] =
+						referencedClassNodeListOfProperty[fromNode.stableId] || []).push(toNode);
 				}
+			});
+
+			const rangeShapeOf = RANGE_ADDRESSING_REGISTRY[rangeAddressing]({
+				baseFieldNames,
+				classByDomainId,
+				optionSetNodeOfProperty,
+				optionSetNodeListOfProperty,
+				referencedClassNodeListOfProperty,
+				recordDerivationFault,
 			});
 
 			// ---- MEANING copy: carried only when CEDS said something (absent stays absent) ----
@@ -451,6 +580,7 @@ const moduleFunction =
 				optionSetNode,
 				classRangeNode,
 				valueNode,
+				rangeMeaning,
 			}) => {
 				if (!Array.isArray(qualifierPairs)) {
 					recordDerivationFault(
@@ -563,6 +693,21 @@ const moduleFunction =
 				}
 				if (valueNode) {
 					cardProperties.valueKey = valueKey;
+				}
+				// ⟪ctdlHub P3⟫ rangeAsMeaning only: the property's ranges as meaning, each list carried only when non-empty
+				// (absent is absent, never [])
+				if (rangeMeaning) {
+					[
+						[HR.RANGE_CLASS_ID_LIST, rangeMeaning.rangeClassIdList],
+						[HR.RANGE_CLASS_NAME_LIST, rangeMeaning.rangeClassNameList],
+						[HR.RANGE_OPTION_SET_ID_LIST, rangeMeaning.rangeOptionSetIdList],
+						[HR.RANGE_OPTION_SET_NAME_LIST, rangeMeaning.rangeOptionSetNameList],
+						[HR.RANGE_DATATYPE_LIST, rangeMeaning.rangeDatatypeList],
+					]
+						.filter(([, rangeValueList]) => rangeValueList.length > 0)
+						.forEach(([cardFieldName, rangeValueList]) => {
+							cardProperties[cardFieldName] = rangeValueList;
+						});
 				}
 
 				// ---- MEANING (§1.3) — every tuple slot carries its name and its prose ----
@@ -707,9 +852,25 @@ const moduleFunction =
 
 				// ⟪campaign P3, W-C-5⟫ the drift gate AT THE PRODUCER: a card carrying a field the table does not declare for
 				// its tier, or lacking an 'always' one, is refused by name — no degraded card, as the provenance refusal above
-				const cardFieldFaultText = cardFieldRefusal({ fieldTable: HUB_CARD_FIELD_TABLE, referenceTier, cardPropertyNameList: Object.keys(cardProperties) });
+				const cardFieldFaultText = cardFieldRefusal({ fieldTable: HUB_CARD_FIELD_TABLE, referenceTier, cardPropertyNameList: Object.keys(cardProperties), ...hubFieldScope });
 				if (cardFieldFaultText) {
 					recordDerivationFault(`${moduleName}: REFUSED — card '${cardUri}' (property '${propertyKey}', domain '${domainId}') ${cardFieldFaultText}`);
+					return;
+				}
+
+				// ⟪ctdlHub P3 step 5a⟫ a property card of a hub that also mints terms points at the term card of its own
+				// property IRI. Both tiers are minted from the same base, so a miss is a bug, refused by name before the
+				// card is emitted.
+				const termCardStableId =
+					mintsTermTier && referenceTier === REFERENCE_TIER.PROPERTY
+						? termCardStableIdByTermIri[propertyUri]
+						: undefined;
+				if (mintsTermTier && referenceTier === REFERENCE_TIER.PROPERTY && termCardStableId === undefined) {
+					recordDerivationFault(
+						`${moduleName}: REFUSED — property card '${cardUri}' (property '${propertyKey}', domain ` +
+							`'${domainId}') has no term card for its property IRI '${propertyUri}'; both tiers come from ` +
+							`the same base, so this is a derivation bug, not a gap in the source.`,
+					);
 					return;
 				}
 
@@ -738,6 +899,11 @@ const moduleFunction =
 				} else if (classRangeNode) {
 					addEdge(hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.RANGE), classRangeNode.stableId);
 				}
+				if (rangeMeaning) {
+					rangeMeaning.rangeNodeList.forEach((rangeNode) => {
+						addEdge(hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.RANGE), rangeNode.stableId);
+					});
+				}
 				if (valueNode) {
 					addEdge(hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.VALUE), valueNode.stableId);
 				}
@@ -745,9 +911,94 @@ const moduleFunction =
 					addEdge(hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.QUALIFIER), onePair.qualifierNode.stableId);
 				});
 				addEdge(IN_HUB_EDGE_TYPE, hubDefinitionStableId);
+				if (termCardStableId !== undefined) {
+					addEdge(HUB_TERM_REFERENCE_EDGE_TYPE, termCardStableId);
+				}
 
 				return { stableId: cardUri, addressSignature };
 			};
+
+			// ---- ⟪ctdlHub P3 step 5⟫ emit one TERM-tier card: one per hub-native class, property, option set and value,
+			//      addressed by the term's own IRI (the base node's declared uri field) ----
+			const termCardStableIdByTermIri = {};
+			const emitTermReference = ({ baseNode, termKind }) => {
+				const termIri = v1(baseNode.properties[baseFieldNames.uri]);
+				const termName = v1(baseNode.properties[baseFieldNames.name]);
+				if (!hasProse(termIri) || !hasProse(termName)) {
+					recordDerivationFault(
+						`${moduleName}: REFUSED — ${termKind} node '${baseNode.stableId}' has no ` +
+							`${hasProse(termIri) ? 'name' : 'uri'}; a term card is addressed by the term's IRI and named by its name.`,
+					);
+					return undefined;
+				}
+				if (termCardStableIdByTermIri[termIri] !== undefined) {
+					recordDerivationFault(
+						`${moduleName}: REFUSED — two base nodes carry the term IRI '${termIri}' (the second is ` +
+							`'${baseNode.stableId}'); a term card is one per IRI, so the base is not one term per node.`,
+					);
+					return undefined;
+				}
+				const addressSignature = termAddressSignatureFor({ termIri });
+				const cardUri = `${hubNamespace}${hubVersion}/${addressSignature}`;
+				const cardProperties = {
+					_source: hubName,
+					role: EQUIVALENCE_NODE_LABELS.HUB_REFERENCE,
+					name: termName,
+					[A.HUB_NAME]: hubName,
+					[HR.HUB_VERSION]: hubVersion,
+					[HR.REFERENCE_TIER]: REFERENCE_TIER.TERM,
+					[HR.TERM_IRI]: termIri,
+					[HR.ADDRESS_SIGNATURE]: addressSignature,
+					uri: cardUri,
+					[HR.TERM_NAME]: termName,
+					[HR.TERM_KIND]: termKind,
+					[HR.ANCHOR_URI]: termIri,
+				};
+				carryProseField({
+					cardProperties,
+					cardFieldName: HR.TERM_DEFINITION,
+					sourceValue: baseNode.properties[baseFieldNames.definition],
+				});
+				cardProperties.embedText = composeEmbedText({
+					referenceTier: REFERENCE_TIER.TERM,
+					cardProperties,
+				});
+				const cardFieldFaultText = cardFieldRefusal({ fieldTable: HUB_CARD_FIELD_TABLE, referenceTier: REFERENCE_TIER.TERM, cardPropertyNameList: Object.keys(cardProperties), ...hubFieldScope });
+				if (cardFieldFaultText) {
+					recordDerivationFault(`${moduleName}: REFUSED — term card '${cardUri}' (term '${termIri}') ${cardFieldFaultText}`);
+					return undefined;
+				}
+				nodes.push({
+					labels: [NODE_LABELS.FORGED_NODE, EQUIVALENCE_NODE_LABELS.HUB_REFERENCE],
+					stableId: cardUri,
+					role: EQUIVALENCE_NODE_LABELS.HUB_REFERENCE,
+					properties: cardProperties,
+				});
+				[
+					[hubEdgeType(hubName, HUB_DECOMPOSITION_SLOTS_BY_NAME.TERM), baseNode.stableId],
+					[IN_HUB_EDGE_TYPE, hubDefinitionStableId],
+				].forEach(([edgeType, toStableId]) => {
+					edges.push({
+						type: edgeType,
+						fromRef: { source: hubName, id: cardUri },
+						toRef: { source: hubName, id: toStableId },
+						properties: { provenanceTier: PROVENANCE_TIER.STRUCTURAL },
+					});
+				});
+				termCardStableIdByTermIri[termIri] = cardUri;
+				return cardUri;
+			};
+
+			// ---- PASS 0 ⟪ctdlHub P3⟫: the term tier, FIRST, so the property pass can point at it ----
+			let termTierCount = 0;
+			const termRoleList = mintsTermTier ? Object.keys(TERM_KIND_BY_ROLE) : [];
+			termRoleList.forEach((oneRole) => {
+				nodesByRole[oneRole].forEach((baseNode) => {
+					if (emitTermReference({ baseNode, termKind: TERM_KIND_BY_ROLE[oneRole] })) {
+						termTierCount++;
+					}
+				});
+			});
 
 			// ---- PASS 1: property tier (one card per declared domain) + value tier ----
 			// skipReport (RULING S-3): a DmeProperty with ZERO declared domains has no tuple —
@@ -756,9 +1007,11 @@ const moduleFunction =
 			const skipReport = [];
 			let propertyTierCount = 0;
 			let valueTierCount = 0;
-			nodesByRole[DME_ROLES.PROPERTY].forEach((propertyNode) => {
+			// ⟪ctdlHub P3⟫ the tuple tiers run only for a hub that mints one of them; a term-only hub has no tuples to skip
+			const tuplePropertyNodeList = mintsPropertyTier || mintsValueTier ? nodesByRole[DME_ROLES.PROPERTY] : [];
+			tuplePropertyNodeList.forEach((propertyNode) => {
 				const propertyProps = propertyNode.properties;
-				const propertyKey = v1(propertyProps.canonicalKey);
+				const propertyKey = v1(propertyProps[baseFieldNames.canonicalKey]);
 
 				// EVERY DECLARED DOMAIN, shape-agnostically (the incumbent's multi-domain rule:
 				// each declared domain is a different idea; addressSignature includes domainId so
@@ -766,7 +1019,7 @@ const moduleFunction =
 				const allDeclaredDomainIds = domainListOf(propertyProps[baseFieldNames.allDomainIds]);
 				const declaredDomainIds = allDeclaredDomainIds.length
 					? allDeclaredDomainIds
-					: domainListOf(propertyProps.domainId);
+					: domainListOf(propertyProps[baseFieldNames.domainId]);
 				if (!declaredDomainIds.length) {
 					skipReport.push({
 						reason: 'zeroDeclaredDomains',
@@ -778,48 +1031,44 @@ const moduleFunction =
 					return;
 				}
 
-				const optionSetNode = optionSetNodeOfProperty[propertyNode.stableId];
-				const rangeOptionSetId = optionSetNode
-					? v1(optionSetNode.properties[baseFieldNames.rangeOptionSetId])
-					: undefined;
-				const rangeClassId = optionSetNode
-					? undefined
-					: v1(propertyProps[baseFieldNames.rangeClassId]);
-				const classRangeNode = rangeClassId
-					? classByDomainId[rangeClassId]
-					: undefined;
-				const rangeDatatype =
-					optionSetNode || rangeClassId
-						? undefined
-						: v1(propertyProps[baseFieldNames.rangeDatatype]);
+				// ⟪ctdlHub P3 step 3⟫ the range, as the hub's declared rangeAddressing mode reads it
+				const rangeShape = rangeShapeOf(propertyNode);
+				if (!rangeShape) {
+					return; // refusal already recorded by name; no degraded card
+				}
+				const { propertyCardRange, valueCardRangeList } = rangeShape;
 
 				declaredDomainIds.forEach((domainId) => {
 					const classNode = classByDomainId[domainId];
 
-					const emittedPropertyCard = emitReference({
-						referenceTier: REFERENCE_TIER.PROPERTY,
-						canonicalKey: propertyKey,
-						domainId,
-						propertyKey,
-						rangeOptionSetId,
-						rangeClassId,
-						rangeDatatype,
-						valueKey: '',
-						qualifierPairs: [],
-						classNode,
-						propertyNode,
-						optionSetNode,
-						classRangeNode,
-					});
-					if (emittedPropertyCard) {
-						propertyTierCount++;
+					if (mintsPropertyTier) {
+						const emittedPropertyCard = emitReference({
+							referenceTier: REFERENCE_TIER.PROPERTY,
+							canonicalKey: propertyKey,
+							domainId,
+							propertyKey,
+							rangeOptionSetId: propertyCardRange.rangeOptionSetId,
+							rangeClassId: propertyCardRange.rangeClassId,
+							rangeDatatype: propertyCardRange.rangeDatatype,
+							valueKey: '',
+							qualifierPairs: [],
+							classNode,
+							propertyNode,
+							optionSetNode: propertyCardRange.optionSetNode,
+							classRangeNode: propertyCardRange.classRangeNode,
+							rangeMeaning: propertyCardRange.rangeMeaning,
+						});
+						if (emittedPropertyCard) {
+							propertyTierCount++;
+						}
 					}
 
-					if (optionSetNode) {
+					const valueCardRangeListForTier = mintsValueTier ? valueCardRangeList : [];
+					valueCardRangeListForTier.forEach(({ rangeOptionSetId, optionSetNode }) => {
 						const valueNodes =
 							valueNodesOfOptionSet[optionSetNode.stableId] || [];
 						valueNodes.forEach((valueNode) => {
-							const valueKey = v1(valueNode.properties.canonicalKey);
+							const valueKey = v1(valueNode.properties[baseFieldNames.canonicalKey]);
 							const emittedValueCard = emitReference({
 								referenceTier: REFERENCE_TIER.VALUE,
 								canonicalKey: valueKey,
@@ -839,7 +1088,7 @@ const moduleFunction =
 								valueTierCount++;
 							}
 						});
-					}
+					});
 				});
 			});
 
@@ -851,8 +1100,9 @@ const moduleFunction =
 			// zero because the loop happened to match nothing.
 			let qualifiedCount = 0;
 			const identificationPatterns = [];
+			// ⟪ctdlHub P3⟫ qualified cards are PROPERTY-tier cards, so a hub that does not mint that tier has no pass 2
 			const classStableIdListForPass2 =
-				qualifiedReference === undefined ? [] : Object.keys(propertyNodesOfClass);
+				qualifiedReference === undefined || !mintsPropertyTier ? [] : Object.keys(propertyNodesOfClass);
 			classStableIdListForPass2.forEach((classStableId) => {
 				const classNode = nodeByStableId[classStableId];
 				const memberPropertyNodes = propertyNodesOfClass[classStableId];
@@ -894,7 +1144,7 @@ const moduleFunction =
 					}
 					const tokenNode = tokenNodes[0];
 					const tokenProps = tokenNode.properties;
-					const tokenDomainId = v1(tokenProps.domainId);
+					const tokenDomainId = v1(tokenProps[baseFieldNames.domainId]);
 					const tokenRangeClassId = v1(tokenProps[baseFieldNames.rangeClassId]);
 					const tokenRangeClassNode = tokenRangeClassId
 						? classByDomainId[tokenRangeClassId]
@@ -904,9 +1154,9 @@ const moduleFunction =
 					qualifierValueNodes.forEach((qualifierValueNode) => {
 						const emittedQualifiedCard = emitReference({
 							referenceTier: REFERENCE_TIER.PROPERTY,
-							canonicalKey: v1(tokenProps.canonicalKey),
+							canonicalKey: v1(tokenProps[baseFieldNames.canonicalKey]),
 							domainId: tokenDomainId,
-							propertyKey: v1(tokenProps.canonicalKey),
+							propertyKey: v1(tokenProps[baseFieldNames.canonicalKey]),
 							rangeOptionSetId: undefined,
 							rangeClassId: tokenRangeClassId,
 							rangeDatatype: tokenRangeClassId
@@ -915,7 +1165,7 @@ const moduleFunction =
 							valueKey: '',
 							qualifierPairs: [
 								{
-									qualifierKey: v1(qualifierValueNode.properties.canonicalKey),
+									qualifierKey: v1(qualifierValueNode.properties[baseFieldNames.canonicalKey]),
 									qualifierName: v1(qualifierValueNode.properties[baseFieldNames.name]),
 									qualifierNode: qualifierValueNode,
 								},
@@ -933,7 +1183,7 @@ const moduleFunction =
 						typeProperty: typePropertyName,
 						stem,
 						tokenProperty: v1(tokenProps[baseFieldNames.name]),
-						tokenKey: v1(tokenProps.canonicalKey),
+						tokenKey: v1(tokenProps[baseFieldNames.canonicalKey]),
 						qualifierValueCount: qualifierValueNodes.length,
 						skipped: false,
 					});
@@ -989,18 +1239,23 @@ const moduleFunction =
 			// ---- the HubDefinition card (§2) — the namespace authority ----
 			// ⟪campaign P3, W-C-5⟫ the profile IS the field table, serialised (cardStructureVersion 3: the five hand-kept lists of
 			// version 2 are gone; a reader keyed on addressSlots must read fieldList)
+			// ⟪ctdlHub P3⟫ the hub's VIEW of the table (hubFieldTableOf: its tierList and rangeAddressing), so a hub without
+			// the term tier serialises exactly the pre-P3 profile
 			const slotProfile = slotProfileFromFieldTable({
 				cardStructureVersion: HUB_CARD_STRUCTURE_VERSION,
 				fieldTable: HUB_CARD_FIELD_TABLE,
 				addressSignatureFieldOrder: ADDRESS_SIGNATURE_FIELD_ORDER,
+				termAddressSignatureFieldOrder: TERM_ADDRESS_SIGNATURE_FIELD_ORDER,
+				...hubFieldScope,
 			});
 			const rootProps = rootNode.properties;
+			// ⟪ctdlHub P3 step 2; PLAN §2.4 H-b⟫ READ through rootFieldNames; the five output names are unchanged
 			const sourceProvenance = JSON.stringify({
-				standardKey: v1(rootProps.standardKey),
-				snapshotKey: v1(rootProps.snapshotKey),
-				publishedVersion: v1(rootProps.publishedVersion),
-				sourceVersion: v1(rootProps.version),
-				sourceUrl: v1(rootProps.sourceUrl),
+				standardKey: v1(rootProps[rootFieldNames.standardKey]),
+				snapshotKey: v1(rootProps[rootFieldNames.snapshotKey]),
+				publishedVersion: v1(rootProps[rootFieldNames.publishedVersion]),
+				sourceVersion: v1(rootProps[rootFieldNames.version]),
+				sourceUrl: v1(rootProps[rootFieldNames.sourceUrl]),
 				forgeModule: provenanceLabel.forgeModule,
 				forgeModuleVersion: provenanceLabel.forgeModuleVersion,
 			});
@@ -1045,10 +1300,11 @@ const moduleFunction =
 				hubDefinitionStableId,
 				counts: {
 					hubDefinition: 1,
+					termTier: termTierCount,
 					propertyTier: propertyTierCount,
 					valueTier: valueTierCount,
 					qualified: qualifiedCount,
-					hubReferenceTotal: propertyTierCount + valueTierCount + qualifiedCount,
+					hubReferenceTotal: termTierCount + propertyTierCount + valueTierCount + qualifiedCount,
 					nodeTotal: nodes.length,
 					edgeTotal: edges.length,
 				},
@@ -1056,7 +1312,7 @@ const moduleFunction =
 			});
 		};
 
-		return { forgeHub, addressSignatureFor, hubDefinitionStableId };
+		return { forgeHub, addressSignatureFor, termAddressSignatureFor, hubDefinitionStableId };
 	};
 
 // END OF moduleFunction() ============================================================
