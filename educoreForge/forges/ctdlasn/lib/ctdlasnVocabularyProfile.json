@@ -70,7 +70,10 @@
 	],
 	"usageNotePredicate": "vann:usageNote",
 	"usageNoteCarriedByTermKindList": [
-		"property"
+		"class",
+		"property",
+		"optionSet",
+		"optionValue"
 	],
 	"domainlessPropertyRootEdge": true,
 	"enrichmentKindList": [
