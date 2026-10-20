@@ -107,7 +107,8 @@
 	"enrichmentKindList": [
 		"E1",
 		"E1a",
-		"E2"
+		"E2",
+		"E3"
 	],
 	"predicateDispositionByName": {
 		"@id": "identity",
