@@ -32,7 +32,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // `rootEmptyPermittedPropertyList` (optional row data): root properties the row lets be EMPTY
 // ('' or []) while active — the sourceUrl row and S7 — read by rootNode.js's required-set check.
 
-const MIGRATING_BUNDLE_LIST = Object.freeze(['ceds', 'edfi', 'sif', 'pesc260805']);
+// ⟪ctdlHub P1, 2026-10-20; SCARLET_ARROW ruling Q1(A)⟫ ctdl, ctdlasn and ctdlqdata are MIGRATING, not new: they are ports of
+// the July 2026 attic forges (codeAttic/cli/parserLib/forge-ctdl*), judged member-for-member against the July oracle
+// GOLD_EVAL_260718 — exactly the case this list exists for. They declare only CT1 below.
+const MIGRATING_BUNDLE_LIST = Object.freeze(['ceds', 'edfi', 'sif', 'pesc260805', 'ctdl', 'ctdlasn', 'ctdlqdata']);
 
 // P10's constant (SPEC §4.1, §7.2): PESC declares it under allowance P10 in F3d. Data only.
 const PERMISSIVE_STABLE_ID_PATTERN = Object.freeze({ pattern: '^\\S+$', trimmed: true });
@@ -319,6 +322,31 @@ const MIGRATION_ALLOWANCE_REGISTRY = Object.freeze({
 	// mustEqual PINS THE SEVEN EXACTLY, in a fixed order: an eighth un-registered type emitted later
 	// is refused by name rather than quietly admitted. That is the S2 discipline — a list that can
 	// silently grow is not a gate.
+	// CT1 — the CTDL-family foreign-term carry (ctdlHub-101926 plan §4.1 row A5; SCARLET_ARROW ruling Q1(A), 2026-10-20).
+	// Each CTDL-family JSON-LD source RE-DESCRIBES terms it does not own (CTDL 20 entries: 7 ceasn, 4 qdata, 8 schema,
+	// owl:sameAs; CTDL-ASN 4 and CTDL-QData 31 ceterms:). Under FBB-001 a forge emits no node for a foreign term, and
+	// under R4 it drops nothing either, so the entries are carried VERBATIM on the root as ONE JSON-encoded list
+	// [{ iri, statements }]. The July attic forges silently filtered them; carrying them is what lets the round trip
+	// count them as carried instead of lost. P5-SHAPED and OFFLINE for P5's reason: no forge-time step can observe a
+	// root extra property; rootNode.js refuses an extra no active allowance names. These bundles are MIGRATIONS (ports
+	// of the July forges judged against the July oracle), which is why they may declare a row at all.
+	CT1: Object.freeze({
+		allowanceId: 'CT1',
+		rowRefId: 'CT1',
+		declarableBy: Object.freeze(['ctdl', 'ctdlasn', 'ctdlqdata']),
+		kind: ALLOWANCE_KIND.OFFLINE,
+		evaluatedAt: null,
+		whileDeclared:
+			'the root carries foreignTermEntryList: the source @graph entries outside the bundle\'s native allowlist, verbatim, as JSON [{ iri, statements }]',
+		allowanceDataContract: Object.freeze({
+			rootExtraPropertyNameList: Object.freeze({ kind: 'stringList', mustEqual: ['foreignTermEntryList'] }),
+		}),
+		preconditionText:
+			'OFFLINE: the source holds @graph entries whose @id is outside the native allowlist (measured: ctdlHub_101926/oracle/A5-foreignTermCounts.json), evidenced by the declaration probe',
+		retiredBy:
+			'the foreign entries become spoke nodes (plan Q-T8) or move to a declared descriptor field → new CTDL-family id',
+	}),
+
 	P4: Object.freeze({
 		allowanceId: 'P4',
 		rowRefId: 'P4',

@@ -57,7 +57,8 @@ const LIST_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 // Sif is the old SIF forge (forges/sif, rootLabel SifRoot); the gold census held none of its labels, the fleet's embedded
 // sifOnly build did (campaign P2). Every forge declaration's rootLabel family must match (test-schemaViewContractProjection e).
 // ⟪lane DES, 2026-10-12⟫ '^StandardLayer$' joins '^StandardBase$': it names every node of a layer block.
-const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif|Sif260928|Pesc[A-Za-z0-9]+)[A-Z]', '^StandardBase$', '^StandardLayer$', '^BridgedRelation_']);
+// ⟪ctdlHub P1⟫ Ctdl, Ctdlasn and Ctdlqdata are the three CTDL-family forges' per-standard label stems (CtdlClass, CtdlasnClass, …).
+const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif|Sif260928|Pesc[A-Za-z0-9]+|Ctdl|Ctdlasn|Ctdlqdata)[A-Z]', '^StandardBase$', '^StandardLayer$', '^BridgedRelation_']);
 // names that END in List / Keys but are JSON strings or literals by declaration: the name-rule test exempts exactly these
 const LIST_NAME_RULE_EXEMPTION_BY_NAME = Object.freeze({
 	importList: 'JSON string (pesc-release-forge walk.js)',
@@ -220,7 +221,7 @@ const STANDARD_DEFINITION_FIELD_LIST = Object.freeze([
 	{ name: 'unkindedMappingEdgeCount', type: 'integer', required: false, meaning: 'match edges carrying no mappingKind' },
 	{ name: 'standardKind', type: 'string', required: true, meaning: 'what kind of standard it is, as its forge declares' },
 	{ name: 'standardUsageTips', type: 'string', required: false, meaning: 'how to read the standard in this graph, as its forge declares; absent when the forge declares null (forgeDeclarationContract allows it: sif, pesc260805)' },
-	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
+	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC, CTDL, CTDLASN, CTDLQData), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
 	{ name: 'releaseLabel', type: 'string', required: true, meaning: 'which member of its family the standard is, version-free (CollegeTranscript, not CollegeTranscript-1.8.0); a one-member family repeats the family name' },
 	{ name: 'descriptionSource', type: 'string', required: true, meaning: 'where in the standard\'s SOURCE its description text is read from (PESC xs:documentation, CEDS dc:description, ...), declared by its forge (lane FIX, Fix 3)' },
 ].map((oneRow) => Object.freeze(oneRow)));

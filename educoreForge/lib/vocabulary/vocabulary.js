@@ -877,7 +877,9 @@ const STANDARD_KIND_LIST = Object.freeze([STANDARD_KIND.DATA_STANDARD, STANDARD_
 // standard filter expands to its releases). A CLOSED word list, so a family is DECLARED by each forge (forge declaration
 // standardFamily, stamped on the root, read by the StandardDefinition finisher) and never inferred from a _source prefix.
 // Toy is the forge framework's own fixture standard: it is in no recipe that builds a gold, and declares itself honestly.
-const STANDARD_FAMILY = Object.freeze({ CEDS: 'CEDS', EDFI: 'EdFi', SIF: 'SIF', PESC: 'PESC', TOY: 'Toy' });
+// ⟪ctdlHub P1, 2026-10-20; SCARLET_ARROW ruling Q5⟫ CTDL, CTDL-ASN and CTDL-QData are THREE families, not one: a family expands
+// to the RELEASES of one standard, and ASN / QData are not CTDL releases, so a CTDL filter must not return them.
+const STANDARD_FAMILY = Object.freeze({ CEDS: 'CEDS', EDFI: 'EdFi', SIF: 'SIF', PESC: 'PESC', CTDL: 'CTDL', CTDLASN: 'CTDLASN', CTDLQDATA: 'CTDLQData', TOY: 'Toy' });
 const STANDARD_FAMILY_LIST = Object.freeze(Object.keys(STANDARD_FAMILY).map((oneMember) => STANDARD_FAMILY[oneMember]));
 // BUILD_ATTESTATION_VERDICT — the words a :BuildAttestation row's verdict may be (lane R, 2026-10-05; FINDING 5-A of 2026-09-01).
 //   pass                 the gate ran and found nothing wrong

@@ -1,0 +1,12 @@
+{
+  // ctdlOnly — forge CTDL alone (no hubs, no bridges): resolve -> forge -> standardBase -> materialize. ctdlHub-101926 P1:
+  // the build whose product graph is censused (apps/graph-builder/tools/oracleCensus.js) and judged against the July
+  // oracle (apps/graph-builder/tools/oracleDiff.js). ctdlOnlyRoundTrip is the stage-on sibling.
+  "schemaVersion": "1.0.0",
+  "recipeName": "ctdlOnly",
+  "kind": "dev",
+  "description": "Forge the CTDL standard base only - proves the ported CTDL bundle forges.",
+  "standards": [ { "token": "ctdl", "version": "current" } ],
+  "hubs": [],
+  "bridges": []
+}

@@ -1,0 +1,14 @@
+standard: CTDL — Credential Transparency Description Language
+publishedVersion: Release 20260327
+publishedVersionEvidence: version line recorded at harvest
+upstreamUrl: https://credreg.net/ctdl/schema/encoding/json
+publisher: Credential Engine
+retrieved: 2026-06-23 (copied from educoreForgeOLD/.../forge-ctdl/assets/standardSourceData/01/)
+version: Release 20260327
+sources:
+  - https://credreg.net/ctdl/schema/encoding/json   (ctdl-schema.json — JSON-LD)
+note: JSON-LD vocabulary. @graph holds rdfs:Class (138), rdf:Property (396),
+      skos:ConceptScheme (34), skos:Concept (445). @ids are CURIEs and are the native
+      stableIds (stableUriPropertyName = 'uri'). 26 skos:Concepts carry a CEDS optionSet
+      anchor in owl:equivalentClass (e.g. ceds:000113#Assistantships) — stashed as a
+      bridge crossRef, NOT emitted as a cross-standard edge (standard-pure).

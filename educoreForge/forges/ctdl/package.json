@@ -1,0 +1,7 @@
+{
+	"name": "forge-ctdl",
+	"version": "1.0.0",
+	"main": "forgeCtdl.js",
+	"description": "CTDL (Credential Transparency Description Language) forge bundle — the JSON-LD schema as DME roles, native CURIE stableIds, foreign references carried verbatim",
+	"private": true
+}
