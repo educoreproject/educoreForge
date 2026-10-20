@@ -38,19 +38,32 @@ const moduleName = 'hub-framework';
 //   baseFieldNames                   the bare names this derivation reads off base nodes ([R1 Q2])
 //   qualifiedReference               {typePropertyPattern, tokenNamesForStem} — DATA, not a hook ([R1 Q7])
 //   provenanceLabel                  {forgeModule, forgeModuleVersion} — BLOCK BYTES ([R2 F1], §4.9)
+// and, since ctdlHub P3 (2026-10-20), four more, each REQUIRED and each declared by CEDS as exactly its pre-P3 behaviour:
+//   tierList                         which tiers the hub mints: term | property | value. The hub card field table is
+//                                    FILTERED by it (hubCardFieldTable.hubFieldTableOf), so a hub without the term tier
+//                                    serialises the pre-P3 slotProfile byte for byte
+//   rangeAddressing                  singleRangeSlot (CEDS: one range, hashed) | rangeAsMeaning (ranges as list-valued
+//                                    meaning, never hashed) — RANGE_ADDRESSING_REGISTRY below
+//   rootFieldNames                   where on the root the five sourceProvenance fields are read (BLOCK BYTES)
+//   embedTextTemplateByTier          embedText as declared slots, one template per tier
 //
 // ⚠ THE HONESTY CLAUSE, AND IT IS NOT A FORMALITY (SPEC §4.4). A FRAMEWORK EXTRACTED FROM ONE HUB IS
-// PROVEN ON ONE, WHICH IS PROVEN ON NONE. This derivation is generic against a CEDS-SHAPED DME base,
-// not against any base. Three things in particular are CEDS-shaped and are NOT parameterised, because
-// parameterising them without a second hub to test against would be inventing a seam rather than
-// finding one:
-//   * `canonicalKey` and `domainId` are still read by bare name. They happen to match vocabulary
-//     CARD property names, which is a coincidence of naming and not a guarantee.
-//   * the `domainListOf` scalarisation exists because 2,068 of 2,324 CEDS property nodes hold
-//     allDomainIds as a bare string after replay scalarization.
-//   * `composeEmbedText`'s value-tier rule states that the range on the value tier IS an option set.
-// WHEN CTDL ARRIVES, THESE ARE THE THREE PLACES THE BOUNDARY WILL MOVE. Said here so the next author
-// meets the list instead of discovering it.
+// PROVEN ON ONE, WHICH IS PROVEN ON NONE. The 2c clause named three CEDS-shaped places where the boundary would move
+// when CTDL arrived. ctdlHub P3 moved them, and this is where each went:
+//   * `canonicalKey` and `domainId` were read by bare name. They are now baseFieldNames entries; every base and root
+//     read goes through a declared name except `role`, the graph contract's universal node field.
+//   * the `domainListOf` scalarisation stays, and now also reads a rangeAsMeaning hub's datatype list. It is
+//     shape-agnostic, so it was never CEDS-only; the 2,068-of-2,324 measurement is still why it exists.
+//   * `composeEmbedText`'s "the range on the value tier IS an option set" is now CEDS's DECLARED value template
+//     (embedTextTemplateByTier), not a framework rule.
+// And two boundaries P3 ADDED: the term tier (one card per hub-native term, addressed by its IRI, with
+// HAS_TERM_REFERENCE from each property card when both tiers are minted), and rangeAsMeaning (one property card per
+// (domain, property), however many ranges it has).
+// WHAT IS PROVEN, SAID PLAINLY: one REAL hub (CEDS: byte-identical across P3, by in-process sha of the derived hub and
+// by its re-forged standardBase block id; GATEREPORT-P3-101926.md) plus one SYNTHETIC RDF-shaped fixture hub
+// (test/fixtures/rdfShapedHub, 3 classes, 4 properties, 1 scheme of 3 concepts; test-rdfShapedFixtureHub.js). That
+// is still NOT two real hubs: CTDL's real base (P1) has never been through this derivation, and two hubs in one build
+// is untested (P5). The hooks seam remains proven only in the negative (HUB_HOOK_NAME_LIST is empty).
 //
 // The card contract is unchanged and is the reason the extraction could be byte-neutral: one card =
 // one addressable idea = one tuple, SELF-SUFFICIENT (ADDRESS / IDENTITY / MEANING / PROVENANCE /
@@ -260,21 +273,23 @@ const uniqueByStableId = (entryList) =>
 //     HubReference cards + the one HubDefinition, sorted by stableId. stableId === uri ===
 //     hubNamespace + hubVersion + '/' + addressSignature. NO _id (the replay engine stamps it).
 // @property {Array<{type:string, fromRef:Object, toRef:Object, properties:Object}>} edges —
-//     HAS_CEDS_* decomposition + IN_HUB, sorted by (type, from, to).
+//     HAS_<HUB>_* decomposition (HAS_<HUB>_TERM on term cards) + IN_HUB + HAS_TERM_REFERENCE (property card -> term
+//     card, only when the hub mints both tiers), sorted by (type, from, to).
 // @property {Array<{role:string, [sourceIdFieldName]:string, name:string, description:string, definition:string}>}
 //     divergenceReport — one row per source node whose description and definition both carry
 //     prose (hasProse) and differ (§5). Explicitly [] when there are none.
 // @property {Array<{reason:string, role:string, [sourceIdFieldName]:string, propertyKey:string, name:string}>}
 //     skipReport — one row per DmeProperty skipped BY NAME (S-3: zeroDeclaredDomains — no
 //     declared domain means no tuple). Explicitly [] when nothing was skipped.
-// @property {Object} counts — { hubDefinition, propertyTier, valueTier, qualified,
+// @property {Object} counts — { hubDefinition, termTier, propertyTier, valueTier, qualified,
 //     hubReferenceTotal, nodeTotal, edgeTotal }.
 // @property {Array<Object>} identificationPatterns — every §4.3 pattern examined.
 //
 // @interface CedsHubForge
 // @property {function(BaseNodeEdges, function(errString, HubForgeResult))} forgeHub — R7
 //     error-first callback; refuses malformed input and unresolvable slots BY NAME.
-// @property {function(Object): string} addressSignatureFor — the R-P1-1 incumbent signature.
+// @property {function(Object): string} addressSignatureFor — the R-P1-1 incumbent signature (property/value tiers).
+// @property {function({termIri:string}): string} termAddressSignatureFor — the term-tier signature (ctdlHub P3).
 // @property {string} hubDefinitionStableId
 
 // START OF moduleFunction() ============================================================
