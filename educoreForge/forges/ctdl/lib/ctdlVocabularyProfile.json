@@ -109,7 +109,8 @@
 		"E1a",
 		"E2",
 		"E3",
-		"E4"
+		"E4",
+		"E5"
 	],
 	"predicateDispositionByName": {
 		"@id": "identity",
