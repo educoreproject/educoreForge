@@ -893,7 +893,10 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postUndesSeamDiffEmpty-101326 -> postCtdlP1SeamDiffEmpty-102026, tag cut ON this commit. CENSUS: the NEW forge bundle forges/ctdl matched by
 // the seam globs — forgeCtdl.js +19/-0, lib/ctdlForgeDeclaration.js +58/-0, lib/ctdlHooks.js +66/-0 (commits ab85e6ef, bf19ad6f) — and
 // lib/forge-framework/migrationAllowanceRegistry.js +29/-1 (ruling Q1(A)). No build.js, forger, replay, replay-manager or bridge-framework source.
-const PHASE3_ANCHOR_TAG = 'postCtdlP1SeamDiffEmpty-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1); the tag is cut ON this commit
+// ═══ RE-ANCHOR (2), 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P1 rulings A6 + shared lib; standing authorisation) ═══ seamDiffEmpty:
+// postCtdlP1SeamDiffEmpty-102026 -> postCtdlP1bSeamDiffEmpty-102026, tag cut ON this commit. CENSUS: forges/ctdl/lib/ctdlHooks.js +5/-3 ONLY
+// (requires the loader and walk from lib/ctdl-family-forge/, commit 7ff03e25). No build.js, forger, replay, replay-manager or framework source.
+const PHASE3_ANCHOR_TAG = 'postCtdlP1bSeamDiffEmpty-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1, re-anchor 2); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
