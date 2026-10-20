@@ -43,6 +43,9 @@ const PARENT_PREDICATE_BY_TERM_KIND = Object.freeze({
 	optionValue: Object.freeze({ predicateName: 'skos:inScheme', targetTermKind: 'optionSet' }),
 });
 
+// every class hangs from the root by HAS_CLASS (the July synthesised edge); other kinds only through their own rules
+const ROOT_EDGE_TYPE_BY_TERM_KIND = Object.freeze({ class: EDGE_TYPE.HAS_CLASS });
+
 // owned terms take a qualified path (<owner>.<name>); the rest their bare name
 const QUALIFIED_PATH_TERM_KIND_LIST = Object.freeze(['property', 'optionValue']);
 
@@ -117,7 +120,8 @@ const moduleFunction =
 				// the structural parent: the first native target of the kind's parent predicate, else the root
 				const parentRule = PARENT_PREDICATE_BY_TERM_KIND[termKind];
 				const parentId = parentRule === undefined ? undefined : nativeTargetsOf(oneEntry, parentRule.predicateName, parentRule.targetTermKind)[0];
-				const owningName = parentId === undefined ? standardSource : (nameById[parentId] || standardSource);
+				// the loader refused every native term without a label, so a parent always has a name
+				const owningName = parentId === undefined ? standardSource : nameById[parentId];
 				const nodePath = QUALIFIED_PATH_TERM_KIND_LIST.indexOf(termKind) === -1 ? `${name}` : `${owningName}.${name}`;
 
 				// references: seam targets, other non-native targets (crossRefs), undefined native targets
@@ -163,8 +167,8 @@ const moduleFunction =
 					origin: `${vocabulary.sourceFileName} ${stableId}`,
 				});
 
-				if (termKind === 'class') {
-					addEdgeOnce({ edgeType: EDGE_TYPE.HAS_CLASS, fromStableId: rootStableId, toStableId: stableId, edgeContext: 'root->class' });
+				if (ROOT_EDGE_TYPE_BY_TERM_KIND[termKind] !== undefined) {
+					addEdgeOnce({ edgeType: ROOT_EDGE_TYPE_BY_TERM_KIND[termKind], fromStableId: rootStableId, toStableId: stableId, edgeContext: `root->${termKind}` });
 				}
 				if (termKind === 'property' && parentId === undefined && domainlessPropertyRootEdge) {
 					addEdgeOnce({ edgeType: EDGE_TYPE.HAS_PROPERTY, fromStableId: rootStableId, toStableId: stableId, edgeContext: 'root->domainlessProperty' });

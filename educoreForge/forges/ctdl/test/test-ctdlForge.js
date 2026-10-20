@@ -191,6 +191,15 @@ twinList.forEach((oneTwin, twinIndex) => taskList.push((args, next) => validateD
 	next('', args);
 })));
 
+taskList.push((args, next) => {
+	const perturbed = copyOfForgeResult(args.forgeResult);
+	delete perturbed.nodes.find((oneNode) => oneNode.role === 'DmeClass').properties.crossRefs;
+	validateDouble({ forgeResult: perturbed, outputPath: path.join(scratchRootPath, 'twinNoCrossRefs'), snapshotPath: SNAPSHOT_DIR_PATH }, (validateError) => {
+		harness.rejects('RED-OBSERVED: a graph node without crossRefs is an emission FAULT, never read as an empty list', validateError ? [validateError] : [], /carries no crossRefs/);
+		next('', args);
+	});
+});
+
 // ------------------------------------------------------------------ 4. synthetic: the paths snapshot 01 never exercises
 taskList.push((args, next) => forgeSource({ sourceFilePath: writeSyntheticSnapshot({ caseName: 'base', graphEntryList: SYNTHETIC_BASE_ENTRY_LIST }) }, (forgeError, forgeResult) => {
 	harness.section('SECTION 4 — a synthetic source: the orphan option set, the unschemed concept, an unused seam predicate');

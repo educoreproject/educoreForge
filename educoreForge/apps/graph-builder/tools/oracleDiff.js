@@ -152,8 +152,8 @@ sharedIdList.forEach((stableId) => {
 		if (stableText(Object.keys(oneCrossRef).sort()) !== stableText(['locator', 'raw'])) {
 			noteUnexplained('A1 crossRef entry is not exactly { raw, locator }', { stableId, candidateValue: stableText(oneCrossRef) });
 		}
-		const totalsKey = `${oneCrossRef.locator} -> ${prefixOf(oneCrossRef.raw)}:`;
-		candidateCrossRefTotalsByKey[totalsKey] = (candidateCrossRefTotalsByKey[totalsKey] || 0) + 1;
+		const totalsName = `${oneCrossRef.locator} -> ${prefixOf(oneCrossRef.raw)}:`;
+		candidateCrossRefTotalsByKey[totalsName] = (candidateCrossRefTotalsByKey[totalsName] || 0) + 1;
 	});
 	const oracleNonSeamPairSet = multisetOf(oracleCrossRefList.filter((oneCrossRef) => !isSeamRaw(oneCrossRef.raw)).map((oneCrossRef) => `${oneCrossRef.raw}|${oneCrossRef.locator}`));
 	const candidatePairSet = multisetOf(candidateCrossRefList.map((oneCrossRef) => `${oneCrossRef.raw}|${oneCrossRef.locator}`));
@@ -201,11 +201,11 @@ sharedIdList.forEach((stableId) => {
 // A1 totals against the source census, less the seam prefixes
 const sourceReferenceCensus = readJson(specRelative(a1.nonNativeReferenceCensusPath)).bySource[allowanceSpec.standardSource].referenceCountByPredicateAndPrefix;
 const expectedCrossRefTotalsByKey = Object.keys(sourceReferenceCensus)
-	.filter((totalsKey) => seamPrefixList.indexOf(totalsKey.split(' -> ')[1].replace(/:$/, '')) === -1)
-	.reduce((totals, totalsKey) => ({ ...totals, [totalsKey]: sourceReferenceCensus[totalsKey] }), {});
+	.filter((totalsName) => seamPrefixList.indexOf(totalsName.split(' -> ')[1].replace(/:$/, '')) === -1)
+	.reduce((totals, totalsName) => ({ ...totals, [totalsName]: sourceReferenceCensus[totalsName] }), {});
 const a1TotalsMismatchList = [...new Set(Object.keys(expectedCrossRefTotalsByKey).concat(Object.keys(candidateCrossRefTotalsByKey)))]
-	.filter((totalsKey) => (expectedCrossRefTotalsByKey[totalsKey] || 0) !== (candidateCrossRefTotalsByKey[totalsKey] || 0))
-	.map((totalsKey) => ({ totalsKey, expected: expectedCrossRefTotalsByKey[totalsKey] || 0, candidate: candidateCrossRefTotalsByKey[totalsKey] || 0 }));
+	.filter((totalsName) => (expectedCrossRefTotalsByKey[totalsName] || 0) !== (candidateCrossRefTotalsByKey[totalsName] || 0))
+	.map((totalsName) => ({ totalsName, expected: expectedCrossRefTotalsByKey[totalsName] || 0, candidate: candidateCrossRefTotalsByKey[totalsName] || 0 }));
 const sumOf = (totals) => Object.values(totals).reduce((total, oneCount) => total + oneCount, 0);
 rowEvidence.A1 = {
 	verdict: a1TotalsMismatchList.length === 0 && !unexplainedList.some((oneItem) => oneItem.kindText.startsWith('A1')) ? PASS : FAIL,

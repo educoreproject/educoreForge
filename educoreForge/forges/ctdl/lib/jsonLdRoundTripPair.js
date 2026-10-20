@@ -172,8 +172,16 @@ const moduleFunction =
 				let fault;
 				graph.nodes.forEach((oneNode) => {
 					const { stableId, role, properties } = oneNode;
+					if (role === ROOT_ROLE && properties.foreignTermEntryList === undefined) {
+						fault = `the root '${stableId}' carries no foreignTermEntryList (the forge always writes it, '[]' when the source has no foreign entry)`;
+						return;
+					}
+					if (properties.crossRefs === undefined) {
+						fault = `node '${stableId}' carries no crossRefs (the structural finalizer stamps it on every node)`;
+						return;
+					}
 					if (role === ROOT_ROLE) {
-						JSON.parse(properties.foreignTermEntryList || '[]').forEach((oneEntry) => statements.set(`foreign|${oneEntry.iri}|${JSON.stringify(oneEntry.statements)}`, {}));
+						JSON.parse(properties.foreignTermEntryList).forEach((oneEntry) => statements.set(`foreign|${oneEntry.iri}|${JSON.stringify(oneEntry.statements)}`, {}));
 						return;
 					}
 					if (TYPE_BY_ROLE[role] === undefined) {
@@ -193,7 +201,7 @@ const moduleFunction =
 					if (properties.status !== undefined) {
 						statements.set(`term|${stableId}|${STATUS_PREDICATE}|vs:${properties.status}`, {});
 					}
-					JSON.parse(properties.crossRefs || '[]').forEach((oneCrossRef) => statements.set(`term|${stableId}|${oneCrossRef.locator}|${oneCrossRef.raw}`, {}));
+					JSON.parse(properties.crossRefs).forEach((oneCrossRef) => statements.set(`term|${stableId}|${oneCrossRef.locator}|${oneCrossRef.raw}`, {}));
 					JSON.parse(properties.declaredCorrespondenceList || '[]').forEach((oneEntry) => statements.set(`term|${stableId}|${oneEntry.predicate}|${oneEntry.target}`, {}));
 				});
 				graph.edges.forEach((oneEdge) => {
