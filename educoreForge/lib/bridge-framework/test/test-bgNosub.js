@@ -191,7 +191,11 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // postUndesVocabularyIi-101326 -> postCtdlP1VocabularyIi-102026, tag cut ON this commit. CENSUS (lib/vocabulary/): vocabulary.js +3/-1
 // (STANDARD_FAMILY gains CTDL, CTDLASN, CTDLQData: ruling Q5), graph-contract.js +3/-2 (producer-local label stems Ctdl|Ctdlasn|Ctdlqdata;
 // the standardFamily meaning text) — commit ab85e6ef. No test file moved.
-const POST_D1_BASE_TAG = 'postCtdlP1VocabularyIi-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P2b; pre-authorised by WORKORDER-P2b for the new edge types) ═══ (ii)
+// postCtdlP1VocabularyIi-102026 -> postCtdlP2bVocabularyIi-102026, tag cut ON this commit together with BG-COMPOSE-PESC's. CENSUS
+// (lib/vocabulary/, commit 4e5c38a2): vocabulary.js +8/-0 (EDGE_TYPES BROADER_CONCEPT, TOP_CONCEPT_OF, SUBPROPERTY_OF, INVERSE_OF,
+// RELATED_CONCEPT), vocabulary-definitions.js +10/-0 (their TERM_DEFINITIONS), test/test-sifEdgeVocabulary.js +4/-1 (schema-view 329 -> 334).
+const POST_D1_BASE_TAG = 'postCtdlP2bVocabularyIi-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P2b); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //

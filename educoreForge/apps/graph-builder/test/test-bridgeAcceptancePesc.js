@@ -894,7 +894,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ═══ RE-ANCHOR, 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P2; standing authorisation, seam-gate test file) ═══ BG-COMPOSE-PESC
 // postCtdlP1bPescCompose-102026 -> postCtdlP2PescCompose-102026, tag cut ON this commit. CENSUS: lib/bridge-framework/test/test-bgNosub.js
 // ONLY — its seamDiffEmpty re-anchor in THIS SAME commit (both tags cut here, so neither re-anchor moves the other gate).
-const P1_BASELINE_COMMIT = 'postCtdlP2PescCompose-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P2); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P2b; pre-authorised by WORKORDER-P2b) ═══ BG-COMPOSE-PESC
+// postCtdlP2PescCompose-102026 -> postCtdlP2bPescCompose-102026, tag cut ON this commit. CENSUS: lib/vocabulary/vocabulary.js +8/-0,
+// vocabulary-definitions.js +10/-0, test/test-sifEdgeVocabulary.js +4/-1 (commit 4e5c38a2: the five CTDL-family enrichment edge types),
+// and lib/bridge-framework/test/test-bgNosub.js (its (ii) re-anchor in THIS commit). No bridge-framework source.
+const P1_BASELINE_COMMIT = 'postCtdlP2bPescCompose-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P2b); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
