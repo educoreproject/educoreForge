@@ -30,7 +30,138 @@ require(path.join(TREE_ROOT, 'test', 'testLib', 'testAppStartup'))({ moduleName,
 const harness = require(path.join(TREE_ROOT, 'test', 'testLib', 'harness'))(moduleName);
 const { runRealSnapshotSuite } = require(path.join(TREE_ROOT, 'lib', 'ctdl-family-forge', 'test', 'realSnapshotSuite'));
 
+// ⟪P2b⟫ the rows the suite expects the profile to carry, written FIRST at each row's commit (red-first)
+const INTENDED_ENRICHMENT_LIST = Object.freeze([]);
+const ENRICHMENT_EFFECT_BY_ROW = Object.freeze({
+ "E1": {
+  "edgeType": "BROADER_CONCEPT",
+  "edgeDelta": 52,
+  "omittedDelta": {
+   "nativeReferenceNotModelled": 104
+  },
+  "exampleEdgeList": [
+   [
+    "metricCat:Acceptance",
+    "metricCat:ParticipationEngagement"
+   ],
+   [
+    "metricCat:Access",
+    "metricCat:ParticipationEngagement"
+   ],
+   [
+    "metricCat:BenefitsReceived",
+    "metricCat:Organization"
+   ]
+  ]
+ },
+ "E2": {
+  "edgeType": "TOP_CONCEPT_OF",
+  "edgeDelta": 61,
+  "omittedDelta": {
+   "nativeReferenceNotModelled": 122
+  },
+  "exampleEdgeList": [
+   [
+    "adminRecord:Tax1099",
+    "qdata:AdministrativeRecordCategory"
+   ],
+   [
+    "adminRecord:TaxW2",
+    "qdata:AdministrativeRecordCategory"
+   ],
+   [
+    "adminRecord:UnemploymentInsurance",
+    "qdata:AdministrativeRecordCategory"
+   ]
+  ]
+ },
+ "E3": {
+  "edgeType": "SUBPROPERTY_OF",
+  "edgeDelta": 2,
+  "omittedDelta": {
+   "nativeReferenceNotModelled": 2
+  },
+  "exampleEdgeList": [
+   [
+    "qdata:regionalEarningsDistribution",
+    "qdata:earningsDistribution"
+   ],
+   [
+    "qdata:regionalEmploymentRate",
+    "qdata:employmentRate"
+   ]
+  ]
+ },
+ "E7": {
+  "carriedPropertyName": "rdfsComment",
+  "carriedCount": 8,
+  "omittedDelta": {
+   "secondaryDescription": 8
+  },
+  "exampleIdList": [
+   "qdata:Observation",
+   "qdata:adjustment",
+   "qdata:dimensionType"
+  ]
+ },
+ "E9": {
+  "carriedPropertyName": "status",
+  "carriedRole": "DmeOptionSet",
+  "carriedCount": 8,
+  "omittedDelta": {
+   "schemeStatus": 8
+  },
+  "exampleIdList": [
+   "qdata:AdministrativeRecordCategory",
+   "qdata:CollectionMethod",
+   "qdata:DataSourceCoverage"
+  ]
+ },
+ "E11": {
+  "crossRefDelta": 13,
+  "omittedDelta": {
+   "unresolvedNativePrefixReference": 13
+  }
+ },
+ "E12": {
+  "carriedPropertyName": "usageNote",
+  "carriedRole": "nonProperty",
+  "carriedCount": 5,
+  "omittedDelta": {
+   "usageNoteOffProperty": 5
+  },
+  "exampleIdList": [
+   "schema:QuantitativeValue",
+   "metricCat:PostCompletion",
+   "metricCat:PostEnrollment"
+  ]
+ },
+ "E13": {
+  "edgeType": "RELATED_CONCEPT",
+  "edgeDelta": 10,
+  "omittedDelta": {
+   "nativeReferenceNotModelled": 10
+  },
+  "exampleEdgeList": [
+   [
+    "demoCat:EducationLevel",
+    "metricCat:EducationLevel"
+   ],
+   [
+    "demoCat:Employment",
+    "metricCat:Employment"
+   ],
+   [
+    "demoCat:Income",
+    "metricCat:Earnings"
+   ]
+  ]
+ }
+});
+
 const EXPECTED = Object.freeze({
+ "intendedEnrichmentList": INTENDED_ENRICHMENT_LIST,
+ "enrichmentEffectByRow": ENRICHMENT_EFFECT_BY_ROW,
  "standardSource": "CTDLQData",
  "rootStableId": "ctdlqdata:root",
  "nodeCountByRole": {
@@ -70,6 +201,7 @@ runRealSnapshotSuite({
 	bundle: require(path.join(__dirname, '..', 'forgeCtdlqdata'))({ embedder: null }),
 	validator: require(path.join(__dirname, '..', 'roundTripValidator')),
 	snapshotDirPath: path.join(__dirname, '..', 'assets', 'standardSourceData', '01'),
+	vocabularyProfile: require(path.join(__dirname, '..', 'lib', 'ctdlqdataVocabularyProfile.json')),
 	sourceFileName: 'qdata.json',
 	expected: EXPECTED,
 });

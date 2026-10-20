@@ -30,7 +30,138 @@ require(path.join(TREE_ROOT, 'test', 'testLib', 'testAppStartup'))({ moduleName,
 const harness = require(path.join(TREE_ROOT, 'test', 'testLib', 'harness'))(moduleName);
 const { runRealSnapshotSuite } = require(path.join(TREE_ROOT, 'lib', 'ctdl-family-forge', 'test', 'realSnapshotSuite'));
 
+// ⟪P2b⟫ the rows the suite expects the profile to carry, written FIRST at each row's commit (red-first)
+const INTENDED_ENRICHMENT_LIST = Object.freeze([]);
+const ENRICHMENT_EFFECT_BY_ROW = Object.freeze({
+ "E2": {
+  "edgeType": "TOP_CONCEPT_OF",
+  "edgeDelta": 8,
+  "omittedDelta": {
+   "nativeReferenceNotModelled": 16
+  },
+  "exampleEdgeList": [
+   [
+    "evalCat:Authority",
+    "ceasn:EvaluatorCategory"
+   ],
+   [
+    "evalCat:Automated",
+    "ceasn:EvaluatorCategory"
+   ],
+   [
+    "evalCat:External",
+    "ceasn:EvaluatorCategory"
+   ]
+  ]
+ },
+ "E3": {
+  "edgeType": "SUBPROPERTY_OF",
+  "edgeDelta": 10,
+  "omittedDelta": {
+   "nativeReferenceNotModelled": 10
+  },
+  "exampleEdgeList": [
+   [
+    "ceasn:competencyLabel",
+    "ceasn:name"
+   ],
+   [
+    "ceasn:inProgressionModel",
+    "skos:inScheme"
+   ],
+   [
+    "ceasn:isTopChildOf",
+    "ceasn:isChildOf"
+   ]
+  ]
+ },
+ "E4": {
+  "edgeType": "INVERSE_OF",
+  "edgeDelta": 2,
+  "omittedDelta": {
+   "nativeReferenceNotModelled": 2
+  },
+  "exampleEdgeList": [
+   [
+    "ceasn:hasChild",
+    "ceasn:isChildOf"
+   ],
+   [
+    "ceasn:isChildOf",
+    "ceasn:hasChild"
+   ]
+  ]
+ },
+ "E7": {
+  "carriedPropertyName": "rdfsComment",
+  "carriedCount": 25,
+  "omittedDelta": {
+   "secondaryDescription": 25
+  },
+  "exampleIdList": [
+   "ceasn:Competency",
+   "ceasn:CompetencyFramework",
+   "ceasn:ProficiencyScale"
+  ]
+ },
+ "E8": {
+  "carriedPropertyName": "skosDefinition",
+  "carriedCount": 3,
+  "omittedDelta": {
+   "secondaryDescription": 3
+  },
+  "exampleIdList": [
+   "evalCat:Authority",
+   "evalCat:External",
+   "evalCat:Peer"
+  ]
+ },
+ "E9": {
+  "carriedPropertyName": "status",
+  "carriedRole": "DmeOptionSet",
+  "carriedCount": 2,
+  "omittedDelta": {
+   "schemeStatus": 2
+  },
+  "exampleIdList": [
+   "ceasn:EvaluatorCategory",
+   "ceasn:PublicationStatus"
+  ]
+ },
+ "E10": {
+  "carriedPropertyName": "changeHistoryUrl",
+  "carriedCount": 118,
+  "omittedDelta": {
+   "changeHistory": 118
+  },
+  "exampleIdList": [
+   "asn:ProgressionLevel",
+   "asn:ProgressionModel",
+   "ceasn:Competency"
+  ]
+ },
+ "E11": {
+  "crossRefDelta": 35,
+  "omittedDelta": {
+   "unresolvedNativePrefixReference": 35
+  }
+ },
+ "E12": {
+  "carriedPropertyName": "usageNote",
+  "carriedRole": "nonProperty",
+  "carriedCount": 1,
+  "omittedDelta": {
+   "usageNoteOffProperty": 1
+  },
+  "exampleIdList": [
+   "publicationStatus:Draft"
+  ]
+ }
+});
+
 const EXPECTED = Object.freeze({
+ "intendedEnrichmentList": INTENDED_ENRICHMENT_LIST,
+ "enrichmentEffectByRow": ENRICHMENT_EFFECT_BY_ROW,
  "standardSource": "CTDLASN",
  "rootStableId": "ctdlasn:root",
  "nodeCountByRole": {
@@ -69,6 +200,7 @@ runRealSnapshotSuite({
 	bundle: require(path.join(__dirname, '..', 'forgeCtdlasn'))({ embedder: null }),
 	validator: require(path.join(__dirname, '..', 'roundTripValidator')),
 	snapshotDirPath: path.join(__dirname, '..', 'assets', 'standardSourceData', '01'),
+	vocabularyProfile: require(path.join(__dirname, '..', 'lib', 'ctdlasnVocabularyProfile.json')),
 	sourceFileName: 'ctdlasn.json',
 	expected: EXPECTED,
 });
