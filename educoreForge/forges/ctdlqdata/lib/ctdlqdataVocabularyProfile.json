@@ -87,7 +87,8 @@
 	],
 	"domainlessPropertyRootEdge": true,
 	"enrichmentKindList": [
-		"E1"
+		"E1",
+		"E2"
 	],
 	"predicateDispositionByName": {
 		"@id": "identity",
