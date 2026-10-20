@@ -37,7 +37,9 @@ DESCRIPTION
                     V1 values        properties whose new value is declared in the spec
                     M1 list-wrapped  properties the oracle holds as a scalar and the candidate as a one-element list
                     added edges      candidateOnlyEdgeRuleList: edges absent from the oracle that a declared rule
-                                     ({ ruleName, edgeType, fromStableId, expectedCount }) admits, counted exactly
+                                     ({ ruleName, edgeType, fromStableId?, locator?, expectedCount }) admits, counted exactly
+                    A1 additions     a1.additionalReferenceCountByLocatorAndPrefix: crossRefs a later row carries beyond the
+                                     source census (P2b E11), declared per (locator, prefix)
      Prints one verdict line per row and the first unexplained differences.
 
 EXIT STATUS
@@ -127,7 +129,8 @@ const candidateOnlyEdgeRuleList = allowanceSpec.candidateOnlyEdgeRuleList || [];
 const candidateOnlyEdgeCountByRule = candidateOnlyEdgeRuleList.reduce((counts, oneRule) => ({ ...counts, [oneRule.ruleName]: 0 }), {});
 Object.keys(candidateEdgeBySignature).filter((oneSignature) => !oracleEdgeBySignature[oneSignature]).forEach((oneSignature) => {
 	const oneEdge = candidateEdgeBySignature[oneSignature];
-	const matchedRule = candidateOnlyEdgeRuleList.find((oneRule) => oneRule.edgeType === oneEdge.type && oneRule.fromStableId === oneEdge.from);
+	// a rule names the edge type and, optionally, the from-node and the edge's locator property (P2b E5: REFERENCES with locator)
+	const matchedRule = candidateOnlyEdgeRuleList.find((oneRule) => oneRule.edgeType === oneEdge.type && (oneRule.fromStableId === undefined || oneRule.fromStableId === oneEdge.from) && oneRule.locator === oneEdge.properties.locator);
 	if (matchedRule === undefined) {
 		noteUnexplained('edge absent from oracle', { edgeSignature: oneSignature });
 		return;
@@ -216,6 +219,10 @@ const sourceReferenceCensus = readJson(specRelative(a1.nonNativeReferenceCensusP
 const expectedCrossRefTotalsByKey = Object.keys(sourceReferenceCensus)
 	.filter((totalsName) => seamPrefixList.indexOf(totalsName.split(' -> ')[1].replace(/:$/, '')) === -1)
 	.reduce((totals, totalsName) => ({ ...totals, [totalsName]: sourceReferenceCensus[totalsName] }), {});
+// ⟪P2b E11⟫ references under a claimed prefix to terms the source does not define, now carried: declared per (locator, prefix)
+Object.keys(a1.additionalReferenceCountByLocatorAndPrefix || {}).forEach((totalsName) => {
+	expectedCrossRefTotalsByKey[totalsName] = (expectedCrossRefTotalsByKey[totalsName] || 0) + a1.additionalReferenceCountByLocatorAndPrefix[totalsName];
+});
 const a1TotalsMismatchList = [...new Set(Object.keys(expectedCrossRefTotalsByKey).concat(Object.keys(candidateCrossRefTotalsByKey)))]
 	.filter((totalsName) => (expectedCrossRefTotalsByKey[totalsName] || 0) !== (candidateCrossRefTotalsByKey[totalsName] || 0))
 	.map((totalsName) => ({ totalsName, expected: expectedCrossRefTotalsByKey[totalsName] || 0, candidate: candidateCrossRefTotalsByKey[totalsName] || 0 }));
@@ -253,7 +260,7 @@ rowEvidence.properties = { verdict: unexplainedList.some((oneItem) => /^property
 candidateOnlyEdgeRuleList.forEach((oneRule) => {
 	rowEvidence[oneRule.ruleName] = {
 		verdict: candidateOnlyEdgeCountByRule[oneRule.ruleName] === oneRule.expectedCount ? PASS : FAIL,
-		detail: `${candidateOnlyEdgeCountByRule[oneRule.ruleName]} candidate-only ${oneRule.edgeType} edge(s) from ${oneRule.fromStableId} (expected ${oneRule.expectedCount})`,
+		detail: `${candidateOnlyEdgeCountByRule[oneRule.ruleName]} candidate-only ${oneRule.edgeType}${oneRule.locator ? ` (locator ${oneRule.locator})` : ''} edge(s)${oneRule.fromStableId ? ` from ${oneRule.fromStableId}` : ''} (expected ${oneRule.expectedCount})`,
 	};
 });
 const rowNameOrder = ['nodes', 'edges', 'properties', 'A1', 'A2', 'A5'].concat(candidateOnlyEdgeRuleList.map((oneRule) => oneRule.ruleName));
