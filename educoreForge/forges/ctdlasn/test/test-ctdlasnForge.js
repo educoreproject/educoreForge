@@ -3,7 +3,7 @@
 
 // test-ctdlasnForge.js — the CTDLASN forge bundle (ctdlHub-101926 P2), Docker-free. The expectation table below is the July
 // oracle's counts for snapshot 01 (dataStores/ctdlHub_101926/oracle) plus this port's ruled departures; the assertions live
-// once in lib/ctdl-family-forge/testSupport/realSnapshotSuite.js. The loader's refusals are proven in forges/ctdl/test and
+// once in lib/ctdl-family-forge/test/realSnapshotSuite.js. The loader's refusals are proven in forges/ctdl/test and
 // lib/ctdl-family-forge/test (the loader is shared); the ORACLE gate is apps/graph-builder/tools/oracleDiff.js on a DEV build.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -28,7 +28,7 @@ const path = require('path');
 const TREE_ROOT = path.join(__dirname, '..', '..', '..');
 require(path.join(TREE_ROOT, 'test', 'testLib', 'testAppStartup'))({ moduleName, helpText });
 const harness = require(path.join(TREE_ROOT, 'test', 'testLib', 'harness'))(moduleName);
-const { runRealSnapshotSuite } = require(path.join(TREE_ROOT, 'lib', 'ctdl-family-forge', 'testSupport', 'realSnapshotSuite'));
+const { runRealSnapshotSuite } = require(path.join(TREE_ROOT, 'lib', 'ctdl-family-forge', 'test', 'realSnapshotSuite'));
 
 const EXPECTED = Object.freeze({
  "standardSource": "CTDLASN",

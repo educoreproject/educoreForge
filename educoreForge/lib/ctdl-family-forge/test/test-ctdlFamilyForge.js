@@ -33,16 +33,28 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const { xLog } = process.global;
 
 const syntheticProfile = Object.freeze({
+	profileNote: 'A synthetic two-prefix profile for the shared-lib test.',
 	standardSource: 'Synth',
 	sourceFileName: 'synth.json',
+	descriptionTemplateSubject: 'Synthetic',
 	nativePrefixList: ['syn'],
 	nativeTermIdList: [],
+	seamTargetPrefixList: [],
 	sourceStatedInversePredicateList: [],
 	termKindByType: { 'rdfs:Class': { termKind: 'class', role: 'DmeClass', perStandardLabel: 'SynthClass', descriptionNoun: 'classes' } },
+	termKindOrder: ['class'],
 	labelPredicateList: ['rdfs:label'],
+	descriptionPredicatePrecedenceList: ['rdfs:comment'],
 	languageTag: 'en-US',
+	statusPredicate: 'vs:term_status',
+	statusValuePrefix: 'vs:',
+	statusCarriedByTermKindList: ['class'],
+	usageNotePredicate: 'vann:usageNote',
+	usageNoteCarriedByTermKindList: [],
+	domainlessPropertyRootEdge: false,
 	predicateDispositionByName: { '@id': 'identity', '@type': 'identity', 'rdfs:label': 'label', 'rdfs:comment': 'description', 'rdfs:subClassOf': 'reference' },
 });
+const { validateVocabularyProfile } = require(path.join(__dirname, '..', 'vocabularyProfileContract'));
 const loader = require(path.join(__dirname, '..', 'jsonLdVocabularyLoader'))({ vocabularyProfile: syntheticProfile });
 const roundTripPair = require(path.join(__dirname, '..', 'jsonLdRoundTripPair'))({ vocabularyProfile: syntheticProfile, ruleModulePath: 'lib/ctdl-family-forge/jsonLdRoundTripPair.js' });
 
@@ -82,6 +94,24 @@ taskList.push((args, next) => roundTripPair.canonicalizeSource({ snapshotPath: w
 	harness.ok('the foreign entry is one statement, verbatim', statementKeyList.some((oneKey) => oneKey.startsWith('foreign|other:C|')));
 	next('', args);
 }));
+
+taskList.push((args, next) => {
+	harness.section('SECTION 4 — the profile is the seam\'s declared interface: an absent or unknown field is refused, never defaulted');
+	const refusalOf = (candidateProfile) => {
+		let refusalText = '';
+		try {
+			validateVocabularyProfile(candidateProfile);
+		} catch (contractError) {
+			refusalText = contractError.message;
+		}
+		return refusalText;
+	};
+	const { domainlessPropertyRootEdge, ...withoutFlag } = syntheticProfile;
+	harness.rejects('an absent boolean flag is refused, not read as false', [refusalOf(withoutFlag)].filter(Boolean), /field 'domainlessPropertyRootEdge' is absent/);
+	harness.rejects('a misspelt field is refused, not ignored', [refusalOf({ ...syntheticProfile, nativePrefixLis: ['x'] })].filter(Boolean), /carries 'nativePrefixLis', which the contract does not name/);
+	harness.equal('the complete synthetic profile conforms', refusalOf(syntheticProfile), '');
+	next('', args);
+});
 
 pipeRunner(taskList.getList(), {}, (pipeError) => {
 	if (pipeError) {

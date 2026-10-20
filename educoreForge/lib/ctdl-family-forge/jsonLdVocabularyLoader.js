@@ -14,6 +14,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const fs = require('fs');
 const { isNativeIriFor } = require('./nativeIdentity');
+const { validateVocabularyProfile } = require('./vocabularyProfileContract');
 
 const CURIE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*:\S+$/;
 const LOCATION_URL_PATTERN = /^upstreamUrl:[ \t]*(\S+)[ \t]*$/m;
@@ -43,6 +44,7 @@ const shapeProblemOf = ({ valueShape, predicateValue, languageTag }) => {
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabularyProfile }) => {
+		validateVocabularyProfile(vocabularyProfile);
 		const { termKindByType, predicateDispositionByName, languageTag, sourceFileName, labelPredicateList } = vocabularyProfile;
 		const isNativeIri = isNativeIriFor(vocabularyProfile);
 

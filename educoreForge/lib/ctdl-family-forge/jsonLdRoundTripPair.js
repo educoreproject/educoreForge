@@ -77,15 +77,14 @@ const OMITTED_TEXT_PROPERTY_NAME = 'text';
 const CHANGE_HISTORY_PREDICATE = 'meta:changeHistory';
 
 const { isNativeIriFor } = require('./nativeIdentity');
+const { validateVocabularyProfile } = require('./vocabularyProfileContract');
 const omitted = (kind, extra) => ({ explicitlyOmitted: true, [OMITTED_KIND_PROPERTY_NAME]: kind, ...(extra || {}) });
 
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabularyProfile, ruleModulePath }) => {
+		validateVocabularyProfile(vocabularyProfile);
 		const { languageTag, sourceFileName, sourceStatedInversePredicateList } = vocabularyProfile;
-		if (!Array.isArray(sourceStatedInversePredicateList)) {
-			throw new Error(`${moduleName} REFUSED: the vocabulary profile declares no sourceStatedInversePredicateList ([] when the source states no inverse); there is no default`);
-		}
 		const isNativeIri = isNativeIriFor(vocabularyProfile);
 
 		// -----------------------------------------------------------------

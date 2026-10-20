@@ -50,10 +50,12 @@ const ROOT_EDGE_TYPE_BY_TERM_KIND = Object.freeze({ class: EDGE_TYPE.HAS_CLASS }
 const QUALIFIED_PATH_TERM_KIND_LIST = Object.freeze(['property', 'optionValue']);
 
 const { isNativeIriFor, prefixOf } = require('./nativeIdentity');
+const { validateVocabularyProfile } = require('./vocabularyProfileContract');
 
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabularyProfile }) => {
+		validateVocabularyProfile(vocabularyProfile);
 		const {
 			standardSource,
 			seamTargetPrefixList,
