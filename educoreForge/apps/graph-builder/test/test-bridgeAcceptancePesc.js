@@ -886,7 +886,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postJevqPerBridgePescCompose-101326 -> postCtdlP1PescCompose-102026, tag cut ON this commit. Found red at fff92efc (25/26). CENSUS over
 // this gate's declared paths: lib/vocabulary/vocabulary.js +3/-1 (STANDARD_FAMILY: CTDL, CTDLASN, CTDLQData) and lib/vocabulary/graph-contract.js
 // +3/-2 (label stems Ctdl|Ctdlasn|Ctdlqdata) — commit ab85e6ef. No bridge-framework, bridge-maker, build.js or interfaces.js change.
-const P1_BASELINE_COMMIT = 'postCtdlP1PescCompose-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1); the tag is cut ON this commit
+// ═══ RE-ANCHOR (2), 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P1; authorised by SCARLET_ARROW) ═══ BG-COMPOSE-PESC
+// postCtdlP1PescCompose-102026 -> postCtdlP1bPescCompose-102026, tag cut ON this commit. Found red at c319b30e (25/26). CENSUS over this gate's
+// declared paths: lib/bridge-framework/test/test-bgNosub.js +4/-1 ONLY — the comment and constant of GARDEN_PORTAL's own seamDiffEmpty
+// re-anchor (2), commit ee076b35, which should have cut this tag on the same commit. No bridge-framework source, bridge-maker, build.js,
+// interfaces.js or vocabulary change.
+const P1_BASELINE_COMMIT = 'postCtdlP1bPescCompose-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1, re-anchor 2); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
