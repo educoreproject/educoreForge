@@ -1,0 +1,15 @@
+{
+  // ctdlasnOnly — CTDLASN alone (stage off): the build whose graph is censused and judged against the July oracle by oracleDiff.js.
+  "schemaVersion": "1.0.0",
+  "recipeName": "ctdlasnOnly",
+  "kind": "dev",
+  "description": "Forge the CTDLASN standard base only - proves the ported CTDLASN bundle forges.",
+  "standards": [
+    {
+      "token": "ctdlasn",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

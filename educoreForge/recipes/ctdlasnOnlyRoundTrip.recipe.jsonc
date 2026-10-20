@@ -1,0 +1,16 @@
+{
+  // ctdlasnOnlyRoundTrip — CTDLASN alone with the RT-13 round-trip stage: the ctdlHub-101926 P2 certification recipe.
+  "schemaVersion": "1.0.0",
+  "recipeName": "ctdlasnOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the CTDLASN standard base and round-trip-validate the materialized product (RT-13 stage).",
+  "roundTripStage": true,
+  "standards": [
+    {
+      "token": "ctdlasn",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

@@ -1,0 +1,7 @@
+{
+	"name": "forge-ctdlasn",
+	"version": "1.0.0",
+	"main": "forgeCtdlasn.js",
+	"description": "CTDL Achievement Standards Network (CTDL-ASN) forge bundle — its JSON-LD schema as DME roles, native CURIE stableIds, foreign references carried verbatim",
+	"private": true
+}

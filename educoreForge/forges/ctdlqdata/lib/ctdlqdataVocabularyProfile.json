@@ -1,0 +1,119 @@
+{
+	"profileNote": "The CTDLQData forge's knowledge of its own JSON-LD vocabulary, as data (ctdlHub-101926 P2), read by lib/ctdl-family-forge. nativePrefixList + nativeTermIdList are the bundle's OWN allowlist (FBB-001 / R4; copied from the July attic parser, with schema: per-term: the ten schema: terms qdata.json itself defines). It has no seam prefix: the source declares no ceds: correspondence. predicateDispositionByName names every predicate a native entry may carry; an unnamed predicate is refused.",
+	"standardSource": "CTDLQData",
+	"sourceFileName": "qdata.json",
+	"descriptionTemplateSubject": "Credential Transparency Description Language \u2014 Quantitative Data (CTDL-QData) (Credential Engine)",
+	"nativePrefixList": [
+		"qdata",
+		"metricCat",
+		"adminRecord",
+		"collectionMethod",
+		"dataWithholding",
+		"demoCat",
+		"incomeDetermination",
+		"sourceCoverage",
+		"subjectCategory",
+		"skos"
+	],
+	"nativeTermIdList": [
+		"schema:MonetaryAmount",
+		"schema:MonetaryAmountDistribution",
+		"schema:QuantitativeValue",
+		"schema:about",
+		"schema:currency",
+		"schema:description",
+		"schema:maxValue",
+		"schema:minValue",
+		"schema:unitText",
+		"schema:value"
+	],
+	"seamTargetPrefixList": [],
+	"sourceStatedInversePredicateList": [],
+	"termKindByType": {
+		"rdfs:Class": {
+			"termKind": "class",
+			"role": "DmeClass",
+			"perStandardLabel": "CtdlqdataClass",
+			"descriptionNoun": "classes"
+		},
+		"rdf:Property": {
+			"termKind": "property",
+			"role": "DmeProperty",
+			"perStandardLabel": "CtdlqdataProperty",
+			"descriptionNoun": "properties"
+		},
+		"skos:ConceptScheme": {
+			"termKind": "optionSet",
+			"role": "DmeOptionSet",
+			"perStandardLabel": "CtdlqdataConceptScheme",
+			"descriptionNoun": "concept schemes"
+		},
+		"skos:Concept": {
+			"termKind": "optionValue",
+			"role": "DmeOptionValue",
+			"perStandardLabel": "CtdlqdataConcept",
+			"descriptionNoun": "concepts"
+		}
+	},
+	"termKindOrder": [
+		"class",
+		"property",
+		"optionSet",
+		"optionValue"
+	],
+	"labelPredicateList": [
+		"rdfs:label",
+		"skos:prefLabel"
+	],
+	"descriptionPredicatePrecedenceList": [
+		"dct:description",
+		"rdfs:comment",
+		"skos:definition"
+	],
+	"languageTag": "en-US",
+	"statusPredicate": "vs:term_status",
+	"statusValuePrefix": "vs:",
+	"statusCarriedByTermKindList": [
+		"class",
+		"property",
+		"optionValue"
+	],
+	"usageNotePredicate": "vann:usageNote",
+	"usageNoteCarriedByTermKindList": [
+		"property"
+	],
+	"domainlessPropertyRootEdge": true,
+	"predicateDispositionByName": {
+		"@id": "identity",
+		"@type": "identity",
+		"rdfs:label": "label",
+		"skos:prefLabel": "label",
+		"dct:description": "description",
+		"rdfs:comment": "description",
+		"skos:definition": "description",
+		"vann:usageNote": "usageNote",
+		"vs:term_status": "status",
+		"meta:changeHistory": "notCarried",
+		"schema:domainIncludes": "reference",
+		"schema:rangeIncludes": "reference",
+		"meta:targetScheme": "reference",
+		"rdfs:subClassOf": "reference",
+		"skos:inScheme": "reference",
+		"meta:domainFor": "reference",
+		"meta:hasConcept": "reference",
+		"rdfs:subPropertyOf": "reference",
+		"owl:inverseOf": "reference",
+		"owl:equivalentClass": "reference",
+		"owl:equivalentProperty": "reference",
+		"skos:broader": "reference",
+		"skos:narrower": "reference",
+		"skos:topConceptOf": "reference",
+		"skos:hasTopConcept": "reference",
+		"skos:narrowMatch": "reference",
+		"skos:relatedMatch": "reference",
+		"skos:exactMatch": "reference",
+		"skos:closeMatch": "reference",
+		"skos:broadMatch": "reference",
+		"owl:sameAs": "reference"
+	}
+}

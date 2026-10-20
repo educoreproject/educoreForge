@@ -9,10 +9,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // language map without the profile's language, a reference value that is not a string. Everything it
 // returns has passed those checks; the walk downstream does not re-check (no guards between our modules).
 //
-// It partitions @graph into NATIVE entries (own @id prefix in the profile's nativePrefixList) and FOREIGN
+// It partitions @graph into NATIVE entries (nativeIdentity.js: prefix or exact term listed by the profile) and FOREIGN
 // entries, which are carried verbatim (plan §4.1 A5) and therefore only type-checked.
 
 const fs = require('fs');
+const { isNativeIriFor } = require('./nativeIdentity');
 
 const CURIE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*:\S+$/;
 const LOCATION_URL_PATTERN = /^upstreamUrl:[ \t]*(\S+)[ \t]*$/m;
@@ -26,7 +27,6 @@ const PREDICATE_VALUE_SHAPE_BY_DISPOSITION = Object.freeze({
 	reference: 'stringList',
 });
 
-const prefixOf = (curieText) => curieText.split(':')[0];
 
 // shapeProblemOf — '' when a predicate's value has the shape its disposition requires, else the problem
 const shapeProblemOf = ({ valueShape, predicateValue, languageTag }) => {
@@ -43,7 +43,8 @@ const shapeProblemOf = ({ valueShape, predicateValue, languageTag }) => {
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabularyProfile }) => {
-		const { nativePrefixList, termKindByType, predicateDispositionByName, languageTag, sourceFileName, labelPredicateList } = vocabularyProfile;
+		const { termKindByType, predicateDispositionByName, languageTag, sourceFileName, labelPredicateList } = vocabularyProfile;
+		const isNativeIri = isNativeIriFor(vocabularyProfile);
 
 		// entryProblemOf — the first refusal reason for one @graph entry, or ''
 		const entryProblemOf = (oneEntry, entryIndex) => {
@@ -57,7 +58,7 @@ const moduleFunction =
 			if (termKindByType[oneEntry['@type']] === undefined) {
 				return `'${entryId}' has @type ${JSON.stringify(oneEntry['@type'])}, which the profile does not map (known: ${Object.keys(termKindByType).join(', ')})`;
 			}
-			if (nativePrefixList.indexOf(prefixOf(entryId)) === -1) {
+			if (!isNativeIri(entryId)) {
 				return '';
 			}
 			if (!labelPredicateList.some((predicateName) => oneEntry[predicateName] !== undefined)) {
@@ -102,8 +103,8 @@ const moduleFunction =
 				callback(`${moduleName} REFUSED: ${entryProblem}`);
 				return;
 			}
-			const nativeEntryList = graphEntryList.filter((oneEntry) => nativePrefixList.indexOf(prefixOf(oneEntry['@id'])) !== -1);
-			const foreignEntryList = graphEntryList.filter((oneEntry) => nativePrefixList.indexOf(prefixOf(oneEntry['@id'])) === -1);
+			const nativeEntryList = graphEntryList.filter((oneEntry) => isNativeIri(oneEntry['@id']));
+			const foreignEntryList = graphEntryList.filter((oneEntry) => !isNativeIri(oneEntry['@id']));
 			const nativeIdList = nativeEntryList.map((oneEntry) => oneEntry['@id']);
 			const duplicateNativeId = nativeIdList.find((entryId, entryIndex) => nativeIdList.indexOf(entryId) !== entryIndex);
 			if (duplicateNativeId !== undefined) {

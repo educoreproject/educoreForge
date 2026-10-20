@@ -50,9 +50,9 @@ const EXPECTED = Object.freeze({
 	declaredCorrespondenceTotal: 53,
 	declaredCorrespondenceNodeTotal: 52,
 	duplicateEdgeSuppressedCount: 9,
-	undefinedNativeTargetCount: 21,
+	unresolvedNativePrefixReferenceCount: 21,
 	foreignTermEntryCount: 20,
-	explicitlyOmittedByKind: { changeHistory: 993, secondaryDescription: 265, usageNoteOffProperty: 62, undefinedNativeTarget: 21, nativeReferenceNotModelled: 942, schemeStatus: 34 },
+	explicitlyOmittedByKind: { changeHistory: 993, secondaryDescription: 265, usageNoteOffProperty: 62, unresolvedNativePrefixReference: 21, nativeReferenceNotModelled: 942, schemeStatus: 34 },
 });
 
 const forgeSource = ({ sourceFilePath }, callback) => bundle.forge({ sourcePath: sourceFilePath, owner: 'test', skipEmbedding: true }, callback);
@@ -114,7 +114,7 @@ taskList.push((args, next) => forgeSource({ sourceFilePath: SOURCE_FILE_PATH }, 
 	harness.equal('node count by role = the July oracle (994)', JSON.stringify(nodeCountByRole), JSON.stringify(EXPECTED.nodeCountByRole));
 	harness.equal('edge count = the oracle graph 10,119 (the July forge emitted 10,128 with 9 duplicates) + 12 root HAS_PROPERTY (A6)', forgeResult.edges.length, EXPECTED.edgeCount);
 	harness.equal('A6: every property with no native domain hangs from the root by HAS_PROPERTY (12)', forgeResult.edges.filter((oneEdge) => oneEdge.type === 'HAS_PROPERTY' && oneEdge.fromRef.id === 'ctdl:root').length, EXPECTED.domainlessPropertyRootEdgeCount);
-	['crossRefTotal', 'declaredCorrespondenceTotal', 'duplicateEdgeSuppressedCount', 'undefinedNativeTargetCount'].forEach((statName) => harness.equal(`stats.${statName}`, forgeResult.stats[statName], EXPECTED[statName]));
+	['crossRefTotal', 'declaredCorrespondenceTotal', 'duplicateEdgeSuppressedCount', 'unresolvedNativePrefixReferenceCount'].forEach((statName) => harness.equal(`stats.${statName}`, forgeResult.stats[statName], EXPECTED[statName]));
 	const rootNode = forgeResult.nodes.find((oneNode) => oneNode.role === 'DmeStandardRoot');
 	harness.equal('root foreignTermEntryList carries the 20 foreign entries (A5)', JSON.parse(rootNode.properties.foreignTermEntryList).length, EXPECTED.foreignTermEntryCount);
 	harness.equal('root publishedVersion read from standardSourceLocation, never hard-coded', `${rootNode.properties.publishedVersion}|${rootNode.properties.versionSource}`, 'Release 20260327|provenance-file');

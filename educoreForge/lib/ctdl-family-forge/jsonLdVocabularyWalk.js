@@ -15,8 +15,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     (R6 / A2) — the forge never resolves it and never translates the predicate;
 //   - edges are de-duplicated on (type, from, to): the source repeats a domain in schema:domainIncludes for 9
 //     CTDL properties and the July forge emitted an edge per repetition (ruling Q4).
-// A native reference whose target the source never defines (21 in CTDL, all ceterms:) is a SOURCE defect: it
-// becomes no edge, and the round trip names each one.
+// A reference under a native prefix to a term the source does not define (CTDL 21, CTDL-ASN 35, CTDL-QData 13) becomes no
+// edge and no crossRef in this oracle-faithful port; the round trip names each one, and phase P2b carries them as crossRefs.
 
 const EDGE_TYPE = Object.freeze({
 	HAS_CLASS: 'HAS_CLASS',
@@ -49,14 +49,13 @@ const ROOT_EDGE_TYPE_BY_TERM_KIND = Object.freeze({ class: EDGE_TYPE.HAS_CLASS }
 // owned terms take a qualified path (<owner>.<name>); the rest their bare name
 const QUALIFIED_PATH_TERM_KIND_LIST = Object.freeze(['property', 'optionValue']);
 
-const prefixOf = (curieText) => curieText.split(':')[0];
+const { isNativeIriFor, prefixOf } = require('./nativeIdentity');
 
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabularyProfile }) => {
 		const {
 			standardSource,
-			nativePrefixList,
 			seamTargetPrefixList,
 			termKindByType,
 			termKindOrder,
@@ -72,7 +71,7 @@ const moduleFunction =
 			domainlessPropertyRootEdge,
 		} = vocabularyProfile;
 
-		const isNativeIri = (iriText) => nativePrefixList.indexOf(prefixOf(iriText)) !== -1;
+		const isNativeIri = isNativeIriFor(vocabularyProfile);
 		const isSeamIri = (iriText) => seamTargetPrefixList.indexOf(prefixOf(iriText)) !== -1;
 		const languageValueOf = (oneEntry, predicateName) => (oneEntry[predicateName] === undefined ? undefined : oneEntry[predicateName][languageTag]);
 		const firstLanguageValueOf = (oneEntry, predicateList) => predicateList.map((predicateName) => languageValueOf(oneEntry, predicateName)).find((oneValue) => oneValue !== undefined && oneValue !== '');
@@ -89,7 +88,7 @@ const moduleFunction =
 			const rootStableId = kit.rootStableId;
 			const termKindById = vocabulary.nativeEntryList.reduce((byId, oneEntry) => ({ ...byId, [oneEntry['@id']]: termKindByType[oneEntry['@type']].termKind }), {});
 			const nameById = vocabulary.nativeEntryList.reduce((byId, oneEntry) => ({ ...byId, [oneEntry['@id']]: firstLanguageValueOf(oneEntry, labelPredicateList) }), {});
-			const walkStats = { crossRefTotal: 0, declaredCorrespondenceTotal: 0, duplicateEdgeSuppressedCount: 0, undefinedNativeTargetCount: 0 };
+			const walkStats = { crossRefTotal: 0, declaredCorrespondenceTotal: 0, duplicateEdgeSuppressedCount: 0, unresolvedNativePrefixReferenceCount: 0 };
 
 			const addedEdgeSignatureSet = new Set();
 			const addEdgeOnce = ({ edgeType, fromStableId, toStableId, edgeContext }) => {
@@ -137,7 +136,7 @@ const moduleFunction =
 						return;
 					}
 					if (termKindById[targetIri] === undefined) {
-						walkStats.undefinedNativeTargetCount += 1;
+						walkStats.unresolvedNativePrefixReferenceCount += 1;
 					}
 				});
 				walkStats.crossRefTotal += crossRefList.length;

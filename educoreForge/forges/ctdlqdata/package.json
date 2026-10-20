@@ -1,0 +1,7 @@
+{
+	"name": "forge-ctdlqdata",
+	"version": "1.0.0",
+	"main": "forgeCtdlqdata.js",
+	"description": "CTDL Quantitative Data (CTDL-QData) forge bundle — its JSON-LD schema as DME roles, native CURIE stableIds, foreign references carried verbatim",
+	"private": true
+}

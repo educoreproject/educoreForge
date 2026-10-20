@@ -36,6 +36,8 @@ const syntheticProfile = Object.freeze({
 	standardSource: 'Synth',
 	sourceFileName: 'synth.json',
 	nativePrefixList: ['syn'],
+	nativeTermIdList: [],
+	sourceStatedInversePredicateList: [],
 	termKindByType: { 'rdfs:Class': { termKind: 'class', role: 'DmeClass', perStandardLabel: 'SynthClass', descriptionNoun: 'classes' } },
 	labelPredicateList: ['rdfs:label'],
 	languageTag: 'en-US',

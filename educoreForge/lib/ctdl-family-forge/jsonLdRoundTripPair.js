@@ -19,8 +19,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // What the instrument knows of the graph model is THIS module's own table (STRUCTURAL_READING below): which native
 // reference a graph edge expresses. It shares only the native allowlist and the language with the forge's profile.
 // The kinds the forge does not carry (ruled 2026-10-20: oracle-faithful now, enrichment in phase P2b) are declared
-// explicitlyOmitted, each statement naming its kind; a source reference to a native-prefix term the source never
-// defines is kind `undefinedNativeTarget` (a defect in the source, listed by name in the verdict).
+// explicitlyOmitted, each statement naming its kind; a reference under a native prefix to a term the source does not
+// define is kind `unresolvedNativePrefixReference` (listed by name in the verdict; some are source defects, some name an
+// external vocabulary sharing the prefix).
 
 const fs = require('fs');
 const path = require('path');
@@ -34,18 +35,20 @@ const STATUS_PREDICATE = 'vs:term_status';
 const ROOT_ROLE = 'DmeStandardRoot';
 
 // the graph edges that express a native reference, read in BOTH directions where the source states both
-// (meta:domainFor is the inverse of schema:domainIncludes; meta:hasConcept of skos:inScheme)
+// (meta:domainFor is the inverse of schema:domainIncludes; meta:hasConcept of skos:inScheme). An inverse is read back ONLY
+// when the profile says the source encoding states it (sourceStatedInversePredicateList): CTDL-QData's source is the
+// includemetaproperties=false encoding, which carries no meta:* predicate at all, and reading the inverse there would invent it.
 const STRUCTURAL_READING = Object.freeze([
 	Object.freeze({ edgeType: 'SUBCLASS_OF', statementList: Object.freeze([Object.freeze({ subject: 'from', predicateName: 'rdfs:subClassOf', object: 'to' })]) }),
 	Object.freeze({ edgeType: 'HAS_PROPERTY', statementList: Object.freeze([
 		Object.freeze({ subject: 'to', predicateName: 'schema:domainIncludes', object: 'from' }),
-		Object.freeze({ subject: 'from', predicateName: 'meta:domainFor', object: 'to' }),
+		Object.freeze({ subject: 'from', predicateName: 'meta:domainFor', object: 'to', isInverse: true }),
 	]) }),
 	Object.freeze({ edgeType: 'HAS_OPTION_SET', statementList: Object.freeze([Object.freeze({ subject: 'from', predicateName: 'meta:targetScheme', object: 'to' })]) }),
 	Object.freeze({ edgeType: 'REFERENCES', statementList: Object.freeze([Object.freeze({ subject: 'from', predicateName: 'schema:rangeIncludes', object: 'to' })]) }),
 	Object.freeze({ edgeType: 'HAS_VALUE', statementList: Object.freeze([
 		Object.freeze({ subject: 'to', predicateName: 'skos:inScheme', object: 'from' }),
-		Object.freeze({ subject: 'from', predicateName: 'meta:hasConcept', object: 'to' }),
+		Object.freeze({ subject: 'from', predicateName: 'meta:hasConcept', object: 'to', isInverse: true }),
 	]) }),
 ]);
 
@@ -67,20 +70,23 @@ const OMITTED_KIND = Object.freeze({
 	SCHEME_STATUS: 'schemeStatus',
 	CHANGE_HISTORY: 'changeHistory',
 	NATIVE_REFERENCE: 'nativeReferenceNotModelled',
-	UNDEFINED_NATIVE_TARGET: 'undefinedNativeTarget',
+	UNRESOLVED_NATIVE_PREFIX_REFERENCE: 'unresolvedNativePrefixReference',
 });
 const OMITTED_KIND_PROPERTY_NAME = 'omittedKind';
 const OMITTED_TEXT_PROPERTY_NAME = 'text';
 const CHANGE_HISTORY_PREDICATE = 'meta:changeHistory';
 
-const prefixOf = (iriText) => `${iriText}`.split(':')[0];
+const { isNativeIriFor } = require('./nativeIdentity');
 const omitted = (kind, extra) => ({ explicitlyOmitted: true, [OMITTED_KIND_PROPERTY_NAME]: kind, ...(extra || {}) });
 
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabularyProfile, ruleModulePath }) => {
-		const { nativePrefixList, languageTag, sourceFileName } = vocabularyProfile;
-		const isNativeIri = (iriText) => nativePrefixList.indexOf(prefixOf(iriText)) !== -1;
+		const { languageTag, sourceFileName, sourceStatedInversePredicateList } = vocabularyProfile;
+		if (!Array.isArray(sourceStatedInversePredicateList)) {
+			throw new Error(`${moduleName} REFUSED: the vocabulary profile declares no sourceStatedInversePredicateList ([] when the source states no inverse); there is no default`);
+		}
+		const isNativeIri = isNativeIriFor(vocabularyProfile);
 
 		// -----------------------------------------------------------------
 		// canonicalizeSource — the snapshot's JSON-LD → statements (never the graph)
@@ -97,7 +103,7 @@ const moduleFunction =
 			}
 			const typeById = graphEntryList.reduce((byId, oneEntry) => ({ ...byId, [oneEntry['@id']]: oneEntry['@type'] }), {});
 			const statements = new Map();
-			const undefinedNativeTargetList = [];
+			const unresolvedNativePrefixReferenceList = [];
 			graphEntryList.forEach((oneEntry) => {
 				const entryId = oneEntry['@id'];
 				const entryType = oneEntry['@type'];
@@ -135,8 +141,8 @@ const moduleFunction =
 						if (!isNativeIri(targetIri)) {
 							statements.set(statementKey, {});
 						} else if (typeById[targetIri] === undefined) {
-							undefinedNativeTargetList.push(statementKey);
-							statements.set(statementKey, omitted(OMITTED_KIND.UNDEFINED_NATIVE_TARGET));
+							unresolvedNativePrefixReferenceList.push(statementKey);
+							statements.set(statementKey, omitted(OMITTED_KIND.UNRESOLVED_NATIVE_PREFIX_REFERENCE));
 						} else if (STRUCTURAL_TRIPLE_SET.has(`${entryType}|${predicateName}|${typeById[targetIri]}`)) {
 							statements.set(statementKey, {});
 						} else {
@@ -155,7 +161,7 @@ const moduleFunction =
 					}
 				});
 			});
-			callback('', { statements, stats: { graphEntryCount: graphEntryList.length, statementCount: statements.size, undefinedNativeTargetList } });
+			callback('', { statements, stats: { graphEntryCount: graphEntryList.length, statementCount: statements.size, unresolvedNativePrefixReferenceList } });
 		};
 
 		// -----------------------------------------------------------------
@@ -215,7 +221,7 @@ const moduleFunction =
 						return;
 					}
 					const endpointByName = { from: oneEdge.fromStableId, to: oneEdge.toStableId };
-					reading.statementList.forEach((oneStatement) => statements.set(`term|${endpointByName[oneStatement.subject]}|${oneStatement.predicateName}|${endpointByName[oneStatement.object]}`, {}));
+					reading.statementList.filter((oneStatement) => !oneStatement.isInverse || sourceStatedInversePredicateList.indexOf(oneStatement.predicateName) !== -1).forEach((oneStatement) => statements.set(`term|${endpointByName[oneStatement.subject]}|${oneStatement.predicateName}|${endpointByName[oneStatement.object]}`, {}));
 				});
 				if (fault !== undefined) {
 					callback('', { fault });
@@ -233,7 +239,7 @@ const moduleFunction =
 			textPropertyName: OMITTED_TEXT_PROPERTY_NAME,
 			caveatText:
 				'Oracle-faithful port (ruling 2026-10-20): these kinds were never carried by the July forge and are retired one per commit in phase P2b. ' +
-				'undefinedNativeTarget items are references to native-prefix terms the SOURCE never defines — a source defect, not a forge loss.',
+				'unresolvedNativePrefixReference items are references, under a prefix the profile claims, to a term the source does not define: some are source defects (CTDL\'s ceterms:credentialAlignment; CTDL-QData\'s qdata:integer), others name an EXTERNAL vocabulary that shares the prefix (asn:, skos:). Listed by name in the verdict; P2b carries them as crossRefs.',
 		});
 
 		const semanticValidationLimit =
@@ -244,7 +250,7 @@ const moduleFunction =
 			'non-native references from crossRefs and the declared-correspondence list, by predicate. EXPLICITLY OMITTED and listed: secondary ' +
 			'description texts, usage notes off properties, concept-scheme status, meta:changeHistory, native references no edge expresses (concept ' +
 			'broader/narrower, topConcept links, native subPropertyOf, inverseOf, and the few typed outside the structural triples), and references ' +
-			'to native terms the source never defines. NOT modelled: the @context, language tags other than ' + `${languageTag}` + ', ordering, ' +
+			'under a native prefix to terms the source does not define. NOT modelled: the @context, language tags other than ' + `${languageTag}` + ', ordering, ' +
 			'derived values (path, depth, searchText, domainCount), and the root\'s provenance fields (checked by the framework).';
 
 		return { canonicalizeSource, emitFromGraph, semanticValidationLimit, omissionDeclaration };

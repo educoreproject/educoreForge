@@ -29,7 +29,8 @@ DESCRIPTION
                                             and object prefix; scalar-string predicates are listed by name, not counted
 
      The spec (JSON) is data: { correspondencePredicateList: [...], standardList: [{ sourceName, sourceFilePath,
-     nativePrefixList }] }. sourceFilePath resolves against the spec file's own directory.
+     nativePrefixList, nativeTermIdList }] }. nativeTermIdList names terms native by exact IRI ([] when unused).
+     sourceFilePath resolves against the spec file's own directory.
 
 EXIT STATUS
      0 written;  1 refused (missing argument, unreadable spec or source, a source without @graph, an entry without @id).
@@ -72,7 +73,10 @@ const prefixOf = (curieText) => `${curieText}`.split(':')[0];
 const countInto = (counts, countName) => ({ ...counts, [countName]: (counts[countName] || 0) + 1 });
 const sortedCounts = (counts) => Object.keys(counts).sort().reduce((sorted, countName) => ({ ...sorted, [countName]: counts[countName] }), {});
 
-const censusOfStandard = ({ sourceName, sourceFilePath, nativePrefixList }) => {
+const censusOfStandard = ({ sourceName, sourceFilePath, nativePrefixList, nativeTermIdList }) => {
+	if (!Array.isArray(nativeTermIdList)) {
+		refuse(`${sourceName}: the spec entry declares no nativeTermIdList ([] when unused); there is no default`);
+	}
 	const resolvedSourcePath = path.resolve(path.dirname(specFilePath), sourceFilePath);
 	if (!fs.existsSync(resolvedSourcePath)) {
 		refuse(`${sourceName}: source '${resolvedSourcePath}' does not exist`);
@@ -86,7 +90,8 @@ const censusOfStandard = ({ sourceName, sourceFilePath, nativePrefixList }) => {
 	if (idlessEntryCount !== 0) {
 		refuse(`${sourceName}: ${idlessEntryCount} @graph entries carry no string @id`);
 	}
-	const isNativeIri = (iriText) => nativePrefixList.includes(prefixOf(iriText));
+	// the bundles' own rule (lib/ctdl-family-forge/nativeIdentity.js): a listed prefix, or an exactly listed term
+	const isNativeIri = (iriText) => nativePrefixList.includes(prefixOf(iriText)) || nativeTermIdList.includes(iriText);
 	const nativeEntryList = graphEntryList.filter((oneEntry) => isNativeIri(oneEntry['@id']));
 	const foreignEntryList = graphEntryList.filter((oneEntry) => !isNativeIri(oneEntry['@id']));
 
@@ -108,7 +113,7 @@ const censusOfStandard = ({ sourceName, sourceFilePath, nativePrefixList }) => {
 
 	return {
 		foreignTerms: {
-			sourceName, sourceFilePath: resolvedSourcePath, nativePrefixList,
+			sourceName, sourceFilePath: resolvedSourcePath, nativePrefixList, nativeTermIdList,
 			graphEntryCount: graphEntryList.length,
 			nativeEntryCount: nativeEntryList.length,
 			foreignEntryCount: foreignEntryList.length,

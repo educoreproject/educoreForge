@@ -63,7 +63,7 @@ The 2,317 **declared** statements are below. The July graph never held them; pha
 | `secondaryDescription` | 265 | an `rdfs:comment` or `skos:definition` that differs from the `dct:description` the node shows |
 | `usageNoteOffProperty` | 62 | `vann:usageNote` on classes, schemes and concepts (properties carry theirs) |
 | `schemeStatus` | 34 | `vs:term_status` on concept schemes |
-| `undefinedNativeTarget` | 21 | references to CTDL terms the file never defines: 12 × `rdfs:subPropertyOf ceterms:credentialAlignment`, 8 × `schema:domainIncludes ceterms:FinancialAlignmentObject`, 1 × `schema:rangeIncludes ceterms:TransferValueAgreement`. **This is a defect in the source**, listed by name in the verdict |
+| `unresolvedNativePrefixReference` | 21 | references to CTDL terms the file never defines: 12 × `rdfs:subPropertyOf ceterms:credentialAlignment`, 8 × `schema:domainIncludes ceterms:FinancialAlignmentObject`, 1 × `schema:rangeIncludes ceterms:TransferValueAgreement`. **This is a defect in the source**, listed by name in the verdict |
 
 ## Round Trip Validation
 

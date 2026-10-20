@@ -5,28 +5,102 @@
 	"descriptionTemplateSubject": "Credential Transparency Description Language (Credential Engine)",
 	"nativePrefixList": [
 		"ceterms",
-		"accommodation", "actionStat", "agentSector", "agreementCat", "alignment", "array", "assessMethod", "assessUse",
-		"audLevel", "audience", "claimType", "collectionCategory", "compare", "costType", "credentialStat", "creditUnit",
-		"deliveryType", "financialAid", "inputType", "learnMethod", "lifeCycle", "logic", "lrEvidence", "lrMethod",
-		"lrOutcome", "lrSource", "orgType", "residency", "scheduleFrequency", "scheduleTiming", "score", "serviceType",
-		"statementCat", "support"
+		"accommodation",
+		"actionStat",
+		"agentSector",
+		"agreementCat",
+		"alignment",
+		"array",
+		"assessMethod",
+		"assessUse",
+		"audLevel",
+		"audience",
+		"claimType",
+		"collectionCategory",
+		"compare",
+		"costType",
+		"credentialStat",
+		"creditUnit",
+		"deliveryType",
+		"financialAid",
+		"inputType",
+		"learnMethod",
+		"lifeCycle",
+		"logic",
+		"lrEvidence",
+		"lrMethod",
+		"lrOutcome",
+		"lrSource",
+		"orgType",
+		"residency",
+		"scheduleFrequency",
+		"scheduleTiming",
+		"score",
+		"serviceType",
+		"statementCat",
+		"support"
 	],
-	"seamTargetPrefixList": ["ceds"],
+	"nativeTermIdList": [],
+	"seamTargetPrefixList": [
+		"ceds"
+	],
+	"sourceStatedInversePredicateList": [
+		"meta:domainFor",
+		"meta:hasConcept"
+	],
 	"termKindByType": {
-		"rdfs:Class": { "termKind": "class", "role": "DmeClass", "perStandardLabel": "CtdlClass", "descriptionNoun": "classes" },
-		"rdf:Property": { "termKind": "property", "role": "DmeProperty", "perStandardLabel": "CtdlProperty", "descriptionNoun": "properties" },
-		"skos:ConceptScheme": { "termKind": "optionSet", "role": "DmeOptionSet", "perStandardLabel": "CtdlConceptScheme", "descriptionNoun": "concept schemes" },
-		"skos:Concept": { "termKind": "optionValue", "role": "DmeOptionValue", "perStandardLabel": "CtdlConcept", "descriptionNoun": "concepts" }
+		"rdfs:Class": {
+			"termKind": "class",
+			"role": "DmeClass",
+			"perStandardLabel": "CtdlClass",
+			"descriptionNoun": "classes"
+		},
+		"rdf:Property": {
+			"termKind": "property",
+			"role": "DmeProperty",
+			"perStandardLabel": "CtdlProperty",
+			"descriptionNoun": "properties"
+		},
+		"skos:ConceptScheme": {
+			"termKind": "optionSet",
+			"role": "DmeOptionSet",
+			"perStandardLabel": "CtdlConceptScheme",
+			"descriptionNoun": "concept schemes"
+		},
+		"skos:Concept": {
+			"termKind": "optionValue",
+			"role": "DmeOptionValue",
+			"perStandardLabel": "CtdlConcept",
+			"descriptionNoun": "concepts"
+		}
 	},
-	"termKindOrder": ["class", "property", "optionSet", "optionValue"],
-	"labelPredicateList": ["rdfs:label", "skos:prefLabel"],
-	"descriptionPredicatePrecedenceList": ["dct:description", "rdfs:comment", "skos:definition"],
+	"termKindOrder": [
+		"class",
+		"property",
+		"optionSet",
+		"optionValue"
+	],
+	"labelPredicateList": [
+		"rdfs:label",
+		"skos:prefLabel"
+	],
+	"descriptionPredicatePrecedenceList": [
+		"dct:description",
+		"rdfs:comment",
+		"skos:definition"
+	],
 	"languageTag": "en-US",
 	"statusPredicate": "vs:term_status",
 	"statusValuePrefix": "vs:",
-	"statusCarriedByTermKindList": ["class", "property", "optionValue"],
+	"statusCarriedByTermKindList": [
+		"class",
+		"property",
+		"optionValue"
+	],
 	"usageNotePredicate": "vann:usageNote",
-	"usageNoteCarriedByTermKindList": ["property"],
+	"usageNoteCarriedByTermKindList": [
+		"property"
+	],
 	"domainlessPropertyRootEdge": true,
 	"predicateDispositionByName": {
 		"@id": "identity",
