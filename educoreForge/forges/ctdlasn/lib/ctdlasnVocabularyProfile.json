@@ -14,7 +14,9 @@
 	"seamTargetPrefixList": [],
 	"sourceStatedInversePredicateList": [
 		"meta:domainFor",
-		"meta:hasConcept"
+		"meta:hasConcept",
+		"skos:narrower",
+		"skos:hasTopConcept"
 	],
 	"termKindByType": {
 		"rdfs:Class": {
@@ -70,6 +72,7 @@
 		"property"
 	],
 	"domainlessPropertyRootEdge": true,
+	"enrichmentKindList": [],
 	"predicateDispositionByName": {
 		"@id": "identity",
 		"@type": "identity",

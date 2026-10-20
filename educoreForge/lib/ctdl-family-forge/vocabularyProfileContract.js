@@ -9,6 +9,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // a profile (loader, walk, round-trip pair, hooks).
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
+const ENRICHMENT_KIND_LIST = Object.freeze(['E1', 'E1a', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E10', 'E11', 'E13']);
 const isStringList = (candidate) => Array.isArray(candidate) && candidate.every((oneValue) => typeof oneValue === 'string');
 
 const KIND_CHECK_BY_KIND = Object.freeze({
@@ -19,6 +20,8 @@ const KIND_CHECK_BY_KIND = Object.freeze({
 	termKindByType: (candidate) => isPlainObject(candidate) && Object.keys(candidate).length > 0 && Object.values(candidate).every(
 		(oneSpec) => isPlainObject(oneSpec) && ['termKind', 'role', 'perStandardLabel', 'descriptionNoun'].every((oneName) => typeof oneSpec[oneName] === 'string'),
 	),
+	// ⟪P2b⟫ the WORKORDER-P2b E-rows a bundle has turned on; an unknown row name is refused, never ignored
+	enrichmentKindList: (candidate) => isStringList(candidate) && candidate.every((oneKind) => ENRICHMENT_KIND_LIST.indexOf(oneKind) !== -1),
 	predicateDispositionByName: (candidate) => isPlainObject(candidate) && Object.values(candidate).every((oneValue) => typeof oneValue === 'string'),
 });
 
@@ -42,6 +45,7 @@ const VOCABULARY_PROFILE_FIELD_KIND = Object.freeze({
 	usageNotePredicate: 'nonEmptyString',
 	usageNoteCarriedByTermKindList: 'stringList',
 	domainlessPropertyRootEdge: 'boolean',
+	enrichmentKindList: 'enrichmentKindList',
 	predicateDispositionByName: 'predicateDispositionByName',
 });
 
@@ -62,4 +66,4 @@ const validateVocabularyProfile = (vocabularyProfile) => {
 	return vocabularyProfile;
 };
 
-module.exports = { validateVocabularyProfile, VOCABULARY_PROFILE_FIELD_KIND, moduleName };
+module.exports = { validateVocabularyProfile, VOCABULARY_PROFILE_FIELD_KIND, ENRICHMENT_KIND_LIST, moduleName };

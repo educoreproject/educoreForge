@@ -52,6 +52,7 @@ const syntheticProfile = Object.freeze({
 	usageNotePredicate: 'vann:usageNote',
 	usageNoteCarriedByTermKindList: [],
 	domainlessPropertyRootEdge: false,
+	enrichmentKindList: [],
 	predicateDispositionByName: { '@id': 'identity', '@type': 'identity', 'rdfs:label': 'label', 'rdfs:comment': 'description', 'rdfs:subClassOf': 'reference' },
 });
 const { validateVocabularyProfile } = require(path.join(__dirname, '..', 'vocabularyProfileContract'));

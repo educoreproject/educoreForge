@@ -28,7 +28,10 @@
 		"schema:value"
 	],
 	"seamTargetPrefixList": [],
-	"sourceStatedInversePredicateList": [],
+	"sourceStatedInversePredicateList": [
+		"skos:narrower",
+		"skos:hasTopConcept"
+	],
 	"termKindByType": {
 		"rdfs:Class": {
 			"termKind": "class",
@@ -83,6 +86,7 @@
 		"property"
 	],
 	"domainlessPropertyRootEdge": true,
+	"enrichmentKindList": [],
 	"predicateDispositionByName": {
 		"@id": "identity",
 		"@type": "identity",

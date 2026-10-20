@@ -46,6 +46,21 @@ const STRUCTURAL_READING = Object.freeze([
 	]) }),
 	Object.freeze({ edgeType: 'HAS_OPTION_SET', statementList: Object.freeze([Object.freeze({ subject: 'from', predicateName: 'meta:targetScheme', object: 'to' })]) }),
 	Object.freeze({ edgeType: 'REFERENCES', statementList: Object.freeze([Object.freeze({ subject: 'from', predicateName: 'schema:rangeIncludes', object: 'to' })]) }),
+	// ⟪P2b E5⟫ a REFERENCES edge the forge stamped with a locator states that predicate instead (meta:targetScheme to a class)
+	Object.freeze({ edgeType: 'REFERENCES', locator: 'meta:targetScheme', statementList: Object.freeze([Object.freeze({ subject: 'from', predicateName: 'meta:targetScheme', object: 'to' })]) }),
+	// ⟪P2b E1, E2, E3, E4, E13⟫ the enrichment edges; skos:narrower and skos:hasTopConcept are read back as inverses, ONLY where
+	// the profile says the source states them (both pairs measured exact inverses, DEVLOG-P2b §2)
+	Object.freeze({ edgeType: 'BROADER_CONCEPT', statementList: Object.freeze([
+		Object.freeze({ subject: 'from', predicateName: 'skos:broader', object: 'to' }),
+		Object.freeze({ subject: 'to', predicateName: 'skos:narrower', object: 'from', isInverse: true }),
+	]) }),
+	Object.freeze({ edgeType: 'TOP_CONCEPT_OF', statementList: Object.freeze([
+		Object.freeze({ subject: 'from', predicateName: 'skos:topConceptOf', object: 'to' }),
+		Object.freeze({ subject: 'to', predicateName: 'skos:hasTopConcept', object: 'from', isInverse: true }),
+	]) }),
+	Object.freeze({ edgeType: 'SUBPROPERTY_OF', statementList: Object.freeze([Object.freeze({ subject: 'from', predicateName: 'rdfs:subPropertyOf', object: 'to' })]) }),
+	Object.freeze({ edgeType: 'INVERSE_OF', statementList: Object.freeze([Object.freeze({ subject: 'from', predicateName: 'owl:inverseOf', object: 'to' })]) }),
+	Object.freeze({ edgeType: 'RELATED_CONCEPT', statementList: Object.freeze([Object.freeze({ subject: 'from', predicateName: 'skos:relatedMatch', object: 'to' })]) }),
 	Object.freeze({ edgeType: 'HAS_VALUE', statementList: Object.freeze([
 		Object.freeze({ subject: 'to', predicateName: 'skos:inScheme', object: 'from' }),
 		Object.freeze({ subject: 'from', predicateName: 'meta:hasConcept', object: 'to', isInverse: true }),
@@ -62,6 +77,27 @@ const STRUCTURAL_TRIPLE_SET = new Set([
 	'skos:Concept|skos:inScheme|skos:ConceptScheme',
 	'skos:ConceptScheme|meta:hasConcept|skos:Concept',
 ]);
+
+// ⟪P2b⟫ the (declaring type, predicate, target type) triples an enrichment row carries, by row: carried when the bundle's profile
+// lists the row, omitted (nativeReferenceNotModelled) otherwise
+const ENRICHMENT_KIND_BY_TRIPLE = Object.freeze({
+	'skos:Concept|skos:broader|skos:Concept': 'E1',
+	'skos:Concept|skos:narrower|skos:Concept': 'E1',
+	'skos:Concept|skos:broader|skos:ConceptScheme': 'E1a',
+	'skos:Concept|skos:topConceptOf|skos:ConceptScheme': 'E2',
+	'skos:ConceptScheme|skos:hasTopConcept|skos:Concept': 'E2',
+	'rdf:Property|rdfs:subPropertyOf|rdf:Property': 'E3',
+	'rdf:Property|owl:inverseOf|rdf:Property': 'E4',
+	'rdf:Property|meta:targetScheme|rdfs:Class': 'E5',
+	'rdf:Property|owl:equivalentProperty|rdfs:Class': 'E6',
+	'skos:Concept|skos:relatedMatch|skos:Concept': 'E13',
+});
+// ⟪P2b⟫ the texts carried under their own property names, by source predicate (secondary descriptions E7/E8; E10)
+const CARRIED_TEXT_BY_PREDICATE = Object.freeze({
+	'rdfs:comment': Object.freeze({ enrichmentKind: 'E7', propertyName: 'rdfsComment' }),
+	'skos:definition': Object.freeze({ enrichmentKind: 'E8', propertyName: 'skosDefinition' }),
+	'meta:changeHistory': Object.freeze({ enrichmentKind: 'E10', propertyName: 'changeHistoryUrl' }),
+});
 
 // the omitted kinds, with the property-scoping the July forge applied (the P2b work order retires them one by one)
 const OMITTED_KIND = Object.freeze({
@@ -84,7 +120,9 @@ const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabularyProfile, ruleModulePath }) => {
 		validateVocabularyProfile(vocabularyProfile);
-		const { languageTag, sourceFileName, sourceStatedInversePredicateList } = vocabularyProfile;
+		const { languageTag, sourceFileName, sourceStatedInversePredicateList, enrichmentKindList, termKindByType, statusCarriedByTermKindList, usageNoteCarriedByTermKindList } = vocabularyProfile;
+		const isEnriched = (enrichmentKind) => enrichmentKindList.indexOf(enrichmentKind) !== -1;
+		const termKindOfType = (typeName) => termKindByType[typeName].termKind;
 		const isNativeIri = isNativeIriFor(vocabularyProfile);
 
 		// -----------------------------------------------------------------
@@ -111,7 +149,6 @@ const moduleFunction =
 					statements.set(`foreign|${iri}|${JSON.stringify(entryStatements)}`, {});
 					return;
 				}
-				const isProperty = entryType === 'rdf:Property';
 				statements.set(`term|${entryId}|@type|${entryType}`, {});
 				Object.keys(oneEntry).forEach((predicateName) => {
 					const predicateValue = oneEntry[predicateName];
@@ -119,16 +156,16 @@ const moduleFunction =
 						return;
 					}
 					if (predicateName === CHANGE_HISTORY_PREDICATE) {
-						statements.set(`term|${entryId}|${predicateName}|${predicateValue}`, omitted(OMITTED_KIND.CHANGE_HISTORY));
+						statements.set(`term|${entryId}|${predicateName}|${predicateValue}`, isEnriched('E10') ? {} : omitted(OMITTED_KIND.CHANGE_HISTORY));
 						return;
 					}
 					if (predicateName === STATUS_PREDICATE) {
-						statements.set(`term|${entryId}|${predicateName}|${predicateValue}`, entryType === 'skos:ConceptScheme' ? omitted(OMITTED_KIND.SCHEME_STATUS) : {});
+						statements.set(`term|${entryId}|${predicateName}|${predicateValue}`, statusCarriedByTermKindList.indexOf(termKindOfType(entryType)) !== -1 ? {} : omitted(OMITTED_KIND.SCHEME_STATUS));
 						return;
 					}
 					if (predicateName === USAGE_NOTE_PREDICATE) {
 						const noteText = predicateValue[languageTag];
-						statements.set(`term|${entryId}|${predicateName}|${noteText}`, isProperty ? {} : omitted(OMITTED_KIND.USAGE_NOTE_OFF_PROPERTY, { [OMITTED_TEXT_PROPERTY_NAME]: noteText }));
+						statements.set(`term|${entryId}|${predicateName}|${noteText}`, usageNoteCarriedByTermKindList.indexOf(termKindOfType(entryType)) !== -1 ? {} : omitted(OMITTED_KIND.USAGE_NOTE_OFF_PROPERTY, { [OMITTED_TEXT_PROPERTY_NAME]: noteText }));
 						return;
 					}
 					if (!Array.isArray(predicateValue)) {
@@ -141,8 +178,10 @@ const moduleFunction =
 							statements.set(statementKey, {});
 						} else if (typeById[targetIri] === undefined) {
 							unresolvedNativePrefixReferenceList.push(statementKey);
-							statements.set(statementKey, omitted(OMITTED_KIND.UNRESOLVED_NATIVE_PREFIX_REFERENCE));
+							statements.set(statementKey, isEnriched('E11') ? {} : omitted(OMITTED_KIND.UNRESOLVED_NATIVE_PREFIX_REFERENCE));
 						} else if (STRUCTURAL_TRIPLE_SET.has(`${entryType}|${predicateName}|${typeById[targetIri]}`)) {
+							statements.set(statementKey, {});
+						} else if (isEnriched(ENRICHMENT_KIND_BY_TRIPLE[`${entryType}|${predicateName}|${typeById[targetIri]}`])) {
 							statements.set(statementKey, {});
 						} else {
 							statements.set(statementKey, omitted(OMITTED_KIND.NATIVE_REFERENCE));
@@ -156,7 +195,7 @@ const moduleFunction =
 					if (descriptionIndex === 0) {
 						statements.set(`term|${entryId}|description|${descriptionText}`, {});
 					} else if (descriptionText !== descriptionTextList[0].descriptionText) {
-						statements.set(`term|${entryId}|${predicateName}|${descriptionText}`, omitted(OMITTED_KIND.SECONDARY_DESCRIPTION, { [OMITTED_TEXT_PROPERTY_NAME]: descriptionText }));
+						statements.set(`term|${entryId}|${predicateName}|${descriptionText}`, isEnriched(CARRIED_TEXT_BY_PREDICATE[predicateName].enrichmentKind) ? {} : omitted(OMITTED_KIND.SECONDARY_DESCRIPTION, { [OMITTED_TEXT_PROPERTY_NAME]: descriptionText }));
 					}
 				});
 			});
@@ -208,9 +247,12 @@ const moduleFunction =
 					}
 					JSON.parse(properties.crossRefs).forEach((oneCrossRef) => statements.set(`term|${stableId}|${oneCrossRef.locator}|${oneCrossRef.raw}`, {}));
 					JSON.parse(properties.declaredCorrespondenceList || '[]').forEach((oneEntry) => statements.set(`term|${stableId}|${oneEntry.predicate}|${oneEntry.target}`, {}));
+					JSON.parse(properties.nativeDeclarationAnomalyList || '[]').forEach((oneEntry) => statements.set(`term|${stableId}|${oneEntry.predicate}|${oneEntry.target}`, {}));
+					Object.keys(CARRIED_TEXT_BY_PREDICATE).filter((predicateName) => properties[CARRIED_TEXT_BY_PREDICATE[predicateName].propertyName] !== undefined)
+						.forEach((predicateName) => statements.set(`term|${stableId}|${predicateName}|${properties[CARRIED_TEXT_BY_PREDICATE[predicateName].propertyName]}`, {}));
 				});
 				graph.edges.forEach((oneEdge) => {
-					const reading = STRUCTURAL_READING.find((oneReading) => oneReading.edgeType === oneEdge.type);
+					const reading = STRUCTURAL_READING.find((oneReading) => oneReading.edgeType === oneEdge.type && oneReading.locator === oneEdge.properties.locator);
 					const touchesRoot = roleById[oneEdge.fromStableId] === ROOT_ROLE || roleById[oneEdge.toStableId] === ROOT_ROLE;
 					if (touchesRoot) {
 						return; // root scaffolding (HAS_CLASS, an orphan's HAS_OPTION_SET, a domainless property's HAS_PROPERTY) states nothing
