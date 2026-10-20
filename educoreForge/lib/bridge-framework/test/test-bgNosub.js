@@ -187,7 +187,11 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // types REMOVED with the V13 structure layer), vocabulary-definitions.js (their definitions removed; HAS_LAYER's text), graph-contract.js
 // (layerScopeRule text names the remaining layer edges; the omission-line example token), test/test-sifEdgeVocabulary.js (schema-view
 // rows 27 -> 13, measured 343 -> 329), test/test-layerBlockKind.js (guide subjects, three roles) — lane UNDES's own commit a54c85f7.
-const POST_D1_BASE_TAG = 'postUndesVocabularyIi-101326'; // re-anchored by GRANITE_BEACON (lane UNDES); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P1; pre-authorised by WORKORDER-P1 step 1 and SCARLET_ARROW) ═══ (ii)
+// postUndesVocabularyIi-101326 -> postCtdlP1VocabularyIi-102026, tag cut ON this commit. CENSUS (lib/vocabulary/): vocabulary.js +3/-1
+// (STANDARD_FAMILY gains CTDL, CTDLASN, CTDLQData: ruling Q5), graph-contract.js +3/-2 (producer-local label stems Ctdl|Ctdlasn|Ctdlqdata;
+// the standardFamily meaning text) — commit ab85e6ef. No test file moved.
+const POST_D1_BASE_TAG = 'postCtdlP1VocabularyIi-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -430,7 +434,10 @@ const POST_D1_BASE_TAG = 'postUndesVocabularyIi-101326'; // re-anchored by GRANI
 // postUndesForgeFrameworkIii-101326, tag cut ON this commit. CENSUS (lib/forge-framework/): roundTripHarness/graphReader.js ONLY
 // (openLayerGraphReader no longer reads the base property id list only the removed layer's validator used; lane UNDES a54c85f7). All three
 // lane-UNDES tags are cut ON this commit, so this re-anchor moves no other gate.
-const PHASE0_ANCHOR_TAG = 'postUndesForgeFrameworkIii-101326'; // re-anchored by GRANITE_BEACON (lane UNDES); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P1; ruling Q1(A), re-anchor authorised by SCARLET_ARROW) ═══ (iii)
+// postUndesForgeFrameworkIii-101326 -> postCtdlP1ForgeFrameworkIii-102026, tag cut ON this commit. CENSUS (lib/forge-framework/):
+// migrationAllowanceRegistry.js +29/-1 ONLY (ctdl, ctdlasn, ctdlqdata join MIGRATING_BUNDLE_LIST; the OFFLINE row CT1) — commit ab85e6ef.
+const PHASE0_ANCHOR_TAG = 'postCtdlP1ForgeFrameworkIii-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -882,7 +889,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // a54c85f7: forges/ceds/layers/ (the V13 structure layer's directory removed: producer, validator, workbook layout, snapshot) and
 // lib/forge-framework/roundTripHarness/graphReader.js (the base property id list removed from the layer reader). No build.js, forger,
 // replay or bridge-framework source.
-const PHASE3_ANCHOR_TAG = 'postUndesSeamDiffEmpty-101326'; // re-anchored by GRANITE_BEACON (lane UNDES); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P1; authorised by SCARLET_ARROW) ═══ seamDiffEmpty (and its (i-live) companion):
+// postUndesSeamDiffEmpty-101326 -> postCtdlP1SeamDiffEmpty-102026, tag cut ON this commit. CENSUS: the NEW forge bundle forges/ctdl matched by
+// the seam globs — forgeCtdl.js +19/-0, lib/ctdlForgeDeclaration.js +58/-0, lib/ctdlHooks.js +66/-0 (commits ab85e6ef, bf19ad6f) — and
+// lib/forge-framework/migrationAllowanceRegistry.js +29/-1 (ruling Q1(A)). No build.js, forger, replay, replay-manager or bridge-framework source.
+const PHASE3_ANCHOR_TAG = 'postCtdlP1SeamDiffEmpty-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

@@ -882,7 +882,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // (JUDGE_PROVIDER_SHAPE.modelForChoiceQuestionForm); apps/graph-builder/apps/bridge-maker/lib/ jevJudgeClient.js 67/30,
 // jevOpusJudgeClient.js 16/3, llmClient.js 5/1, ollamaJudgeClient.js 4/0, debugJudge.js 4/0. The PESC plugins changed only by
 // declaration (choiceQuestionFormName), through the same seam.
-const P1_BASELINE_COMMIT = 'postJevqPerBridgePescCompose-101326'; // re-anchored by LUNAR_PEAK (lane JEVQ, per-bridge form); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P1; pre-authorised by WORKORDER-P1 step 1) ═══ BG-COMPOSE-PESC
+// postJevqPerBridgePescCompose-101326 -> postCtdlP1PescCompose-102026, tag cut ON this commit. Found red at fff92efc (25/26). CENSUS over
+// this gate's declared paths: lib/vocabulary/vocabulary.js +3/-1 (STANDARD_FAMILY: CTDL, CTDLASN, CTDLQData) and lib/vocabulary/graph-contract.js
+// +3/-2 (label stems Ctdl|Ctdlasn|Ctdlqdata) — commit ab85e6ef. No bridge-framework, bridge-maker, build.js or interfaces.js change.
+const P1_BASELINE_COMMIT = 'postCtdlP1PescCompose-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
