@@ -8,7 +8,7 @@ const path = require('path');
 const roundTripHarness = require(path.join(__dirname, '..', '..', 'lib', 'forge-framework', 'roundTripHarness', 'roundTripHarness'))();
 const forgeDeclaration = require('./lib/ctdlForgeDeclaration'); // the SAME declaration object as forgeCtdl.js
 const vocabularyProfile = require('./lib/ctdlVocabularyProfile.json');
-const ctdlRoundTripPair = require('./lib/jsonLdRoundTripPair')({ vocabularyProfile, ruleModulePath: 'forges/ctdl/lib/jsonLdRoundTripPair.js' });
+const ctdlRoundTripPair = require(path.join(__dirname, '..', '..', 'lib', 'ctdl-family-forge', 'jsonLdRoundTripPair'))({ vocabularyProfile, ruleModulePath: 'lib/ctdl-family-forge/jsonLdRoundTripPair.js' });
 
 module.exports = roundTripHarness.validatorFrom({
 	forgeDeclaration,

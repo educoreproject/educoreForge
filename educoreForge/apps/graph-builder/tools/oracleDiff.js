@@ -36,6 +36,8 @@ DESCRIPTION
                     A5 foreign terms the root property holds exactly the source's foreign @graph entries (A5 counts file)
                     V1 values        properties whose new value is declared in the spec
                     M1 list-wrapped  properties the oracle holds as a scalar and the candidate as a one-element list
+                    added edges      candidateOnlyEdgeRuleList: edges absent from the oracle that a declared rule
+                                     ({ ruleName, edgeType, fromStableId, expectedCount }) admits, counted exactly
      Prints one verdict line per row and the first unexplained differences.
 
 EXIT STATUS
@@ -120,7 +122,18 @@ const edgeSignatureOf = (oneEdge) => `${oneEdge.type}|${oneEdge.from}|${oneEdge.
 const oracleEdgeBySignature = oracleCensus.intraEdges.reduce((bySignature, oneEdge) => ({ ...bySignature, [edgeSignatureOf(oneEdge)]: oneEdge }), {});
 const candidateEdgeBySignature = candidateCensus.intraEdges.reduce((bySignature, oneEdge) => ({ ...bySignature, [edgeSignatureOf(oneEdge)]: oneEdge }), {});
 Object.keys(oracleEdgeBySignature).filter((oneSignature) => !candidateEdgeBySignature[oneSignature]).forEach((oneSignature) => noteUnexplained('edge absent from candidate', { edgeSignature: oneSignature }));
-Object.keys(candidateEdgeBySignature).filter((oneSignature) => !oracleEdgeBySignature[oneSignature]).forEach((oneSignature) => noteUnexplained('edge absent from oracle', { edgeSignature: oneSignature }));
+// edges the allowance ADDS (e.g. A6): matched by a declared rule { ruleName, edgeType, fromStableId, expectedCount }, counted per rule
+const candidateOnlyEdgeRuleList = allowanceSpec.candidateOnlyEdgeRuleList || [];
+const candidateOnlyEdgeCountByRule = candidateOnlyEdgeRuleList.reduce((counts, oneRule) => ({ ...counts, [oneRule.ruleName]: 0 }), {});
+Object.keys(candidateEdgeBySignature).filter((oneSignature) => !oracleEdgeBySignature[oneSignature]).forEach((oneSignature) => {
+	const oneEdge = candidateEdgeBySignature[oneSignature];
+	const matchedRule = candidateOnlyEdgeRuleList.find((oneRule) => oneRule.edgeType === oneEdge.type && oneRule.fromStableId === oneEdge.from);
+	if (matchedRule === undefined) {
+		noteUnexplained('edge absent from oracle', { edgeSignature: oneSignature });
+		return;
+	}
+	candidateOnlyEdgeCountByRule[matchedRule.ruleName] += 1;
+});
 Object.keys(oracleEdgeBySignature).filter((oneSignature) => candidateEdgeBySignature[oneSignature]).forEach((oneSignature) => {
 	const oracleEdgeText = stableText(withoutNames(oracleEdgeBySignature[oneSignature].properties, allowanceSpec.ignoredOracleEdgePropertyList));
 	const candidateEdgeText = stableText(candidateEdgeBySignature[oneSignature].properties);
@@ -237,7 +250,13 @@ rowEvidence.nodes = { verdict: unexplainedList.some((oneItem) => /^node |^role |
 rowEvidence.edges = { verdict: unexplainedList.some((oneItem) => /^edge /.test(oneItem.kindText)) ? FAIL : PASS, detail: `${oracleCensus.intraEdges.length} oracle / ${candidateCensus.intraEdges.length} candidate intra-standard edges; (type, from, to) and properties compared` };
 rowEvidence.properties = { verdict: unexplainedList.some((oneItem) => /^property /.test(oneItem.kindText)) ? FAIL : PASS, detail: 'every other property identical, or named by A3 (removed/added), A4, V1 or M1' };
 
-const rowNameOrder = ['nodes', 'edges', 'properties', 'A1', 'A2', 'A5'];
+candidateOnlyEdgeRuleList.forEach((oneRule) => {
+	rowEvidence[oneRule.ruleName] = {
+		verdict: candidateOnlyEdgeCountByRule[oneRule.ruleName] === oneRule.expectedCount ? PASS : FAIL,
+		detail: `${candidateOnlyEdgeCountByRule[oneRule.ruleName]} candidate-only ${oneRule.edgeType} edge(s) from ${oneRule.fromStableId} (expected ${oneRule.expectedCount})`,
+	};
+});
+const rowNameOrder = ['nodes', 'edges', 'properties', 'A1', 'A2', 'A5'].concat(candidateOnlyEdgeRuleList.map((oneRule) => oneRule.ruleName));
 const overallVerdict = rowNameOrder.every((rowName) => rowEvidence[rowName].verdict === PASS) && unexplainedList.length === 0 ? PASS : FAIL;
 rowNameOrder.forEach((rowName) => xLog.result(`[${rowName}] ${rowEvidence[rowName].verdict} — ${rowEvidence[rowName].detail}\n`));
 unexplainedList.slice(0, UNEXPLAINED_SHOW_LIMIT).forEach((oneItem) => xLog.result(`  UNEXPLAINED ${JSON.stringify(oneItem)}\n`));

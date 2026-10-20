@@ -2,7 +2,7 @@
   // ctdlOnlyRoundTrip — ctdlOnly PLUS the RT-13 round-trip stage: forge CTDL alone, materialize, then run its DECLARED
   // roundTripValidator against the product graph and land the verdict with the build outputs. ctdlHub-101926 P1's
   // certification recipe. Expect inventedTotal 0, lostTotal 0, roundTripClean true, and explicitlyOmittedTotal 2,317:
-  // the kinds the July forge never carried, declared by name in forges/ctdl/lib/jsonLdRoundTripPair.js and retired
+  // the kinds the July forge never carried, declared by name in lib/ctdl-family-forge/jsonLdRoundTripPair.js and retired
   // in phase P2b (ruling 2026-10-20).
   "schemaVersion": "1.0.0",
   "recipeName": "ctdlOnlyRoundTrip",

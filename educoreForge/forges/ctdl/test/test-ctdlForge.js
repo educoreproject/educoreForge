@@ -44,7 +44,8 @@ const scratchRootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'ctdlForgeTest-'))
 // the snapshot-01 measurements (dataStores/ctdlHub_101926/oracle/*.json, P0) — the counts this forge must reproduce
 const EXPECTED = Object.freeze({
 	nodeCountByRole: { DmeStandardRoot: 1, DmeClass: 136, DmeProperty: 378, DmeOptionSet: 34, DmeOptionValue: 445 },
-	edgeCount: 10119,
+	edgeCount: 10131,
+	domainlessPropertyRootEdgeCount: 12,
 	crossRefTotal: 562,
 	declaredCorrespondenceTotal: 53,
 	declaredCorrespondenceNodeTotal: 52,
@@ -111,7 +112,8 @@ taskList.push((args, next) => forgeSource({ sourceFilePath: SOURCE_FILE_PATH }, 
 	}
 	const nodeCountByRole = forgeResult.nodes.reduce((counts, oneNode) => ({ ...counts, [oneNode.role]: (counts[oneNode.role] || 0) + 1 }), {});
 	harness.equal('node count by role = the July oracle (994)', JSON.stringify(nodeCountByRole), JSON.stringify(EXPECTED.nodeCountByRole));
-	harness.equal('edge count = the oracle graph (10,119; the July forge emitted 10,128 with 9 duplicates)', forgeResult.edges.length, EXPECTED.edgeCount);
+	harness.equal('edge count = the oracle graph 10,119 (the July forge emitted 10,128 with 9 duplicates) + 12 root HAS_PROPERTY (A6)', forgeResult.edges.length, EXPECTED.edgeCount);
+	harness.equal('A6: every property with no native domain hangs from the root by HAS_PROPERTY (12)', forgeResult.edges.filter((oneEdge) => oneEdge.type === 'HAS_PROPERTY' && oneEdge.fromRef.id === 'ctdl:root').length, EXPECTED.domainlessPropertyRootEdgeCount);
 	['crossRefTotal', 'declaredCorrespondenceTotal', 'duplicateEdgeSuppressedCount', 'undefinedNativeTargetCount'].forEach((statName) => harness.equal(`stats.${statName}`, forgeResult.stats[statName], EXPECTED[statName]));
 	const rootNode = forgeResult.nodes.find((oneNode) => oneNode.role === 'DmeStandardRoot');
 	harness.equal('root foreignTermEntryList carries the 20 foreign entries (A5)', JSON.parse(rootNode.properties.foreignTermEntryList).length, EXPECTED.foreignTermEntryCount);

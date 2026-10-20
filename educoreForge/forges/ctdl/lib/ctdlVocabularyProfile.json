@@ -27,7 +27,7 @@
 	"statusCarriedByTermKindList": ["class", "property", "optionValue"],
 	"usageNotePredicate": "vann:usageNote",
 	"usageNoteCarriedByTermKindList": ["property"],
-	"domainlessPropertyRootEdge": false,
+	"domainlessPropertyRootEdge": true,
 	"predicateDispositionByName": {
 		"@id": "identity",
 		"@type": "identity",

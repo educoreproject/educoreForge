@@ -5,11 +5,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // ctdlHooks.js — the H2/H3 hook set for the CTDL forge bundle (SPEC-forgeFramework-v1.md §5; ctdlHub-101926
 // P1). Two loaders (the JSON-LD vocabulary; the snapshot's standardSourceLocation, for the upstream URL),
 // describeSource, the walk, and describeRoot. The vocabulary profile is the bundle's data; the loader and
-// the walk are profile-driven so the CTDL-ASN and CTDL-QData bundles reuse them with their own profiles.
+// the walk are profile-driven and live in lib/ctdl-family-forge/, which the CTDL-ASN and CTDL-QData bundles share (ruling 2026-10-20).
 
+const path = require('path');
 const vocabularyProfile = require('./ctdlVocabularyProfile.json');
-const jsonLdVocabularyLoader = require('./jsonLdVocabularyLoader')({ vocabularyProfile });
-const jsonLdVocabularyWalk = require('./jsonLdVocabularyWalk')({ vocabularyProfile });
+const CTDL_FAMILY_FORGE_LIB = path.join(__dirname, '..', '..', '..', 'lib', 'ctdl-family-forge');
+const jsonLdVocabularyLoader = require(path.join(CTDL_FAMILY_FORGE_LIB, 'jsonLdVocabularyLoader'))({ vocabularyProfile });
+const jsonLdVocabularyWalk = require(path.join(CTDL_FAMILY_FORGE_LIB, 'jsonLdVocabularyWalk'))({ vocabularyProfile });
 
 const LOADER_NAME = Object.freeze({ VOCABULARY: 'vocabulary', SOURCE_LOCATION: 'sourceLocation' });
 

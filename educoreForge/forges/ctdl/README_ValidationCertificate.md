@@ -1,7 +1,7 @@
 # Validation certificate — CTDL (Credential Transparency Description Language)
 
-**CTDL Release 20260327 was built from its one JSON-LD schema file. The graph has 994 nodes and 10,119 edges.**
-**It is the July 2026 CTDL graph, re-forged on the current framework, node for node and edge for edge.**
+**CTDL Release 20260327 was built from its one JSON-LD schema file. The graph has 994 nodes and 10,131 edges.**
+**It is the July 2026 CTDL graph, re-forged on the current framework, node for node and edge for edge, plus 12 edges that make every node reachable from the root.**
 
 Accuracy was checked two ways:
 
@@ -35,6 +35,7 @@ Accuracy was checked two ways:
 |---|---|---|---:|
 | `HAS_CLASS` | root → class | (every class) | 136 |
 | `HAS_PROPERTY` | class → property | `schema:domainIncludes` | 7,076 |
+| `HAS_PROPERTY` | root → property | (each of the 12 properties with no CTDL domain; the July graph left them unreachable) | 12 |
 | `REFERENCES` | property → class | `schema:rangeIncludes` | 2,339 |
 | `HAS_OPTION_SET` | property → concept scheme | `meta:targetScheme` | 41 |
 | `HAS_VALUE` | concept scheme → concept | `skos:inScheme` | 445 |
@@ -65,7 +66,7 @@ The 2,317 **declared** statements are below. The July graph never held them; pha
 
 ## Round Trip Validation
 
-The validator (`roundTripValidator.js`, pair `lib/jsonLdRoundTripPair.js`) reads the JSON-LD on one side and the live graph on the other. It compares type, label, primary description, usage note, status, and every IRI each term references, with the value in each statement's key. On the graph side, native references are read back from the edges that express them. Non-native ones are read from `crossRefs` and `declaredCorrespondenceList`; foreign entries from the root. The result is **inventedTotal 0, lostTotal 0, roundTripClean true**.
+The validator (`roundTripValidator.js`, pair `lib/ctdl-family-forge/jsonLdRoundTripPair.js`) reads the JSON-LD on one side and the live graph on the other. It compares type, label, primary description, usage note, status, and every IRI each term references, with the value in each statement's key. On the graph side, native references are read back from the edges that express them. Non-native ones are read from `crossRefs` and `declaredCorrespondenceList`; foreign entries from the root. The result is **inventedTotal 0, lostTotal 0, roundTripClean true**.
 
 The instrument was seen to fail on purpose four ways (`test/test-ctdlForge.js`): a dropped edge, an altered description, a dropped crossRef, and a retargeted CEDS declaration. Each one showed up in the verdict.
 
