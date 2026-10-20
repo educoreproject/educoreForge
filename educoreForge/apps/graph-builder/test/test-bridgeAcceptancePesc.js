@@ -882,7 +882,15 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // (JUDGE_PROVIDER_SHAPE.modelForChoiceQuestionForm); apps/graph-builder/apps/bridge-maker/lib/ jevJudgeClient.js 67/30,
 // jevOpusJudgeClient.js 16/3, llmClient.js 5/1, ollamaJudgeClient.js 4/0, debugJudge.js 4/0. The PESC plugins changed only by
 // declaration (choiceQuestionFormName), through the same seam.
-const P1_BASELINE_COMMIT = 'postJevqPerBridgePescCompose-101326'; // re-anchored by LUNAR_PEAK (lane JEVQ, per-bridge form); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (TWILIGHT_MEADOW; ctdlHub lane P3 hubFramework, ruling SCARLET_ARROW; pre-authorised) ═══ BG-COMPOSE-PESC
+// postJevqPerBridgePescCompose-101326 -> postCtdlHubP3PescCompose-102026, tag cut ON this commit. Found red at a34ca338 (25/26;
+// dataStores/ctdlHub_101926/p3Runs/runAllTests-p3.log). CENSUS over this gate's paths (numstat from the old tag, 4 paths, all lib/vocabulary,
+// lane P3's own commits 85838bba and 6cbd320d: the hub term tier and rangeAsMeaning): vocabulary.js 38/1 (REFERENCE_TIER.TERM,
+// HUB_TERM_DECOMPOSITION_SLOTS, HUB_TERM_REFERENCE_EDGE_TYPE, TERM_ADDRESS_SIGNATURE_FIELD_ORDER, nine HUB_REFERENCE_PROPERTIES),
+// graph-contract.js 2/0 (five range list names in LIST_VALUED_PROPERTY_NAME_LIST), vocabulary-definitions.js 1/0 (the HAS_TERM_REFERENCE
+// definition), test/test-sifEdgeVocabulary.js 4/1 (schema-view members 329 -> 334). No bridge-framework source, no plugin, bridge-maker,
+// build.js or interfaces.js change: PESC still composes through the same seam with no plugin edit.
+const P1_BASELINE_COMMIT = 'postCtdlHubP3PescCompose-102026'; // re-anchored by TWILIGHT_MEADOW (ctdlHub lane P3); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

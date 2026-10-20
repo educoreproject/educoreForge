@@ -187,7 +187,13 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // types REMOVED with the V13 structure layer), vocabulary-definitions.js (their definitions removed; HAS_LAYER's text), graph-contract.js
 // (layerScopeRule text names the remaining layer edges; the omission-line example token), test/test-sifEdgeVocabulary.js (schema-view
 // rows 27 -> 13, measured 343 -> 329), test/test-layerBlockKind.js (guide subjects, three roles) — lane UNDES's own commit a54c85f7.
-const POST_D1_BASE_TAG = 'postUndesVocabularyIi-101326'; // re-anchored by GRANITE_BEACON (lane UNDES); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (TWILIGHT_MEADOW; ctdlHub lane P3 hubFramework, ruling SCARLET_ARROW; pre-authorised) ═══ (ii) postUndesVocabularyIi-101326 ->
+// postCtdlHubP3VocabularyIi-102026, tag cut ON this commit. Found red at a34ca338. CENSUS (lib/vocabulary/, numstat from the old tag):
+// vocabulary.js 38/1 (term tier: REFERENCE_TIER.TERM, HUB_TERM_DECOMPOSITION_SLOTS, HUB_TERM_REFERENCE_EDGE_TYPE, TERM_ADDRESS_SIGNATURE_FIELD_ORDER,
+// nine HUB_REFERENCE_PROPERTIES), vocabulary-definitions.js 1/0 (the HAS_TERM_REFERENCE definition), graph-contract.js 2/0 (five range list
+// names, LIST_VALUED_PROPERTY_NAME_LIST), test/test-sifEdgeVocabulary.js 4/1 (schema-view members 329 -> 334) — lane P3's own commits
+// 85838bba and 6cbd320d. Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postCtdlHubP3VocabularyIi-102026'; // re-anchored by TWILIGHT_MEADOW (ctdlHub lane P3); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -882,7 +888,12 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // a54c85f7: forges/ceds/layers/ (the V13 structure layer's directory removed: producer, validator, workbook layout, snapshot) and
 // lib/forge-framework/roundTripHarness/graphReader.js (the base property id list removed from the layer reader). No build.js, forger,
 // replay or bridge-framework source.
-const PHASE3_ANCHOR_TAG = 'postUndesSeamDiffEmpty-101326'; // re-anchored by GRANITE_BEACON (lane UNDES); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (TWILIGHT_MEADOW; ctdlHub lane P3 hubFramework, ruling SCARLET_ARROW; pre-authorised) ═══ seamDiffEmpty (and its (i-live) companion):
+// postUndesSeamDiffEmpty-101326 -> postCtdlHubP3SeamDiffEmpty-102026, tag cut ON this commit. Found red at a34ca338. CENSUS: ONE path,
+// forges/ceds/lib/cedsHubDeclaration.js 26/0 (lane P3's commit 85838bba: the four new hub declaration keys tierList, rangeAddressing,
+// rootFieldNames, embedTextTemplateByTier and baseFieldNames canonicalKey/domainId, each equal to CEDS's prior behaviour; the CEDS
+// standardBase block id 45a83bae... unmoved, measured). No build.js, forger, replay, forge-framework or bridge-framework source.
+const PHASE3_ANCHOR_TAG = 'postCtdlHubP3SeamDiffEmpty-102026'; // re-anchored by TWILIGHT_MEADOW (ctdlHub lane P3); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
