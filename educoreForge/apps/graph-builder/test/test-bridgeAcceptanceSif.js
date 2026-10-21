@@ -110,7 +110,10 @@ const acceptanceDir = path.join(treeRoot, 'lib', 'bridge-framework', 'test', 'ac
 const BRIDGE_NAME = 'sifCedsStandardPlugin';
 const SUBJECT_PREFIX = 'sif';
 const SOURCE_STANDARD_NAME = 'SIF';
-const pluginFilePath = path.join(treeRoot, 'forges', 'sif', 'bridges', `${BRIDGE_NAME}.js`);
+// ⟪hub-neutral bridge lane R3⟫ the SIF bridge is composed from forges/sif/bridges/sifBridging.js and the CEDS hub's declaration: the
+// module is the REGISTRY ENTRY (declaration, hooks), the file under test is the bridging file it was composed from
+const shippedSifEntry = require(path.join(treeRoot, 'lib', 'bridge-framework', 'test', 'testSupport', 'shippedBridge')).shippedBridgeEntryFor(BRIDGE_NAME);
+const pluginFilePath = shippedSifEntry.pluginFilePath;
 const bundleDirPath = path.join(treeRoot, 'forges', 'sif');
 
 const vocabularyLib = require(path.join(treeRoot, 'lib', 'vocabulary', 'vocabulary'));
@@ -154,7 +157,7 @@ const censusFixtureResolution = (() => {
 // ---------------------------------------------------------------------
 harness.section('SECTION 3 — BG-PLUGIN: the REAL SIF plugin validates, its digests recompute, its REAL hooks run over a graph double');
 
-const pluginModule = require(pluginFilePath);
+const pluginModule = shippedSifEntry;
 const declaration = pluginModule.bridgeDeclaration;
 const declarationDigestOf = (oneDeclaration) => sha256Hex(bridgePluginContractLib.canonicalJsonText(oneDeclaration));
 const channelAssertionDigestOf = (oneDeclaration) => sha256Hex(bridgePluginContractLib.canonicalJsonText(predicateSourceLib.PREDICATE_SOURCE_KIND_REGISTRY[oneDeclaration.predicateSource.kind].provenanceOf(oneDeclaration.predicateSource)));
@@ -606,7 +609,7 @@ const runRecordDispositionSection = () => {
 const runIdGateBasisSection = () => {
 	harness.section("SECTION 9 — BG-IDGATE-BASIS (RULING BS-11): hub-identifier-as-answer is a DERIVED rule; a key-filtered pool is gated on its shared key");
 	const auditLib = require(path.join(__dirname, 'bridgeAcceptance', 'renderingAudit'));
-	const sifDeclaration = require(path.join(__dirname, '..', '..', '..', 'forges', 'sif', 'bridges', 'sifCedsStandardPlugin')).bridgeDeclaration;
+	const sifDeclaration = require(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'test', 'testSupport', 'shippedBridge')).shippedBridgeDeclarationFor('sifCedsStandardPlugin');
 	const specFor = (matchBasis) => auditLib.idGateSpecFor({ matchBasis, blindingDeclaration: sifDeclaration.blindingDeclaration });
 	const patternNameListFor = (matchBasis) => (specFor(matchBasis).patternList || []).map((onePattern) => onePattern.patternName);
 

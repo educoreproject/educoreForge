@@ -155,9 +155,9 @@ const variantOrErrorFor = (bridgeDeclaration) => {
 	const resolved = bridgePluginContractLib.judgePromptVariantFor({ bridgeDeclaration });
 	return resolved.error ? `ERROR ${resolved.error}` : resolved.judgePromptVariant;
 };
-const edfiPluginPath = path.join(TREE_ROOT, 'forges', 'edfi', 'bridges', 'edfiCedsDerivedPlugin.js');
 const edfiBundleDirPath = path.join(TREE_ROOT, 'forges', 'edfi');
-const edfiDeclaration = () => cloneJson(require(edfiPluginPath).bridgeDeclaration);
+const { shippedBridgeDeclarationFor } = require('./testSupport/shippedBridge');
+const edfiDeclaration = () => shippedBridgeDeclarationFor('edfiCedsDerivedPlugin');
 const validationRefusalFor = (bridgeDeclaration) => {
 	const validated = bridgePluginContractLib.validateBridgeDeclaration({ bridgeDeclaration, bundleDirPath: edfiBundleDirPath });
 	return validated && validated.error ? validated.error.message : '';
@@ -195,25 +195,25 @@ harness.match('a stray member is refused by name', owningConstructDefinitionLib.
 harness.match('ownerNodeProperty without its property names is refused', owningConstructDefinitionLib.owningConstructDefinitionSourceReason({ kind: 'ownerNodeProperty', ownerReferencePropertyName: 'parentId' }), /needs a non-blank ownerReferencePropertyName and definitionPropertyName/);
 // ruling COPPER_RIVER 2026-10-13: Ed-Fi and every per-release PESC bridge take the owning-definition form and read the owner's
 // description; SIF keeps the instruction form, so it declares no source (its variant would read none)
-const SHIPPED_SOURCE_BY_PLUGIN_PATH = {
-	'forges/edfi/bridges/edfiCedsDerivedPlugin.js': OWNER_SOURCE,
-	'forges/sif260928/bridges/sif260928CedsDerivedPlugin.js': null,
-	'forges/pesccollegetranscript1v8v0/bridges/pescCollegeTranscript1v8v0CedsDerivedPlugin.js': OWNER_SOURCE,
-	'forges/pesccollegetranscript1v7v0/bridges/pescCollegeTranscript1v7v0CedsDerivedPlugin.js': OWNER_SOURCE,
-	'forges/peschighschooltranscript1v6v0/bridges/pescHighSchoolTranscript1v6v0CedsDerivedPlugin.js': OWNER_SOURCE,
-	'forges/pesctestscorereport1v1v0/bridges/pescTestScoreReport1v1v0CedsDerivedPlugin.js': OWNER_SOURCE,
-	'forges/pesclearningrecord1v0v0/bridges/pescLearningRecord1v0v0CedsDerivedPlugin.js': OWNER_SOURCE,
-	'forges/pescdocumentrequest1v0v0/bridges/pescDocumentRequest1v0v0CedsDerivedPlugin.js': OWNER_SOURCE,
-	'forges/pescdocumentresponse1v0v0/bridges/pescDocumentResponse1v0v0CedsDerivedPlugin.js': OWNER_SOURCE,
-	'forges/pescacademiceportfolio1v0v0/bridges/pescAcademicEportfolio1v0v0CedsDerivedPlugin.js': OWNER_SOURCE,
+const SHIPPED_SOURCE_BY_BRIDGE_NAME = {
+	edfiCedsDerivedPlugin: OWNER_SOURCE,
+	sif260928CedsDerivedPlugin: null,
+	pescCollegeTranscript1v8v0CedsDerivedPlugin: OWNER_SOURCE,
+	pescCollegeTranscript1v7v0CedsDerivedPlugin: OWNER_SOURCE,
+	pescHighSchoolTranscript1v6v0CedsDerivedPlugin: OWNER_SOURCE,
+	pescTestScoreReport1v1v0CedsDerivedPlugin: OWNER_SOURCE,
+	pescLearningRecord1v0v0CedsDerivedPlugin: OWNER_SOURCE,
+	pescDocumentRequest1v0v0CedsDerivedPlugin: OWNER_SOURCE,
+	pescDocumentResponse1v0v0CedsDerivedPlugin: OWNER_SOURCE,
+	pescAcademicEportfolio1v0v0CedsDerivedPlugin: OWNER_SOURCE,
 };
-const shippedFaultList = Object.keys(SHIPPED_SOURCE_BY_PLUGIN_PATH).map((pluginPath) => {
-	const shippedDeclaration = require(path.join(TREE_ROOT, pluginPath)).bridgeDeclaration;
-	const expected = SHIPPED_SOURCE_BY_PLUGIN_PATH[pluginPath];
+const shippedFaultList = Object.keys(SHIPPED_SOURCE_BY_BRIDGE_NAME).map((bridgeName) => {
+	const shippedDeclaration = shippedBridgeDeclarationFor(bridgeName);
+	const expected = SHIPPED_SOURCE_BY_BRIDGE_NAME[bridgeName];
 	const declared = shippedDeclaration.owningConstructDefinitionSource;
 	const expectedFormName = expected === null ? 'matchingInstructionsState' : 'owningConstructDefinitionState';
 	const sourceAgrees = expected === null ? declared === undefined : declared !== undefined && Object.keys(expected).every((memberName) => declared[memberName] === expected[memberName]) && owningConstructDefinitionLib.owningConstructDefinitionSourceReason(declared) === '';
-	return sourceAgrees && shippedDeclaration.choiceQuestionFormName === expectedFormName ? null : `${pluginPath}: form ${JSON.stringify(shippedDeclaration.choiceQuestionFormName)}, source ${JSON.stringify(declared)}`;
+	return sourceAgrees && shippedDeclaration.choiceQuestionFormName === expectedFormName ? null : `${bridgeName}: form ${JSON.stringify(shippedDeclaration.choiceQuestionFormName)}, source ${JSON.stringify(declared)}`;
 }).filter((oneFault) => oneFault !== null);
 harness.equal('the ten shipped judgeSlot plugins declare what was ruled: Ed-Fi and PESC the owning-definition form reading parentId.description, SIF the instruction form and no source', shippedFaultList.join(' | '), '');
 

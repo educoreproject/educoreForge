@@ -183,7 +183,7 @@ forgeOf({ token: 'ctdl', entryFileName: 'forgeCtdl', sourceFileName: 'ctdl-schem
 					const asnJudge = judgeZeroJudge(asnResult);
 					harness.ok('e_asnCtdlZeroJudgeCalls PASS', asnJudge.pass, asnJudge.detail);
 					harness.section('THE TWIN SWEEP');
-					const loaded = require(path.join(FORGES_DIR, 'ctdl', 'bridges', 'ctdlCedsDeclaredCorrespondence.js'));
+					const loaded = require(path.join(FORGES_DIR, '..', 'lib', 'bridge-framework', 'test', 'testSupport', 'shippedBridge')).shippedBridgeEntryFor('ctdlCedsDeclaredCorrespondence');
 					const withoutNotationRule = { bridgeDeclaration: { ...loaded.bridgeDeclaration, declaredTargetRuleList: loaded.bridgeDeclaration.declaredTargetRuleList.filter((oneRule) => oneRule.ruleKind !== 'memberByNotation') } };
 					runCtdlCeds({ ctdlForged, pluginModuleOverrides: { ctdlCedsDeclaredCorrespondence: withoutNotationRule } }, (twinResult) => {
 						const twinVerdict = judgeCtdlCeds({ result: twinResult, ctdlForged });

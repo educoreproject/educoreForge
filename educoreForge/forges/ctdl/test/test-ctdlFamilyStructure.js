@@ -175,7 +175,9 @@ forgeAll(0, [], (forgeError, forgedList) => {
 		const tableWithoutDomainFor = JSON.parse(fs.readFileSync(scratchTablePath, 'utf8'));
 		tableWithoutDomainFor.structureLocatorList = tableWithoutDomainFor.structureLocatorList.filter((oneRow) => oneRow.locator !== 'meta:domainFor');
 		fs.writeFileSync(scratchTablePath, JSON.stringify(tableWithoutDomainFor));
-		fs.rmSync(path.join(scratchForgesDir, 'ctdl', 'bridges', 'ctdlCedsDeclaredCorrespondence.js'));
+		// ⟪hub-neutral bridge lane R3⟫ the declared CTDL→CEDS bridge is now composed from ctdlBridging.js (and needs the CEDS hub
+		// declaration, absent from this scratch tree); removed for the same reason the plugin file was
+		fs.rmSync(path.join(scratchForgesDir, 'ctdl', 'bridges', 'ctdlBridging.js'));
 		const scratchRegistry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: scratchForgesDir });
 		runProducer({ graph, runnerLib: require(RUNNER_PATH), registry: scratchRegistry }, (refusalOutcome) => {
 			harness.match('e_locatorInNeitherListRefusedByName PASS', String(refusalOutcome.runError || ''), /carries locator 'meta:domainFor', which the family locator table lists as neither structure nor correspondence/);

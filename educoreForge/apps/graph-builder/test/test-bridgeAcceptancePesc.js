@@ -106,6 +106,8 @@ const acceptanceDir = path.join(treeRoot, 'lib', 'bridge-framework', 'test', 'ac
 
 const bridgePluginContractLib = require(path.join(treeRoot, 'lib', 'bridge-framework', 'bridgePluginContract'));
 const pluginRegistryLib = require(path.join(treeRoot, 'lib', 'bridge-framework', 'pluginRegistry'));
+// ⟪hub-neutral bridge lane R3⟫ the shipped bridges are composed from forges/pesc260805/bridges/pescBridging.js; read them by NAME
+const { shippedBridgeEntryFor } = require(path.join(treeRoot, 'lib', 'bridge-framework', 'test', 'testSupport', 'shippedBridge'));
 
 const readJson = (filePath) => JSON.parse(fs.readFileSync(filePath, 'utf8').replace(/^\s*\/\/.*$/gm, ''));
 const expectedCompose = readJson(path.join(acceptanceDir, 'expectedCompose.json'));
@@ -151,7 +153,7 @@ const runPluginSection = () => {
 
 	const digestByBridgeName = {};
 	PLUGIN_REGISTRY_ROW_LIST.forEach((oneRow) => {
-		const pluginModule = require(path.join(bundleDirPath, 'bridges', oneRow.bridgeName));
+		const pluginModule = shippedBridgeEntryFor(oneRow.bridgeName);
 		const shipped = pluginModule.bridgeDeclaration;
 		harness.equal(`BG-PLUGIN-PESC a ${oneRow.bridgeName} — the SHIPPED declaration validates against the REAL contract`, refusalTextFor(shipped), '');
 
@@ -188,7 +190,7 @@ const runPluginSection = () => {
 	});
 
 	harness.section('    BG-PLUGIN-PESC twins — five DISTINCT refusals through the SAME validator, observed RED');
-	const shippedPropertyTier = require(path.join(bundleDirPath, 'bridges', PLUGIN_REGISTRY_ROW_LIST[0].bridgeName)).bridgeDeclaration;
+	const shippedPropertyTier = shippedBridgeEntryFor(PLUGIN_REGISTRY_ROW_LIST[0].bridgeName).bridgeDeclaration;
 	const twinList = [
 		{
 			label: 'RED-OBSERVED an UNKNOWN TOP-LEVEL KEY is refused by name — which is WHY the dedup rule and the understatement record live on disk as data rather than inside the declaration',
@@ -1042,7 +1044,7 @@ const runSeatSection = (forged, done) => {
 		});
 
 	PLUGIN_REGISTRY_ROW_LIST.forEach((oneRow) => {
-		const shipped = require(path.join(bundleDirPath, 'bridges', oneRow.bridgeName)).bridgeDeclaration;
+		const shipped = shippedBridgeEntryFor(oneRow.bridgeName).bridgeDeclaration;
 		const subjectNodeList = subjectNodeListFor(oneRow);
 		const unpopulatedNameList = shipped.renderingAllowList.subject.filter((oneName) => !namePopulatedOnSome(oneName, subjectNodeList));
 		harness.equal(

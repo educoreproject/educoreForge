@@ -42,7 +42,7 @@ const GATE_ID = 'BG-QUALIFIER';
 const RENDERER_FILE = 'evidenceRenderer.js';
 const FRAMEWORK_FILE = 'bridge-framework.js';
 const TREE_ROOT = path.join(__dirname, '..', '..', '..');
-const edfiDeclaration = require(path.join(TREE_ROOT, 'forges', 'edfi', 'bridges', 'edfiCedsDerivedPlugin.js')).bridgeDeclaration;
+const edfiDeclaration = require('./testSupport/shippedBridge').shippedBridgeDeclarationFor('edfiCedsDerivedPlugin');
 
 // THE EXTERNAL REFERENCE for (b): the promptHash the BASE renderer (educoreForge main a07ea515, before lane QUAL)
 // produced for UNQUALIFIED_POOL_INPUT below, computed with that checkout's own module. A pin from the renderer under

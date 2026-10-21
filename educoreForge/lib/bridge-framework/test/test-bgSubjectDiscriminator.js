@@ -49,19 +49,21 @@ const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework',
 const CONTRACT_PATH = path.join(__dirname, '..', 'bridgePluginContract.js');
 const TREE_ROOT = path.join(__dirname, '..', '..', '..');
 const FORGES_DIR_PATH = path.join(TREE_ROOT, 'forges');
+// ⟪hub-neutral bridge lane R3⟫ a shipped bridge is read by NAME through the registry (it may be composed)
+const { shippedBridgeDeclarationFor } = require('./testSupport/shippedBridge');
 
 // the five shipped plugins, with the bundle directory the contract resolves document channels against
 const SHIPPED_PLUGIN_LIST = [
-	{ bridgeName: 'sifCedsStandardPlugin', bundleDirName: 'sif', pluginPath: 'forges/sif/bridges/sifCedsStandardPlugin.js' },
+	{ bridgeName: 'sifCedsStandardPlugin', bundleDirName: 'sif' },
 	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded, "known to be garbage"): edfiCedsCrosswalkPlugin moved to forges/edfi/retiredBridges/, out of the roster
-	{ bridgeName: 'edfiCedsDerivedPlugin', bundleDirName: 'edfi', pluginPath: 'forges/edfi/bridges/edfiCedsDerivedPlugin.js' },
-	{ bridgeName: 'pescCedsDerivedPlugin', bundleDirName: 'pesc260805', pluginPath: 'forges/pesc260805/bridges/pescCedsDerivedPlugin.js' },
-	{ bridgeName: 'pescOptionSetCedsDerivedPlugin', bundleDirName: 'pesc260805', pluginPath: 'forges/pesc260805/bridges/pescOptionSetCedsDerivedPlugin.js' },
+	{ bridgeName: 'edfiCedsDerivedPlugin', bundleDirName: 'edfi' },
+	{ bridgeName: 'pescCedsDerivedPlugin', bundleDirName: 'pesc260805' },
+	{ bridgeName: 'pescOptionSetCedsDerivedPlugin', bundleDirName: 'pesc260805' },
 ];
 
 // The mutation fixture: a real shipped declaration, cloned so a test never edits a shipped object.
 const clonedDeclarationFor = (onePlugin, overrideByName) => {
-	const shipped = require(path.join(TREE_ROOT, onePlugin.pluginPath)).bridgeDeclaration;
+	const shipped = shippedBridgeDeclarationFor(onePlugin.bridgeName);
 	const cloned = { ...shipped, ...overrideByName };
 	Object.keys(overrideByName || {}).forEach((oneName) => {
 		if (overrideByName[oneName] === '__DELETE__') {
@@ -101,7 +103,7 @@ const conjunctJudgeByRefId = {
 	// future edit gave a second plugin a discriminator, this goes red and someone has to say why.
 	a_allFiveShippedPluginsRegisterUnchanged: (subject) => {
 		const refused = SHIPPED_PLUGIN_LIST.filter((onePlugin) => validateWith(subject, onePlugin, {}).error !== undefined);
-		const declaringList = SHIPPED_PLUGIN_LIST.filter((onePlugin) => require(path.join(TREE_ROOT, onePlugin.pluginPath)).bridgeDeclaration.subjectDiscriminator !== undefined);
+		const declaringList = SHIPPED_PLUGIN_LIST.filter((onePlugin) => shippedBridgeDeclarationFor(onePlugin.bridgeName).subjectDiscriminator !== undefined);
 		const splitIsRight = declaringList.length === 1 && declaringList[0].bridgeName === 'pescOptionSetCedsDerivedPlugin';
 		return {
 			pass: refused.length === 0 && splitIsRight,
