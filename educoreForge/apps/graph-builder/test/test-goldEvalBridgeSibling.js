@@ -133,6 +133,37 @@ harness.equal('debug block: 1 invalid-debug counted', debugAudit.invalidDebugEdg
 harness.match('debug block: refused naming the block', debugAudit.refusalMessage || '', /toy_rel_toyhub/);
 harness.match('debug block: the offender is named by STABLEID (from -[type]-> to), not [object Object]', debugAudit.refusalMessage || '', /toy:property\/A\.two -\[EXACT_MATCH\]-> urn:toyhub:P000002/);
 harness.match('an empty block text is refused by name', sibling.auditMappingBlockText({ blockText: '', subject: 'x' }).refusalMessage || '', /has no text/);
+
+// ⟪ctdlHub P8, RULING SCARLET_ARROW 2026-10-21 (A)⟫ THE STRUCTURAL EXEMPTION. A family-structure block (subject suffix
+// _struct) carries HAS_PROPERTY / REFERENCES / SUBCLASS_OF / HAS_OPTION_SET edges stamped provenanceTier 'structural' and NO
+// mappingSource: they are not mapping edges, and the no-mappingSource rule refused them. The exemption is exactly that
+// conjunction; everything else still meets the rule, and the exempt edges are REPORTED by type and count, never skipped silently.
+const structuralEdgeLineFor = ({ type, fromStableId, toStableId, provenanceTier }) => ({
+	type,
+	fromRef: { source: SOURCE_NAME, id: fromStableId },
+	toRef: { source: SOURCE_NAME, id: toStableId },
+	properties: { ...(provenanceTier === undefined ? {} : { provenanceTier: [provenanceTier] }), provenanceSource: ['toyFamilyStructure'], bridgeAuthored: [true], crossRefLocator: ['toy:locator'] },
+});
+const structuralBlockTextFor = (extraEdgeList) => replayBlockLib.serializeBlock({
+	header: RELATIONSHIP_HEADER,
+	nodes: [nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.one' }), nodeLineFor({ source: SOURCE_NAME, stableId: 'toy:property/A.two' }), nodeLineFor({ source: HUB_NAME, stableId: 'urn:toyhub:P000001' })],
+	edges: [
+		structuralEdgeLineFor({ type: 'HAS_PROPERTY', fromStableId: 'toy:property/A.one', toStableId: 'toy:property/A.two', provenanceTier: 'structural' }),
+		structuralEdgeLineFor({ type: 'HAS_PROPERTY', fromStableId: 'toy:property/A.two', toStableId: 'toy:property/A.one', provenanceTier: 'structural' }),
+		structuralEdgeLineFor({ type: 'REFERENCES', fromStableId: 'toy:property/A.one', toStableId: 'toy:property/A.one', provenanceTier: 'structural' }),
+	].concat(extraEdgeList),
+});
+const STRUCT_SUBJECT = 'toy@1_0_rel_toyb@1_0_struct';
+const structAudit = sibling.auditMappingBlockText({ blockText: structuralBlockTextFor([]), subject: STRUCT_SUBJECT });
+harness.ok('P8 (A): a _struct block of structural-tier edges with no mappingSource → NOT refused', structAudit.refusalMessage === null, structAudit.refusalMessage);
+harness.equal('P8 (A): … and its structural edges are REPORTED by type and count', JSON.stringify(structAudit.structuralEdgeCountByType), JSON.stringify({ HAS_PROPERTY: 2, REFERENCES: 1 }));
+const mappingInStructAudit = sibling.auditMappingBlockText({ blockText: structuralBlockTextFor([{ ...edgeLineFor({ fromStableId: 'toy:property/A.one', toStableId: 'urn:toyhub:P000001', mappingSource: AUTHORED_SOURCE }), properties: { matchBasis: ['crosswalk'] } }]), subject: STRUCT_SUBJECT });
+harness.match('P8 (A) twin: a MAPPING-type edge with no mappingSource inside a _struct block → REFUSED', mappingInStructAudit.refusalMessage || '', /1 edge\(s\) with NO mappingSource.*EXACT_MATCH/);
+const untieredAudit = sibling.auditMappingBlockText({ blockText: structuralBlockTextFor([structuralEdgeLineFor({ type: 'SUBCLASS_OF', fromStableId: 'toy:property/A.two', toStableId: 'toy:property/A.two', provenanceTier: undefined })]), subject: STRUCT_SUBJECT });
+harness.match('P8 (A) twin: a structural-TYPE edge WITHOUT the structural tier inside a _struct block → REFUSED', untieredAudit.refusalMessage || '', /1 edge\(s\) with NO mappingSource.*SUBCLASS_OF/);
+const notStructAudit = sibling.auditMappingBlockText({ blockText: structuralBlockTextFor([]), subject: 'toy@1_0_rel_toyhub@1_0_exact' });
+harness.match('P8 (A) twin: the same structural edges in a block that is NOT _struct → REFUSED', notStructAudit.refusalMessage || '', /3 edge\(s\) with NO mappingSource/);
+harness.equal('P8 (A): a non-_struct block row carries NO structuralEdgeCountByType (every other row unchanged)', cleanAudit.structuralEdgeCountByType, undefined);
 harness.match('a block that does not deserialise is refused by name', sibling.auditMappingBlockText({ blockText: '{"kind":"header","blockType":"relationship"}\n{"kind":"mystery"}\n', subject: 'x' }).refusalMessage || '', /does not deserialise/);
 
 // ---------------------------------------------------------------------

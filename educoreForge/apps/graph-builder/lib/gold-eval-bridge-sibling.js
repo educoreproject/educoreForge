@@ -35,7 +35,23 @@ const vocabularyLib = require(path.join(CORE_LIB, 'vocabulary', 'vocabulary'));
 // bridge-maker/lib: a new file there would move the decision-block fingerprint for a reason unrelated to content.
 const judgeIdentityAliasTableLib = require(path.join(__dirname, 'judgeIdentityAliasTable'));
 
-const { SCHEMA_BLOCK_KIND, MAPPING_PROPERTIES } = vocabularyLib;
+const { SCHEMA_BLOCK_KIND, MAPPING_PROPERTIES, RELATIONSHIP_PRODUCER_SUFFIX, PROVENANCE_TIER } = vocabularyLib;
+// ⟪ctdlHub P8, RULING SCARLET_ARROW 2026-10-21 (A)⟫ THE STRUCTURAL EXEMPTION from the no-mappingSource rule. A family-structure
+// block (subject suffix RELATIONSHIP_PRODUCER_SUFFIX.structural, '_struct') carries edges of the structural producer's edge
+// types stamped provenanceTier 'structural' and NO mappingSource — they are not mapping edges, and before this the rule refused
+// every one of them (552 on the P8 candidate). An edge is exempt ONLY when all four hold: the block is _struct, its type is one
+// of the structural producer's declared types, its tier is 'structural', and it carries no mappingSource. Every other edge —
+// a mapping-type edge in a _struct block, an untiered structural-type edge, any edge of any other block — still meets the rule.
+// The exempt edges are REPORTED by type and count on the block's audit row, never skipped silently.
+const { STRUCTURAL_EDGE_TYPE_NAME_LIST } = require(path.join(CORE_LIB, 'bridge-framework', 'structuralProducerContract'));
+// the property name the structural producer stamps (structuralRunner.js writes it as the literal key provenanceTier; the
+// vocabulary has no producer-neutral constant for the edge property, only per-family ones)
+const STRUCTURAL_TIER_PROPERTY_NAME = 'provenanceTier';
+const isStructuralBlockSubject = (subject) => typeof subject === 'string' && subject.endsWith(RELATIONSHIP_PRODUCER_SUFFIX.structural);
+const isExemptStructuralEdge = (oneEdge) =>
+	STRUCTURAL_EDGE_TYPE_NAME_LIST.indexOf(oneEdge.type) !== -1 &&
+	scalarPropertyOf(oneEdge.properties, STRUCTURAL_TIER_PROPERTY_NAME) === PROVENANCE_TIER.STRUCTURAL &&
+	scalarPropertyOf(oneEdge.properties, MAPPING_PROPERTIES.MAPPING_SOURCE) === undefined;
 
 // ⟪JOB 6, 2026-09-08⟫ THE JUDGE ENUMERATION — read-side, and it enumerates FROM THE MANIFEST.
 // The population rule is the conservation audit's own: a population read from a registry of what you EXPECT
@@ -135,7 +151,11 @@ const auditMappingBlockText = ({ blockText, subject } = {}) => {
 		return { subject, edgeCount: 0, invalidDebugEdgeCount: 0, ...UNREADABLE_BLOCK_ENUMERATION, refusalMessage: `${moduleName}: relationship block '${subject}' does not deserialise (${codecFault}) — unreadable evidence certifies nothing` };
 	}
 	const harvestedEdgeList = deserialised.edges.map(harvestedEdgeFrom);
-	const refusal = certificationCheckLib.debugEdgeRefusal({ harvestedEdgeList, blockLabel: subject });
+	const exemptStructuralEdgeList = isStructuralBlockSubject(subject) ? harvestedEdgeList.filter(isExemptStructuralEdge) : [];
+	const ruledEdgeList = harvestedEdgeList.filter((oneEdge) => exemptStructuralEdgeList.indexOf(oneEdge) === -1);
+	const refusal = certificationCheckLib.debugEdgeRefusal({ harvestedEdgeList: ruledEdgeList, blockLabel: subject });
+	const structuralEdgeCountByType = exemptStructuralEdgeList.reduce((countByType, oneEdge) => ({ ...countByType, [oneEdge.type]: (countByType[oneEdge.type] || 0) + 1 }), {});
+	const structuralCensus = isStructuralBlockSubject(subject) ? { structuralEdgeCountByType } : {};
 	const invalidDebugEdgeCount = harvestedEdgeList.filter((oneEdge) => {
 		// the debug marker is mappingSource 'bridge-debug' since lane P (2026-10-04); provenanceTier no longer rides a mapping edge
 		const mappingSource = oneEdge.properties && oneEdge.properties.mappingSource;
@@ -170,6 +190,7 @@ const auditMappingBlockText = ({ blockText, subject } = {}) => {
 		subject,
 		edgeCount: harvestedEdgeList.length,
 		...judgedSubjectCensus,
+		...structuralCensus,
 		invalidDebugEdgeCount,
 		judgedEdgeCount: enumeration.judgedEdgeCount,
 		judgedEdgeMissingJudgeIdentityCount: enumeration.judgedEdgeMissingJudgeIdentityCount,
