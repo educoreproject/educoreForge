@@ -119,7 +119,8 @@
 		"E7",
 		"E8",
 		"E10",
-		"E11"
+		"E11",
+		"E14"
 	],
 	"predicateDispositionByName": {
 		"@id": "identity",
@@ -153,5 +154,10 @@
 		"skos:closeMatch": "reference",
 		"skos:broadMatch": "reference",
 		"owl:sameAs": "reference"
+	},
+	"rangeDatatypeRule": {
+		"predicateName": "schema:rangeIncludes",
+		"prefixList": ["xsd"],
+		"termIdList": ["rdf:langString", "rdf:HTML", "rdfs:Literal"]
 	}
 }

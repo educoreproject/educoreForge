@@ -11,7 +11,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 // the WORKORDER-P2b rows a profile may name in enrichmentKindList. E9 (scheme status) and E12 (usage notes on every role) are not
 // rows here: they widen statusCarriedByTermKindList / usageNoteCarriedByTermKindList, which already say what they mean as data
-const ENRICHMENT_KIND_LIST = Object.freeze(['E1', 'E1a', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E10', 'E11', 'E13']);
+// ⟪ctdlHub P4⟫ E14: rangeDatatypeList on DmeProperty, read through rangeDatatypeRule (SCARLET_ARROW ruling)
+const ENRICHMENT_KIND_LIST = Object.freeze(['E1', 'E1a', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E10', 'E11', 'E13', 'E14']);
 const isStringList = (candidate) => Array.isArray(candidate) && candidate.every((oneValue) => typeof oneValue === 'string');
 
 const KIND_CHECK_BY_KIND = Object.freeze({
@@ -25,6 +26,11 @@ const KIND_CHECK_BY_KIND = Object.freeze({
 	// ⟪P2b⟫ the WORKORDER-P2b E-rows a bundle has turned on; an unknown row name is refused, never ignored
 	enrichmentKindList: (candidate) => isStringList(candidate) && candidate.every((oneKind) => ENRICHMENT_KIND_LIST.indexOf(oneKind) !== -1),
 	predicateDispositionByName: (candidate) => isPlainObject(candidate) && Object.values(candidate).every((oneValue) => typeof oneValue === 'string'),
+	// ⟪ctdlHub P4 E14⟫ which of a property's range targets are DATATYPES: { predicateName, prefixList, termIdList }, nothing else
+	rangeDatatypeRule: (candidate) => isPlainObject(candidate)
+		&& JSON.stringify(Object.keys(candidate).sort()) === JSON.stringify(['predicateName', 'prefixList', 'termIdList'])
+		&& typeof candidate.predicateName === 'string' && candidate.predicateName.length > 0
+		&& isStringList(candidate.prefixList) && isStringList(candidate.termIdList),
 });
 
 const VOCABULARY_PROFILE_FIELD_KIND = Object.freeze({
@@ -49,6 +55,7 @@ const VOCABULARY_PROFILE_FIELD_KIND = Object.freeze({
 	domainlessPropertyRootEdge: 'boolean',
 	enrichmentKindList: 'enrichmentKindList',
 	predicateDispositionByName: 'predicateDispositionByName',
+	rangeDatatypeRule: 'rangeDatatypeRule',
 });
 
 // validateVocabularyProfile — throws a named Error on the first violation; returns the profile when it conforms

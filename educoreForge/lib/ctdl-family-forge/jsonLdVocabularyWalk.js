@@ -99,11 +99,14 @@ const moduleFunction =
 			predicateDispositionByName,
 			domainlessPropertyRootEdge,
 			enrichmentKindList,
+			rangeDatatypeRule,
 		} = vocabularyProfile;
 
 		const isNativeIri = isNativeIriFor(vocabularyProfile);
 		const isSeamIri = (iriText) => seamTargetPrefixList.indexOf(prefixOf(iriText)) !== -1;
 		const isEnriched = (enrichmentKind) => enrichmentKindList.indexOf(enrichmentKind) !== -1;
+		// ⟪ctdlHub P4 E14⟫ a range target is a DATATYPE when its prefix or its whole CURIE is declared so (rangeDatatypeRule)
+		const isDatatypeIri = (iriText) => rangeDatatypeRule.prefixList.indexOf(prefixOf(iriText)) !== -1 || rangeDatatypeRule.termIdList.indexOf(iriText) !== -1;
 		const languageValueOf = (oneEntry, predicateName) => (oneEntry[predicateName] === undefined ? undefined : oneEntry[predicateName][languageTag]);
 		const firstLanguageValueOf = (oneEntry, predicateList) => predicateList.map((predicateName) => languageValueOf(oneEntry, predicateName)).find((oneValue) => oneValue !== undefined && oneValue !== '');
 
@@ -185,6 +188,12 @@ const moduleFunction =
 				walkStats.crossRefTotal += crossRefList.length;
 				walkStats.declaredCorrespondenceTotal += declaredCorrespondenceList.length;
 
+				// ⟪ctdlHub P4 E14⟫ the property's own datatype ranges, verbatim CURIEs in source order, each once. They stay in crossRefs
+				// too (R4: crossRefs is the verbatim record of every non-native reference); this list is the hub's reading of them.
+				const rangeDatatypeList = termKind === 'property' && isEnriched('E14')
+					? (oneEntry[rangeDatatypeRule.predicateName] || []).filter(isDatatypeIri).filter((iriText, iriIndex, iriList) => iriList.indexOf(iriText) === iriIndex)
+					: [];
+
 				const statusValue = oneEntry[statusPredicate];
 				const usageNote = languageValueOf(oneEntry, usageNotePredicate);
 				const carriedProperties = {
@@ -196,6 +205,8 @@ const moduleFunction =
 					...(crossRefList.length !== 0 ? { crossRefs: JSON.stringify(crossRefList) } : {}),
 					...(declaredCorrespondenceList.length !== 0 ? { declaredCorrespondenceList: JSON.stringify(declaredCorrespondenceList) } : {}),
 					...(nativeDeclarationAnomalyList.length !== 0 ? { nativeDeclarationAnomalyList: JSON.stringify(nativeDeclarationAnomalyList) } : {}),
+					// a LIST, not a JSON string: graph-contract §1 names rangeDatatypeList list-valued, so replay keeps it a list
+					...(rangeDatatypeList.length !== 0 ? { rangeDatatypeList } : {}),
 					...carriedTextProperties,
 				};
 

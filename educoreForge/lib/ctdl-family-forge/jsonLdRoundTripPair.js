@@ -120,7 +120,7 @@ const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabularyProfile, ruleModulePath }) => {
 		validateVocabularyProfile(vocabularyProfile);
-		const { languageTag, sourceFileName, sourceStatedInversePredicateList, enrichmentKindList, termKindByType, statusCarriedByTermKindList, usageNoteCarriedByTermKindList } = vocabularyProfile;
+		const { languageTag, sourceFileName, sourceStatedInversePredicateList, enrichmentKindList, termKindByType, statusCarriedByTermKindList, usageNoteCarriedByTermKindList, rangeDatatypeRule } = vocabularyProfile;
 		const isEnriched = (enrichmentKind) => enrichmentKindList.indexOf(enrichmentKind) !== -1;
 		const termKindOfType = (typeName) => termKindByType[typeName].termKind;
 		const isNativeIri = isNativeIriFor(vocabularyProfile);
@@ -248,6 +248,8 @@ const moduleFunction =
 					JSON.parse(properties.crossRefs).forEach((oneCrossRef) => statements.set(`term|${stableId}|${oneCrossRef.locator}|${oneCrossRef.raw}`, {}));
 					JSON.parse(properties.declaredCorrespondenceList || '[]').forEach((oneEntry) => statements.set(`term|${stableId}|${oneEntry.predicate}|${oneEntry.target}`, {}));
 					JSON.parse(properties.nativeDeclarationAnomalyList || '[]').forEach((oneEntry) => statements.set(`term|${stableId}|${oneEntry.predicate}|${oneEntry.target}`, {}));
+					// ⟪ctdlHub P4 E14⟫ each datatype read back as the statement it came from; a scalar is a one-entry list after replay
+					[].concat(properties.rangeDatatypeList || []).forEach((datatypeIri) => statements.set(`term|${stableId}|${rangeDatatypeRule.predicateName}|${datatypeIri}`, {}));
 					Object.keys(CARRIED_TEXT_BY_PREDICATE).filter((predicateName) => properties[CARRIED_TEXT_BY_PREDICATE[predicateName].propertyName] !== undefined)
 						.forEach((predicateName) => statements.set(`term|${stableId}|${predicateName}|${properties[CARRIED_TEXT_BY_PREDICATE[predicateName].propertyName]}`, {}));
 				});

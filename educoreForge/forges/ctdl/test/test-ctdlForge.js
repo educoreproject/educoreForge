@@ -59,7 +59,8 @@ const EXPECTED = Object.freeze({
 // what the bundle carries — written FIRST at each P2b commit, so the suite goes red until the profile turns the row on (red-first).
 // Each row's effect: the edges it adds, the omitted statements it retires (by kind), the crossRefs it adds, and three named examples
 // from the source. E9 and E12 widen the profile's status / usageNote lists rather than naming a row in enrichmentKindList.
-const INTENDED_ENRICHMENT_LIST = Object.freeze(['E1', 'E1a', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E12', 'E11']);
+// ⟪ctdlHub P4⟫ E14 (SCARLET_ARROW ruling): rangeDatatypeList on DmeProperty, the property's own schema:rangeIncludes datatypes
+const INTENDED_ENRICHMENT_LIST = Object.freeze(['E1', 'E1a', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E12', 'E11', 'E14']);
 const ENRICHMENT_EFFECT_BY_ROW = Object.freeze({
 	E1: { edgeType: 'BROADER_CONCEPT', edgeDelta: 98, omittedDelta: { nativeReferenceNotModelled: 196 }, exampleEdgeList: [['accommodation:AccessibleHousing', 'accommodation:FacilityAccommodation'], ['accommodation:AccessibleParking', 'accommodation:FacilityAccommodation'], ['accommodation:AccessibleRestroom', 'accommodation:FacilityAccommodation']] },
 	E1a: { anomalyList: [['costType:PersonalExpenses', 'skos:broader', 'ceterms:CostType']], omittedDelta: { nativeReferenceNotModelled: 1 } },
@@ -74,6 +75,7 @@ const ENRICHMENT_EFFECT_BY_ROW = Object.freeze({
 	E10: { carriedPropertyName: 'changeHistoryUrl', carriedCount: 993, omittedDelta: { changeHistory: 993 }, exampleIdList: ['ceterms:AcademicCertificate', 'ceterms:alignmentDate', 'accommodation:AccessibleHousing'] },
 	E11: { crossRefDelta: 21, omittedDelta: { unresolvedNativePrefixReference: 21 } },
 	E12: { carriedPropertyName: 'usageNote', carriedRole: 'nonProperty', carriedCount: 62, omittedDelta: { usageNoteOffProperty: 62 }, exampleIdList: ['ceterms:AggregateDataProfile', 'ceterms:AlignmentObject', 'ceterms:AssessmentProfile'] },
+	E14: { carriedPropertyName: 'rangeDatatypeList', carriedRole: 'DmeProperty', carriedCount: 133, carriedEntryCount: 136, omittedDelta: {}, exampleIdList: ['ceterms:addressCountry', 'ceterms:highEarnings', 'ceterms:name'], exampleValueById: { 'ceterms:highEarnings': ['xsd:decimal', 'xsd:integer'], 'ceterms:name': ['rdf:langString'] } },
 });
 const enrichedCountOf = (fieldName) => INTENDED_ENRICHMENT_LIST.reduce((total, oneRow) => total + (ENRICHMENT_EFFECT_BY_ROW[oneRow][fieldName] || 0), 0);
 const omittedAfterEnrichment = (baseCounts) => {
@@ -175,6 +177,11 @@ taskList.push((args, next) => forgeSource({ sourceFilePath: SOURCE_FILE_PATH }, 
 			const carrierList = forgeResult.nodes.filter((oneNode) => oneNode.properties[effect.carriedPropertyName] !== undefined && (effect.carriedRole === undefined || (effect.carriedRole === 'nonProperty' ? oneNode.role !== 'DmeProperty' : oneNode.role === effect.carriedRole)));
 			harness.equal(`${oneRow}: ${effect.carriedPropertyName} carried on ${effect.carriedRole || 'any role'}`, carrierList.length, effect.carriedCount);
 			effect.exampleIdList.forEach((oneId) => harness.ok(`${oneRow}: ${oneId} carries ${effect.carriedPropertyName}`, nodeById[oneId].properties[effect.carriedPropertyName] !== undefined));
+			// ⟪ctdlHub P4⟫ a list-valued row is counted by its entries too, and named examples are checked by value
+			if (effect.carriedEntryCount !== undefined) {
+				harness.equal(`${oneRow}: ${effect.carriedPropertyName} entries`, carrierList.reduce((total, oneNode) => total + [].concat(oneNode.properties[effect.carriedPropertyName]).length, 0), effect.carriedEntryCount);
+			}
+			Object.keys(effect.exampleValueById || {}).forEach((oneId) => harness.equal(`${oneRow}: ${oneId} ${effect.carriedPropertyName}`, JSON.stringify(nodeById[oneId].properties[effect.carriedPropertyName]), JSON.stringify(effect.exampleValueById[oneId])));
 		}
 	});
 	next('', { ...args, forgeResult });
@@ -233,6 +240,20 @@ const twinList = [
 			return perturbed;
 		},
 		isSeen: (verdict) => verdict.lostTotal === 1 && verdict.inventedTotal === 1,
+	},
+	{
+		// ⟪ctdlHub P4 E14⟫ the round trip reads rangeDatatypeList back as schema:rangeIncludes statements, so a datatype the
+		// source never stated is INVENTED (the crossRef carrying the same statement keeps every true one from reading as new)
+		twinName: 'one datatype invented in a rangeDatatypeList',
+		perturb: (forgeResult) => {
+			const perturbed = copyOfForgeResult(forgeResult);
+			const target = perturbed.nodes.find((oneNode) => oneNode.properties.rangeDatatypeList !== undefined);
+			if (target !== undefined) {
+				target.properties.rangeDatatypeList = [].concat(target.properties.rangeDatatypeList, ['xsd:gYearMonth']);
+			}
+			return perturbed;
+		},
+		isSeen: (verdict) => verdict.lostTotal === 0 && verdict.inventedTotal === 1,
 	},
 ];
 twinList.forEach((oneTwin, twinIndex) => taskList.push((args, next) => validateDouble({ forgeResult: oneTwin.perturb(args.forgeResult), outputPath: path.join(scratchRootPath, `twin${twinIndex}`), snapshotPath: SNAPSHOT_DIR_PATH }, (validateError, verdict) => {

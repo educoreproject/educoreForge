@@ -70,6 +70,11 @@ const runRealSnapshotSuite = ({ harness, bundle, validator, snapshotDirPath, sou
 				const carrierList = forgeResult.nodes.filter((oneNode) => oneNode.properties[effect.carriedPropertyName] !== undefined && (effect.carriedRole === undefined || (effect.carriedRole === 'nonProperty' ? oneNode.role !== 'DmeProperty' : oneNode.role === effect.carriedRole)));
 				harness.equal(`${oneRow}: ${effect.carriedPropertyName} carried on ${effect.carriedRole || 'any role'}`, carrierList.length, effect.carriedCount);
 				effect.exampleIdList.forEach((oneId) => harness.ok(`${oneRow}: ${oneId} carries ${effect.carriedPropertyName}`, nodeById[oneId].properties[effect.carriedPropertyName] !== undefined));
+				// ⟪ctdlHub P4⟫ a list-valued row is counted by its entries too, and named examples are checked by value
+				if (effect.carriedEntryCount !== undefined) {
+					harness.equal(`${oneRow}: ${effect.carriedPropertyName} entries`, carrierList.reduce((total, oneNode) => total + [].concat(oneNode.properties[effect.carriedPropertyName]).length, 0), effect.carriedEntryCount);
+				}
+				Object.keys(effect.exampleValueById || {}).forEach((oneId) => harness.equal(`${oneRow}: ${oneId} ${effect.carriedPropertyName}`, JSON.stringify(nodeById[oneId].properties[effect.carriedPropertyName]), JSON.stringify(effect.exampleValueById[oneId])));
 			}
 		});
 		next('', { ...args, forgeResult });
@@ -87,10 +92,24 @@ const runRealSnapshotSuite = ({ harness, bundle, validator, snapshotDirPath, sou
 	}));
 	[
 		{ twinName: 'a structural edge dropped from the graph', caseName: 'twinEdge', perturb: (forgeResult) => ({ ...forgeResult, edges: forgeResult.edges.filter((oneEdge) => oneEdge !== forgeResult.edges.find((candidate) => candidate.type === expected.twinEdgeType && candidate.fromRef.id !== expected.rootStableId)) }) },
+		// ⟪ctdlHub P4 E14⟫ the dropped crossRef is one NO other property also carries: a datatype range is held twice (crossRefs, the
+		// verbatim record, and rangeDatatypeList, the hub's reading), so dropping only its crossRef loses no statement, correctly
 		{ twinName: 'one crossRef dropped from the graph', caseName: 'twinCrossRef', perturb: (forgeResult) => {
 			const perturbed = copyOfForgeResult(forgeResult);
-			const target = perturbed.nodes.find((oneNode) => JSON.parse(oneNode.properties.crossRefs).length > 0);
-			target.properties.crossRefs = JSON.stringify(JSON.parse(target.properties.crossRefs).slice(1));
+			const isSoleCarrier = (oneNode, oneCrossRef) => [].concat(oneNode.properties.rangeDatatypeList || []).indexOf(oneCrossRef.raw) === -1;
+			const target = perturbed.nodes.find((oneNode) => JSON.parse(oneNode.properties.crossRefs).some((oneCrossRef) => isSoleCarrier(oneNode, oneCrossRef)));
+			const crossRefList = JSON.parse(target.properties.crossRefs);
+			const droppedIndex = crossRefList.findIndex((oneCrossRef) => isSoleCarrier(target, oneCrossRef));
+			target.properties.crossRefs = JSON.stringify(crossRefList.filter((oneCrossRef, crossRefIndex) => crossRefIndex !== droppedIndex));
+			return perturbed;
+		} },
+		// ⟪ctdlHub P4 E14⟫ a datatype range removed from BOTH its carriers is lost: the double carriage hides nothing real
+		{ twinName: 'one datatype range dropped from crossRefs and rangeDatatypeList', caseName: 'twinDatatypeRange', perturb: (forgeResult) => {
+			const perturbed = copyOfForgeResult(forgeResult);
+			const target = perturbed.nodes.find((oneNode) => oneNode.properties.rangeDatatypeList !== undefined);
+			const droppedIri = [].concat(target.properties.rangeDatatypeList)[0];
+			target.properties.rangeDatatypeList = [].concat(target.properties.rangeDatatypeList).slice(1);
+			target.properties.crossRefs = JSON.stringify(JSON.parse(target.properties.crossRefs).filter((oneCrossRef) => oneCrossRef.raw !== droppedIri));
 			return perturbed;
 		} },
 	].forEach((oneTwin, twinIndex) => taskList.push((args, next) => validateDouble({ forgeResult: oneTwin.perturb(args.forgeResult), caseName: oneTwin.caseName }, (validateError, verdict) => {

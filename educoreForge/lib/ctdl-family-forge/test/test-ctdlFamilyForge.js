@@ -54,6 +54,7 @@ const syntheticProfile = Object.freeze({
 	domainlessPropertyRootEdge: false,
 	enrichmentKindList: [],
 	predicateDispositionByName: { '@id': 'identity', '@type': 'identity', 'rdfs:label': 'label', 'rdfs:comment': 'description', 'rdfs:subClassOf': 'reference' },
+	rangeDatatypeRule: { predicateName: 'schema:rangeIncludes', prefixList: ['xsd'], termIdList: [] },
 });
 const { validateVocabularyProfile } = require(path.join(__dirname, '..', 'vocabularyProfileContract'));
 const loader = require(path.join(__dirname, '..', 'jsonLdVocabularyLoader'))({ vocabularyProfile: syntheticProfile });

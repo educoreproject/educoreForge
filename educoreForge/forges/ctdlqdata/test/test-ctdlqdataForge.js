@@ -31,7 +31,7 @@ const harness = require(path.join(TREE_ROOT, 'test', 'testLib', 'harness'))(modu
 const { runRealSnapshotSuite } = require(path.join(TREE_ROOT, 'lib', 'ctdl-family-forge', 'test', 'realSnapshotSuite'));
 
 // ⟪P2b⟫ the rows the suite expects the profile to carry, written FIRST at each row's commit (red-first)
-const INTENDED_ENRICHMENT_LIST = Object.freeze(['E1', 'E2', 'E3', 'E7', 'E9', 'E12', 'E13', 'E11']);
+const INTENDED_ENRICHMENT_LIST = Object.freeze(['E1', 'E2', 'E3', 'E7', 'E9', 'E12', 'E13', 'E11', 'E14']);
 const ENRICHMENT_EFFECT_BY_ROW = Object.freeze({
  "E1": {
   "edgeType": "BROADER_CONCEPT",
@@ -156,6 +156,21 @@ const ENRICHMENT_EFFECT_BY_ROW = Object.freeze({
     "metricCat:Earnings"
    ]
   ]
+ },
+ "E14": {
+  "carriedPropertyName": "rangeDatatypeList",
+  "carriedRole": "DmeProperty",
+  "carriedCount": 24,
+  "carriedEntryCount": 24,
+  "omittedDelta": {},
+  "exampleIdList": [
+   "qdata:adjustment",
+   "qdata:dataSuppressionPolicy",
+   "qdata:earningsDefinition"
+  ],
+  "exampleValueById": {
+   "qdata:adjustment": ["rdf:langString"]
+  }
  }
 });
 
