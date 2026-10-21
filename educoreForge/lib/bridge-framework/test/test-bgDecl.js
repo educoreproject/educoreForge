@@ -368,7 +368,8 @@ const shippedDeclaringPluginList = () =>
 		.readdirSync(FORGES_DIR, { withFileTypes: true })
 		.filter((oneEntry) => oneEntry.isDirectory() && fs.existsSync(path.join(FORGES_DIR, oneEntry.name, 'bridges')))
 		.reduce((soFar, oneEntry) => soFar.concat(fs.readdirSync(path.join(FORGES_DIR, oneEntry.name, 'bridges')).filter((oneFileName) => /\.js$/.test(oneFileName)).map((oneFileName) => ({ bundleDirPath: path.join(FORGES_DIR, oneEntry.name), pluginFilePath: path.join(FORGES_DIR, oneEntry.name, 'bridges', oneFileName) }))), [])
-		.filter((onePlugin) => require(onePlugin.pluginFilePath).bridgeDeclaration.candidateRetrieval !== undefined)
+		// ⟪ctdlHub P6⟫ a structural producer (exports { structuralDeclaration }, pluginRegistry's second shape) is no bridge plugin
+		.filter((onePlugin) => require(onePlugin.pluginFilePath).bridgeDeclaration !== undefined && require(onePlugin.pluginFilePath).bridgeDeclaration.candidateRetrieval !== undefined)
 		.sort((leftPlugin, rightPlugin) => (leftPlugin.pluginFilePath < rightPlugin.pluginFilePath ? -1 : 1));
 const toyFixturePluginList = () => fs.readdirSync(path.join(TOY_BUNDLE_DIR, 'bridges')).filter((oneFileName) => /\.js$/.test(oneFileName)).sort().map((oneFileName) => ({ bundleDirPath: TOY_BUNDLE_DIR, pluginFilePath: path.join(TOY_BUNDLE_DIR, 'bridges', oneFileName) }));
 

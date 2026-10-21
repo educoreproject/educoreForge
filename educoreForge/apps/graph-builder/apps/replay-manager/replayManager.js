@@ -1320,7 +1320,10 @@ const moduleFunction =
 		// (phase B6) edgeTypeList (optional): the relationship types a producer wrote. Absent, the harvest takes
 		// every edge between two labelled nodes (a base block); present, only those types (see replay-engine).
 		// ⟪lane DES⟫ edgeEndpointRule (optional): 'eitherSelected' for a layer block, whose edges reach its base's nodes
-		const { inGraph, selectionLabels, edgeTypeList, edgeEndpointRule, header, vectorStore, conservationExpectation } = spec || {};
+		// ⟪ctdlHub P6, ruled⟫ crossSourcePair (optional): { pairA, pairB } — two _source names; the harvest takes every edge whose two
+		// endpoints carry DIFFERENT _source names of the pair, and no node (replay-engine's existing pair selector, fetchBridgeEdges).
+		// A structural family block is harvested this way. Absent, the selection is exactly what it was.
+		const { inGraph, selectionLabels, edgeTypeList, edgeEndpointRule, header, vectorStore, conservationExpectation, crossSourcePair } = spec || {};
 
 		const graphName = inGraph && (inGraph.containerName || inGraph.graphName);
 		const refusal = nameRefusal(graphName, 'harvest');
@@ -1354,7 +1357,7 @@ const moduleFunction =
 			{
 				boltUri: inGraph.boltUrl,
 				password: inGraph.password,
-				selector: { selectionLabels, edgeTypeList, edgeEndpointRule },
+				selector: crossSourcePair === undefined ? { selectionLabels, edgeTypeList, edgeEndpointRule } : { pairA: crossSourcePair.pairA, pairB: crossSourcePair.pairB },
 				header,
 				vectorStore,
 			},

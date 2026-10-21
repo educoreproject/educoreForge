@@ -35,8 +35,9 @@ const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..');
 const bridgeFrameworkLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'bridge-framework'));
 const pluginRegistryLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'pluginRegistry'));
 const conflictDetectorLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'conflictDetector'));
-const { graphReaderFactory } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'graphReader'));
-const { graphWriterFactory } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'graphWriter'));
+const { graphReaderFactory, familyReaderFactory } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'graphReader'));
+const { graphWriterFactory, structuralWriterFactory } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'graphWriter'));
+const { structuralRunnerFactory } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'structuralRunner'));
 
 const FORGES_DIR_PATH = path.join(TREE_ROOT, 'forges');
 
@@ -69,7 +70,22 @@ const moduleFunction =
 			conflictDetector: conflictDetectorLib.detectSiblingConflicts,
 		});
 
+		// ⟪ctdlHub P6, ruling R-3⟫ the STRUCTURAL runner, beside the framework, over the same registry and the real doors: a recipe
+		// bridge naming a registered structural producer (pluginRegistry.structuralEntryByName) is run there; every other is
+		// forwarded to the framework exactly as before. The dispatch is a registry lookup, never a test of a name.
+		const structuralRunner = structuralRunnerFactory({ familyReaderFactory, structuralWriterFactory, pluginRegistry });
+
 		const run = ({ inGraph, bridge, applyLabel, ...restOfSpec }, callback) => {
+			if (pluginRegistry.structuralEntryByName[bridge] !== undefined) {
+				structuralRunner.run({ inGraph, bridge, applyLabel, source: restOfSpec.source, config: restOfSpec.config }, (runError, runReport) => {
+					if (runError) {
+						callback(`${moduleName}: ${String(runError)}`);
+						return;
+					}
+					callback('', runReport);
+				});
+				return;
+			}
 			// forwarded UNCHANGED; the framework refuses inGraph / bridge / applyLabel by name for its own reasons
 			bridgeFramework.run({ inGraph, bridge, applyLabel, ...restOfSpec }, (runError, runReport) => {
 				if (runError) {

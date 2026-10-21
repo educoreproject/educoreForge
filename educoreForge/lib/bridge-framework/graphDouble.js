@@ -401,7 +401,63 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 		};
 	};
 
-	return { graphReaderFactory, graphWriterFactory, state, harvestByLabel };
+	// ⟪ctdlHub P6, R-3⟫ the STRUCTURAL doors' doubles: the family reader (base records of the family's _source names, hub layer and
+	// text nodes excluded, no vector, ordered by stableId as the bolt query orders them) and the structural writer (the same closed
+	// rule, endpoints read from the double, full-identity merge, EDGES-ONLY loaded summary), plus the cross-source pair harvest the
+	// engine's fetchBridgeEdges performs: every edge whose endpoints carry two DIFFERENT _source names of the pair, and no node.
+	const familyReaderFactory = ({ inGraph, familyStandardNameList } = {}) => {
+		const constructionError = graphSeamRulesLib.familyConstructionRefusal({ inGraph, standardNameList: familyStandardNameList, roleText: 'familyReaderFactory' });
+		if (constructionError) {
+			throw constructionError;
+		}
+		const embedTextRole = graphSeamRulesLib.textSearchVocabularyFor().embedTextRole;
+		const readFamilyRecords = (callback) => {
+			callback('', state.nodeList
+				.filter((oneNode) => familyStandardNameList.indexOf(oneNode.properties._source) !== -1 && oneNode.properties.role !== embedTextRole && !graphSeamRulesLib.HUB_LAYER_LABEL_LIST.some((oneLabel) => oneNode.labels.indexOf(oneLabel) !== -1))
+				.map((oneNode) => graphSeamRulesLib.withoutEmbedding({ stableId: oneNode.stableId, labels: oneNode.labels.slice(), properties: { ...oneNode.properties } }))
+				.sort((leftRecord, rightRecord) => compareStrings(leftRecord.stableId, rightRecord.stableId)));
+		};
+		return graphSeamRulesLib.closedFamilyReader({ readFamilyRecords, close: (callback) => callback('') });
+	};
+	const structuralWriterFactory = ({ inGraph, pairStandardNameList } = {}) => {
+		const constructionError = graphSeamRulesLib.familyConstructionRefusal({ inGraph, standardNameList: pairStandardNameList, roleText: 'structuralWriterFactory' });
+		if (constructionError) {
+			throw constructionError;
+		}
+		const loadedStructuralEdgeList = [];
+		const writeStructuralEdge = ({ fromStableId, toStableId, edgeType, edgeProperties } = {}, callback) => {
+			const byStableId = nodeByStableId();
+			const endpointOf = (oneStableId) => (byStableId[oneStableId] === undefined ? null : { labels: byStableId[oneStableId].labels, sourceStandardName: byStableId[oneStableId].properties._source });
+			const refusal = graphSeamRulesLib.structuralEdgeRefusal({ fromStableId, toStableId, edgeType, edgeProperties, pairStandardNameList, fromEndpoint: endpointOf(fromStableId), toEndpoint: endpointOf(toStableId) });
+			if (refusal) {
+				callback(refusal.message);
+				return;
+			}
+			const identityOf = (oneEdgeShape) => edgeConservationIdentityFor({ type: oneEdgeShape.type, fromRef: { id: oneEdgeShape.fromStableId }, toRef: { id: oneEdgeShape.toStableId }, properties: oneEdgeShape.properties });
+			const incomingShape = { fromStableId, toStableId, type: edgeType, properties: { ...edgeProperties } };
+			if (state.edgeList.find((oneEdge) => identityOf(oneEdge) === identityOf(incomingShape)) === undefined) {
+				state.edgeList.push(incomingShape);
+			}
+			state.writtenEdgeList.push({ ...incomingShape, applyLabel: null });
+			loadedStructuralEdgeList.push({ type: edgeType, fromRef: { id: fromStableId }, toRef: { id: toStableId }, properties: { ...edgeProperties } });
+			callback('', { edgeWritten: true });
+		};
+		const pgShaped = (properties) => Object.keys(properties || {}).reduce((soFar, oneName) => ({ ...soFar, [oneName]: Array.isArray(properties[oneName]) ? properties[oneName] : [properties[oneName]] }), {});
+		const close = (callback) => callback('', { loadedConservationSummary: replayEngineLib.conservationSummaryFor({ nodes: [], edges: loadedStructuralEdgeList.map((oneEdge) => ({ ...oneEdge, properties: pgShaped(oneEdge.properties) })) }) });
+		return graphSeamRulesLib.closedStructuralWriter({ writeStructuralEdge, close });
+	};
+	const harvestByCrossSourcePair = ({ pairA, pairB } = {}) => {
+		const byStableId = nodeByStableId();
+		const sourceOfNode = (oneStableId) => (byStableId[oneStableId] === undefined ? undefined : byStableId[oneStableId].properties._source);
+		return {
+			nodeList: [],
+			edgeList: state.edgeList
+				.filter((oneEdge) => [pairA, pairB].indexOf(sourceOfNode(oneEdge.fromStableId)) !== -1 && [pairA, pairB].indexOf(sourceOfNode(oneEdge.toStableId)) !== -1 && sourceOfNode(oneEdge.fromStableId) !== sourceOfNode(oneEdge.toStableId))
+				.map((oneEdge) => ({ fromStableId: oneEdge.fromStableId, toStableId: oneEdge.toStableId, type: oneEdge.type, properties: Object.keys(oneEdge.properties).reduce((soFar, oneName) => ({ ...soFar, [oneName]: Array.isArray(oneEdge.properties[oneName]) ? oneEdge.properties[oneName] : [oneEdge.properties[oneName]] }), {}) })),
+		};
+	};
+
+	return { graphReaderFactory, graphWriterFactory, state, harvestByLabel, familyReaderFactory, structuralWriterFactory, harvestByCrossSourcePair };
 };
 
 module.exports = { graphDoubleFrom, isPlainObject, moduleName };

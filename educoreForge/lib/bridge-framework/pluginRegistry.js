@@ -20,11 +20,19 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   registerPlugin({ pluginModule, pluginFilePath, bundleDirPath })   → { entry } | { error }   (pure save the header read)
 //   buildRegistryFromDirectory({ forgesDirPath })                    → frozen { entryByBridgeName, pluginFilePathList } | THROWS
 //   lookupPlugin({ registry, bridgeName, standardKey })              → { entry } | { error }
+//   registerStructuralProducer({ producerModule, producerFilePath, bundleDirPath }) → { entry } | { error }
+//   lookupStructuralProducer({ registry, producerName, standardKey }) → { entry } | { error }
+//
+// ⟪ctdlHub P6, ruling R-3⟫ A SECOND MODULE SHAPE: a file under bridges/ exporting EXACTLY { structuralDeclaration } is a STRUCTURAL
+// producer (structuralProducerContract.js), registered into its OWN map, structuralEntryByName, never into entryByBridgeName: every
+// reader of entryByBridgeName (the conflict detector, describeBridge, the framework's run) reads a bridgeDeclaration, which a
+// structural producer does not have. A name is unique across BOTH maps. Any other export set is still a stray file, refused.
 
 const fs = require('fs');
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const bridgePluginContractLib = require('./bridgePluginContract');
+const structuralProducerContractLib = require('./structuralProducerContract');
 
 const BRIDGES_DIR_NAME = 'bridges';
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
@@ -69,6 +77,33 @@ const registerPlugin = ({ pluginModule, pluginFilePath, bundleDirPath } = {}) =>
 	};
 };
 
+// registerStructuralProducer — the second shape: exactly { structuralDeclaration }, validated, its locator table read and checked
+const registerStructuralProducer = ({ producerModule, producerFilePath, bundleDirPath } = {}) => {
+	const exportNameList = isPlainObject(producerModule) ? Object.keys(producerModule) : [];
+	if (exportNameList.length !== 1 || exportNameList[0] !== 'structuralDeclaration') {
+		return { error: refuse.byName({ moduleName, what: `structural producer file ${producerFilePath} exports [${exportNameList.join(', ')}], not exactly { structuralDeclaration }`, where: 'a structural producer is pure data; the algorithm is the framework\'s (structuralRunner.js)' }) };
+	}
+	const validated = structuralProducerContractLib.validateStructuralDeclaration({ structuralDeclaration: producerModule.structuralDeclaration, bundleDirPath });
+	if (validated.error) {
+		return { error: new Error(`${validated.error.message} [structural producer ${producerFilePath}]`) };
+	}
+	const expectedStandardKey = path.basename(path.dirname(path.dirname(producerFilePath)));
+	if (producerModule.structuralDeclaration.standardKey !== expectedStandardKey) {
+		return { error: refuse.byName({ moduleName, what: `structural producer ${producerFilePath} declares standardKey '${producerModule.structuralDeclaration.standardKey}' but sits under bundle '${expectedStandardKey}'`, where: 'standardKey MUST equal the bundle directory (BR-009)' }) };
+	}
+	return {
+		entry: Object.freeze({
+			producerName: producerModule.structuralDeclaration.producerName,
+			standardKey: producerModule.structuralDeclaration.standardKey,
+			bundleDirPath,
+			producerFilePath,
+			structuralDeclaration: producerModule.structuralDeclaration,
+			locatorTable: validated.locatorTable,
+			locatorTableFilePath: validated.locatorTableFilePath,
+		}),
+	};
+};
+
 // buildRegistryFromDirectory — discovery over forges/<standardKey>/bridges/*.js; THROWS by name on any refusal
 const buildRegistryFromDirectory = ({ forgesDirPath, requireModule } = {}) => {
 	if (typeof forgesDirPath !== 'string' || !fs.existsSync(forgesDirPath) || !fs.statSync(forgesDirPath).isDirectory()) {
@@ -76,7 +111,9 @@ const buildRegistryFromDirectory = ({ forgesDirPath, requireModule } = {}) => {
 	}
 	const loadModule = typeof requireModule === 'function' ? requireModule : (oneFilePath) => require(oneFilePath);
 	const entryByBridgeName = {};
+	const structuralEntryByName = {};
 	const pluginFilePathList = [];
+	const structuralProducerFilePathList = [];
 	const bundleNameList = fs
 		.readdirSync(forgesDirPath, { withFileTypes: true })
 		.filter((oneEntry) => oneEntry.isDirectory())
@@ -102,9 +139,29 @@ const buildRegistryFromDirectory = ({ forgesDirPath, requireModule } = {}) => {
 			if (substrateReason) {
 				throw refuse.byName({ moduleName, what: substrateReason, where: 'a plugin declares assertions; it never reaches a driver, a store, a judge or an embedder' });
 			}
+			// ⟪ctdlHub P6⟫ the second shape, told apart by its one export (require is cached, so the plugin path below loads the same
+			// module); its name is unique across both maps, and its file is listed apart from the plugin files
+			const candidateModule = loadModule(pluginFilePath);
+			if (isPlainObject(candidateModule) && Object.prototype.hasOwnProperty.call(candidateModule, 'structuralDeclaration')) {
+				pluginFilePathList.pop();
+				structuralProducerFilePathList.push(pluginFilePath);
+				const registeredProducer = registerStructuralProducer({ producerModule: candidateModule, producerFilePath: pluginFilePath, bundleDirPath });
+				if (registeredProducer.error) {
+					throw registeredProducer.error;
+				}
+				const clashing = structuralEntryByName[registeredProducer.entry.producerName] || entryByBridgeName[registeredProducer.entry.producerName];
+				if (clashing !== undefined) {
+					throw refuse.byName({ moduleName, what: `name '${registeredProducer.entry.producerName}' is declared by TWO files: ${clashing.pluginFilePath || clashing.producerFilePath} and ${pluginFilePath}`, where: 'a bridge name is unique across plugins and structural producers' });
+				}
+				structuralEntryByName[registeredProducer.entry.producerName] = registeredProducer.entry;
+				return;
+			}
 			const registered = registerPlugin({ pluginModule: loadModule(pluginFilePath), pluginFilePath, bundleDirPath });
 			if (registered.error) {
 				throw registered.error;
+			}
+			if (structuralEntryByName[registered.entry.bridgeName] !== undefined) {
+				throw refuse.byName({ moduleName, what: `name '${registered.entry.bridgeName}' is declared by TWO files: ${structuralEntryByName[registered.entry.bridgeName].producerFilePath} and ${pluginFilePath}`, where: 'a bridge name is unique across plugins and structural producers' });
 			}
 			const existing = entryByBridgeName[registered.entry.bridgeName];
 			if (existing !== undefined) {
@@ -113,7 +170,7 @@ const buildRegistryFromDirectory = ({ forgesDirPath, requireModule } = {}) => {
 			entryByBridgeName[registered.entry.bridgeName] = registered.entry;
 		});
 	});
-	return Object.freeze({ entryByBridgeName: Object.freeze(entryByBridgeName), pluginFilePathList: Object.freeze(pluginFilePathList), forgesDirPath });
+	return Object.freeze({ entryByBridgeName: Object.freeze(entryByBridgeName), structuralEntryByName: Object.freeze(structuralEntryByName), pluginFilePathList: Object.freeze(pluginFilePathList), structuralProducerFilePathList: Object.freeze(structuralProducerFilePathList), forgesDirPath });
 };
 
 const registeredNameText = (registry) => {
@@ -136,4 +193,16 @@ const lookupPlugin = ({ registry, bridgeName, standardKey } = {}) => {
 	return { entry };
 };
 
-module.exports = { registerPlugin, buildRegistryFromDirectory, lookupPlugin, registeredNameText, BRIDGES_DIR_NAME, moduleName };
+// lookupStructuralProducer — the run-time resolution of a structural producer, refusing an unregistered name and a wrong source
+const lookupStructuralProducer = ({ registry, producerName, standardKey } = {}) => {
+	const producerEntry = registry && isPlainObject(registry.structuralEntryByName) ? registry.structuralEntryByName[producerName] : undefined;
+	if (producerEntry === undefined) {
+		return { error: refuse.byName({ moduleName, what: `structural producer '${producerName}' is not registered`, where: 'a structural producer is a file under forges/<standardKey>/bridges/ exporting { structuralDeclaration }' }) };
+	}
+	if (producerEntry.standardKey !== standardKey) {
+		return { error: refuse.byName({ moduleName, what: `structural producer '${producerName}' is registered for standardKey '${producerEntry.standardKey}' but the recipe's source is '${standardKey}'`, where: 'a producer runs only for the standard it sits under (BR-009)' }) };
+	}
+	return { entry: producerEntry };
+};
+
+module.exports = { registerPlugin, registerStructuralProducer, buildRegistryFromDirectory, lookupPlugin, lookupStructuralProducer, registeredNameText, BRIDGES_DIR_NAME, moduleName };

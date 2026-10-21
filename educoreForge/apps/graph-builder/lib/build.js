@@ -2267,10 +2267,22 @@ const build = (recipe, deps, callback) => {
 				}
 				// ⟪ctdlHub P5⟫ hubStandardName — the hub bundle's declared standardName, by the same one canonical authority, so the
 				// bridge reads exactly its own hub's cards when a graph holds more than one hub (a hub's cards carry hubName = it, I12)
-				const hubBundle = components.forger.resolveBundle({ standard: bridge.hub });
-				if (hubBundle.error) {
+				// ⟪ctdlHub P6, ruling R-3⟫ a STRUCTURAL bridge (familyStandards / pairWith, no hub) maps toward no hub: no hub bundle is
+				// resolved and hubStandardName stays absent; its family's standard names are resolved instead, by the same authority
+				const hubBundle = bridge.hub === undefined ? null : components.forger.resolveBundle({ standard: bridge.hub });
+				if (hubBundle !== null && hubBundle.error) {
 					next(`bridge ${pairLabel}: resolving hub bundle for standardName: ${hubBundle.error}`);
 					return;
+				}
+				const familyStandardNameByToken = {};
+				const familyTokenList = bridge.hub === undefined ? [].concat(bridge.familyStandards || bridge.dependencies || []) : [];
+				for (let familyIndex = 0; familyIndex < familyTokenList.length; familyIndex++) {
+					const familyBundle = components.forger.resolveBundle({ standard: familyTokenList[familyIndex] });
+					if (familyBundle.error) {
+						next(`bridge ${pairLabel}: resolving family bundle '${familyTokenList[familyIndex]}' for standardName: ${familyBundle.error}`);
+						return;
+					}
+					familyStandardNameByToken[familyTokenList[familyIndex]] = familyBundle.standardName;
 				}
 				bridgeMaker.run(
 					{
@@ -2304,7 +2316,7 @@ const build = (recipe, deps, callback) => {
 							sourceStandardName: sourceBundle.standardName,
 							sourceVersion: resolvedVersionByToken[bridge.source],
 							hubVersion: resolvedVersionByToken[bridge.hub],
-							hubStandardName: hubBundle.standardName,
+							hubStandardName: hubBundle === null ? undefined : hubBundle.standardName,
 							// pairWith + its resolved version reach a STRUCTURAL producer (ctdlFamilyStructure) so it
 							// knows its sibling pairing endpoint; undefined for a mapping bridge, which ignores them.
 							pairWith: bridge.pairWith,
@@ -2313,6 +2325,8 @@ const build = (recipe, deps, callback) => {
 							// whole family, so a cross-sibling ref is told apart from a dangler (the third sibling is
 							// among the restored dependency bases). undefined for a mapping bridge, which ignores it.
 							familyStandards: bridge.familyStandards || bridge.dependencies,
+							// ⟪ctdlHub P6⟫ present ONLY on a hubless (structural) bridge: the framework's closed config list never sees it
+							...(bridge.hub === undefined ? { familyStandardNameByToken } : {}),
 						},
 					},
 					(err, runReport) => {
@@ -2421,6 +2435,10 @@ const build = (recipe, deps, callback) => {
 								// must not be indistinguishable from a seam that legitimately has nothing to
 								// compare. Do not restore the exemption to quiet that refusal — find the drop.
 								conservationExpectation: oneBlock.loadedConservationSummary,
+								// ⟪ctdlHub P6, ruled⟫ a structural block is harvested by its CROSS-SOURCE PAIR (the engine's pair selector:
+								// edges between two different _source of the pair), never by label: its edge types are native ones, which a
+								// label harvest would also take from inside one standard. Passed only when the producer's block carries it.
+								...(oneBlock.crossSourcePair === undefined ? {} : { crossSourcePair: oneBlock.crossSourcePair }),
 								// ⟪campaign P3, W-C-6⟫ the relationship header names its PAIR, the pretty versions and the producer
 								// (SCHEMA_BLOCK_HEADER_FIELD_LIST_BY_KIND); its subject is re-composed from them, discriminator
 								// included. Before P3 standardKey held the whole subject here.

@@ -1,0 +1,9 @@
+{
+	"tableNote": "Fixture locator table for test-bgStructural (ctdlHub P6): two structure locators, one correspondence locator.",
+	"structureLocatorList": [
+		{ "locator": "schema:domainIncludes", "edgeType": "HAS_PROPERTY", "direction": "targetToSource" },
+		{ "locator": "schema:rangeIncludes", "edgeType": "REFERENCES", "direction": "sourceToTarget" },
+		{ "locator": "meta:domainFor", "edgeType": "HAS_PROPERTY", "direction": "sourceToTarget" }
+	],
+	"correspondenceLocatorList": ["owl:equivalentProperty"]
+}

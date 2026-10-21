@@ -1,0 +1,338 @@
+{
+	"allowanceNote": "ctdlHub-101926 P6 ruling R-4 (SCARLET_ARROW, 2026-10-21): the family-structure edges the P6 producer writes that the July oracle lacks. Every one has a skos:Concept or skos:ConceptScheme endpoint, a term CTDL-ASN imports and owns as its own node (Q-T5, kept). July wrote none of them because the attic forges dropped the skos: references from CTDL and CTDL-QData crossRefs; allowance A1 carries ALL non-native references now, so the same-IRI join finds them. CARRIED, NEVER DROPPED: each is enumerated here; any edge outside this list and the oracle is a defect.",
+	"ruling": "R-4",
+	"countByPair": {
+		"CTDL::CTDLASN": 36,
+		"CTDL::CTDLQData": 0,
+		"CTDLASN::CTDLQData": 10
+	},
+	"edgeListByPair": {
+		"CTDL::CTDLASN": [
+			{
+				"type": "HAS_PROPERTY",
+				"from": "skos:Concept",
+				"to": "ceterms:ctid",
+				"crossRefLocator": "schema:domainIncludes",
+				"carrier": "ceterms:ctid"
+			},
+			{
+				"type": "HAS_PROPERTY",
+				"from": "skos:Concept",
+				"to": "ceterms:precededBy",
+				"crossRefLocator": "schema:domainIncludes",
+				"carrier": "ceterms:precededBy"
+			},
+			{
+				"type": "HAS_PROPERTY",
+				"from": "skos:Concept",
+				"to": "ceterms:precedes",
+				"crossRefLocator": "schema:domainIncludes",
+				"carrier": "ceterms:precedes"
+			},
+			{
+				"type": "HAS_PROPERTY",
+				"from": "skos:Concept",
+				"to": "ceterms:subjectWebpage",
+				"crossRefLocator": "schema:domainIncludes",
+				"carrier": "ceterms:subjectWebpage"
+			},
+			{
+				"type": "HAS_PROPERTY",
+				"from": "skos:ConceptScheme",
+				"to": "ceterms:ctid",
+				"crossRefLocator": "schema:domainIncludes",
+				"carrier": "ceterms:ctid"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:agreementType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:agreementType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:alignmentType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:alignmentType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:classification",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:classification"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:comparator",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:comparator"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:compares",
+				"to": "skos:ConceptScheme",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:compares"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:creditLevelType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:creditLevelType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:creditUnitType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:creditUnitType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:environmentalHazardType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:environmentalHazardType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:financialAssistanceForType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:financialAssistanceForType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:hasFacetScheme",
+				"to": "skos:ConceptScheme",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:hasFacetScheme"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:hasGlossary",
+				"to": "skos:ConceptScheme",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:hasGlossary"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:hasSubFrameworkScheme",
+				"to": "skos:ConceptScheme",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:hasSubFrameworkScheme"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:instructionalProgramType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:instructionalProgramType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:jobLevelType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:jobLevelType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:learningRecognitionEvidenceType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:learningRecognitionEvidenceType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:learningRecognitionMethodType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:learningRecognitionMethodType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:learningRecognitionOutcomeType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:learningRecognitionOutcomeType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:learningRecognitionSourceType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:learningRecognitionSourceType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:leftAction",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:leftAction"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:leftSource",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:leftSource"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:logicalOperator",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:logicalOperator"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:payBandType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:payBandType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:paymentPatternType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:paymentPatternType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:performanceLevelType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:performanceLevelType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:physicalCapabilityType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:physicalCapabilityType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:precededBy",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:precededBy"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:precedes",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:precedes"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:rightAction",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:rightAction"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:rightSource",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:rightSource"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:sensoryCapabilityType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:sensoryCapabilityType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "ceterms:statementType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "ceterms:statementType"
+			}
+		],
+		"CTDL::CTDLQData": [],
+		"CTDLASN::CTDLQData": [
+			{
+				"type": "REFERENCES",
+				"from": "qdata:dataCollectionMethodType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "qdata:dataCollectionMethodType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "qdata:dataSourceCoverageType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "qdata:dataSourceCoverageType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "qdata:dataWithholdingType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "qdata:dataWithholdingType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "qdata:dimensionType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "qdata:dimensionType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "qdata:dimensionType",
+				"to": "skos:ConceptScheme",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "qdata:dimensionType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "qdata:incomeDeterminationType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "qdata:incomeDeterminationType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "qdata:metricType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "qdata:metricType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "qdata:recordType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "qdata:recordType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "qdata:subjectType",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "qdata:subjectType"
+			},
+			{
+				"type": "REFERENCES",
+				"from": "schema:unitText",
+				"to": "skos:Concept",
+				"crossRefLocator": "schema:rangeIncludes",
+				"carrier": "schema:unitText"
+			}
+		]
+	}
+}

@@ -349,4 +349,45 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 	return graphSeamRulesLib.closedReader({ readHubCards, readSubjectNodes, forWalk, forEvidence, forRetrieval, close, readHubTermCards, readTargetStandardRecords });
 };
 
-module.exports = { graphReaderFactory, moduleName };
+// ⟪ctdlHub P6, R-3⟫ familyReaderFactory — the STRUCTURAL producer's read door: the base records (no vector) of every standard of a
+// family, by _source EXACTLY, hub layer and text nodes excluded — the population a same-IRI identity join runs over. Its own closed
+// shape (graphSeamRules.closedFamilyReader): a structural run never holds a bridge reader.
+//   familyReaderFactory({ inGraph, familyStandardNameList }) → { readFamilyRecords(cb → recordList), close(cb) }
+const familyReaderFactory = ({ inGraph, familyStandardNameList } = {}) => {
+	const constructionError = graphSeamRulesLib.familyConstructionRefusal({ inGraph, standardNameList: familyStandardNameList, roleText: 'familyReaderFactory' });
+	if (constructionError) {
+		throw constructionError;
+	}
+	const textSearchVocabulary = graphSeamRulesLib.textSearchVocabularyFor();
+	if (textSearchVocabulary.error) {
+		throw textSearchVocabulary.error;
+	}
+	if (typeof inGraph.boltUrl !== 'string' || typeof inGraph.password !== 'string') {
+		throw new Error(`${moduleName} REFUSED: inGraph lacks boltUrl / password — the GraphHandle replayManager.create returns carries both`);
+	}
+	const neo4j = require('neo4j-driver');
+	const driver = neo4j.driver(inGraph.boltUrl, neo4j.auth.basic(typeof inGraph.user === 'string' ? inGraph.user : NEO4J_USER, inGraph.password), { encrypted: false });
+	const unwrapValue = (oneValue) => (neo4j.isInt(oneValue) ? oneValue.toNumber() : Array.isArray(oneValue) ? oneValue.map(unwrapValue) : oneValue);
+	const readFamilyRecords = (callback) => {
+		const session = driver.session();
+		session
+			.run(`MATCH (n) WHERE n._source IN $familyStandardNameList AND (n.role IS NULL OR n.role <> $embedTextRole) AND ${graphSeamRulesLib.HUB_LAYER_LABEL_LIST.map((oneLabel) => `NOT n:${oneLabel}`).join(' AND ')} RETURN n ORDER BY n.stableId`, { familyStandardNameList, embedTextRole: textSearchVocabulary.embedTextRole })
+			.then((result) => {
+				const recordList = result.records.map((oneRecord) => {
+					const node = oneRecord.get('n');
+					const properties = Object.keys(node.properties || {}).filter((oneName) => oneName !== 'embedding').reduce((soFar, oneName) => ({ ...soFar, [oneName]: unwrapValue(node.properties[oneName]) }), {});
+					return { stableId: properties.stableId, labels: node.labels.slice(), properties };
+				});
+				session.close().then(() => callback('', recordList)).catch((closeError) => callback(`${moduleName}: session close: ${closeError.message}`));
+			})
+			.catch((runError) => {
+				session.close().then(() => callback(`${moduleName}: ${runError.message}`)).catch(() => callback(`${moduleName}: ${runError.message}`));
+			});
+	};
+	const close = (callback) => {
+		driver.close().then(() => callback('')).catch((closeError) => callback(`${moduleName}: driver close: ${closeError.message}`));
+	};
+	return graphSeamRulesLib.closedFamilyReader({ readFamilyRecords, close });
+};
+
+module.exports = { graphReaderFactory, familyReaderFactory, moduleName };

@@ -214,4 +214,59 @@ const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) =>
 	return graphSeamRulesLib.closedWriter({ writeMappingEdge, close, writeDeclaredCorrespondenceEdge });
 };
 
-module.exports = { graphWriterFactory, moduleName };
+// ⟪ctdlHub P6, R-3⟫ structuralWriterFactory — the STRUCTURAL producer's write door, one per family pair: a base-to-base edge between
+// the pair's two standards under graphSeamRules.structuralEdgeRefusal, merged on the full property map as every door merges, no
+// label stamped (a structural block is harvested by its cross-source pair, not by label). close reports the loaded conservation
+// summary as the bridge writer's does, EDGES ONLY: the pair harvest carries no nodes (replay-engine fetchBridgeEdges).
+//   structuralWriterFactory({ inGraph, pairStandardNameList }) → { writeStructuralEdge({ fromStableId, toStableId, edgeType, edgeProperties }, cb), close(cb) }
+const structuralWriterFactory = ({ inGraph, pairStandardNameList } = {}) => {
+	const constructionError = graphSeamRulesLib.familyConstructionRefusal({ inGraph, standardNameList: pairStandardNameList, roleText: 'structuralWriterFactory' });
+	if (constructionError) {
+		throw constructionError;
+	}
+	if (typeof inGraph.boltUrl !== 'string' || typeof inGraph.password !== 'string') {
+		throw new Error(`${moduleName} REFUSED: inGraph lacks boltUrl / password — the GraphHandle replayManager.create returns carries both`);
+	}
+	const neo4j = require('neo4j-driver');
+	const driver = neo4j.driver(inGraph.boltUrl, neo4j.auth.basic(typeof inGraph.user === 'string' ? inGraph.user : NEO4J_USER, inGraph.password), { encrypted: false });
+	const loadedEdgeList = [];
+	const writeStructuralEdge = ({ fromStableId, toStableId, edgeType, edgeProperties } = {}, callback) => {
+		const shapeRefusal = graphSeamRulesLib.structuralEdgeRefusal({ fromStableId, toStableId, edgeType, edgeProperties, pairStandardNameList });
+		if (shapeRefusal) {
+			callback(shapeRefusal.message);
+			return;
+		}
+		const session = driver.session();
+		session
+			.run(`OPTIONAL MATCH (a:${FORGED_NODE_LABEL} {stableId: $fromStableId}) WITH a OPTIONAL MATCH (b:${FORGED_NODE_LABEL} {stableId: $toStableId}) RETURN labels(a) AS fromLabels, a._source AS fromSource, a IS NOT NULL AS fromPresent, labels(b) AS toLabels, b._source AS toSource, b IS NOT NULL AS toPresent`, { fromStableId, toStableId })
+			.then((lookup) => {
+				const row = lookup.records[0];
+				const fromEndpoint = row && row.get('fromPresent') ? { labels: row.get('fromLabels'), sourceStandardName: row.get('fromSource') } : null;
+				const toEndpoint = row && row.get('toPresent') ? { labels: row.get('toLabels'), sourceStandardName: row.get('toSource') } : null;
+				const endpointRefusal = graphSeamRulesLib.structuralEdgeRefusal({ fromStableId, toStableId, edgeType, edgeProperties, pairStandardNameList, fromEndpoint, toEndpoint });
+				if (endpointRefusal) {
+					return session.close().then(() => callback(endpointRefusal.message));
+				}
+				return session
+					.run(`MATCH (a:${FORGED_NODE_LABEL} {stableId: $fromStableId}) MATCH (b:${FORGED_NODE_LABEL} {stableId: $toStableId}) CALL apoc.merge.relationship(a, $edgeType, $edgeProperties, {}, b) YIELD rel RETURN count(rel) AS edgeCount`, { fromStableId, toStableId, edgeType, edgeProperties })
+					.then((written) => {
+						const edgeCount = written.records[0] ? written.records[0].get('edgeCount') : 0;
+						const wroteOne = neo4j.isInt(edgeCount) ? edgeCount.toNumber() === 1 : edgeCount === 1;
+						if (wroteOne) {
+							loadedEdgeList.push({ type: edgeType, fromRef: { id: fromStableId }, toRef: { id: toStableId }, properties: { ...edgeProperties } });
+						}
+						return session.close().then(() => (wroteOne ? callback('', { edgeWritten: true }) : callback(`${moduleName}: MERGE ${fromStableId} -[${edgeType}]-> ${toStableId} reported ${String(edgeCount)} edges, not 1 — an un-counted write cannot be gated`)));
+					});
+			})
+			.catch((runError) => {
+				session.close().then(() => callback(`${moduleName}: ${runError.message}`)).catch(() => callback(`${moduleName}: ${runError.message}`));
+			});
+	};
+	const pgShaped = (properties) => Object.keys(properties || {}).reduce((soFar, oneName) => ({ ...soFar, [oneName]: Array.isArray(properties[oneName]) ? properties[oneName] : [properties[oneName]] }), {});
+	const close = (callback) => {
+		driver.close().then(() => callback('', { loadedConservationSummary: replayEngineLib.conservationSummaryFor({ nodes: [], edges: loadedEdgeList.map((oneEdge) => ({ ...oneEdge, properties: pgShaped(oneEdge.properties) })) }) })).catch((closeError) => callback(`${moduleName}: driver close: ${closeError.message}`));
+	};
+	return graphSeamRulesLib.closedStructuralWriter({ writeStructuralEdge, close });
+};
+
+module.exports = { graphWriterFactory, structuralWriterFactory, moduleName };

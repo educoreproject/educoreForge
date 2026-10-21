@@ -546,6 +546,57 @@ const declaredCorrespondenceEdgeRefusal = ({ subjectStableId, objectStableId, ob
 	return null;
 };
 
+// ⟪ctdlHub P6, R-3⟫ the STRUCTURAL producer's doors: a family reader (the family's base records) and a structural writer (one per
+// family pair), each a closed shape of its own, so neither can be mistaken for a bridge's reader or writer
+const FAMILY_READER_MEMBER_LIST = Object.freeze(['readFamilyRecords', 'close']);
+const STRUCTURAL_WRITER_MEMBER_LIST = Object.freeze(['writeStructuralEdge', 'close']);
+const closedFamilyReader = (reader) => closedShape({ target: reader, memberList: FAMILY_READER_MEMBER_LIST, shapeName: 'familyReader' });
+const closedStructuralWriter = (writer) => closedShape({ target: writer, memberList: STRUCTURAL_WRITER_MEMBER_LIST, shapeName: 'structuralWriter' });
+// the closed property set of a structural family edge: the July producer's, provenanceSource now the producer's name (A3) and
+// owner (':golden', a July artefact) gone
+const STRUCTURAL_EDGE_PROPERTY_NAME_LIST = Object.freeze(['provenanceTier', 'provenanceSource', 'bridgeAuthored', 'crossRefLocator']);
+const STRUCTURAL_FAMILY_EDGE_TYPE_LIST = Object.freeze(['HAS_PROPERTY', 'REFERENCES', 'SUBCLASS_OF', 'HAS_OPTION_SET']);
+const familyConstructionRefusal = ({ inGraph, standardNameList, roleText } = {}) => {
+	if (!isPlainObject(inGraph)) {
+		return refuse.byName({ moduleName, what: `${roleText}: inGraph is absent`, where: 'the materialized dependency GraphHandle; there is no default' });
+	}
+	if (!Array.isArray(standardNameList) || standardNameList.length < 2 || standardNameList.some((oneName) => !isNonEmptyString(oneName)) || new Set(standardNameList).size !== standardNameList.length) {
+		return refuse.byName({ moduleName, what: `${roleText}: standard names ${JSON.stringify(standardNameList)}`, where: 'at least two distinct _source names (the family, or the pair)' });
+	}
+	return null;
+};
+// structuralEdgeRefusal — the structural writer's seam: returns an Error or null. Both endpoints are BASE nodes of the pair (never
+// a hub-layer node), of two DIFFERENT standards of it; the type is one of the four family types; the properties are the closed set.
+const structuralEdgeRefusal = ({ fromStableId, toStableId, edgeType, edgeProperties, pairStandardNameList, fromEndpoint, toEndpoint } = {}) => {
+	if (!isNonEmptyString(fromStableId) || !isNonEmptyString(toStableId)) {
+		return refuse.byName({ moduleName, what: `writeStructuralEdge: fromStableId ${JSON.stringify(fromStableId)} / toStableId ${JSON.stringify(toStableId)}`, where: 'both endpoints by stableId' });
+	}
+	if (STRUCTURAL_FAMILY_EDGE_TYPE_LIST.indexOf(edgeType) === -1) {
+		return refuse.byName({ moduleName, what: `writeStructuralEdge: edgeType '${edgeType}' is not a family structure type (${STRUCTURAL_FAMILY_EDGE_TYPE_LIST.join(', ')})`, where: 'the locator table names one of the four July family types; a structural producer writes nothing else' });
+	}
+	if (!isPlainObject(edgeProperties)) {
+		return refuse.byName({ moduleName, what: 'writeStructuralEdge: edgeProperties is not an object', where: 'STRUCTURAL_EDGE_PROPERTY_NAME_LIST' });
+	}
+	const outside = Object.keys(edgeProperties).find((oneName) => STRUCTURAL_EDGE_PROPERTY_NAME_LIST.indexOf(oneName) === -1);
+	const missing = STRUCTURAL_EDGE_PROPERTY_NAME_LIST.find((oneName) => edgeProperties[oneName] === undefined || edgeProperties[oneName] === null || edgeProperties[oneName] === '');
+	if (outside !== undefined || missing !== undefined) {
+		return refuse.byName({ moduleName, what: `writeStructuralEdge: properties ${JSON.stringify(Object.keys(edgeProperties))} (${outside !== undefined ? `outside: ${outside}` : `missing: ${missing}`})`, where: `exactly ${STRUCTURAL_EDGE_PROPERTY_NAME_LIST.join(', ')}` });
+	}
+	if (edgeProperties.provenanceTier !== vocabularyLib.PROVENANCE_TIER.STRUCTURAL || edgeProperties.bridgeAuthored !== true || !/^[a-z][A-Za-z0-9]*:[A-Za-z][A-Za-z0-9]*$/.test(String(edgeProperties.crossRefLocator)) || !/^[a-z][A-Za-z0-9]*$/.test(String(edgeProperties.provenanceSource))) {
+		return refuse.byName({ moduleName, what: `writeStructuralEdge: properties ${JSON.stringify(edgeProperties)}`, where: "provenanceTier 'structural', bridgeAuthored true, crossRefLocator a CURIE, provenanceSource the producer's lowerCamel name" });
+	}
+	if (fromEndpoint === null || toEndpoint === null) {
+		return refuse.byName({ moduleName, what: `writeStructuralEdge: endpoint ${fromEndpoint === null ? fromStableId : toStableId} is absent from inGraph`, where: 'the identity join only ever names nodes it read; an absent one is a defect, never skipped' });
+	}
+	if (fromEndpoint !== undefined && toEndpoint !== undefined) {
+		const hubLayerEndpoint = [fromEndpoint, toEndpoint].find((oneEndpoint) => HUB_LAYER_LABEL_LIST.some((oneLabel) => oneEndpoint.labels.indexOf(oneLabel) !== -1));
+		if (hubLayerEndpoint !== undefined || pairStandardNameList.indexOf(fromEndpoint.sourceStandardName) === -1 || pairStandardNameList.indexOf(toEndpoint.sourceStandardName) === -1 || fromEndpoint.sourceStandardName === toEndpoint.sourceStandardName) {
+			return refuse.byName({ moduleName, what: `writeStructuralEdge: ${fromStableId} (${fromEndpoint.sourceStandardName}) → ${toStableId} (${toEndpoint.sourceStandardName}) is not a base-to-base edge between the two standards of [${pairStandardNameList.join(', ')}]`, where: 'a family edge joins two DIFFERENT family standards\' base nodes; an intra-standard edge is the forge\'s, a hub card is no endpoint' });
+		}
+	}
+	return null;
+};
+
 // mappingEdgeRefusal — the §6 write seam: returns an Error or null
 const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgeProperties, sourceStandardName, subjectEndpoint, objectEndpoint } = {}) => {
 	if (!isNonEmptyString(subjectStableId) || !isNonEmptyString(objectStableId)) {
@@ -685,6 +736,14 @@ module.exports = {
 	CARD_REQUIRED_PROPERTY_LIST,
 	READER_MEMBER_LIST,
 	declaredCorrespondenceEdgeRefusal,
+	FAMILY_READER_MEMBER_LIST,
+	STRUCTURAL_WRITER_MEMBER_LIST,
+	STRUCTURAL_EDGE_PROPERTY_NAME_LIST,
+	STRUCTURAL_FAMILY_EDGE_TYPE_LIST,
+	closedFamilyReader,
+	closedStructuralWriter,
+	familyConstructionRefusal,
+	structuralEdgeRefusal,
 	TERM_REFERENCE_TIER,
 	shapeHubTermCardList,
 	VIEW_MEMBER_LIST,

@@ -80,6 +80,10 @@ const JUDGE_SLOT_PREDICATE_ENUM_LITERAL = Object.freeze(['exactMatch', 'closeMat
 // every bridge plugin shipped under forges/ on 2026-09-28, with the variant and renderer version each resolves to
 const SHIPPED_PLUGIN_LIST = [
 	{ bridgeName: 'sifCedsStandardPlugin', pluginPath: 'forges/sif/bridges/sifCedsStandardPlugin.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
+	// ADDED 2026-10-21 (STERLING_PORTAL, ctdlHub P6, rulings R-2/R-5): the two DECLARED-correspondence plugins. A declared basis judges
+	// nothing; its variant row is the documentary 'crosswalk' (registration resolves one), and nothing is ever rendered under it.
+	{ bridgeName: 'ctdlCedsDeclaredCorrespondence', pluginPath: 'forges/ctdl/bridges/ctdlCedsDeclaredCorrespondence.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'ctdlasnCtdlDeclaredCorrespondence', pluginPath: 'forges/ctdlasn/bridges/ctdlasnCtdlDeclaredCorrespondence.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
 	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded, "known to be garbage"): edfiCedsCrosswalkPlugin moved to forges/edfi/retiredBridges/, out of the roster
 	// MOVED 2026-09-30 (IVORY_ECHO, WORKORDER-jevRelations-093026 R2, TQ ruling "every bridge uses judge-named relations"):
 	// Ed-Fi derived now declares predicateRule judgeSlot-v1, so it resolves to derivedJudgeSlot. Was: 'derived' / derived-v12.
