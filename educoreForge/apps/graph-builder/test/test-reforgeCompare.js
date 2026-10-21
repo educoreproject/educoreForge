@@ -21,7 +21,8 @@
 //   (l) -summarize records the BUILD tree's head (required, named), passes only when every report passed
 //   (j) -compareStores end to end: a LIST of stores compares every pair; a store holding NO table is refused; identical stores pass; a changed block text and an unregistered table are named; a
 //       block whose refId is not sha256(text) fails the content-address row
-// RED TWINS (in memory, a double of lib/reforge-compare.js): wrongLabelExcluded -> (d); listSortedAway -> (c);
+//   (m) ⟪ctdlHub P8⟫ the scratch graph name inside the forgeCensus attestation's detail is normalised, and ONLY there
+// RED TWINS (in memory, a double of lib/reforge-compare.js): scratchNameNotNormalised -> (m); wrongLabelExcluded -> (d); listSortedAway -> (c);
 // integerReadAsFloat -> (f); patternAdmitted -> (e); emptyListPasses -> (i); endpointByHashAlways -> (g);
 // multisetCollapsed -> (h); orderSensitiveDigest -> (a).
 
@@ -79,7 +80,25 @@ const makeStore = (filePath, { blockText, extraTable, forgedRefId }) => {
 	database.close();
 };
 
+// ⟪ctdlHub P8, RULING SCARLET_ARROW 2026-10-21⟫ (m) THE ONE TOKEN NORMALISATION: the forgeCensus attestation's detail names the
+// build's SCRATCH graph (its fulltextIndex clause), so two identical builds differ there by name alone. Only that token, only
+// in that property of that node, is normalised before digesting; any other difference still fails.
+const forgeCensusNodeWith = (detailText) => ({ labelList: ['BuildAttestation', 'ForgedNode', 'GraphMeta'], propertyByName: { stableId: 'buildAttestation:forgeCensus', detail: detailText } });
+const roundTripNodeWith = (detailText) => ({ labelList: ['BuildAttestation', 'ForgedNode', 'GraphMeta'], propertyByName: { stableId: 'buildAttestation:roundTrip', detail: detailText } });
+const CENSUS_DETAIL_A = 'rootOwnership pass || fulltextIndex pass: FULLTEXT index DEV_gb_materialize_90204_28_fulltext is the declared :ForgedNode(name, description)';
+const CENSUS_DETAIL_B = 'rootOwnership pass || fulltextIndex pass: FULLTEXT index DEV_gb_materialize_38936_28_fulltext is the declared :ForgedNode(name, description)';
 const conjunctJudgeByRefId = {
+	m_scratchGraphNameNormalisedOnlyThere: (mutationList, done) => {
+		const lib = libFor(mutationList);
+		const nameOnly = compareNodes(lib, [forgeCensusNodeWith(CENSUS_DETAIL_A)], [forgeCensusNodeWith(CENSUS_DETAIL_B)]);
+		const nameAndMore = compareNodes(lib, [forgeCensusNodeWith(CENSUS_DETAIL_A)], [forgeCensusNodeWith(CENSUS_DETAIL_B.replace('rootOwnership pass', 'rootOwnership FAIL'))]);
+		const otherNode = compareNodes(lib, [roundTripNodeWith(CENSUS_DETAIL_A)], [roundTripNodeWith(CENSUS_DETAIL_B)]);
+		const otherProperty = compareNodes(lib, [{ ...forgeCensusNodeWith(CENSUS_DETAIL_A), propertyByName: { stableId: 'buildAttestation:forgeCensus', detail: 'x', summary: CENSUS_DETAIL_A } }], [{ ...forgeCensusNodeWith(CENSUS_DETAIL_A), propertyByName: { stableId: 'buildAttestation:forgeCensus', detail: 'x', summary: CENSUS_DETAIL_B } }]);
+		done({
+			pass: nameOnly.identical && !nameAndMore.identical && !otherNode.identical && !otherProperty.identical,
+			detail: `scratch-name-only ${nameOnly.identical ? 'IDENTICAL' : 'DIFFER'}; plus another character ${nameAndMore.identical ? 'IDENTICAL' : 'DIFFER'}; same token on another node ${otherNode.identical ? 'IDENTICAL' : 'DIFFER'}; on another property ${otherProperty.identical ? 'IDENTICAL' : 'DIFFER'}`,
+		});
+	},
 	a_readOrderCannotMove: (mutationList, done) => {
 		const lib = libFor(mutationList);
 		const comparison = compareNodes(lib, NODE_LIST, NODE_LIST.slice().reverse());
@@ -244,6 +263,7 @@ const conjunctJudgeByRefId = {
 	},
 };
 const TWIN_LIST = [
+	{ conjunctRefId: 'm_scratchGraphNameNormalisedOnlyThere', twinName: 'scratchNameNotNormalised', find: 'const normalisedPropertyByName = normalisedPropertyByNameFor({ labelList, propertyByName });', replace: 'const normalisedPropertyByName = propertyByName;' },
 	{ conjunctRefId: 'd_namedVolatileRowExcludesExactly', twinName: 'wrongLabelExcluded', find: 'oneRow.scope === scope && subjectNameList.indexOf(oneRow.subjectName) !== -1', replace: 'oneRow.scope === scope' },
 	{ conjunctRefId: 'c_unsortedSetNamed', twinName: 'listSortedAway', find: "return ['list', oneValue.map(canonicalValueOf)];", replace: "return ['list', oneValue.map(canonicalValueOf).sort()];" },
 	{ conjunctRefId: 'f_integerIsNotFloat', twinName: 'integerReadAsFloat', find: "typeof oneValue.toNumber === 'function') {\n\t\treturn ['int', oneValue.toString()];", replace: "typeof oneValue.toNumber === 'function') {\n\t\treturn ['float', oneValue.toString()];" },
