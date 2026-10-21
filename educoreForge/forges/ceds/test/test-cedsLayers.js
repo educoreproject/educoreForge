@@ -50,7 +50,8 @@ const forgeOneLayer = ({ layerKey, baseNodeEdges }, callback) => {
 // roundTripOf — the layer's own validator over the stamped graph (a double of what the bolt reader returns)
 const roundTripOf = ({ layerKey, stampedGraph, baseNodeEdges, resolvedLayer }, callback) => {
 	const validator = require(path.join(BUNDLE_DIR_PATH, 'layers', layerKey, 'roundTripValidator.js'));
-	const layerGraph = layerGraphOfStampedGraph({ stampedGraph, baseNodeEdges });
+	// the base-endpoint properties the layer's own validator declares it reads (R5 S3); [] for a validator that declares none
+	const layerGraph = layerGraphOfStampedGraph({ stampedGraph, baseNodeEdges, baseEndpointPropertyNameList: validator.BASE_ENDPOINT_PROPERTY_NAME_LIST || [] });
 	if (validator.baseQueryRowsOfNodeEdges) {
 		layerGraph.baseQueryRowListByName = validator.baseQueryRowsOfNodeEdges({ baseNodeEdges });
 	}
