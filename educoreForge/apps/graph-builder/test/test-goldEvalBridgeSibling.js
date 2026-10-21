@@ -466,7 +466,7 @@ const roundTripStageStatics = require(path.join(__dirname, '..', 'lib', 'round-t
 // exists to disagree with the first.
 const recipeLibForCounts = require(path.join(__dirname, '..', 'lib', 'recipe'))();
 const declaredBridgeCountOf = (recipeName) => {
-	const loaded = recipeLibForCounts.loadRecipe(path.join(__dirname, '..', '..', '..', 'recipes', `${recipeName}.recipe.jsonc`));
+	const loaded = recipeLibForCounts.loadRecipe(path.join(__dirname, '..', '..', '..', 'recipes', `${recipeName}.recipe.jsonc`), { forgesDirPath: path.join(__dirname, '..', '..', '..', 'forges') });
 	if (loaded.error) { throw new Error(`declaredBridgeCountOf('${recipeName}'): ${loaded.error}`); }
 	return (loaded.recipe.bridges || []).length;
 };
@@ -692,7 +692,7 @@ const judgeNamingGates = ({ standardsDatabase, driveGoldEvalCheck, realActions, 
 const inventoryGateVerbGates = ({ standardsDatabase, driveGoldEvalCheck, realActions, bridgedRunDirPath, mintConservationArtifacts, databaseFilePath, cleanManifestRefId, finish }) => {
 	harness.section('SECTION 6 — ctdlHub P8: the VERB requires the inventory gate for a promotable recipe');
 	const goldenRecipeName = 'goldCtdlHub';
-	harness.equal('P8: the fixture recipe is kind golden (read from the recipe, so a kind change cannot silently void these)', require('../lib/recipe')().loadRecipe(path.join(__dirname, '..', '..', '..', 'recipes', `${goldenRecipeName}.recipe.jsonc`)).recipe.kind, 'golden');
+	harness.equal('P8: the fixture recipe is kind golden (read from the recipe, so a kind change cannot silently void these)', require('../lib/recipe')().loadRecipe(path.join(__dirname, '..', '..', '..', 'recipes', `${goldenRecipeName}.recipe.jsonc`), { forgesDirPath: path.join(__dirname, '..', '..', '..', 'forges') }).recipe.kind, 'golden');
 	const goldenRunDirPath = runDirFor({ recipeName: goldenRecipeName });
 	harness.ok('    the golden run dir gets REAL-SHAPED conservation artifacts (CLEAN manifest)', !mintConservationArtifacts({ standardsDatabase, manifestRefId: cleanManifestRefId, runDirPath: goldenRunDirPath }));
 	const goldenValuesWith = (extraValues) => ({ buildLogDirPath: [goldenRunDirPath], manifestRefId: [cleanManifestRefId], standardsDatabaseFilePath: [databaseFilePath], ...extraValues });

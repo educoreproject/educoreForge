@@ -42,7 +42,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const JSON5 = require('json5');
+const recipeLib = require('../lib/recipe')();
 const Database = require('better-sqlite3');
 
 const TREE_ROOT = path.join(__dirname, '..', '..', '..');
@@ -127,7 +127,11 @@ const taskList = new taskListPlus();
 Object.keys(pairByBlockHash).forEach((decisionBlockHash) => {
 	taskList.push((args, next) => {
 		const { recipeName, manifestRefId, bridge } = pairByBlockHash[decisionBlockHash];
-		const recipe = JSON5.parse(fs.readFileSync(path.join(TREE_ROOT, 'recipes', `${recipeName}.recipe.jsonc`), 'utf8'));
+		const loadedRecipe = recipeLib.loadRecipe(path.join(TREE_ROOT, 'recipes', `${recipeName}.recipe.jsonc`), { forgesDirPath: path.join(TREE_ROOT, 'forges') });
+		if (loadedRecipe.error) {
+			refuse(`recipe ${recipeName}: ${loadedRecipe.error}`);
+		}
+		const recipe = loadedRecipe.recipe;
 		const recipeBridge = recipe.bridges.find((oneBridge) => oneBridge.bridge === bridge.bridgeName && oneBridge.source === bridge.source);
 		const versionOf = (token) => buildStatics.explicitVersionFrom(forger.getVersionStamp({ standard: token }).value);
 		const standardNameOf = (token) => forger.resolveBundle({ standard: token }).standardName;

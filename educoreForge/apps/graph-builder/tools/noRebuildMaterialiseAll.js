@@ -38,7 +38,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const JSON5 = require('json5');
+const recipeLib = require('../lib/recipe')();
 
 const TREE_ROOT = path.join(__dirname, '..', '..', '..');
 require(path.join(TREE_ROOT, 'test', 'testLib', 'testAppStartup'))({ moduleName, helpText });
@@ -82,7 +82,11 @@ const taskList = new taskListPlus();
 recipeNameList.forEach((recipeName) => {
 	taskList.push((args, next) => {
 		const recipeCapture = capture.recipeCaptureList.find((oneCapture) => oneCapture.recipeName === recipeName);
-		const recipe = JSON5.parse(fs.readFileSync(path.join(TREE_ROOT, 'recipes', `${recipeName}.recipe.jsonc`), 'utf8'));
+		const loadedRecipe = recipeLib.loadRecipe(path.join(TREE_ROOT, 'recipes', `${recipeName}.recipe.jsonc`), { forgesDirPath: path.join(TREE_ROOT, 'forges') });
+		if (loadedRecipe.error) {
+			refuse(`recipe ${recipeName}: ${loadedRecipe.error}`);
+		}
+		const recipe = loadedRecipe.recipe;
 		const versionByToken = {};
 		const standardNameByToken = {};
 		recipe.standards.forEach((oneStandard) => {

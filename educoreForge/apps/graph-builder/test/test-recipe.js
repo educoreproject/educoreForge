@@ -46,7 +46,7 @@ const goodRecipe = (name) =>
 	path.join(__dirname, '..', '..', '..', 'recipes', `${name}.recipe.jsonc`);
 
 const loadOrDie = (filePath) => {
-	const loaded = recipeLib.loadRecipe(filePath);
+	const loaded = recipeLib.loadRecipe(filePath, { forgesDirPath: path.join(__dirname, '..', '..', '..', 'forges') });
 	if (loaded.error) {
 		console.error(`test setup failure: could not load ${filePath} -- ${loaded.error}`);
 		process.exit(1);

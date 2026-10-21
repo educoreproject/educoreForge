@@ -21,8 +21,8 @@
     { "standard": "ctdl" }
   ],
   "bridges": [
-    { "source": "ctdl", "hub": "ceds", "bridge": "ctdlCedsDeclaredCorrespondence", "dependencies": ["ctdl", "ceds"] },
-    { "source": "ctdlasn", "hub": "ctdl", "bridge": "ctdlasnCtdlDeclaredCorrespondence", "dependencies": ["ctdlasn", "ctdl"] },
+    { "source": "ctdl", "hubs": ["ceds"], "dependencies": ["ctdl", "ceds"] },
+    { "source": "ctdlasn", "hubs": ["ctdl"], "dependencies": ["ctdlasn", "ctdl"] },
     { "source": "ctdl", "familyStandards": ["ctdl", "ctdlasn", "ctdlqdata"], "bridge": "ctdlFamilyStructure", "dependencies": ["ctdl", "ctdlasn", "ctdlqdata"] }
   ]
 }

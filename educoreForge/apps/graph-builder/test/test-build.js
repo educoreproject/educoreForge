@@ -104,7 +104,7 @@ const sourceOf = (filePath) =>
 		.join('\n');
 
 const loadOrDie = (filePath) => {
-	const loaded = recipeLib.loadRecipe(filePath);
+	const loaded = recipeLib.loadRecipe(filePath, { forgesDirPath: path.join(__dirname, '..', '..', '..', 'forges') });
 	if (loaded.error) {
 		console.error(`test setup failure: could not load ${filePath} -- ${loaded.error}`);
 		process.exit(1);

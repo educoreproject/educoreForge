@@ -50,7 +50,7 @@ const contractLibFor = (scenario) =>
 
 // the recipe's derived plugins, each declaration cloned so a twin may alter one without touching the loaded module
 const siblingDeclarationListFor = (scenario) => {
-	const loaded = recipeLib.loadRecipe(SIBLING_RECIPE_PATH);
+	const loaded = recipeLib.loadRecipe(SIBLING_RECIPE_PATH, { forgesDirPath: path.join(__dirname, '..', '..', '..', 'forges') });
 	if (loaded.error) {
 		return { error: loaded.error };
 	}

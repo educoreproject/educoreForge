@@ -35,7 +35,7 @@ const { getConfig } = process.global;
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const JSON5 = require('json5');
+const recipeLib = require('../lib/recipe')();
 
 const TREE_ROOT = path.join(__dirname, '..', '..', '..');
 const forger = require('../apps/forger');
@@ -65,7 +65,14 @@ harness.equal('every captured recipe of record is gated or excluded by name', un
 
 // the build's own inputs: the discovery registry and phase A's version arithmetic
 const registry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: path.join(TREE_ROOT, 'forges') });
-const recipeNamed = (recipeName) => JSON5.parse(fs.readFileSync(path.join(TREE_ROOT, 'recipes', `${recipeName}.recipe.jsonc`), 'utf8'));
+// ⟪R3⟫ through loadRecipe, as a build reads it: a new-form recipe's bridges[] expand to the pairs a build runs
+const recipeNamed = (recipeName) => {
+	const loaded = recipeLib.loadRecipe(path.join(TREE_ROOT, 'recipes', `${recipeName}.recipe.jsonc`), { forgesDirPath: path.join(TREE_ROOT, 'forges') });
+	if (loaded.error) {
+		throw new Error(`${moduleName}: recipe ${recipeName}: ${loaded.error}`);
+	}
+	return loaded.recipe;
+};
 const versionByTokenFor = (recipe) => recipe.standards.reduce((soFar, oneStandard) => {
 	const stamp = forger.getVersionStamp({ standard: oneStandard.token });
 	if (stamp.error) {

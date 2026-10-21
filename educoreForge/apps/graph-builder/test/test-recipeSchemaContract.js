@@ -57,10 +57,10 @@ const conjunctJudgeByRefId = {
 		const recipeLib = recipeLibFor(mutationList);
 		const recipeFileList = fs.readdirSync(RECIPES_DIR).filter((oneName) => /\.recipe\.jsonc$/.test(oneName));
 		const failingList = recipeFileList.filter((oneName) => {
-			const loaded = recipeLib.loadRecipe(path.join(RECIPES_DIR, oneName));
+			const loaded = recipeLib.loadRecipe(path.join(RECIPES_DIR, oneName), { forgesDirPath: path.join(__dirname, '..', '..', '..', 'forges') });
 			return loaded.error || loaded.loadError || !recipeLib.validateRecipe(loaded.recipe, {}).layers.structural.ok;
 		});
-		const acceptance = recipeLib.loadRecipe(path.join(RECIPES_DIR, 'goldJevAcceptance2.recipe.jsonc')).recipe || {};
+		const acceptance = recipeLib.loadRecipe(path.join(RECIPES_DIR, 'goldJevAcceptance2.recipe.jsonc'), { forgesDirPath: path.join(__dirname, '..', '..', '..', 'forges') }).recipe || {};
 		done({ pass: recipeFileList.length >= 43 && failingList.length === 0 && acceptance.kind === 'golden' && acceptance.recipeName === 'goldJevAcceptance2', detail: `${recipeFileList.length} recipes; failing [${failingList.join(', ')}]; acceptance kind ${acceptance.kind}` });
 	},
 	c_kindGatesGoldEvalStamp: (mutationList, done) => {

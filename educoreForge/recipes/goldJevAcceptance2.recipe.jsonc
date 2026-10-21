@@ -23,15 +23,15 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] },
-    { "source": "sif260928", "hub": "ceds", "bridge": "sif260928CedsDerivedPlugin", "dependencies": ["sif260928", "ceds"] },
-    { "source": "pesccollegetranscript1v8v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v8v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v8v0", "ceds"] },
-    { "source": "peschighschooltranscript1v6v0", "hub": "ceds", "bridge": "pescHighSchoolTranscript1v6v0CedsDerivedPlugin", "dependencies": ["peschighschooltranscript1v6v0", "ceds"] },
-    { "source": "pesctestscorereport1v1v0", "hub": "ceds", "bridge": "pescTestScoreReport1v1v0CedsDerivedPlugin", "dependencies": ["pesctestscorereport1v1v0", "ceds"] },
-    { "source": "pesclearningrecord1v0v0", "hub": "ceds", "bridge": "pescLearningRecord1v0v0CedsDerivedPlugin", "dependencies": ["pesclearningrecord1v0v0", "ceds"] },
-    { "source": "pescdocumentrequest1v0v0", "hub": "ceds", "bridge": "pescDocumentRequest1v0v0CedsDerivedPlugin", "dependencies": ["pescdocumentrequest1v0v0", "ceds"] },
-    { "source": "pescdocumentresponse1v0v0", "hub": "ceds", "bridge": "pescDocumentResponse1v0v0CedsDerivedPlugin", "dependencies": ["pescdocumentresponse1v0v0", "ceds"] },
-    { "source": "pescacademiceportfolio1v0v0", "hub": "ceds", "bridge": "pescAcademicEportfolio1v0v0CedsDerivedPlugin", "dependencies": ["pescacademiceportfolio1v0v0", "ceds"] }
+    { "source": "edfi", "hubs": ["ceds"], "dependencies": ["edfi", "ceds"] },
+    { "source": "sif260928", "hubs": ["ceds"], "dependencies": ["sif260928", "ceds"] },
+    { "source": "pesccollegetranscript1v8v0", "hubs": ["ceds"], "dependencies": ["pesccollegetranscript1v8v0", "ceds"] },
+    { "source": "peschighschooltranscript1v6v0", "hubs": ["ceds"], "dependencies": ["peschighschooltranscript1v6v0", "ceds"] },
+    { "source": "pesctestscorereport1v1v0", "hubs": ["ceds"], "dependencies": ["pesctestscorereport1v1v0", "ceds"] },
+    { "source": "pesclearningrecord1v0v0", "hubs": ["ceds"], "dependencies": ["pesclearningrecord1v0v0", "ceds"] },
+    { "source": "pescdocumentrequest1v0v0", "hubs": ["ceds"], "dependencies": ["pescdocumentrequest1v0v0", "ceds"] },
+    { "source": "pescdocumentresponse1v0v0", "hubs": ["ceds"], "dependencies": ["pescdocumentresponse1v0v0", "ceds"] },
+    { "source": "pescacademiceportfolio1v0v0", "hubs": ["ceds"], "dependencies": ["pescacademiceportfolio1v0v0", "ceds"] }
   ],
   "roundTripStage": true
 }
