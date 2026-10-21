@@ -62,6 +62,9 @@ const { readOptionalBooleanValue } = require('./optional-boolean-value');
 // marker comes from ONE table (SCHEMA_BLOCK_KIND_SUFFIX), never a literal composed here.
 const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const bridgeCollisionRuleLib = require(path.join(__dirname, 'bridgeCollisionRule'));
+// ⟪R0 proof kit, 2026-10-21, trap T1⟫ a golden recipe refuses a mapping bridge that materialised from no frozen block
+const frozenDecisionBlockRuleLib = require(path.join(__dirname, 'frozenDecisionBlockRule'));
+const { RECIPE_KIND_RULE } = require(path.join(__dirname, 'recipe'))();
 const embeddingCoverageGateLib = require(path.join(__dirname, 'embedding-coverage-gate'));
 const forgeCensusGateLib = require(path.join(__dirname, 'forge-census-gate'));
 // ⟪campaign P2, W-A-3⟫ the frozen decision block header carries the frameworkFingerprint the passport reports
@@ -2450,6 +2453,22 @@ const build = (recipe, deps, buildCallback) => {
 							next(`bridge ${pairLabel}: ${err}`);
 							return;
 						}
+						// ⟪R0 proof kit, 2026-10-21, trap T1⟫ the framework answers a missing frozen block with zero edges and a status
+						// line; a recipe whose kind requires frozen blocks refuses it by name (frozenDecisionBlockRule.js). The key it
+						// names is composed by pairKeyFor (the framework's template, pinned) from the versions this build handed the bridge.
+						const silentZeroRefusal = frozenDecisionBlockRuleLib.refusalFor({
+							recipeName: recipe.recipeName,
+							recipeKind: recipe.kind,
+							kindRule: RECIPE_KIND_RULE[recipe.kind],
+							bridge,
+							pairRebridges: thisPairRebridges,
+							runReport,
+							pairKey: frozenDecisionBlockRuleLib.pairKeyFor({ hubToken: bridge.hub, hubVersion: resolvedVersionByToken[bridge.hub], sourceToken: bridge.source, sourceVersion: resolvedVersionByToken[bridge.source], bridgeName, producerKind: runReport.producer }),
+						});
+						if (silentZeroRefusal !== '') {
+							next(`bridge ${pairLabel}: ${silentZeroRefusal}`);
+							return;
+						}
 						// ⟪spend ledger R1⟫ a MAPPING bridge's spend, as its run report counted it: the bridge framework's report carries
 						// counts.judgeSpend (asked 0 on a plain build) EXCEPT on its no-frozen-block branch, which states that nothing ran:
 						// counts null beside decisionBlock null ("zero edges; nothing judged"). That one shape records no spend; a
@@ -3034,6 +3053,9 @@ module.exports = moduleFunction({ moduleName });
 // pure helpers exported as statics so the rebridge-scope resolution + per-pair scope match can be gated
 // directly (§6 no-silent-default), without standing up the whole build pipeline.
 module.exports.refuseHublessReuseUnderDeriveHub = refuseHublessReuseUnderDeriveHub;
+// ⟪R0 proof kit, 2026-10-21⟫ the version a standard resolves to, read by the no-rebuild digest gate so it composes pairKeys from
+// the SAME arithmetic phase A uses (forger.getVersionStamp → explicitVersionFrom), not a copy of it
+module.exports.explicitVersionFrom = explicitVersionFrom;
 // ⟪lane R, 2026-10-05⟫ the fidelity row's producer and its wiring, exported as statics so the three states (skipped,
 // pass, passWithAllowedLoss) are gated through the real materialize tail with hermetic doubles (test-fidelityAttestation)
 module.exports.runCedsFidelityGate = runCedsFidelityGate;

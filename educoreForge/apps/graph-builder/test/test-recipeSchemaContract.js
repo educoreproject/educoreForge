@@ -96,7 +96,7 @@ const conjunctJudgeByRefId = {
 };
 const TWIN_LIST = [
 	{ conjunctRefId: 'a_kindDescriptionRequiredDeadKeysRefused', twinName: 'descriptionNotRequired', find: "	required: ['schemaVersion', 'recipeName', 'kind', 'description', 'standards'],", replace: "	required: ['schemaVersion', 'recipeName', 'kind', 'standards']," },
-	{ conjunctRefId: 'c_kindGatesGoldEvalStamp', twinName: 'devMayPromote', find: '	dev: Object.freeze({ promotionRenameAllowed: false }),', replace: '	dev: Object.freeze({ promotionRenameAllowed: true }),' },
+	{ conjunctRefId: 'c_kindGatesGoldEvalStamp', twinName: 'devMayPromote', find: '	dev: Object.freeze({ promotionRenameAllowed: false, frozenDecisionBlockRequired: false }),', replace: '	dev: Object.freeze({ promotionRenameAllowed: true, frozenDecisionBlockRequired: false }),' },
 	{ conjunctRefId: 'd_producerRecordedPerMembership', twinName: 'producerNotRecorded', find: "${esc(oneMember.description)}, ${recipeName ? esc(recipeName) : 'NULL'});`,", replace: "${esc(oneMember.description)}, NULL);`," },
 ];
 

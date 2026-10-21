@@ -212,7 +212,7 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // from the old tag): graph-contract.js 1/0 (one STANDARD_DEFINITION_FIELD_LIST row, mappedPropertyCountByHub, outside (ii)'s allowed
 // vocabulary.js+tests as P2b's edge rows were) and test/test-sifEdgeVocabulary.js 3/1 (schema view 339 -> 340, declared). Allowed-path
 // list NOT widened.
-const POST_D1_BASE_TAG = 'postCtdlP6VocabularyIi-102126'; // re-anchored by STERLING_PORTAL (ctdlHub P6; census REANCHOR-CENSUS-P6-102126.md; GO SCARLET_ARROW 32dd4c0a); the tag is cut ON this commit
+const POST_D1_BASE_TAG = 'postHubNeutralR0VocabularyIi-102126'; // re-anchored by SCARLET_STREAM (de-hub lane A R0; census REANCHOR-CENSUS-R0-102126.md; GO SCARLET_ARROW 1174c14f); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -462,10 +462,7 @@ const POST_D1_BASE_TAG = 'postCtdlP6VocabularyIi-102126'; // re-anchored by STER
 // postCtdlP1ForgeFrameworkIii-102026 -> postCtdlP5ForgeFrameworkIii-102026, tag cut ON this commit. CENSUS (lib/forge-framework/):
 // test/test-gSeamUntouched.js ONLY, 10/1 (its P5 re-anchor 79e7c6fa); no forge-framework source moved. BG-COMPOSE-PESC (a) moves with
 // it (this file is inside its diffed path list); both tags are cut ON this commit, so this re-anchor moves no other gate.
-// ═══ RE-ANCHOR, 2026-10-21 (VELVET_CHORUS; spend ledger lane R1; GO SCARLET_ARROW) ═══ (iii) postCtdlP6ForgeFrameworkIii-102126 ->
-// postSpendLedgerR1ForgeFrameworkIii-102126, tag cut ON this commit. CENSUS (lib/forge-framework/): test/test-gSeamUntouched.js ONLY — its
-// G-SEAM-UNTOUCHED re-anchor in this same commit (the coupling G-SEAM -> (iii)). No forge-framework source.
-const PHASE0_ANCHOR_TAG = 'postSpendLedgerR1ForgeFrameworkIii-102126'; // re-anchored by VELVET_CHORUS (spend ledger lane R1; census REANCHOR-CENSUS-R1-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
+const PHASE0_ANCHOR_TAG = 'postHubNeutralR0ForgeFrameworkIii-102126'; // re-anchored by SCARLET_STREAM (de-hub lane A R0; census REANCHOR-CENSUS-R0-102126.md; GO SCARLET_ARROW 1174c14f); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -962,11 +959,7 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // three paths): apps/graph-builder/lib/build.js 8/0 (hubStandardName composed from the hub bundle's standardName, c0a4200d);
 // replay-manager/lib/finishing/lib/standard-definition-finisher.js 25/0 (per-hub mappedPropertyCountByHub only when >1 HubDefinition,
 // c0a4200d + 7a05e200) and its test test-standardDefinitionDisposition.js 34/1. No forger, replay, forge-framework or forge file change.
-// ═══ RE-ANCHOR, 2026-10-21 (VELVET_CHORUS; spend ledger lane R1; GO SCARLET_ARROW) ═══ BG-SEAM-UNTOUCHED seamDiffEmpty and (i-live)
-// postCtdlP6SeamDiffEmpty-102126 -> postSpendLedgerR1SeamDiffEmpty-102126, tag cut ON this commit. CENSUS at a3c04e5d with this gate's path list:
-// forger.js 5/1 and build.js 133/3 (R1's spend ledger, as G-SEAM-UNTOUCHED's census states). (i-live): COMPONENT_SHAPES.forger.forge.resultKeys
-// gains embeddingSpendRecordList (interfaces.js, a3c04e5d); build.js refuses a successful forge report without it, by name. Nothing excluded.
-const PHASE3_ANCHOR_TAG = 'postSpendLedgerR1SeamDiffEmpty-102126'; // re-anchored by VELVET_CHORUS (spend ledger lane R1; census REANCHOR-CENSUS-R1-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
+const PHASE3_ANCHOR_TAG = 'postHubNeutralR0SeamDiffEmpty-102126'; // re-anchored by SCARLET_STREAM (de-hub lane A R0; census REANCHOR-CENSUS-R0-102126.md; GO SCARLET_ARROW 1174c14f); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

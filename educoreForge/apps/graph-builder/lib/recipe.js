@@ -177,10 +177,12 @@ const RECIPE_SCHEMA = {
 
 // RECIPE_KIND_RULE — ⟪campaign P2, W-C-10⟫ what a recipe's kind PERMITS, as data: only a golden recipe's graph may be stamped
 // under a GOLD_EVAL_* name (graphBuilder -stampPromotion reads this). A dev or subset recipe is refused by name there.
+// ⟪R0 proof kit, 2026-10-21, trap T1⟫ frozenDecisionBlockRequired: a mapping bridge outside the --rebridge scope that finds no frozen
+// decision block is REFUSED in a recipe of this kind (build.js, frozenDecisionBlockRule.js) instead of yielding zero edges silently.
 const RECIPE_KIND_RULE = Object.freeze({
-	golden: Object.freeze({ promotionRenameAllowed: true }),
-	dev: Object.freeze({ promotionRenameAllowed: false }),
-	subset: Object.freeze({ promotionRenameAllowed: false }),
+	golden: Object.freeze({ promotionRenameAllowed: true, frozenDecisionBlockRequired: true }),
+	dev: Object.freeze({ promotionRenameAllowed: false, frozenDecisionBlockRequired: false }),
+	subset: Object.freeze({ promotionRenameAllowed: false, frozenDecisionBlockRequired: false }),
 });
 
 const ajv = new Ajv({ allErrors: true, strict: false });

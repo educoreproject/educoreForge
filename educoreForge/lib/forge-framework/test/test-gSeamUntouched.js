@@ -221,15 +221,7 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 //                                                                   only its own hub's cards in a multi-hub graph
 // forger.js, shape-forged-graph.js, replay-engine.js, replay-block.js, replayManager.js and round-trip-stage.js: UNTOUCHED. THE SEAM
 // FILE LIST IS UNCHANGED, no exclusion added; the red was observed at 1904fa96 in the full suite (DEVLOG-P5 checkpoint 5).
-// ═══ RE-ANCHOR, 2026-10-21 (VELVET_CHORUS; spend ledger lane R1; GO SCARLET_ARROW) ═══ G-SEAM-UNTOUCHED
-// postCtdlP6GSeamUntouched-102126 -> postSpendLedgerR1GSeamUntouched-102126, tag cut ON this commit. CENSUS, measured with this gate's own
-// command at this commit: exactly TWO of the seven, both R1's own (a3c04e5d and this commit):
-//   apps/graph-builder/apps/forger/forger.js  5/1    the embedder's spend records ride the forge report (and beside a failed forge's error)
-//   apps/graph-builder/lib/build.js          133/3   the spend ledger: pricing + lifetime path resolved before any spend, the judge metered,
-//                                                    spend gathered from forges and mapping bridges, every exit after the run dir writes it
-// shape-forged-graph.js, replay-engine.js, replay-block.js, replayManager.js, round-trip-stage.js: UNTOUCHED. Seam file list unchanged.
-// Forge OUTPUT proven byte-identical to main for all 18 base subjects of the recipes of record (evidence/R1/forgeOutputEquality).
-const PRE_MIGRATION_REF = 'postSpendLedgerR1GSeamUntouched-102126'; // re-anchored by VELVET_CHORUS (spend ledger lane R1; census REANCHOR-CENSUS-R1-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
+const PRE_MIGRATION_REF = 'postHubNeutralR0GSeamUntouched-102126'; // re-anchored by SCARLET_STREAM (de-hub lane A R0; census REANCHOR-CENSUS-R0-102126.md; GO SCARLET_ARROW 1174c14f); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

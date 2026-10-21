@@ -123,6 +123,23 @@ const canonicalValueOf = (oneValue) => {
 const canonicalValueTextOf = (oneValue) => JSON.stringify(canonicalValueOf(oneValue));
 const valueDigestOf = (oneValue) => sha256Of(canonicalValueTextOf(oneValue)).slice(0, 16);
 
+// ⟪ctdlHub P8, RULING SCARLET_ARROW 2026-10-21⟫ THE ONE TOKEN NORMALISATION — an exception to "names, never patterns", made
+// once, by ruling, and kept this narrow. The forgeCensus attestation's detail text names the build's SCRATCH graph in its
+// fulltextIndex clause (replayManager.js mints DEV_gb_<purpose>_<pid>_<seq>; a build materialises with purpose 'materialize'),
+// so two identical from-scratch builds differ there by the scratch name alone (measured on the P8 candidate, 2026-10-21). The
+// rows below name the node (label + stableId) and the property; inside ONLY those the scratch-name token is replaced by a fixed
+// placeholder BEFORE digesting, so every other character still compares. The whole field is never excluded.
+const SCRATCH_GRAPH_NAME_TOKEN_RE = /DEV_gb_materialize_\d+_\d+/g;
+const SCRATCH_GRAPH_NAME_PLACEHOLDER = '<scratchGraphName>';
+const SCRATCH_NAME_NORMALISATION_LIST = Object.freeze([
+	Object.freeze({ labelName: 'BuildAttestation', stableId: 'buildAttestation:forgeCensus', propertyName: 'detail' }),
+]);
+// normalisedPropertyByNameFor — the property map with the scratch-name token replaced where (and only where) a row names it
+const normalisedPropertyByNameFor = ({ labelList, propertyByName }) => {
+	const matchedRowList = SCRATCH_NAME_NORMALISATION_LIST.filter((oneRow) => labelList.indexOf(oneRow.labelName) !== -1 && propertyByName && propertyByName.stableId === oneRow.stableId && typeof propertyByName[oneRow.propertyName] === 'string');
+	return matchedRowList.reduce((soFar, oneRow) => ({ ...soFar, [oneRow.propertyName]: soFar[oneRow.propertyName].replace(SCRATCH_GRAPH_NAME_TOKEN_RE, SCRATCH_GRAPH_NAME_PLACEHOLDER) }), propertyByName);
+};
+
 // recordOf — the compared content of one property map: sorted names, the volatile ones removed and listed
 const recordOf = ({ propertyByName, excludedNameSet }) => {
 	const nameList = Object.keys(propertyByName || {}).sort();
@@ -143,7 +160,8 @@ const recordOf = ({ propertyByName, excludedNameSet }) => {
 //   propertyDigestByName (EVERY property), contentHash (over every property; used only to name a non-unique endpoint) }
 const rawNodeRecordFor = ({ labelList, propertyByName }) => {
 	const sortedLabelList = labelList.slice().sort();
-	const record = recordOf({ propertyByName, excludedNameSet: new Set() });
+	const normalisedPropertyByName = normalisedPropertyByNameFor({ labelList, propertyByName });
+	const record = recordOf({ propertyByName: normalisedPropertyByName, excludedNameSet: new Set() });
 	const stableIdText = propertyByName && typeof propertyByName.stableId === 'string' ? propertyByName.stableId : NO_STABLE_ID_MARK;
 	return {
 		recordKind: 'node',
