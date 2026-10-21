@@ -1,0 +1,26 @@
+{
+  // fourWithTwoHubsEdfiDerived — fourWithHubEdfiDerived PLUS the CTDL standard and the CTDL hub (ctdlHub-101926 P6 step 0).
+  // The first REAL judged bridge to run inside a two-hub graph (the P5 stand-down named it unchecked). Rebridged cache-only
+  // from a COPY of the gold's judgment cache, its frozen decision block must equal the single-hub run's record for record,
+  // header.frameworkFingerprint the only allowed difference, and its candidate pools must equal the single-hub forensics:
+  // the CTDL cards in the same graph must not leak into a CEDS-targeted bridge's pool.
+  "schemaVersion": "1.0.0",
+  "recipeName": "fourWithTwoHubsEdfiDerived",
+  "kind": "dev",
+  "description": "fourWithHubEdfiDerived plus CTDL and its hub: one real judged CEDS bridge inside a two-hub graph.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "pesc260805", "version": "current" },
+    { "token": "sif", "version": "current" },
+    { "token": "ctdl", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] }
+  ],
+  "roundTripStage": true
+}

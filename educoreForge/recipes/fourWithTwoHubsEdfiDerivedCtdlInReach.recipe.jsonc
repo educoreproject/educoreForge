@@ -1,0 +1,26 @@
+{
+  // fourWithTwoHubsEdfiDerivedCtdlInReach — fourWithTwoHubsEdfiDerived with ctdl ADDED to the bridge's dependencies (ctdlHub-101926 P6 step 0, run B).
+  // A bridge reads only its restored DEPENDENCY graph ([source, hub] ∪ dependencies), so without this the CTDL cards never reach it;
+  // with it, the CTDL base and its hub cards (and their vectors) sit in the very graph the derived bridge retrieves from. Rebridged
+  // cache-only; its decision block must equal the single-hub run record for record and its candidate pools must be unchanged:
+  // the hub filter (bridgeTarget, hubStandardName) is what keeps CTDL cards out of a CEDS-targeted pool.
+  "schemaVersion": "1.0.0",
+  "recipeName": "fourWithTwoHubsEdfiDerivedCtdlInReach",
+  "kind": "dev",
+  "description": "fourWithTwoHubsEdfiDerived with ctdl in the bridge dependencies: CTDL hub cards inside the derived bridge's own dependency graph.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "pesc260805", "version": "current" },
+    { "token": "sif", "version": "current" },
+    { "token": "ctdl", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds", "ctdl"] }
+  ],
+  "roundTripStage": true
+}
