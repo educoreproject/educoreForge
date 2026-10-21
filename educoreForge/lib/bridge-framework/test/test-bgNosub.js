@@ -930,7 +930,14 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // lib/ctdlForgeDeclaration.js 58/0, lib/ctdlHooks.js 9/0; forges/ctdlasn/forgeCtdlasn.js 19/0, lib/ctdlasnForgeDeclaration.js 56/0,
 // lib/ctdlasnHooks.js 9/0; forges/ctdlqdata/forgeCtdlqdata.js 19/0, lib/ctdlqdataForgeDeclaration.js 56/0, lib/ctdlqdataHooks.js 9/0;
 // lib/forge-framework/migrationAllowanceRegistry.js 29/1. No build.js, forger, replay or replay-manager source.
-const PHASE3_ANCHOR_TAG = 'postCtdlCampaignMergeSeamDiffEmpty-102026'; // re-anchored by INDIGO_LOOM (ctdlHub campaign merge); the tag is cut ON the merge commit
+// ═══ RE-ANCHOR, 2026-10-20 (INDIGO_LOOM; ctdlHub-101926 P4; ruled by SCARLET_ARROW: once, after P4 step 2) ═══ seamDiffEmpty (and its
+// (i-live) companion): postCtdlCampaignMergeSeamDiffEmpty-102026 -> postCtdlP4SeamDiffEmpty-102026, tag cut ON this commit together with
+// BG-COMPOSE-PESC's. Found red at 1e80b81f on its first path. CENSUS (numstat from the old tag, exactly three paths, all ruled):
+// forges/ceds/lib/cedsHubDeclaration.js 4/0 (domainAddressing 'domainFields' 1e80b81f, hubVersionSegment 'verbatim' 07b38f9f: each
+// CEDS's prior behaviour; cedsHubFingerprint identical, standardBase 45a83bae unmoved by a real build), forges/ctdl/lib/ctdlHubDeclaration.js
+// 94/0 and forges/ctdl/lib/ctdlHubHooks.js 17/0 (the NEW CTDL hub role, ee5ff0bf; hooks {}). No build.js, forger, replay, replay-manager,
+// forge-framework or forge entry/forge-declaration change.
+const PHASE3_ANCHOR_TAG = 'postCtdlP4SeamDiffEmpty-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P4); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
