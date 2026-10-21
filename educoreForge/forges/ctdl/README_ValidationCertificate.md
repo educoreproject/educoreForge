@@ -1,7 +1,7 @@
 # Validation certificate — CTDL (Credential Transparency Description Language)
 
-**CTDL Release 20260327 was built from its one JSON-LD schema file. The graph has 994 nodes and 10,131 edges.**
-**It is the July 2026 CTDL graph, re-forged on the current framework, node for node and edge for edge, plus 12 edges that make every node reachable from the root.**
+**CTDL Release 20260327 was built from its one JSON-LD schema file. The graph has 994 nodes and 10,627 edges.**
+**It is the July 2026 graph, re-forged on the current framework, plus everything the source says about its own terms that the July forge dropped (phase P2b): nothing in the source is now left out.**
 
 Accuracy was checked two ways:
 
@@ -14,7 +14,7 @@ Accuracy was checked two ways:
 | source | `assets/standardSourceData/01/ctdl-schema.json`, sha256 `03715222…49eb42`, checked against `SHA256SUMS` at every build. Provenance: `assets/standardSourceData/01/README_PROVENANCE.md` |
 | source URL | `https://credreg.net/ctdl/schema/encoding/json` (retrieved 2026-06-23) |
 | graph | `DEV_gb_materialize_92105_2`, a scratch graph built 2026-10-20 and disposed after its census |
-| build | recipe `recipes/ctdlOnlyRoundTrip.recipe.jsonc`, `--vectorize=false`, manifest `2625a7d2…a667094d5`, standardBase block **`4ef79cec9bffec73c4e0b89f92df2903bd22933b4ac480da4018e07a04deb4af`** (it was `3d8b1218…` before the 12 root edges, ruling A6) |
+| build | recipe `recipes/ctdlOnlyRoundTrip.recipe.jsonc`, `--vectorize=false`, manifest `59f7f090…6a21268e`, standardBase block **`78d3a9b36f4f51ec9dccafce974799a511eaadb4b9fb224e83214f3419f351c1`** (P2b, head `52747113`; every earlier block and each move is listed in `DEVLOG-P2b.md`) |
 | certification | `graphBuilder -goldEvalCheck` on the build's run directory: **PASS** (1 declared validator, inventedTotal 0; no bridge, no judged edge) |
 | oracle | `apps/graph-builder/tools/oracleDiff.js` against `dataStores/ctdlHub_101926/oracle/CTDL.census.json`: **PASS, 0 unexplained differences** |
 | structure | `apps/graph-builder/tools/graphStructureCheck.js`: all five checks **PASS**; every one of the 993 content nodes is reachable from the root |
@@ -41,6 +41,11 @@ Accuracy was checked two ways:
 | `HAS_OPTION_SET` | property → concept scheme | `meta:targetScheme` | 41 |
 | `HAS_VALUE` | concept scheme → concept | `skos:inScheme` | 445 |
 | `SUBCLASS_OF` | class → class | `rdfs:subClassOf` | 82 |
+| `BROADER_CONCEPT` | concept → broader concept | `skos:broader` (`skos:narrower` is its read-back inverse) | 98 |
+| `TOP_CONCEPT_OF` | concept → scheme it heads | `skos:topConceptOf` (`skos:hasTopConcept` inverse) | 346 |
+| `SUBPROPERTY_OF` | property → property | `rdfs:subPropertyOf` | 37 |
+| `INVERSE_OF` | property → property | `owl:inverseOf`, as stated (both directions) | 12 |
+| `REFERENCES (locator `meta:targetScheme`)` | property → class | `meta:targetScheme` to a class | 3 |
 
 A node's identifier is its CURIE as the source writes it (`ceterms:Credential`, `audience:Resident`).
 
@@ -52,18 +57,15 @@ A node's identifier is its CURIE as the source writes it (`ceterms:Credential`, 
 
 ## The counts
 
-The source has 1,013 `@graph` entries: 993 CTDL terms and 20 foreign entries. The round trip compared 24,463 source statements: 22,146 matched the graph exactly and 2,317 are declared as not yet carried.
+The round trip compared 24,463 source statements, and **all 24,463 matched the graph**. Nothing is declared omitted (`explicitlyOmittedTotal` 0).
 
-The 2,317 **declared** statements are below. The July graph never held them; phase P2b of this lane adds them:
-
-| Kind | Count | What it is |
-|---|---:|---|
-| `changeHistory` | 993 | each term's `meta:changeHistory` link |
-| `nativeReferenceNotModelled` | 942 | concept `skos:broader`/`narrower` (98/98, plus 1 `broader` to a scheme), `skos:topConceptOf`/`hasTopConcept` (346/346), property `rdfs:subPropertyOf` (37), `owl:inverseOf` (12), and 4 references whose target type no edge expresses (3 `meta:targetScheme` → a class, 1 `owl:equivalentProperty` → a class) |
-| `secondaryDescription` | 265 | an `rdfs:comment` or `skos:definition` that differs from the `dct:description` the node shows |
-| `usageNoteOffProperty` | 62 | `vann:usageNote` on classes, schemes and concepts (properties carry theirs) |
-| `schemeStatus` | 34 | `vs:term_status` on concept schemes |
-| `unresolvedNativePrefixReference` | 21 | references to CTDL terms the file never defines: 12 × `rdfs:subPropertyOf ceterms:credentialAlignment`, 8 × `schema:domainIncludes ceterms:FinancialAlignmentObject`, 1 × `schema:rangeIncludes ceterms:TransferValueAgreement`. **This is a defect in the source**, listed by name in the verdict |
+Phase P2b added what the July forge dropped, one kind per commit:
+- the concept and property hierarchies, top concepts and inverse properties, as the edges above;
+- second description texts (`rdfsComment`, `skosDefinition`), never merged into `description`;
+- the change-history link (`changeHistoryUrl`);
+- status on concept schemes, and usage notes on every role;
+- probable source anomalies, verbatim, in `nativeDeclarationAnomalyList` (CTDL only);
+- references to undefined terms under a claimed prefix, as crossRefs (E11).
 
 ## Round Trip Validation
 
@@ -73,10 +75,8 @@ The instrument was seen to fail on purpose four ways (`test/test-ctdlForge.js`):
 
 ## Known issues
 
-- **The concept hierarchy and the property hierarchy are not in the graph.** A query cannot yet walk `skos:broader` or `rdfs:subPropertyOf` (942 statements; see the counts). Scheduled: P2b.
-- **Only one description per term.** Where CTDL gives both `dct:description` and `rdfs:comment`, the node shows the first, and the other text is not carried (265). Scheduled: P2b.
 - **The CEDS declarations are data, not links.** Nothing joins a CTDL concept to a CEDS node yet. That is the declared-seam bridge, a later phase. Whether any of them may become match edges is TQ's question Q-T1.
-- **The source refers to three CTDL terms it never defines** (21 references, listed above). The graph cannot make those references into edges.
+- **The source refers to three CTDL terms it never defines** (21 references, listed above). They cannot become edges; since P2b (E11) each is carried as a crossRef on the referring node, so nothing is lost.
 
 ## Provenance
 

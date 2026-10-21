@@ -1,7 +1,7 @@
 # Validation certificate — CTDL-ASN (Credential Transparency Description Language — Achievement Standards Network)
 
-**CTDLASN 20230929 was built from its one JSON-LD schema file. The graph has 119 nodes and 280 edges.**
-**It is the July 2026 CTDLASN graph, re-forged on the current framework, node for node and edge for edge.**
+**CTDLASN 20230929 was built from its one JSON-LD schema file. The graph has 119 nodes and 300 edges.**
+**It is the July 2026 graph, re-forged on the current framework, plus everything the source says about its own terms that the July forge dropped (phase P2b): nothing in the source is now left out.**
 
 Accuracy was checked two ways:
 
@@ -14,7 +14,7 @@ Accuracy was checked two ways:
 | source | `assets/standardSourceData/01/ctdlasn.json`, sha256 `8bacfcec…a0b7`, checked against `SHA256SUMS` at every build. Provenance: `assets/standardSourceData/01/README_PROVENANCE.md` |
 | source URL | `https://credreg.net/ctdlasn/schema/encoding/json` |
 | graph | `DEV_gb_materialize_3768_2`, a scratch graph built 2026-10-20 and disposed after its census |
-| build | recipe `recipes/ctdlasnOnlyRoundTrip.recipe.jsonc`, `--vectorize=false`, manifest `ad7739a5…d1fd07`, standardBase block **`2145d170eab3ad6b0ad8fbbe3b6229d093d395f8f06752d6475520218b4842e3`** |
+| build | recipe `recipes/ctdlasnOnlyRoundTrip.recipe.jsonc`, `--vectorize=false`, manifest `4fa2ae96…5068ef73`, standardBase block **`c9ff737e5a5f86d185e268203f8edfd871a28615bff10bb3c53335222db2f494`** (P2b, head `52747113`; every earlier block and each move is listed in `DEVLOG-P2b.md`) |
 | certification | `graphBuilder -goldEvalCheck`: **PASS** (1 declared validator, inventedTotal 0; no bridge, no judged edge) |
 | oracle | `apps/graph-builder/tools/oracleDiff.js` against `dataStores/ctdlHub_101926/oracle/CTDLASN.census.json`: **PASS, 0 unexplained differences** |
 | structure | `apps/graph-builder/tools/graphStructureCheck.js`: all five checks **PASS**; every content node is reachable from the root |
@@ -40,6 +40,9 @@ Accuracy was checked two ways:
 | `HAS_OPTION_SET` | property → concept scheme | `meta:targetScheme` | 2 |
 | `HAS_VALUE` | concept scheme → concept | `skos:inScheme` | 8 |
 | `SUBCLASS_OF` | class → class | `rdfs:subClassOf` | 2 |
+| `TOP_CONCEPT_OF` | concept → scheme it heads | `skos:topConceptOf` | 8 |
+| `SUBPROPERTY_OF` | property → property | `rdfs:subPropertyOf` | 10 |
+| `INVERSE_OF` | property → property | `owl:inverseOf` | 2 |
 
 A node's identifier is its CURIE as the source writes it.
 - **References outside CTDLASN:** every one is kept **as written** in the node's `crossRefs`, as `{ raw, locator }` (349 references). Nothing is resolved and no owner is assigned.
@@ -48,16 +51,15 @@ A node's identifier is its CURIE as the source writes it.
 
 ## The counts
 
-The round trip compared 1,532 source statements. 1,320 matched the graph exactly, and 212 are **declared** as not yet carried. The July graph never held them, and phase P2b adds them:
+The round trip compared 1,532 source statements, and **all 1,532 matched the graph**. Nothing is declared omitted (`explicitlyOmittedTotal` 0).
 
-| Kind | Count | What it is |
-|---|---:|---|
-| `changeHistory` | 118 | each term's `meta:changeHistory` link |
-| `unresolvedNativePrefixReference` | 35 | references to `asn:` terms of the **external** ASN vocabulary (e.g. `owl:equivalentClass asn:Rubric`): the July allowlist claims all of `asn:` but this file defines only 4 `asn:` terms |
-| `secondaryDescription` | 28 | an `rdfs:comment` or `skos:definition` that differs from the description the node shows |
-| `nativeReferenceNotModelled` | 28 | `rdfs:subPropertyOf` 10, `skos:hasTopConcept`/`topConceptOf` 8/8, `owl:inverseOf` 2 |
-| `schemeStatus` | 2 | `vs:term_status` on concept schemes |
-| `usageNoteOffProperty` | 1 | a `vann:usageNote` on a non-property |
+Phase P2b added what the July forge dropped, one kind per commit:
+- the concept and property hierarchies, top concepts and inverse properties, as the edges above;
+- second description texts (`rdfsComment`, `skosDefinition`), never merged into `description`;
+- the change-history link (`changeHistoryUrl`);
+- status on concept schemes, and usage notes on every role;
+- probable source anomalies, verbatim, in `nativeDeclarationAnomalyList` (CTDL only);
+- references to undefined terms under a claimed prefix, as crossRefs (E11).
 
 ## Round Trip Validation
 
@@ -65,7 +67,7 @@ The validator (`roundTripValidator.js`, with the shared pair `lib/ctdl-family-fo
 
 ## Known issues
 
-- **The 35 `asn:` references are dropped, not carried.** They name the external ASN vocabulary. P2b (item E11) carries them as crossRefs.
+- **35 references point outside the graph, and are carried as crossRefs (P2b, E11).** 34 name the external ASN vocabulary (`asn:`); one names a `ceasn:` term the source never defines, which is a source defect.
 - **CTDL-ASN imports W3C SKOS terms as its own** (`skos:Concept`, `skos:ConceptScheme` and 17 `skos:*` properties), exactly as the July graph did. Whether it should is TQ's question Q-T5.
 
 ## For more information

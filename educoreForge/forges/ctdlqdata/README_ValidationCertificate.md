@@ -1,7 +1,7 @@
 # Validation certificate — CTDL-QData (Credential Transparency Description Language — Quantitative Data)
 
-**CTDLQData 20260130 was built from its one JSON-LD schema file. The graph has 215 nodes and 277 edges.**
-**It is the July 2026 CTDLQData graph, re-forged on the current framework, node for node and edge for edge.**
+**CTDLQData 20260130 was built from its one JSON-LD schema file. The graph has 215 nodes and 402 edges.**
+**It is the July 2026 graph, re-forged on the current framework, plus everything the source says about its own terms that the July forge dropped (phase P2b): nothing in the source is now left out.**
 
 Accuracy was checked two ways:
 
@@ -14,7 +14,7 @@ Accuracy was checked two ways:
 | source | `assets/standardSourceData/01/qdata.json`, sha256 `7a60c290…967d69`, checked against `SHA256SUMS` at every build. Provenance: `assets/standardSourceData/01/README_PROVENANCE.md` |
 | source URL | `https://credreg.com/qdata/schema/encoding/json?includemetaproperties=false` |
 | graph | `DEV_gb_materialize_4659_2`, a scratch graph built 2026-10-20 and disposed after its census |
-| build | recipe `recipes/ctdlqdataOnlyRoundTrip.recipe.jsonc`, `--vectorize=false`, manifest `c2c2be70…42b72f`, standardBase block **`81078cbb81a2400fabe4407d653af3f609ed27e0ab808b864b21995360542a5c`** |
+| build | recipe `recipes/ctdlqdataOnlyRoundTrip.recipe.jsonc`, `--vectorize=false`, manifest `b3c89e52…e3f4b66f`, standardBase block **`89e25a2a7f82398ac5783a5da185c5e039575f10fc2887814aa55e606e0f4c0a`** (P2b, head `52747113`; every earlier block and each move is listed in `DEVLOG-P2b.md`) |
 | certification | `graphBuilder -goldEvalCheck`: **PASS** (1 declared validator, inventedTotal 0; no bridge, no judged edge) |
 | oracle | `apps/graph-builder/tools/oracleDiff.js` against `dataStores/ctdlHub_101926/oracle/CTDLQData.census.json`: **PASS, 0 unexplained differences** |
 | structure | `apps/graph-builder/tools/graphStructureCheck.js`: all five checks **PASS**; every content node is reachable from the root |
@@ -39,6 +39,10 @@ Accuracy was checked two ways:
 | `REFERENCES` | property → class | `schema:rangeIncludes` | 37 |
 | `HAS_OPTION_SET` | root → concept scheme (no property names one) | (every scheme) | 8 |
 | `HAS_VALUE` | concept scheme → concept | `skos:inScheme` | 113 |
+| `BROADER_CONCEPT` | concept → broader concept | `skos:broader` | 52 |
+| `TOP_CONCEPT_OF` | concept → scheme it heads | `skos:topConceptOf` | 61 |
+| `SUBPROPERTY_OF` | property → property | `rdfs:subPropertyOf` | 2 |
+| `RELATED_CONCEPT` | concept → concept | `skos:relatedMatch` between QData concepts (not a mapping) | 10 |
 
 A node's identifier is its CURIE as the source writes it.
 - **References outside CTDLQData:** every one is kept **as written** in the node's `crossRefs`, as `{ raw, locator }` (178 references). Nothing is resolved and no owner is assigned.
@@ -47,15 +51,15 @@ A node's identifier is its CURIE as the source writes it.
 
 ## The counts
 
-The round trip compared 1,594 source statements. 1,322 matched the graph exactly, and 272 are **declared** as not yet carried. The July graph never held them, and phase P2b adds them:
+The round trip compared 1,594 source statements, and **all 1,594 matched the graph**. Nothing is declared omitted (`explicitlyOmittedTotal` 0).
 
-| Kind | Count | What it is |
-|---|---:|---|
-| `nativeReferenceNotModelled` | 238 | the concept hierarchy `skos:broader`/`narrower` 52/52, `skos:topConceptOf`/`hasTopConcept` 61/61, `skos:relatedMatch` between QData concepts 10, `rdfs:subPropertyOf` 2 |
-| `unresolvedNativePrefixReference` | 13 | 9 `schema:rangeIncludes skos:Concept` and 1 `skos:ConceptScheme` (W3C SKOS terms the allowlist claims but the file does not define), and 3 `qdata:integer` (**a defect in the source**: no such term) |
-| `schemeStatus` | 8 | `vs:term_status` on concept schemes |
-| `secondaryDescription` | 8 | a second description text |
-| `usageNoteOffProperty` | 5 | a `vann:usageNote` on a non-property |
+Phase P2b added what the July forge dropped, one kind per commit:
+- the concept and property hierarchies, top concepts and inverse properties, as the edges above;
+- second description texts (`rdfsComment`, `skosDefinition`), never merged into `description`;
+- the change-history link (`changeHistoryUrl`);
+- status on concept schemes, and usage notes on every role;
+- probable source anomalies, verbatim, in `nativeDeclarationAnomalyList` (CTDL only);
+- references to undefined terms under a claimed prefix, as crossRefs (E11).
 
 ## Round Trip Validation
 
@@ -63,7 +67,6 @@ The validator (`roundTripValidator.js`, with the shared pair `lib/ctdl-family-fo
 
 ## Known issues
 
-- **The concept hierarchy is not in the graph** (238 statements). P2b.
 - **`schema:` belongs to QData only where QData defines the term.** The 10 `schema:` terms in `qdata.json` are nodes; a reference to any other `schema:` term is a crossRef. This reproduces the July graph's 10 `schema:*` nodes exactly.
 - **The source encoding carries no `meta:*` predicates** (`includemetaproperties=false`), so there is no `meta:domainFor` or `meta:hasConcept` to read back.
 
