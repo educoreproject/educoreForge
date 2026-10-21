@@ -1,0 +1,17 @@
+{
+  // ctdlHub — the CTDL base WITH its folded hub, no bridge (ctdlHub-101926 P4). The second real hub on lib/hub-framework:
+  // the forger derives the CTDL hub (term, property and value tiers; domains from HAS_PROPERTY edges; ranges as meaning)
+  // and folds it into the single CTDL standardBase block. Naming the hub HERE is what activates it; the descriptor's
+  // hubModule only declares that CTDL can be one (ctdlOnly builds the same block with or without those keys).
+  "schemaVersion": "1.0.0",
+  "recipeName": "ctdlHub",
+  "kind": "dev",
+  "description": "CTDL standardBase with its folded HubReference subgraph (no bridge).",
+  "standards": [
+    { "token": "ctdl", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ctdl" }
+  ],
+  "bridges": []
+}
