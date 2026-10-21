@@ -1417,7 +1417,7 @@ const goldEvalCheckAction = (callback) => {
 	// artifact without those fields are the proof it changed at all. A hand-assembled or foreign run
 	// directory that predates them will be refused BY NAME rather than silently certified on partial
 	// evidence, which is the trade this ruling makes deliberately.
-	const emitVerdict = ({ bridgeSibling, manifest, judgeEnumeration }) => {
+	const emitVerdict = ({ bridgeSibling, manifest, judgeEnumeration, inventoryGate }) => {
 		const enrichmentResult = certificateEnrichmentLib.buildCertificateEnrichment({
 			summary,
 			declaredRowList: declaredRows,
@@ -1439,7 +1439,7 @@ const goldEvalCheckAction = (callback) => {
 			judgeEnumeration.judgedEdgeTotal === 0
 				? 'judges: NONE — zero judged edges across the audited block(s), so --judgedBy is not required'
 				: `judges (${judgeEnumeration.judgeToolIdList.length}, over ${judgeEnumeration.judgedEdgeTotal} judged edge(s)): ${judgeEnumeration.judgeToolIdList.join(', ')}`;
-		const scopeText = `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0)} mapping edge(s), 0 invalid-debug; ${judgeText}`;
+		const scopeText = `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0)} mapping edge(s), 0 invalid-debug; ${judgeText}; ${inventoryGate.statusText}`;
 		xLog.status(
 			`graphBuilder: [goldEvalCheck] PASS — ${declaredRows.length} declared validator(s) ran ` +
 				`with inventedTotal=0${absentTokens.length ? `; ${absentTokens.length} bundle(s) declared-ABSENT (tolerated during the retrofit): ${absentTokens.join(', ')}` : ''}; ${scopeText}`,
@@ -1497,11 +1497,63 @@ const goldEvalCheckAction = (callback) => {
 					// silently, in place. Additivity holds because the four names were checked against the
 					// payload above and none collides — a claim about THESE names, not a property of spread.
 					...enrichmentResult.enrichment,
+					// ⟪ctdlHub P8⟫ THE INVENTORY GATE'S REPORT, appended after the enrichment (no incumbent key moves; the
+					// name collides with none of the payload's keys above). It carries what was read, from where, and what the
+					// candidate adds — the refusal path never reaches here, so a PASS payload always says what it compared.
+					inventoryGate: inventoryGate.payload,
 				},
 				null,
 				2,
 			),
 		});
+	};
+	// ⟪ctdlHub P8, WORKORDER-P8 step 1⟫ THE STANDARD-INVENTORY PROMOTION GATE (lib/gold-eval-inventory.js). A graph whose
+	// recipe PERMITS promotion (RECIPE_KIND_RULE) — or whose recipe could not be located, which fails safe — must name what
+	// it supersedes (--supersedes=<containerName>[,...] or --supersedes=none), and is REFUSED BY NAME when it lacks any
+	// standard or hub a predecessor holds. A recipe whose kind forbids promotion is not required to, and the payload says so;
+	// naming --supersedes on one still runs the gate. Runs LAST, after conservation: it is the one check that opens graphs.
+	const inventoryGateRequired = !(loadedRecipe && recipeLib.RECIPE_KIND_RULE[loadedRecipe.recipe.kind] && recipeLib.RECIPE_KIND_RULE[loadedRecipe.recipe.kind].promotionRenameAllowed === false);
+	const rawSupersedesList = process.global.commandLineParameters.values.supersedes;
+	const runInventoryGateStep = ({ manifestRefIdUnderCertification }, inventoryCallback) => {
+		if (!inventoryGateRequired && rawSupersedesList === undefined) {
+			const notRequiredText = `inventory gate: NOT REQUIRED — recipe kind '${loadedRecipe.recipe.kind}' does not permit promotion`;
+			inventoryCallback('', { statusText: notRequiredText, payload: { ran: false, reason: notRequiredText } });
+			return;
+		}
+		const neo4j = require('neo4j-driver');
+		// the candidate and every live predecessor are opened READ-ONLY, bolt port and credential read from the container
+		const openGraphReader = ({ containerName }, openCallback) => {
+			requireCedsRoundTripCompiler()().resolveContainerBolt({ containerName }, (resolveError, resolved) => {
+				if (resolveError) {
+					openCallback(resolveError);
+					return;
+				}
+				const driver = neo4j.driver(resolved.boltUrl, neo4j.auth.basic('neo4j', resolved.password), { encrypted: false });
+				const session = driver.session({ defaultAccessMode: neo4j.session.READ });
+				const runCypher = ({ cypherText }, cypherCallback) =>
+					session.run(cypherText).then((cypherResult) => cypherCallback('', cypherResult.records.map((oneRecord) => oneRecord.toObject())), (cypherError) => cypherCallback(cypherError.message));
+				openCallback('', { runCypher, closeAll: (closeCallback) => session.close().then(() => driver.close(), () => driver.close()).then(() => closeCallback(), () => closeCallback()) });
+			});
+		};
+		require('./gold-eval-inventory').runInventoryGate(
+			{
+				rawSupersedesList,
+				candidateContainerName: firstValue(process.global.commandLineParameters, 'containerName'),
+				manifestRefId: manifestRefIdUnderCertification,
+				inventoryDirectoryPath: firstValue(process.global.commandLineParameters, 'supersedesInventoryDirectoryPath'),
+				openGraphReader,
+			},
+			(gateRefusal, gateReport) => {
+				if (gateRefusal) {
+					inventoryCallback(`graphBuilder -goldEvalCheck: REFUSED — INVENTORY GATE —\n  - ${gateRefusal}`);
+					return;
+				}
+				const inventoryText = gateReport.supersedesNone
+					? 'inventory gate: --supersedes=none (supersedes nothing; nothing compared)'
+					: `inventory gate: PASS against ${gateReport.predecessorReportList.map((oneReport) => `${oneReport.predecessorInventory.graphName} (${oneReport.predecessorInventory.inventoryOrigin})`).join(', ')}; candidate holds ${gateReport.candidateInventory.nameListByDimension.standard.length} standard(s), ${gateReport.candidateInventory.nameListByDimension.hub.length} hub(s)`;
+				inventoryCallback('', { statusText: inventoryText, payload: { ran: true, ...gateReport } });
+			},
+		);
 	};
 	// ⟪JOB 6b⟫ THIS BRANCH USED TO NARROW; IT NOW REFUSES, and the change is deliberate.
 	// Without --manifestRefId the BRIDGE sibling could honestly narrow to 'forge round trip only',
@@ -1610,17 +1662,24 @@ const goldEvalCheckAction = (callback) => {
 					`[goldEvalCheck] conservation: ${conservationAudit.memberCount} of ` +
 						`${conservationAudit.memberCount} manifest member(s) certified PASS from their per-block artifacts`,
 				);
-				emitVerdict({
-					bridgeSibling: { manifestRefId: audit.manifestRefId, standardsDatabaseFilePath: supportStoreResolution.filePath, memberCount: audit.memberCount, mappingBlockList: audit.mappingBlockList },
-					manifest,
-					judgeEnumeration: {
-						judgeToolIdList: audit.judgeToolIdList,
-						judgeIdentityPairList: audit.judgeIdentityPairList,
-						judgedEdgeTotal: audit.judgedEdgeTotal,
-						perBlockList: audit.mappingBlockList.map((oneBlockRow) => ({ subject: oneBlockRow.subject, judgedEdgeCount: oneBlockRow.judgedEdgeCount, judgeIdentityPairList: oneBlockRow.judgeIdentityPairList })),
-						// ⟪G6-l⟫ THE LIST judgedByViolation VALIDATED, handed forward — never a second read of process.global.
-						namedAtPromotionList: judgedByOutcome.namedIdentityList,
-					},
+				runInventoryGateStep({ manifestRefIdUnderCertification: manifestRefId }, (inventoryError, inventoryGate) => {
+					if (inventoryError) {
+						callback(inventoryError);
+						return;
+					}
+					emitVerdict({
+						bridgeSibling: { manifestRefId: audit.manifestRefId, standardsDatabaseFilePath: supportStoreResolution.filePath, memberCount: audit.memberCount, mappingBlockList: audit.mappingBlockList },
+						manifest,
+						judgeEnumeration: {
+							judgeToolIdList: audit.judgeToolIdList,
+							judgeIdentityPairList: audit.judgeIdentityPairList,
+							judgedEdgeTotal: audit.judgedEdgeTotal,
+							perBlockList: audit.mappingBlockList.map((oneBlockRow) => ({ subject: oneBlockRow.subject, judgedEdgeCount: oneBlockRow.judgedEdgeCount, judgeIdentityPairList: oneBlockRow.judgeIdentityPairList })),
+							// ⟪G6-l⟫ THE LIST judgedByViolation VALIDATED, handed forward — never a second read of process.global.
+							namedAtPromotionList: judgedByOutcome.namedIdentityList,
+						},
+						inventoryGate,
+					});
 				});
 			});
 		});

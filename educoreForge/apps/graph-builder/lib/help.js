@@ -32,6 +32,8 @@ SYNOPSIS
      graphBuilder   -goldEvalCheck --buildLogDirPath=<the build's run directory>
                                    --manifestRefId=<the manifest -build printed> [--standardsDatabaseFilePath=<its store>]
                                    [--judgedBy=<toolId>[,<toolId>...]]   (COMMA-SEPARATED; one per judge present)
+                                   --supersedes=<containerName>[,...]|none [--containerName=<the candidate>]
+                                   [--supersedesInventoryDirectoryPath=<dir of <name>.inventory.json>]
      graphBuilder   -stampPromotion --containerName=<the PROMOTED name> --goldEvalCheckLogPath=<its saved output>
                                    --replayLogPath=<the -replay run log>  | --replayBuildLogPath=<a replay build log>
                                    --reforgeEvidencePath=<reforgeCompare -summarize output>
@@ -498,6 +500,24 @@ OPTIONS
                   ORDERING: the invalid-debug block refusal above fires FIRST and is untouched by
                   any of this. A debug-judge graph is refused for being debug-judged, not for how
                   its judges were named.
+                  THE STANDARD-INVENTORY GATE (ctdlHub P8; lib/gold-eval-inventory.js). Runs LAST,
+                  after conservation. A run whose recipe PERMITS promotion (kind 'golden'), or whose
+                  recipe cannot be located, must name what it supersedes:
+                  --supersedes=<containerName>[,<containerName>...] or --supersedes=none (alone).
+                  The candidate is read LIVE from --containerName=<its running container>, READ-ONLY,
+                  and only after its ONE GraphProvenance is shown to name --manifestRefId. Inventory =
+                  the distinct _source on :DmeStandardRoot plus the HubDefinition hubNames.
+                  Predecessors are read live from their running containers, or -- when
+                  --supersedesInventoryDirectoryPath=<dir> is given -- every one from
+                  <dir>/<containerName>.inventory.json (the gate's shape: graphName,
+                  standardSourceList, hubNameList; or P0's oracleCensus shape: graphLabel,
+                  nodeCountBySource, which carries NO hub list). A production graph is checked from
+                  such a file; its volume is never mounted. REFUSES BY NAME listing EVERY standard and
+                  EVERY hub a predecessor holds that the candidate lacks, and on any dimension a
+                  predecessor file does not carry (UNMEASURED is never read as empty). What the
+                  candidate ADDS is reported in the payload's inventoryGate, never refused. A recipe
+                  whose kind forbids promotion is not required to name a predecessor; the payload
+                  says so (inventoryGate.ran false, with the reason).
 
 OUTPUT
      -build:    JSON { manifestId, boltUrl } on stdout (progress on stderr).

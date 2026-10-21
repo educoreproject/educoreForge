@@ -633,12 +633,51 @@ const judgeNamingGates = ({ standardsDatabase, driveGoldEvalCheck, realActions, 
 								driveGoldEvalCheck({ actionsFactory: realActions, values: valuesFor(debugManifestRefId, ['someJudgeNobodyDeclared:v9']) }, (orderError) => {
 									harness.match('ORDERING: the pre-existing debug refusal fires FIRST, UNTOUCHED by JOB 6', orderError || '', /bridge-debug/);
 										harness.ok('ORDERING: …and no judge-naming refusal appears ahead of it', !/--judgedBy/.test(orderError || ''), orderError);
-										finish();
+										inventoryGateVerbGates({ standardsDatabase, driveGoldEvalCheck, realActions, bridgedRunDirPath, mintConservationArtifacts, databaseFilePath, cleanManifestRefId, finish });
 									});
 								});
 								});
 							});
 						});
+					});
+				});
+			});
+		});
+	});
+};
+
+// ---------------------------------------------------------------------
+// SECTION 6 — ctdlHub P8: THE VERB RUNS THE STANDARD-INVENTORY GATE (lib/gold-eval-inventory.js; its own gates live in
+// test-goldEvalInventory.js). Here only the WIRING: a run directory whose recipe is kind 'golden' must name what it
+// supersedes, --supersedes=none certifies and says so, a named predecessor without a candidate container refuses, a dev
+// recipe is not required to and the payload says so — and, three-state, cutting the requirement lets a golden run pass
+// with nothing compared (observed RED). The CLEAN manifest stands in for a golden one: its bridge count is read from the
+// golden recipe and its relationship block is clean, so every earlier gate passes and the inventory gate is the one speaking.
+// ---------------------------------------------------------------------
+const inventoryGateVerbGates = ({ standardsDatabase, driveGoldEvalCheck, realActions, bridgedRunDirPath, mintConservationArtifacts, databaseFilePath, cleanManifestRefId, finish }) => {
+	harness.section('SECTION 6 — ctdlHub P8: the VERB requires the inventory gate for a promotable recipe');
+	const goldenRecipeName = 'goldCtdlHub';
+	harness.equal('P8: the fixture recipe is kind golden (read from the recipe, so a kind change cannot silently void these)', require('../lib/recipe')().loadRecipe(path.join(__dirname, '..', '..', '..', 'recipes', `${goldenRecipeName}.recipe.jsonc`)).recipe.kind, 'golden');
+	const goldenRunDirPath = runDirFor({ recipeName: goldenRecipeName });
+	harness.ok('    the golden run dir gets REAL-SHAPED conservation artifacts (CLEAN manifest)', !mintConservationArtifacts({ standardsDatabase, manifestRefId: cleanManifestRefId, runDirPath: goldenRunDirPath }));
+	const goldenValuesWith = (extraValues) => ({ buildLogDirPath: [goldenRunDirPath], manifestRefId: [cleanManifestRefId], standardsDatabaseFilePath: [databaseFilePath], ...extraValues });
+	driveGoldEvalCheck({ actionsFactory: realActions, values: goldenValuesWith({}) }, (absentError) => {
+		harness.match('P8-a: a golden run with NO --supersedes → REFUSED BY NAME by the inventory gate', absentError || '', /INVENTORY GATE[\s\S]*--supersedes=<containerName>.*REQUIRED/);
+		driveGoldEvalCheck({ actionsFactory: realActions, values: goldenValuesWith({ supersedes: ['none'] }) }, (noneError, noneVerdict) => {
+			const nonePayload = noneVerdict ? JSON.parse(noneVerdict.resultText) : {};
+			harness.ok('P8-b: --supersedes=none → PASS', !noneError && noneVerdict && noneVerdict.exitCode === 0, noneError);
+			harness.ok('P8-b: … and the certificate SAYS it superseded nothing', nonePayload.inventoryGate && nonePayload.inventoryGate.ran === true && nonePayload.inventoryGate.supersedesNone === true, JSON.stringify(nonePayload.inventoryGate));
+			driveGoldEvalCheck({ actionsFactory: realActions, values: goldenValuesWith({ supersedes: ['GOLD_EVAL_fixturePredecessor'] }) }, (noCandidateError) => {
+				harness.match('P8-c: a predecessor named without --containerName → REFUSED BY NAME', noCandidateError || '', /--containerName=<the candidate's running container> is REQUIRED/);
+				driveGoldEvalCheck({ actionsFactory: realActions, values: { buildLogDirPath: [bridgedRunDirPath], manifestRefId: [cleanManifestRefId], standardsDatabaseFilePath: [databaseFilePath] } }, (devError, devVerdict) => {
+					const devPayload = devVerdict ? JSON.parse(devVerdict.resultText) : {};
+					harness.ok('P8-d: a DEV recipe without --supersedes → PASS (its kind does not permit promotion)', !devError && devVerdict && devVerdict.exitCode === 0, devError);
+					harness.ok('P8-d: … and the certificate SAYS the gate was not required, and why', devPayload.inventoryGate && devPayload.inventoryGate.ran === false && /does not permit promotion/.test(devPayload.inventoryGate.reason), JSON.stringify(devPayload.inventoryGate));
+					const requirementCutText = 'const inventoryGateRequired = !(loadedRecipe';
+					const requirementCutActions = () => bridgeTwinFactories.loadBuildJsDouble({ buildJsPath: actionsModulePath, mutationList: [{ find: requirementCutText, replace: 'const inventoryGateRequired = false && !(loadedRecipe' }] })();
+					driveGoldEvalCheck({ actionsFactory: requirementCutActions, values: goldenValuesWith({}) }, (cutError, cutVerdict) => {
+						harness.ok('P8-e: RED-OBSERVED — with the requirement cut, the SAME golden run without --supersedes PASSES (nothing compared)', !cutError && cutVerdict && cutVerdict.exitCode === 0, cutError);
+						finish();
 					});
 				});
 			});

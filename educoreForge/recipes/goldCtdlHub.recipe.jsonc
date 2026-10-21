@@ -1,0 +1,71 @@
+{
+  // goldCtdlHub — ctdlHub-101926 P8 (WORKORDER-P8-assembleAndGoldEval step 2; RUBY_PEAK for SCARLET_ARROW, 2026-10-21): the current
+  // DEV gold's recipe goldJevCt17Concepts (GOLD_EVAL_261013_jevQuestionPerBridge, manifest a1dc1875) PLUS the CTDL family (standards
+  // ctdl, ctdlasn, ctdlqdata), the CTDL hub beside the CEDS hub, and P6's declared bridges (recipe ctdlFamilyDeclared: CTDL's 53
+  // declared ceds: correspondences, CTDL-ASN's 4 owl:equivalentProperty to CTDL, and the family structure). Every added entry is
+  // APPENDED after the gold's own entries of its list; everything else (the gold's comment below, its standards, its CEDS hub, its
+  // layers, its ten derived bridges, roundTripStage) is byte-identical to goldJevCt17Concepts. Build it with a SCOPED rebridge
+  // (--rebridge=ctdl,ctdlasn) over a COPY of the gold's decision store, so the gold's ten frozen derived-bridge decision blocks
+  // MATERIALISE unchanged (every pre-existing block id identical) and only the never-frozen declared bridges are frozen; the
+  // declared bases ask no judge. kind 'golden' so -stampPromotion may name its graph GOLD_EVAL_*.
+  //
+  // goldJevCt17Concepts — goldJevCt17 PLUS CEDS's two LAYERS (lane UNDES, campaign cedsRichness-101226, GRANITE_BEACON for
+  // COPPER_RIVER, 2026-10-13; TQ: "Remove the DES layer, keep text repair and concepts"): the Ontology Guide V14 Appendix A
+  // (guide: the Conceptual Model concepts of all 400 classes) and the U+FFFD text repairs from the CEDS IDS v14 (textRepair),
+  // each its own block of kind 'layer' beside a CEDS base block that does NOT change, so every bridge replays from the copied
+  // judgment cache exactly as before. It replaces goldJevCt17Layers (lane DES), whose third layer was removed; that recipe's
+  // gold, GOLD_EVAL_261012_cedsLayers, stays reproducible from tag postDesLayersAuditGSeamUntouched-101226. Everything below
+  // the layers line is goldJevCt17, unchanged.
+  //
+  // goldJevCt17 — goldJevAcceptance2 PLUS PESC College Transcript 1.7.0 (forgeClean lane CT17, ONYX_DANCE, 2026-10-09).
+  // TQ: "I think including 1.7 would be very interesting (though we probably won't when we move to production)." This
+  // reverses his 09-30 Q1 ruling (seven releases) for the DEV/eval graph ONLY. goldJevAcceptance2 is deliberately left
+  // untouched so GOLD_EVAL_261008_forgeClean, the production candidate, stays exactly reproducible from main. Same members
+  // otherwise, same order, with 1.7.0 standing after 1.8.0. kind 'golden' so -stampPromotion may name its graph GOLD_EVAL_*.
+  // Its first build (GOLD_EVAL_261009_ct17) reused the forgeClean R4 judgment cache by copy: every 1.7.0 unit whose prompt
+  // renders identically to a 1.8.0 unit is a cache hit (the version carry, DESIGN-pescBridge.md "Version replay").
+  "schemaVersion": "1.0.0",
+  "recipeName": "goldCtdlHub",
+  "kind": "golden",
+  "description": "Pure-Jev gold graph with CEDS's two layers (Ontology Guide V14 Appendix A concepts, U+FFFD text repairs from the IDS v14) beside the CEDS hub: CEDS hub, Ed-Fi (crosswalk excluded), SIF 260928 and all seven PESC releases plus College Transcript 1.7.0 (College Transcript 1.8.0, College Transcript 1.7.0, High School Transcript 1.6.0, Test Score Report 1.1.0, Learning Record 1.0.0, Document Request 1.0.0, Document Response 1.0.0, Academic ePortfolio 1.0.0), every standard re-forged on fresh stores and every derived bridge judged by Jev through a COPY of the forgeClean R4 judgment cache, so a unit whose prompt is unchanged is a cache hit and only new prompts are judged. PLUS (ctdlHub P8) the CTDL family (CTDL, CTDL-ASN, CTDL-QData), the CTDL hub beside the CEDS hub, and the declared bridges CTDL→CEDS, CTDL-ASN→CTDL and the CTDL family structure.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sif260928", "version": "current" },
+    { "token": "pesccollegetranscript1v8v0", "version": "current" },
+    { "token": "pesccollegetranscript1v7v0", "version": "current" },
+    { "token": "peschighschooltranscript1v6v0", "version": "current" },
+    { "token": "pesctestscorereport1v1v0", "version": "current" },
+    { "token": "pesclearningrecord1v0v0", "version": "current" },
+    { "token": "pescdocumentrequest1v0v0", "version": "current" },
+    { "token": "pescdocumentresponse1v0v0", "version": "current" },
+    { "token": "pescacademiceportfolio1v0v0", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "ctdlasn", "version": "current" },
+    { "token": "ctdlqdata", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "layers": [
+    { "standard": "ceds", "layer": "guide" },
+    { "standard": "ceds", "layer": "textRepair" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] },
+    { "source": "sif260928", "hub": "ceds", "bridge": "sif260928CedsDerivedPlugin", "dependencies": ["sif260928", "ceds"] },
+    { "source": "pesccollegetranscript1v8v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v8v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v8v0", "ceds"] },
+    { "source": "pesccollegetranscript1v7v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v7v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v7v0", "ceds"] },
+    { "source": "peschighschooltranscript1v6v0", "hub": "ceds", "bridge": "pescHighSchoolTranscript1v6v0CedsDerivedPlugin", "dependencies": ["peschighschooltranscript1v6v0", "ceds"] },
+    { "source": "pesctestscorereport1v1v0", "hub": "ceds", "bridge": "pescTestScoreReport1v1v0CedsDerivedPlugin", "dependencies": ["pesctestscorereport1v1v0", "ceds"] },
+    { "source": "pesclearningrecord1v0v0", "hub": "ceds", "bridge": "pescLearningRecord1v0v0CedsDerivedPlugin", "dependencies": ["pesclearningrecord1v0v0", "ceds"] },
+    { "source": "pescdocumentrequest1v0v0", "hub": "ceds", "bridge": "pescDocumentRequest1v0v0CedsDerivedPlugin", "dependencies": ["pescdocumentrequest1v0v0", "ceds"] },
+    { "source": "pescdocumentresponse1v0v0", "hub": "ceds", "bridge": "pescDocumentResponse1v0v0CedsDerivedPlugin", "dependencies": ["pescdocumentresponse1v0v0", "ceds"] },
+    { "source": "pescacademiceportfolio1v0v0", "hub": "ceds", "bridge": "pescAcademicEportfolio1v0v0CedsDerivedPlugin", "dependencies": ["pescacademiceportfolio1v0v0", "ceds"] },
+    { "source": "ctdl", "hub": "ceds", "bridge": "ctdlCedsDeclaredCorrespondence", "dependencies": ["ctdl", "ceds"] },
+    { "source": "ctdlasn", "hub": "ctdl", "bridge": "ctdlasnCtdlDeclaredCorrespondence", "dependencies": ["ctdlasn", "ctdl"] },
+    { "source": "ctdl", "familyStandards": ["ctdl", "ctdlasn", "ctdlqdata"], "bridge": "ctdlFamilyStructure", "dependencies": ["ctdl", "ctdlasn", "ctdlqdata"] }
+  ],
+  "roundTripStage": true
+}
