@@ -494,7 +494,11 @@ const JUDGE_PROVIDER_SHAPE = Object.freeze({
 		// to produce a ranking; requiring every PROVIDER to carry one would outlaw the debug double, which has no
 		// ranking to give and is lawful without it. A verdict is choice + category + rationale; the ranking is how
 		// it got there.
-		resultKeys: Object.freeze(['choice', 'category', 'rationale', 'model', 'attempts']),
+		// ⟪spend ledger R1, 2026-10-21⟫ spendCallList IS a contract member: [{ provider, model (the WIRE model billed), inputTokens,
+		// outputTokens }], one entry per paid response (lib/spend-ledger/spendRecord.js SPEND_CALL_FIELD_LIST); [] from the debug
+		// judge, which makes none. judgeComponent prices it and refuses a live answer without it, so a provider that omitted it
+		// would be refused at its first judgment rather than here.
+		resultKeys: Object.freeze(['choice', 'category', 'rationale', 'model', 'attempts', 'spendCallList']),
 	}),
 	describe: Object.freeze({
 		arity: 0,
