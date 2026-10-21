@@ -939,7 +939,7 @@ const stageSpendLedger = (whenDone) => {
 	const debugJudgeSpend = [debugUnit, debugUnit, debugUnit].reduce((judgeSpend, spendRecord) => spendRecordLib.judgeSpendTotalsWith({ judgeSpend, spendRecord }), { asked: 3, servedFromCache: 0, abstained: 1, rationaleReaskCount: 0, ...spendRecordLib.JUDGE_SPEND_TOTAL_SEED });
 	const embeddingRecord = { provider: 'voyage', model: 'voyage-4-large', texts: 10, distinctMisses: 4, servedFromCache: 6, tokens: 2000000, latencyMs: 50 };
 	const spendingForger = () => workingForger({
-		forge: ({ standard, version }, cb) => cb('', { standard, version, snapshotKey: '01', publishedVersion: version, versionSource: 'spec', nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, layerReportList: [], embedCallCount: 1, embeddingSpendRecordList: standard === 'probesource' ? [embeddingRecord] : [] }),
+		forge: ({ standard, version }, cb) => cb('', { standard, version, snapshotKey: '01', publishedVersion: version, versionSource: 'spec', nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, layerReportList: [], embedCallCount: 1, embeddingSpendRecordList: standard === 'probesource' ? [embeddingRecord] : [], ...(standard === 'probehub' ? { hubDivergenceReport: [{ row: 'divergence' }], hubSkipReport: [] } : {}) }),
 	});
 	const judgingBridgeMaker = (bridgeError) => withDescribeBridge(() => ({ run: (spec, cb) => (bridgeError ? cb(bridgeError) : cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: { judgeSpend: debugJudgeSpend } })) }));
 	// a hub-and-source recipe naming no real standard: the spend path is the same for every hub, and this suite adds no hub
@@ -967,6 +967,10 @@ const stageSpendLedger = (whenDone) => {
 		harness.ok('  totals: $0.20, and the prices used ride in the ledger with their sources', goodLedger && near(goodLedger.totals.usd, 0.2) && goodLedger.priceRowList.every((onePriceRow) => typeof onePriceRow.priceSource === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(onePriceRow.priceAsOf)), JSON.stringify(goodLedger && goodLedger.totals));
 		const lifetimeLineList = fs.existsSync(lifetimeLedgerFilePath) ? fs.readFileSync(lifetimeLedgerFilePath, 'utf8').split('\n').filter((lineText) => lineText !== '') : [];
 		harness.equal('one line is appended to the lifetime ledger', lifetimeLineList.length, 1);
+		// ⟪R5 S5⟫ the hub fold's two reports are named for their hub
+		const goldRunDirList = fs.readdirSync(goodLogsDirPath);
+		const hubReportNameList = goldRunDirList.length === 1 ? fs.readdirSync(path.join(goodLogsDirPath, goldRunDirList[0])).filter((oneName) => /Divergence|SkipReport/.test(oneName)).sort() : [];
+		harness.equal('the hub reports are named for the hub that produced them (R5 S5)', hubReportNameList.join(','), 'hubSkipReport.probehub.json,proseDivergence.probehub.json');
 		const failedLogsDirPath = path.join(scratchDir, 'failedBuildLogs');
 		spendBuild({ buildLogsDirPath: failedLogsDirPath, spendPricingFilePath: fixturePricingFilePath, components: { bridgeMaker: judgingBridgeMaker('the bridge double failed on purpose') } }, ({ err: failedErr }) => {
 			harness.match('a build whose bridge FAILS still fails, naming the bridge fault', failedErr || '', /the bridge double failed on purpose/);

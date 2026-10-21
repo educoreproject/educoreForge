@@ -1971,11 +1971,11 @@ const build = (recipe, deps, buildCallback) => {
 						);
 						return;
 					}
-					const divergenceReportPath = path.join(
-						buildReportsDirPath,
-						'cedsProseDivergence.json',
-					);
-					const skipReportPath = path.join(buildReportsDirPath, 'cedsHubSkipReport.json');
+					// ⟪R5 S5, 2026-10-21⟫ named for the HUB whose fold produced them, so a two-hub build writes one pair per hub
+					// and no hub's reports carry another hub's name (no reader of the old names exists, measured: R5 DEVLOG)
+					const hubToken = String(std.token).toLowerCase();
+					const divergenceReportPath = path.join(buildReportsDirPath, `proseDivergence.${hubToken}.json`);
+					const skipReportPath = path.join(buildReportsDirPath, `hubSkipReport.${hubToken}.json`);
 					fs.writeFile(
 						divergenceReportPath,
 						JSON.stringify(args.forgeReport.hubDivergenceReport, null, '\t'),
