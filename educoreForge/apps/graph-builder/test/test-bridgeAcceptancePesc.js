@@ -923,7 +923,22 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postCtdlP4PescCompose-102026 -> postCtdlP4FinisherPescCompose-102026, tag cut ON this commit. CENSUS over this gate's declared paths:
 // lib/bridge-framework/test/test-bgNosub.js 8/1 ONLY — its seamDiffEmpty re-anchor in THIS SAME commit. No bridge-framework source,
 // bridge-maker, build.js, interfaces.js or lib/vocabulary change.
-const P1_BASELINE_COMMIT = 'postCtdlP4FinisherPescCompose-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P4, finisher); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (INDIGO_LOOM; ctdlHub-101926 P5 two hubs in one build; ruled by SCARLET_ARROW once the P0-vs-P5
+// regression confirmed IDENTICAL: four recipes, plain materialise-from-frozen builds, every id line equal) ═══
+// BG-COMPOSE-PESC (a)'s 'zero framework change' is retired for this range because P5 is a mandated framework change.
+// postCtdlP4FinisherPescCompose-102026 -> postCtdlP5PescCompose-102026, tag cut ON this commit. CENSUS (numstat over the diffed path
+// list from the old tag, measured with this re-anchor in the tree; 20 paths):
+//   apps/graph-builder/lib/build.js 8/0 (hubStandardName from the hub bundle)
+//   lib/bridge-framework/: bridge-framework.js 11/2 (hubName to the reader; targetHub-vs-recipe refusal), bridgePluginContract.js 32/0
+//     (bridgeTarget contract), graphDouble.js 10/6 and graphReader.js 16/12 (hub-scoped card reads; hub-layer exclusion),
+//     graphSeamRules.js 12/1 (HUB_LAYER_LABEL_LIST; hubName required), pluginRegistry.js 10/4 (third export required)
+//   lib/bridge-framework/test/: fixtures toy{Crosswalk,Derived,Standard}Plugin.js 4/1 each (bridgeTarget toyhub), test-bgBolt.js 17/8,
+//     test-bgDerived.js 2/2, test-bgEts.js 1/1, test-bgMultiHub.js 205/0 (new), test-bgNosub.js 13/2 (its own re-anchor),
+//     test-bgReg.js 2/2, testSupport/boltDriverDouble.js 8/1, testSupport/toyBridgeScenario.js 2/0
+//   lib/vocabulary/: graph-contract.js 1/0 (mappedPropertyCountByHub row), test/test-sifEdgeVocabulary.js 3/1 (339 -> 340)
+// Every plugin's bridgeDeclaration bytes are UNCHANGED (bridgeTarget is a sibling export), so declarationDigest does not move;
+// frameworkFingerprint does, so any later rebridge re-keys bridge blocks with identical decisions (expected; recorded for P8).
+const P1_BASELINE_COMMIT = 'postCtdlP5PescCompose-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P5); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

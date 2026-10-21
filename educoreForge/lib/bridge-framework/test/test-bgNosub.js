@@ -207,7 +207,12 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // vocabulary.js 38/1, vocabulary-definitions.js 1/0, graph-contract.js 2/0, test/test-sifEdgeVocabulary.js 7/1. From the P3 tag, lanes P1-P2b's
 // paths: vocabulary.js 11/1, vocabulary-definitions.js 10/0, graph-contract.js 3/2, test/test-sifEdgeVocabulary.js 7/1. The 7/1 on each side is
 // the other lane's +5 comment plus the merge's own comment and the 329 -> 339 sum (measured 34/34). Allowed-path list NOT widened.
-const POST_D1_BASE_TAG = 'postCtdlCampaignMergeVocabularyIi-102026'; // re-anchored by INDIGO_LOOM (ctdlHub campaign merge); the tag is cut ON the merge commit
+// ═══ RE-ANCHOR, 2026-10-21 (INDIGO_LOOM; ctdlHub-101926 P5; ruled by SCARLET_ARROW, graph-contract.js named) ═══ (ii)
+// postCtdlCampaignMergeVocabularyIi-102026 -> postCtdlP5VocabularyIi-102026, tag cut ON this commit. CENSUS (lib/vocabulary/, numstat
+// from the old tag): graph-contract.js 1/0 (one STANDARD_DEFINITION_FIELD_LIST row, mappedPropertyCountByHub, outside (ii)'s allowed
+// vocabulary.js+tests as P2b's edge rows were) and test/test-sifEdgeVocabulary.js 3/1 (schema view 339 -> 340, declared). Allowed-path
+// list NOT widened.
+const POST_D1_BASE_TAG = 'postCtdlP5VocabularyIi-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P5); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -944,7 +949,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // 10/0 (01882ee4: a HubReference is never a mapping SUBJECT) and lib/schema-view-finisher.js 35/6 + test/test-schemaViewContractProjection.js
 // 39/2 (9737fbfe: the schema view documents a term-tier hub's HAS_<HUB>_TERM and HAS_TERM_REFERENCE). No build.js, forger, replay,
 // forge-framework or forge file change.
-const PHASE3_ANCHOR_TAG = 'postCtdlP4FinisherSeamDiffEmpty-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P4, finisher); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (INDIGO_LOOM; ctdlHub-101926 P5 two hubs in one build; ruled by SCARLET_ARROW: once, after the P0-vs-P5
+// regression confirmed IDENTICAL) ═══ seamDiffEmpty (and its (i-live) companion): postCtdlP4FinisherSeamDiffEmpty-102026 ->
+// postCtdlP5SeamDiffEmpty-102026, tag cut ON this commit together with (ii)'s and BG-COMPOSE-PESC's. CENSUS (numstat from the old tag,
+// three paths): apps/graph-builder/lib/build.js 8/0 (hubStandardName composed from the hub bundle's standardName, c0a4200d);
+// replay-manager/lib/finishing/lib/standard-definition-finisher.js 25/0 (per-hub mappedPropertyCountByHub only when >1 HubDefinition,
+// c0a4200d + 7a05e200) and its test test-standardDefinitionDisposition.js 34/1. No forger, replay, forge-framework or forge file change.
+const PHASE3_ANCHOR_TAG = 'postCtdlP5SeamDiffEmpty-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P5); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
