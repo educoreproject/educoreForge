@@ -212,7 +212,16 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // layerReportList without '|| []') — lane DES's own commits 0f9713b8 (lib/layer-framework/layerRoundTrip.js: a layer verdict records the endpoint it read;
 // certificate-enrichment.js: a layer token names its layer block) and 4681cf0b (self-audit: interfaces.js ForgeReport and the forger
 // resultKeys declare layerReportList; build.js reads it without a silent '|| []'; forger doubles in test-build.js and test-replay.js).
-const PRE_MIGRATION_REF = 'postDesLayersAuditGSeamUntouched-101226'; // re-anchored by RADIANT_HORIZON (lane DES); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (INDIGO_LOOM; ctdlHub-101926 P5 two hubs in one build; ruled by SCARLET_ARROW) ═══ G-SEAM-UNTOUCHED
+// postDesLayersAuditGSeamUntouched-101226 -> postCtdlP5GSeamUntouched-102026, tag cut ON this commit. CENSUS, MEASURED WITH THIS GATE'S
+// OWN COMMAND (git diff --stat postDesLayersAuditGSeamUntouched-101226 -- <the 7 seam files>) at 1904fa96: exactly ONE of the seven,
+// ctdlHub P5 c0a4200d:
+//   apps/graph-builder/lib/build.js                          |  8  hubStandardName composed from resolveBundle({ standard: bridge.hub })
+//                                                                   .standardName, refused by name when unresolvable, so each bridge reads
+//                                                                   only its own hub's cards in a multi-hub graph
+// forger.js, shape-forged-graph.js, replay-engine.js, replay-block.js, replayManager.js and round-trip-stage.js: UNTOUCHED. THE SEAM
+// FILE LIST IS UNCHANGED, no exclusion added; the red was observed at 1904fa96 in the full suite (DEVLOG-P5 checkpoint 5).
+const PRE_MIGRATION_REF = 'postCtdlP5GSeamUntouched-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P5); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
