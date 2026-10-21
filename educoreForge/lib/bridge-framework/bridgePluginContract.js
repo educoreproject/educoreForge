@@ -979,7 +979,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		if (value[joinFieldName] === undefined) {
 			return `MUST name ${joinFieldName} (the join key of matchBasis '${bridgeDeclaration.matchBasis}'); nothing is inferred`;
 		}
-		const strayJoinField = ['canonicalKey', 'termIri'].find((oneField) => oneField !== joinFieldName && value[oneField] !== undefined);
+		const strayJoinField = Array.from(new Set(Object.keys(SOURCE_ACQUISITION_REGISTRY).map((oneBasis) => SOURCE_ACQUISITION_REGISTRY[oneBasis].targetKeyTupleField).filter((oneField) => oneField !== null))).find((oneField) => oneField !== joinFieldName && value[oneField] !== undefined);
 		if (strayJoinField !== undefined) {
 			return `names '${strayJoinField}', the join key of another basis; matchBasis '${bridgeDeclaration.matchBasis}' joins on ${joinFieldName}`;
 		}

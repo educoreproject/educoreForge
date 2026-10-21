@@ -2275,7 +2275,8 @@ const build = (recipe, deps, callback) => {
 					return;
 				}
 				const familyStandardNameByToken = {};
-				const familyTokenList = bridge.hub === undefined ? [].concat(bridge.familyStandards || bridge.dependencies || []) : [];
+				// the family is the recipe's familyStandards, or (a single pairWith) its required dependencies; recipe validation makes one present
+				const familyTokenList = bridge.hub !== undefined ? [] : bridge.familyStandards !== undefined ? bridge.familyStandards : bridge.dependencies;
 				for (let familyIndex = 0; familyIndex < familyTokenList.length; familyIndex++) {
 					const familyBundle = components.forger.resolveBundle({ standard: familyTokenList[familyIndex] });
 					if (familyBundle.error) {
