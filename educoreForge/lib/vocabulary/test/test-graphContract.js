@@ -105,6 +105,8 @@ findUnsorted(parsedDocument, '$');
 harness.equal('  keys are sorted at every depth', JSON.stringify(unsortedPathList.slice(0, 5)), '[]');
 harness.equal('  the document carries its contract version', parsedDocument.graphContractVersion, graphContract.GRAPH_CONTRACT_VERSION);
 harness.equal('  and the attestation verdict words, resolved from vocabulary (so the DME copy is self-contained)', JSON.stringify(parsedDocument.buildAttestationVerdictList), JSON.stringify(vocabulary.BUILD_ATTESTATION_VERDICT_LIST));
+// ⟪ctdlHub P6, for P7⟫ the DME finds HAS_<HUB>_TERM edges from the contract, so the term slot list rides beside hubSlotList
+harness.equal('  and the hub slot list, and BESIDE it the hub TERM slot list (HAS_<HUB>_TERM), both resolved from vocabulary', JSON.stringify({ hubSlotList: parsedDocument.hubSlotList, hubTermSlotList: parsedDocument.hubTermSlotList }), JSON.stringify({ hubSlotList: vocabulary.HUB_DECOMPOSITION_SLOTS, hubTermSlotList: vocabulary.HUB_TERM_DECOMPOSITION_SLOTS }));
 harness.equal('  and the passport rows, as declared', JSON.stringify(parsedDocument.passportFieldList.map((oneRow) => oneRow.name)), JSON.stringify(graphContract.PASSPORT_FIELD_LIST.map((oneRow) => oneRow.name)));
 const expectedSha = crypto.createHash('sha256').update(firstText, 'utf8').digest('hex');
 harness.equal('graphContractSha256() is sha256 of exactly those bytes', graphContract.graphContractSha256(), expectedSha);

@@ -398,6 +398,9 @@ const graphContractDocument = () => {
 		producerLocalLabelPatternSourceList: PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST,
 		// W-D-5 (P1 asked): the hub slot list both incoming arms of findMappings walk
 		hubSlotList: require('./vocabulary').HUB_DECOMPOSITION_SLOTS,
+		// ⟪ctdlHub P6, for P7⟫ the term slot (HAS_<HUB>_TERM), kept OUT of hubSlotList as vocabulary keeps it out of
+		// HUB_DECOMPOSITION_SLOTS, so the DME finds term edges from the contract without findMappings' arms changing
+		hubTermSlotList: require('./vocabulary').HUB_TERM_DECOMPOSITION_SLOTS,
 		userLinkTargetRule: USER_LINK_TARGET_RULE,
 		userEdgeStampFieldList: USER_EDGE_STAMP_FIELD_LIST,
 		userEdgeRule: USER_EDGE_RULE,
