@@ -22,6 +22,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   lookupPlugin({ registry, bridgeName, standardKey })              → { entry } | { error }
 //   registerStructuralProducer({ producerModule, producerFilePath, bundleDirPath }) → { entry } | { error }
 //   lookupStructuralProducer({ registry, producerName, standardKey }) → { entry } | { error }
+//   standardBridgingFor({ forgesDirPath, standardKey })              → { bridgingFilePath, standardBridging } | { error }
 //
 // ⟪ctdlHub P6, ruling R-3⟫ A SECOND MODULE SHAPE: a file under bridges/ exporting EXACTLY { structuralDeclaration } is a STRUCTURAL
 // producer (structuralProducerContract.js), registered into its OWN map, structuralEntryByName, never into entryByBridgeName: every
@@ -257,4 +258,42 @@ const lookupStructuralProducer = ({ registry, producerName, standardKey } = {}) 
 	return { entry: producerEntry };
 };
 
-module.exports = { registerPlugin, registerStructuralProducer, buildRegistryFromDirectory, lookupPlugin, lookupStructuralProducer, registeredNameText, BRIDGES_DIR_NAME, moduleName };
+// standardBridgingFor — ⟪R3 recipe form⟫ the ONE standard bridging file under forges/<standardKey>/bridges/, found by the same
+// convention discovery uses (bridges/*.js, the forbidden-substrate scan BEFORE the file is loaded, told apart by its export), for
+// the recipe expansion: a new-form recipe entry names a source and its hubs, and the bridge names are derived from this file.
+// None, or more than one, is refused by name; the pairing itself is still confirmed at run by lookupPlugin.
+const standardBridgingFor = ({ forgesDirPath, standardKey } = {}) => {
+	if (typeof forgesDirPath !== 'string' || !path.isAbsolute(forgesDirPath) || typeof standardKey !== 'string' || standardKey === '') {
+		return { error: refuse.byName({ moduleName, what: `forgesDirPath ${JSON.stringify(forgesDirPath)} / standardKey ${JSON.stringify(standardKey)}: an absolute forges directory and a standard token are both required`, where: 'the caller passes the tree\'s forges/ directory (each bridging file is required by its path)' }) };
+	}
+	const bridgesDirPath = path.join(String(forgesDirPath), String(standardKey), BRIDGES_DIR_NAME);
+	if (!fs.existsSync(bridgesDirPath) || !fs.statSync(bridgesDirPath).isDirectory()) {
+		return { error: refuse.byName({ moduleName, what: `standard '${standardKey}' has no bridges directory at ${bridgesDirPath}`, where: 'a recipe entry naming hubs[] needs the standard\'s bridging file under forges/<standardKey>/bridges/' }) };
+	}
+	const bridgingFilePathList = [];
+	const substrateReasonList = [];
+	fs.readdirSync(bridgesDirPath, { withFileTypes: true })
+		.filter((oneEntry) => oneEntry.isFile() && /\.js$/.test(oneEntry.name))
+		.map((oneEntry) => path.join(bridgesDirPath, oneEntry.name))
+		.sort()
+		.forEach((oneFilePath) => {
+			const substrateReason = bridgePluginContractLib.forbiddenSubstrateReason({ pluginFilePath: oneFilePath });
+			if (substrateReason) {
+				substrateReasonList.push(substrateReason);
+				return;
+			}
+			const candidateModule = require(oneFilePath);
+			if (isPlainObject(candidateModule) && Object.prototype.hasOwnProperty.call(candidateModule, STANDARD_BRIDGING_EXPORT_NAME)) {
+				bridgingFilePathList.push(oneFilePath);
+			}
+		});
+	if (substrateReasonList.length) {
+		return { error: refuse.byName({ moduleName, what: substrateReasonList.join('; '), where: 'a plugin declares assertions; it never reaches a driver, a store, a judge or an embedder' }) };
+	}
+	if (bridgingFilePathList.length !== 1) {
+		return { error: refuse.byName({ moduleName, what: `standard '${standardKey}' has ${bridgingFilePathList.length} standard bridging files under ${bridgesDirPath} [${bridgingFilePathList.map((oneFilePath) => path.basename(oneFilePath)).join(', ')}], not exactly one`, where: 'a recipe entry naming hubs[] derives its bridge names from the standard\'s ONE bridging file' }) };
+	}
+	return { bridgingFilePath: bridgingFilePathList[0], standardBridging: require(bridgingFilePathList[0])[STANDARD_BRIDGING_EXPORT_NAME] };
+};
+
+module.exports = { registerPlugin, registerStructuralProducer, buildRegistryFromDirectory, standardBridgingFor, lookupPlugin, lookupStructuralProducer, registeredNameText, BRIDGES_DIR_NAME, moduleName };

@@ -394,7 +394,7 @@ const readAndValidate = (actionName) => {
 		};
 	}
 
-	const loaded = recipeLib.loadRecipe(recipePath);
+	const loaded = recipeLib.loadRecipe(recipePath, { forgesDirPath: FORGES_DIR });
 	if (loaded.error) {
 		return { recipePath, loadError: loaded.error };
 	}
@@ -1381,7 +1381,7 @@ const goldEvalCheckAction = (callback) => {
 	const recipeNameFromRunDir = path.basename(buildLogDirPath).replace(/_\d{8}-\d{6}$/, '');
 	const derivedRecipePath = path.join(__dirname, '..', '..', '..', 'recipes', `${recipeNameFromRunDir}.recipe.jsonc`);
 	const recipePathForBridges = explicitRecipePath || (fs.existsSync(derivedRecipePath) ? derivedRecipePath : null);
-	const loadedRecipe = recipePathForBridges ? recipeLib.loadRecipe(recipePathForBridges) : null;
+	const loadedRecipe = recipePathForBridges ? recipeLib.loadRecipe(recipePathForBridges, { forgesDirPath: FORGES_DIR }) : null;
 	if (loadedRecipe && loadedRecipe.error) {
 		callback(`graphBuilder -goldEvalCheck: REFUSED — the recipe named for the bridge declaration (${recipePathForBridges}) does not load: ${loadedRecipe.error}`);
 		return;
@@ -1736,7 +1736,7 @@ const promotionKindRefusal = ({ containerName, recipeName, recipesDirPath = path
 	if (typeof recipeName !== 'string' || !recipeName || !fs.existsSync(recipePath)) {
 		return `graphBuilder -stampPromotion: REFUSED — '${containerName}' is a GOLD_EVAL name, and the passport's recipe ${JSON.stringify(recipeName)} has no recipe file at ${recipePath}, so its kind (what it permits) cannot be read`;
 	}
-	const loaded = recipeLib.loadRecipe(recipePath);
+	const loaded = recipeLib.loadRecipe(recipePath, { forgesDirPath: FORGES_DIR });
 	const kindRule = loaded.recipe ? recipeLib.RECIPE_KIND_RULE[loaded.recipe.kind] : undefined;
 	if (!kindRule || !kindRule.promotionRenameAllowed) {
 		return `graphBuilder -stampPromotion: REFUSED — recipe '${recipeName}' is kind ${JSON.stringify(loaded.recipe && loaded.recipe.kind)}, which does not permit a GOLD_EVAL name (RECIPE_KIND_RULE: only 'golden' does); declare the acceptance recipe kind 'golden'`;

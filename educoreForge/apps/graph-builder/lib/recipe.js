@@ -14,8 +14,11 @@
 //                          .availableForges). Correctly flags un-ported forges until they land.
 
 const fs = require('fs');
+const path = require('path');
 const JSON5 = require('json5');
 const Ajv = require('ajv');
+const recipeBridgeExpansionLib = require(path.join(__dirname, 'recipe-bridge-expansion'));
+const pluginRegistryLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'pluginRegistry'));
 
 // =====================================================================
 // LAYER 1 — strict NEW-format structural schema
@@ -192,7 +195,11 @@ const validateStructural = ajv.compile(RECIPE_SCHEMA);
 // LOAD
 // =====================================================================
 
-const loadRecipe = (recipePath) => {
+// ⟪R3 recipe form, 2026-10-21⟫ loadRecipe(recipePath, { forgesDirPath }) — a recipe whose bridges[] carry the NEW form
+// { source, hubs:[...], dependencies, facet?, params? } is EXPANDED here to one old-form entry per hub (recipe-bridge-
+// expansion.js), so the schema and everything after it read the entries they always read. forgesDirPath (absolute) is needed
+// only for such a recipe, and its absence then is refused by name. recipeText stays the file's own text (the recipeHash).
+const loadRecipe = (recipePath, { forgesDirPath } = {}) => {
 	if (!recipePath) {
 		return { error: 'no recipe path given' };
 	}
@@ -214,7 +221,14 @@ const loadRecipe = (recipePath) => {
 	if (recipe === null || typeof recipe !== 'object' || Array.isArray(recipe)) {
 		return { error: 'recipe must be a JSON object' };
 	}
-	return { recipe, recipeText: text };
+	const expanded = recipeBridgeExpansionLib.expandRecipeBridges({
+		recipe,
+		standardBridgingFor: forgesDirPath === undefined ? undefined : (sourceToken) => pluginRegistryLib.standardBridgingFor({ forgesDirPath, standardKey: sourceToken }),
+	});
+	if (expanded.error) {
+		return { error: `recipe bridges[] do not expand: ${expanded.error.message}` };
+	}
+	return { recipe: expanded.recipe, recipeText: text };
 };
 
 // =====================================================================
