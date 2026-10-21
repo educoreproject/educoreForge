@@ -1439,7 +1439,11 @@ const goldEvalCheckAction = (callback) => {
 			judgeEnumeration.judgedEdgeTotal === 0
 				? 'judges: NONE — zero judged edges across the audited block(s), so --judgedBy is not required'
 				: `judges (${judgeEnumeration.judgeToolIdList.length}, over ${judgeEnumeration.judgedEdgeTotal} judged edge(s)): ${judgeEnumeration.judgeToolIdList.join(', ')}`;
-		const scopeText = `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0)} mapping edge(s), 0 invalid-debug; ${judgeText}; ${inventoryGate.statusText}`;
+		// ⟪ctdlHub P8⟫ family-structure edges (exempt from the no-mappingSource rule, RULING (A)) are counted apart, so the
+		// status line never calls a structural edge a mapping edge
+		const structuralEdgeTotal = bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + Object.keys(oneBlock.structuralEdgeCountByType || {}).reduce((blockSoFar, edgeTypeName) => blockSoFar + oneBlock.structuralEdgeCountByType[edgeTypeName], 0), 0);
+		const edgeTotal = bridgeSibling.mappingBlockList.reduce((soFar, oneBlock) => soFar + oneBlock.edgeCount, 0);
+		const scopeText = `bridge sibling: ${bridgeSibling.mappingBlockList.length} relationship block(s) audited, ${edgeTotal - structuralEdgeTotal} mapping edge(s)${structuralEdgeTotal ? ` + ${structuralEdgeTotal} family-structure edge(s) (exempt, reported per block)` : ''}, 0 invalid-debug; ${judgeText}; ${inventoryGate.statusText}`;
 		xLog.status(
 			`graphBuilder: [goldEvalCheck] PASS — ${declaredRows.length} declared validator(s) ran ` +
 				`with inventedTotal=0${absentTokens.length ? `; ${absentTokens.length} bundle(s) declared-ABSENT (tolerated during the retrofit): ${absentTokens.join(', ')}` : ''}; ${scopeText}`,

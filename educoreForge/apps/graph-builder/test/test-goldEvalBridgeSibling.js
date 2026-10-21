@@ -164,6 +164,10 @@ harness.match('P8 (A) twin: a structural-TYPE edge WITHOUT the structural tier i
 const notStructAudit = sibling.auditMappingBlockText({ blockText: structuralBlockTextFor([]), subject: 'toy@1_0_rel_toyhub@1_0_exact' });
 harness.match('P8 (A) twin: the same structural edges in a block that is NOT _struct → REFUSED', notStructAudit.refusalMessage || '', /3 edge\(s\) with NO mappingSource/);
 harness.equal('P8 (A): a non-_struct block row carries NO structuralEdgeCountByType (every other row unchanged)', cleanAudit.structuralEdgeCountByType, undefined);
+// the WIRING: the manifest row the certificate carries must copy the census (it did not, at first — measured on the P8 payload)
+const structRow = sibling.mappingBlockRowFor({ oneMember: { subject: STRUCT_SUBJECT, schemaBlockRefId: 'f'.repeat(64) }, audit: structAudit });
+harness.equal('P8 (A): the certificate ROW for a _struct block carries the structural census', JSON.stringify(structRow.structuralEdgeCountByType), JSON.stringify({ HAS_PROPERTY: 2, REFERENCES: 1 }));
+harness.ok('P8 (A): … and a non-_struct row carries no such key', !Object.prototype.hasOwnProperty.call(sibling.mappingBlockRowFor({ oneMember: { subject: 'toy_rel_toyhub', schemaBlockRefId: 'e'.repeat(64) }, audit: cleanAudit }), 'structuralEdgeCountByType'));
 harness.match('a block that does not deserialise is refused by name', sibling.auditMappingBlockText({ blockText: '{"kind":"header","blockType":"relationship"}\n{"kind":"mystery"}\n', subject: 'x' }).refusalMessage || '', /does not deserialise/);
 
 // ---------------------------------------------------------------------

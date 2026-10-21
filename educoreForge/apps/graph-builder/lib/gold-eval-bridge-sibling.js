@@ -201,6 +201,22 @@ const auditMappingBlockText = ({ blockText, subject } = {}) => {
 	};
 };
 
+// mappingBlockRowFor — PURE: one member's audit → its mappingBlockList row. ⟪ctdlHub P8⟫ Extracted so the row's shape is
+// testable: the structural census was first added to the audit and NOT to this row, so the certificate never showed it — a
+// pure test of the audit did not prove the wiring that copies it (measured on the P8 candidate's payload).
+const mappingBlockRowFor = ({ oneMember, audit }) => ({
+	subject: oneMember.subject,
+	refId: oneMember.schemaBlockRefId,
+	edgeCount: audit.edgeCount,
+	...(audit.judgedSubjectCount === undefined ? {} : { judgedSubjectCount: audit.judgedSubjectCount }),
+	...(audit.structuralEdgeCountByType === undefined ? {} : { structuralEdgeCountByType: audit.structuralEdgeCountByType }),
+	invalidDebugEdgeCount: audit.invalidDebugEdgeCount,
+	judgedEdgeCount: audit.judgedEdgeCount,
+	judgedEdgeMissingJudgeIdentityCount: audit.judgedEdgeMissingJudgeIdentityCount,
+	judgedEdgeMalformedJudgeIdentityCount: audit.judgedEdgeMalformedJudgeIdentityCount,
+	judgeIdentityPairList: audit.judgeIdentityPairList,
+});
+
 // auditManifestMappingBlocks — the store-reading half: manifest → relationship members → per-block audit
 const auditManifestMappingBlocks = ({ standardsDatabase, manifestRefId } = {}, callback) => {
 	if (!standardsDatabase || typeof standardsDatabase.getManifest !== 'function' || typeof standardsDatabase.getBlock !== 'function') {
@@ -261,7 +277,7 @@ const auditManifestMappingBlocks = ({ standardsDatabase, manifestRefId } = {}, c
 					return;
 				}
 				const audit = auditMappingBlockText({ blockText: typeof blockRow.text === 'string' ? blockRow.text : `${blockRow.text}`, subject: oneMember.subject });
-				mappingBlockList.push({ subject: oneMember.subject, refId: oneMember.schemaBlockRefId, edgeCount: audit.edgeCount, ...(audit.judgedSubjectCount === undefined ? {} : { judgedSubjectCount: audit.judgedSubjectCount }), invalidDebugEdgeCount: audit.invalidDebugEdgeCount, judgedEdgeCount: audit.judgedEdgeCount, judgedEdgeMissingJudgeIdentityCount: audit.judgedEdgeMissingJudgeIdentityCount, judgedEdgeMalformedJudgeIdentityCount: audit.judgedEdgeMalformedJudgeIdentityCount, judgeIdentityPairList: audit.judgeIdentityPairList });
+				mappingBlockList.push(mappingBlockRowFor({ oneMember, audit }));
 				if (audit.refusalMessage !== null) {
 					refusalMessageList.push(audit.refusalMessage);
 				}
@@ -279,4 +295,4 @@ const auditManifestMappingBlocks = ({ standardsDatabase, manifestRefId } = {}, c
 // the module's own constant rather than retyping the string. A gate that retypes a token is a second
 // declaration of it, and two declarations of one value are two things that can drift — the subject of this
 // whole campaign, in miniature.
-module.exports = { auditMappingBlockText, auditManifestMappingBlocks, judgeEnumerationOf, ABSENT_RENDERER_VERSION_TOKEN, moduleName };
+module.exports = { auditMappingBlockText, auditManifestMappingBlocks, mappingBlockRowFor, judgeEnumerationOf, ABSENT_RENDERER_VERSION_TOKEN, moduleName };
