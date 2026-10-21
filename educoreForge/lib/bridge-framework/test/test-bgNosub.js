@@ -458,7 +458,11 @@ const POST_D1_BASE_TAG = 'postCtdlP5VocabularyIi-102026'; // re-anchored by INDI
 // ═══ RE-ANCHOR, 2026-10-20 (GARDEN_PORTAL; ctdlHub-101926 P1; ruling Q1(A), re-anchor authorised by SCARLET_ARROW) ═══ (iii)
 // postUndesForgeFrameworkIii-101326 -> postCtdlP1ForgeFrameworkIii-102026, tag cut ON this commit. CENSUS (lib/forge-framework/):
 // migrationAllowanceRegistry.js +29/-1 ONLY (ctdl, ctdlasn, ctdlqdata join MIGRATING_BUNDLE_LIST; the OFFLINE row CT1) — commit ab85e6ef.
-const PHASE0_ANCHOR_TAG = 'postCtdlP1ForgeFrameworkIii-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P1); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (INDIGO_LOOM; ctdlHub-101926 P5; proposed to SCARLET_ARROW, see DEVLOG-P5 checkpoint 6) ═══ (iii)
+// postCtdlP1ForgeFrameworkIii-102026 -> postCtdlP5ForgeFrameworkIii-102026, tag cut ON this commit. CENSUS (lib/forge-framework/):
+// test/test-gSeamUntouched.js ONLY, 10/1 (its P5 re-anchor 79e7c6fa); no forge-framework source moved. BG-COMPOSE-PESC (a) moves with
+// it (this file is inside its diffed path list); both tags are cut ON this commit, so this re-anchor moves no other gate.
+const PHASE0_ANCHOR_TAG = 'postCtdlP5ForgeFrameworkIii-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P5); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
