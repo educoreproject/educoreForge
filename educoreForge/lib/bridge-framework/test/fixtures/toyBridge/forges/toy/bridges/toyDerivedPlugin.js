@@ -74,4 +74,7 @@ const bridgeDeclaration = Object.freeze({
 // NO HOOKS. See the header: both mandatory hooks are FORBIDDEN on a derived basis.
 const bridgeHooks = {};
 
-module.exports = { bridgeDeclaration, bridgeHooks };
+// ⟪ctdlHub P5⟫ the hub this toy plugin maps toward (the sibling bridgeTarget export)
+const bridgeTarget = { targetHub: 'toyhub' };
+
+module.exports = { bridgeDeclaration, bridgeHooks, bridgeTarget };

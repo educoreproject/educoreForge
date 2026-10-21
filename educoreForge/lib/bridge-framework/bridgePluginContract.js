@@ -308,6 +308,9 @@ const RUN_CONFIG_KEY_LIST = Object.freeze([
 	'sourceStandardName',
 	'sourceVersion',
 	'hubVersion',
+	// ⟪ctdlHub P5⟫ the target hub's declared standardName (= its cards' hubName, invariant I12), composed by build.js from
+	// the hub bundle's parserDescriptor exactly as sourceStandardName is from the source's; the reader reads ONLY this hub
+	'hubStandardName',
 	'pairWith',
 	'pairWithVersion',
 	'familyStandards',
@@ -371,6 +374,33 @@ const FORBIDDEN_REQUIRE_LIST = Object.freeze([
 ]);
 const FORBIDDEN_FUNCTION_NAME_LIST = Object.freeze(['resolveTarget', 'writeEdge', 'openDriver', 'rerank']);
 const FORBIDDEN_SOURCE_TOKEN_LIST = Object.freeze(['addressSignature', 'HubReference', 'MERGE ', 'CREATE ', 'session.run']);
+
+// ---------------------------------------------------------------------
+// ⟪ctdlHub P5; SCARLET_ARROW ruling A⟫ BRIDGE_TARGET_CONTRACT — the hub a plugin maps toward, in a SIBLING export
+// (module.exports.bridgeTarget), never inside bridgeDeclaration: the declaration is content-addressed into every decision
+// block (declarationDigest, pluginRegistry), so a key added there would re-key every bridge block. header.hubName already
+// records the hub in each block. Checked at run against the recipe pairing's hub.
+// ---------------------------------------------------------------------
+const BRIDGE_TARGET_CONTRACT = Object.freeze({
+	targetHub: Object.freeze({ required: true, kind: 'lowercaseString' }),
+});
+const BRIDGE_TARGET_KEY_LIST = Object.freeze(Object.keys(BRIDGE_TARGET_CONTRACT));
+
+// validateBridgeTarget — null when the sibling export conforms; else the refusal, by name
+const validateBridgeTarget = ({ bridgeTarget } = {}) => {
+	if (!isPlainObject(bridgeTarget)) {
+		return refuse.byName({ moduleName, what: `bridgeTarget is ${bridgeTarget === null ? 'null' : `a ${typeof bridgeTarget}`}`, where: 'a plugin file exports bridgeTarget = { targetHub: <the hub standard token> } beside bridgeDeclaration and bridgeHooks' });
+	}
+	const unknownKey = Object.keys(bridgeTarget).find((oneName) => BRIDGE_TARGET_KEY_LIST.indexOf(oneName) === -1);
+	if (unknownKey !== undefined) {
+		return refuse.byName({ moduleName, what: `bridgeTarget carries unknown key '${unknownKey}'`, where: `BRIDGE_TARGET_CONTRACT names ${listAsText(BRIDGE_TARGET_KEY_LIST)}` });
+	}
+	const faultReason = KIND_CHECKER_REGISTRY[BRIDGE_TARGET_CONTRACT.targetHub.kind](bridgeTarget.targetHub, BRIDGE_TARGET_CONTRACT.targetHub);
+	if (faultReason) {
+		return refuse.byName({ moduleName, what: `bridgeTarget.targetHub ${faultReason}`, where: 'the hub standard token the recipe pairs this bridge with (recipe.bridges[].hub), lowercase as every recipe token is' });
+	}
+	return null;
+};
 
 // ---------------------------------------------------------------------
 // BRIDGE_DECLARATION_CONTRACT — one row per key, kind-checked by the registry below
@@ -1498,6 +1528,8 @@ module.exports = {
 	FORBIDDEN_SOURCE_TOKEN_LIST,
 	validateBridgeDeclaration,
 	validateBridgeHooks,
+	BRIDGE_TARGET_CONTRACT,
+	validateBridgeTarget,
 	forbiddenSubstrateReason,
 	resolveChannels,
 	parseCsvHeaderLine,

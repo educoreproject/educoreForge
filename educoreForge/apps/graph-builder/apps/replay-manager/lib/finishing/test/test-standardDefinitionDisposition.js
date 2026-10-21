@@ -17,6 +17,11 @@
 //       (e, cl, mk, any) excludes hub-layer sources, so a hub's own card -> card edge (HAS_TERM_REFERENCE, 7,076 on the CTDL
 //       hub) is not counted as an unkinded mapping edge; a real spoke -> HubReference edge with no mappingKind still refuses
 //       (conjunct c, unchanged; and measured live on DEV_p4CtdlHub, DEVLOG-P4 checkpoint 9)
+//   (j) ⟪ctdlHub P5⟫ a graph holding TWO OR MORE hubs gives each StandardDefinition mappedPropertyCountByHub: per hub, the
+//       distinct subjects with an EXACT_MATCH / CLOSE_MATCH to that hub's cards, every hub listed (zero stated, not omitted);
+//       a single-hub graph carries no such property, so single-hub output is unchanged byte for byte
+//   (k) ⟪ctdlHub P5⟫ the derivation cypher reads the per-hub matches by the card's hubName, hub-layer subjects excluded, and the
+//       graph's hub names from its HubDefinitions
 //   (h) ⟪lane FIX, Fix 3⟫ a root with no forge-declared descriptionSource is REFUSED by name; (h') a root's descriptionSource
 //       is carried to its card
 //   (the declaration's own refusals — missing kind, kind outside STANDARD_KIND_LIST, empty tips — are gated in
@@ -49,7 +54,7 @@ const finisherFor = (mutationList) => (mutationList.length === 0 ? realFinisherF
 
 // a root row as the derivation query returns it; the counts are what the conjunct varies
 // ⟪campaign P3, W-C-4⟫ a root row carries the forge-declared family and release label (the finisher refuses a root without them)
-const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, unkindedMappingEdgeCount = 0, standardKind = null, standardUsageTips = null, standardFamily = 'Toy', releaseLabel = 'Toy', descriptionSource = 'the toy source description field' }) => ({
+const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, unkindedMappingEdgeCount = 0, standardKind = null, standardUsageTips = null, standardFamily = 'Toy', releaseLabel = 'Toy', descriptionSource = 'the toy source description field', hubNameList = ['ToyHub'], hubMatchList = [] }) => ({
 	sourceKey: 'Toy',
 	standardKey: 'toy',
 	standardName: 'Toy',
@@ -69,6 +74,8 @@ const rootRow = ({ exactMappedProperties, mappingKindList, mappingSourceList, un
 	standardFamily,
 	releaseLabel,
 	descriptionSource,
+	hubNameList,
+	hubMatchList,
 });
 const readQueryOver = (rowList) => (queryArguments, callback) => callback('', { records: rowList.map((oneRow) => ({ get: (fieldName) => oneRow[fieldName] })) });
 
@@ -133,6 +140,18 @@ const conjunctJudgeByRefId = {
 		const missingList = exclusionTextList.filter((exclusionText) => finisher.DERIVATION_CYPHER.indexOf(exclusionText) === -1);
 		done({ pass: missingList.length === 0, detail: missingList.length === 0 ? 'every mapping-subject match excludes hub-layer sources' : `missing: ${missingList.join('; ')}` });
 	},
+	j_perHubCountsOnlyWithTwoHubs: (finisher, done) => {
+		const single = finisher.shapeOne(rootRow({ exactMappedProperties: 2, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'], hubNameList: ['CEDS'], hubMatchList: [{ hubName: 'CEDS', relation: 'EXACT_MATCH', subjectStableId: 'toy:a' }, { hubName: 'CEDS', relation: 'EXACT_MATCH', subjectStableId: 'toy:b' }] })).properties;
+		const two = finisher.shapeOne(rootRow({ exactMappedProperties: 2, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'], hubNameList: ['TOYTHREE', 'CTDL', 'CEDS'], hubMatchList: [{ hubName: 'CEDS', relation: 'EXACT_MATCH', subjectStableId: 'toy:a' }, { hubName: 'CEDS', relation: 'EXACT_MATCH', subjectStableId: 'toy:b' }, { hubName: 'CTDL', relation: 'CLOSE_MATCH', subjectStableId: 'toy:a' }] })).properties;
+		const expectedText = JSON.stringify({ CEDS: { exactMappedProperties: 2, closeMappedProperties: 0 }, CTDL: { exactMappedProperties: 0, closeMappedProperties: 1 }, TOYTHREE: { exactMappedProperties: 0, closeMappedProperties: 0 } });
+		const singleUnchanged = !Object.prototype.hasOwnProperty.call(single, 'mappedPropertyCountByHub');
+		done({ pass: singleUnchanged && two.mappedPropertyCountByHub === expectedText && two.exactMappedProperties === 2, detail: `single hub: ${singleUnchanged ? 'no property' : JSON.stringify(single.mappedPropertyCountByHub)}; three hubs: ${two.mappedPropertyCountByHub}` });
+	},
+	k_cypherReadsPerHubMatches: (finisher, done) => {
+		const wantedList = ['WHERE NOT hm:HubReference', 'hubName: hmCard.hubName', 'collect(DISTINCT hd.hubName) AS hubNameList', 'hubNameList, hubMatchList'];
+		const missingList = wantedList.filter((oneText) => finisher.DERIVATION_CYPHER.indexOf(oneText) === -1);
+		done({ pass: missingList.length === 0, detail: missingList.length ? `missing ${missingList.join(' | ')}` : 'per-hub matches and hub names are read' });
+	},
 	d_cypherCollectsKindAndSource: (finisher, done) => {
 		const pass = finisher.DERIVATION_CYPHER.indexOf('collect(DISTINCT mkEdge.mappingKind) AS mappingKindList') !== -1 && finisher.DERIVATION_CYPHER.indexOf('collect(DISTINCT mkEdge.mappingSource) AS mappingSourceList') !== -1;
 		done({ pass, detail: pass ? 'collects mappingKind and mappingSource from the edges' : 'the derivation cypher does not collect them' });
@@ -189,6 +208,8 @@ const TWIN_LIST = [
 		replace: "const mappingSourceList = (oneRow.mappingSourceList || []).filter((oneValue) => oneValue !== 'null');",
 	},
 	{ conjunctRefId: 'i_hubCardNeverAMappingSubject', twinName: 'hubCardCountedAsMappingSubject', find: 'OPTIONAL MATCH (mk {_source: root._source})-[mkEdge]->(:HubReference) WHERE NOT mk:HubReference', replace: 'OPTIONAL MATCH (mk {_source: root._source})-[mkEdge]->(:HubReference)' },
+	{ conjunctRefId: 'j_perHubCountsOnlyWithTwoHubs', twinName: 'perHubMapAlwaysWritten', find: 'const perHubCountText = hubNameList.length > 1', replace: 'const perHubCountText = true' },
+	{ conjunctRefId: 'k_cypherReadsPerHubMatches', twinName: 'perHubReadWithoutHubLayerExclusion', find: 'WHERE NOT hm:HubReference', replace: '' },
 	{ conjunctRefId: 'c_unkindedEdgeRefusedByName', twinName: 'refusalRemoved', find: '\t\t\t\tif (unkindedRowList.length > 0) {', replace: '\t\t\t\tif (false) {' },
 	{
 		conjunctRefId: 'd_cypherCollectsKindAndSource',

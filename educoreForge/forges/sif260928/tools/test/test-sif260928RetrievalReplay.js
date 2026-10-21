@@ -163,6 +163,9 @@ const replayShape = (scenario) => {
 	scenario.spec.bridge = PLUGIN_NAME;
 	scenario.spec.source = STANDARD_KEY;
 	scenario.spec.config = { ...scenario.spec.config, sourceStandard: STANDARD_KEY, sourceStandardName: SOURCE_STANDARD_NAME, sourceVersion: SOURCE_VERSION, familyStandards: [STANDARD_KEY] };
+	// ⟪ctdlHub P5⟫ the shipped plugin targets 'ceds' (its bridgeTarget export); this suite runs it on the toy hub DOUBLE, so the
+	// target is laid over as the toy's own — the run-time pairing check is unchanged
+	scenario.pluginModuleOverrides[PLUGIN_NAME] = { ...(scenario.pluginModuleOverrides[PLUGIN_NAME] || {}), bridgeTarget: { targetHub: scenario.spec.hub } };
 };
 
 // the subject: the framework scenario plus the instrument's own mutation list and graph edit (a twin writes either)
@@ -173,7 +176,7 @@ const replayLibOf = (subject) => (subject.replayMutationList.length === 0 ? requ
 // replayOver — the instrument over the scenario's graph through the double's retrieval view, as the CLI does over bolt
 const replayOver = ({ subject, retrievalSettings, excludedPropertyNameListList }, callback) => {
 	const replayLib = replayLibOf(subject);
-	const reader = graphDoubleFrom(cloneJson(subject.graph)).graphReaderFactory({ inGraph: {}, dependencyStandardNameList: [SOURCE_STANDARD_NAME, HUB_NAME], sourceStandardName: SOURCE_STANDARD_NAME, blindingDeclaration: shippedDeclaration().blindingDeclaration });
+	const reader = graphDoubleFrom(cloneJson(subject.graph)).graphReaderFactory({ inGraph: {}, dependencyStandardNameList: [SOURCE_STANDARD_NAME, HUB_NAME], sourceStandardName: SOURCE_STANDARD_NAME, blindingDeclaration: shippedDeclaration().blindingDeclaration, hubName: HUB_NAME });
 	replayLib.readRetrievalInputs({ retrievalView: reader.forRetrieval(), sourceStandardName: SOURCE_STANDARD_NAME, hubStandardName: HUB_NAME }, (readError, retrievalInputs) => {
 		if (readError) {
 			callback(readError);

@@ -119,7 +119,7 @@ const taskList = new taskListPlus();
 
 taskList.push((args, next) => {
 	const startMilliseconds = Date.now();
-	const reader = graphReaderFactory({ inGraph, dependencyStandardNameList: [runSpec.sourceStandardName, runSpec.hubToken], sourceStandardName: runSpec.sourceStandardName, blindingDeclaration: bridgeDeclaration.blindingDeclaration.slice() });
+	const reader = graphReaderFactory({ inGraph, dependencyStandardNameList: [runSpec.sourceStandardName, runSpec.hubToken], sourceStandardName: runSpec.sourceStandardName, blindingDeclaration: bridgeDeclaration.blindingDeclaration.slice(), hubName: decisionBlock.header.hubName });
 	replayLib.readRetrievalInputs({ retrievalView: reader.forRetrieval(), sourceStandardName: runSpec.sourceStandardName, hubStandardName: decisionBlock.header.hubName }, (readError, retrievalInputs) => {
 		reader.close(() => {
 			if (readError) {

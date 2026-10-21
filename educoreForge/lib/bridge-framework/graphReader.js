@@ -6,8 +6,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // §5.2 step 1, §14.1; RULINGS BF7, P8, 12:05 #2; named in apps/graph-builder/DOCTRINE.md). The same contract
 // as graphDouble.js's reader (the rules live in graphSeamRules.js — this file is the I/O):
 //
-//   graphReaderFactory({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration }) → reader
-//     readHubCards({ referenceTier }, cb)   HubReference cards of the hub, ONE flatten, list slots re-widened, embedding required
+//   graphReaderFactory({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration, hubName }) → reader
+//     readHubCards({ referenceTier }, cb)   HubReference cards of the hub NAMED hubName (⟪ctdlHub P5⟫ a graph may hold several),
+//                                           ONE flatten, list slots re-widened, embedding required
 //     readSubjectNodes(cb)                  the source standard's forged nodes (_source EXACT), WITHOUT the embedding, blinded
 //     forWalk({ channelPropertyList })      the walk view — declared channel properties unblinded, other blinded names refused
 //     forEvidence()                         the blinded view (the renderer / judge / forensics view) — nodes AND edges (BR6)
@@ -15,7 +16,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     close(cb)
 //
 // Text nodes (role DME_ROLES.EMBED_TEXT) are excluded from readSourceRecords and from both ends of every among-source
-// edge, so subjects, walk and evidence never carry one (R-BR-2). Of the retrieval reads, readSubjectVectors is scoped
+// edge, so subjects, walk and evidence never carry one (R-BR-2). ⟪ctdlHub P5⟫ So are hub-layer nodes (HubReference,
+// HubDefinition): a hub's nodes carry the hub standard's own _source, and a hub standard may also be a bridge source. Of the retrieval reads, readSubjectVectors is scoped
 // by the declared subject LABEL rather than by that exclusion; readEmbedTextVectors is the read that returns them.
 //
 // neo4j-driver v6 is promise-native; the dispensation (DOCTRINE.md) is taken as .then().catch()-to-callback at
@@ -28,8 +30,8 @@ const graphSeamRulesLib = require('./graphSeamRules');
 const NEO4J_USER = 'neo4j';
 const PAGE_SIZE = 5000;
 
-const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration } = {}) => {
-	const constructionError = graphSeamRulesLib.readerConstructionRefusal({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration });
+const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration, hubName } = {}) => {
+	const constructionError = graphSeamRulesLib.readerConstructionRefusal({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration, hubName });
 	if (constructionError) {
 		throw constructionError;
 	}
@@ -104,7 +106,7 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 
 	const readHubCards =({ referenceTier } = {}, callback) => {
 		pagedNodeRead(
-			{ cypher: `MATCH (n:${graphSeamRulesLib.HUB_REFERENCE_LABEL}) WHERE n.referenceTier = $referenceTier RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`, parameters: { referenceTier } },
+			{ cypher: `MATCH (n:${graphSeamRulesLib.HUB_REFERENCE_LABEL}) WHERE n.referenceTier = $referenceTier AND n.hubName = $hubName RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`, parameters: { referenceTier, hubName } },
 			(readError, rawRecordList) => {
 				if (readError) {
 					callback(readError);
@@ -124,11 +126,13 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 	// subject, a walk node, an evidence node or an endpoint of an among-source edge (R-BR-2). IS NULL keeps a roleless
 	// node: in Cypher `null <> $x` is null, and a WHERE drops null.
 	const embedTextExclusionConditionFor = (variableName) => `(${variableName}.role IS NULL OR ${variableName}.role <> $embedTextRole)`;
+	// ⟪ctdlHub P5⟫ a hub-layer node is never a source record, nor an end of an among-source edge
+	const hubLayerExclusionConditionFor = (variableName) => graphSeamRulesLib.HUB_LAYER_LABEL_LIST.map((oneLabel) => `NOT ${variableName}:${oneLabel}`).join(' AND ');
 
 	// readSourceRecords — every node whose _source is the source standard EXACTLY (BR-023), text nodes excluded; the vector is never read
 	const readSourceRecords = (callback) => {
 		pagedNodeRead(
-			{ cypher: `MATCH (n) WHERE ${embedTextExclusionConditionFor('n')} AND n._source = $sourceStandardName RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`, parameters: { sourceStandardName, embedTextRole: textSearchVocabulary.embedTextRole } },
+			{ cypher: `MATCH (n) WHERE ${embedTextExclusionConditionFor('n')} AND ${hubLayerExclusionConditionFor('n')} AND n._source = $sourceStandardName RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`, parameters: { sourceStandardName, embedTextRole: textSearchVocabulary.embedTextRole } },
 			(readError, rawRecordList) => {
 				if (readError) {
 					callback(readError);
@@ -153,7 +157,7 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 		const session = driver.session();
 		const typeClause = Array.isArray(edgeTypeList) && edgeTypeList.length ? ' AND type(r) IN $edgeTypeList' : '';
 		session
-			.run(`MATCH (a)-[r]->(b) WHERE a._source = $sourceStandardName AND b._source = $sourceStandardName${typeClause} AND ${embedTextExclusionConditionFor('a')} AND ${embedTextExclusionConditionFor('b')} RETURN a.stableId AS fromStableId, b.stableId AS toStableId, type(r) AS edgeType, properties(r) AS edgeProperties`, { sourceStandardName, embedTextRole: textSearchVocabulary.embedTextRole, edgeTypeList:Array.isArray(edgeTypeList) ? edgeTypeList : [] })
+			.run(`MATCH (a)-[r]->(b) WHERE a._source = $sourceStandardName AND b._source = $sourceStandardName${typeClause} AND ${embedTextExclusionConditionFor('a')} AND ${embedTextExclusionConditionFor('b')} AND ${hubLayerExclusionConditionFor('a')} AND ${hubLayerExclusionConditionFor('b')} RETURN a.stableId AS fromStableId, b.stableId AS toStableId, type(r) AS edgeType, properties(r) AS edgeProperties`, { sourceStandardName, embedTextRole: textSearchVocabulary.embedTextRole, edgeTypeList:Array.isArray(edgeTypeList) ? edgeTypeList : [] })
 			.then((result) => {
 				const edgeList = result.records.map((oneRecord) => ({ fromStableId: oneRecord.get('fromStableId'), toStableId: oneRecord.get('toStableId'), type: oneRecord.get('edgeType'), properties: unwrapProperties(oneRecord.get('edgeProperties')) }));
 				session.close().then(() => callback('', edgeList)).catch((closeError) => callback(`${moduleName}: session close: ${closeError.message}`));
@@ -205,7 +209,7 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 		graphSeamRulesLib.closedRetrievalView({
 			readHubVectors: ({ referenceTier } = {}, callback) => {
 				pagedNodeRead(
-					{ cypher: `MATCH (n:${graphSeamRulesLib.HUB_REFERENCE_LABEL}) WHERE n.referenceTier = $referenceTier RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`, parameters: { referenceTier } },
+					{ cypher: `MATCH (n:${graphSeamRulesLib.HUB_REFERENCE_LABEL}) WHERE n.referenceTier = $referenceTier AND n.hubName = $hubName RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`, parameters: { referenceTier, hubName } },
 					(readError, rawRecordList) => (readError ? callback(readError) : callback('', rawRecordList.map(graphSeamRulesLib.retrievalRecordFor))),
 				);
 			},
@@ -259,7 +263,7 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 				}
 				const hubReferenceLabel = graphSeamRulesLib.HUB_REFERENCE_LABEL;
 				pagedRowRead(
-					{ cypher: `MATCH (c:${hubReferenceLabel}) WHERE c.referenceTier = $referenceTier RETURN c.stableId AS cardStableId, c.hubName AS hubName ORDER BY cardStableId SKIP $skip LIMIT $limit`, parameters: { referenceTier }, aliasList: ['cardStableId', 'hubName'] },
+					{ cypher: `MATCH (c:${hubReferenceLabel}) WHERE c.referenceTier = $referenceTier AND c.hubName = $hubName RETURN c.stableId AS cardStableId, c.hubName AS hubName ORDER BY cardStableId SKIP $skip LIMIT $limit`, parameters: { referenceTier, hubName }, aliasList: ['cardStableId', 'hubName'] },
 					(cardReadError, cardRowList) => {
 						if (cardReadError) {
 							callback(cardReadError);
@@ -267,8 +271,8 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 						}
 						pagedRowRead(
 							{
-								cypher: `MATCH (c:${hubReferenceLabel})-[r]->(b) WHERE c.referenceTier = $referenceTier RETURN c.stableId AS cardStableId, type(r) AS edgeType, b.stableId AS baseStableId, b.role AS baseRole ORDER BY cardStableId, edgeType, baseStableId SKIP $skip LIMIT $limit`,
-								parameters: { referenceTier },
+								cypher: `MATCH (c:${hubReferenceLabel})-[r]->(b) WHERE c.referenceTier = $referenceTier AND c.hubName = $hubName RETURN c.stableId AS cardStableId, type(r) AS edgeType, b.stableId AS baseStableId, b.role AS baseRole ORDER BY cardStableId, edgeType, baseStableId SKIP $skip LIMIT $limit`,
+								parameters: { referenceTier, hubName },
 								aliasList: ['cardStableId', 'edgeType', 'baseStableId', 'baseRole'],
 							},
 							(edgeReadError, edgeRowList) => {

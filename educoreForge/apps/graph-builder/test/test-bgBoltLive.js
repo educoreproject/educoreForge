@@ -200,7 +200,7 @@ standardsDatabaseModule().open({ databaseFilePath: PINNED_STORE_PATH }, (openErr
 // ---------------------------------------------------------------------
 // the conjuncts
 // ---------------------------------------------------------------------
-const readerFor = ({ handle, readerLib }) => readerLib.graphReaderFactory({ inGraph: inGraphFor(handle), dependencyStandardNameList: DEPENDENCY_STANDARD_NAME_LIST, sourceStandardName: SOURCE_STANDARD_NAME, blindingDeclaration: BLINDING_DECLARATION });
+const readerFor = ({ handle, readerLib }) => readerLib.graphReaderFactory({ inGraph: inGraphFor(handle), dependencyStandardNameList: DEPENDENCY_STANDARD_NAME_LIST, sourceStandardName: SOURCE_STANDARD_NAME, blindingDeclaration: BLINDING_DECLARATION, hubName: 'CEDS' });
 
 // a twin whose mutation cannot be applied (find-text drift) is reported BY NAME as a failed assertion and yields the
 // REAL module so the run continues (the conjunct then fails honestly rather than the suite dying mid-callback)

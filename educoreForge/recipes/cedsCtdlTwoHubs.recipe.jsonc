@@ -1,0 +1,19 @@
+{
+  // cedsCtdlTwoHubs — TWO hubs in one build, no bridge (ctdlHub-101926 P5). CEDS and CTDL, each with its hub folded into its own
+  // standardBase block: the graph holds two HubDefinitions and two sets of HubReference cards, told apart by hubName. Bridges
+  // read only their own target hub's cards (bridgeTarget, hubStandardName), so this recipe is the reusable base for the P6
+  // declared bridges and the P7 multi-hub DME. Do NOT point a DME at a graph built from it before P7: the DME reads one hub.
+  "schemaVersion": "1.0.0",
+  "recipeName": "cedsCtdlTwoHubs",
+  "kind": "dev",
+  "description": "CEDS and CTDL, each with its folded hub: two hubs in one graph (no bridge).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": []
+}

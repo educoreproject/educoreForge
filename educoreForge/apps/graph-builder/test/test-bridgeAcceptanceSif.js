@@ -264,7 +264,7 @@ const cleanNodeList = [
 ];
 const walkViewOver = (nodeList) => {
 	const double = graphDoubleLib.graphDoubleFrom({ nodeList: clone(nodeList), edgeList: [] });
-	const reader = double.graphReaderFactory({ inGraph: { double: 'syntheticSifFields' }, dependencyStandardNameList: [SOURCE_STANDARD_NAME, 'CEDS'], sourceStandardName: SOURCE_STANDARD_NAME, blindingDeclaration: declaration.blindingDeclaration });
+	const reader = double.graphReaderFactory({ inGraph: { double: 'syntheticSifFields' }, dependencyStandardNameList: [SOURCE_STANDARD_NAME, 'CEDS'], sourceStandardName: SOURCE_STANDARD_NAME, blindingDeclaration: declaration.blindingDeclaration, hubName: 'CEDS' });
 	return reader.forWalk({ channelPropertyList: walkChannel.channelPropertyList.slice() });
 };
 // the graph double answers SYNCHRONOUSLY, so this whole chain runs to completion inside the call below — hence a

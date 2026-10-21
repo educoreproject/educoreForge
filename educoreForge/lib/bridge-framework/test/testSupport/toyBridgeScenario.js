@@ -172,6 +172,7 @@ const makeSpec = ({ bridge, rebridge } = {}) => ({
 		sourceStandardName: toyGraphLib.SOURCE_STANDARD_NAME,
 		sourceVersion: toyGraphLib.SOURCE_VERSION,
 		hubVersion: toyGraphLib.HUB_VERSION,
+		hubStandardName: toyGraphLib.HUB_NAME,
 		pairWith: undefined,
 		pairWithVersion: undefined,
 		familyStandards: ['toy'],
@@ -245,6 +246,7 @@ const buildRegistry = (scenario) => {
 			return {
 				bridgeDeclaration: override.bridgeDeclaration === undefined ? loaded.bridgeDeclaration : override.bridgeDeclaration,
 				bridgeHooks: override.bridgeHooks === undefined ? loaded.bridgeHooks : override.bridgeHooks,
+				bridgeTarget: override.bridgeTarget === undefined ? loaded.bridgeTarget : override.bridgeTarget,
 			};
 		}
 		return loaded;

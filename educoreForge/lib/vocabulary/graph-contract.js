@@ -217,6 +217,7 @@ const STANDARD_DEFINITION_FIELD_LIST = Object.freeze([
 	{ name: 'optionValueCount', type: 'integer', required: true, meaning: 'its option-value-role nodes' },
 	{ name: 'exactMappedProperties', type: 'integer', required: true, meaning: 'its properties carrying an EXACT_MATCH to the hub' },
 	{ name: 'closeMappedProperties', type: 'integer', required: true, meaning: 'its properties carrying a CLOSE_MATCH to the hub' },
+	{ name: 'mappedPropertyCountByHub', type: 'string', required: false, meaning: 'present only in a graph holding more than one hub: JSON, per hub name, its exactMappedProperties and closeMappedProperties (every hub listed, zero stated)' },
 	{ name: 'mappingKindList', type: 'stringList', required: true, meaning: 'the distinct mappingKind values its match edges carry' },
 	{ name: 'mappingSourceList', type: 'stringList', required: true, meaning: 'the distinct mappingSource values its match edges carry' },
 	{ name: 'mappingEdgeTypes', type: 'stringList', required: true, meaning: 'the match edge types its edges use' },

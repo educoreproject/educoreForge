@@ -85,8 +85,17 @@ const boltWriterLib = (scenario) => moduleDouble.loadWithMutations({ modulePath:
 // twoStates — a fresh toy state for the BOLT half (bound into the driver double) and an identical fresh graphDouble.
 // (phase B7) Every node carries the forged-node label, as every node replay writes to a real graph does: the
 // writer's endpoint matches are labelled with it, and the driver double honours the label.
-const twoStates = () => {
+// ⟪ctdlHub P5⟫ withForeignNeighbour adds ONE node of another standard that is NOT hub-layer, and a source edge to it. Since P5
+// the reader also excludes hub-layer nodes by label, so a hub card no longer proves the _source scope is load-bearing; this
+// neighbour does: drop the _source scope and it, not a hub card, leaks into the subjects and the among-source edges.
+const FOREIGN_NEIGHBOUR_STABLE_ID = 'otherstd:property/Neighbour';
+const twoStates = ({ withForeignNeighbour } = {}) => {
 	const graph = toyGraphLib.toyGraph();
+	if (withForeignNeighbour === true) {
+		const firstSourceNode = graph.nodeList.find((oneNode) => oneNode.properties._source === SOURCE_STANDARD_NAME);
+		graph.nodeList.push({ stableId: FOREIGN_NEIGHBOUR_STABLE_ID, labels: ['DmeProperty'], properties: { stableId: FOREIGN_NEIGHBOUR_STABLE_ID, _source: 'OtherStd', role: 'DmeProperty', name: 'Neighbour' } });
+		graph.edgeList.push({ fromStableId: firstSourceNode.stableId, toStableId: FOREIGN_NEIGHBOUR_STABLE_ID, type: 'REFERENCES', properties: {} });
+	}
 	graph.nodeList.forEach((oneNode) => {
 		oneNode.labels.push(FORGED_NODE_LABEL);
 	});
@@ -95,7 +104,7 @@ const twoStates = () => {
 	const graphDouble = graphDoubleLib.graphDoubleFrom(graph);
 	return { boltState, graphDouble };
 };
-const readerArgs = { inGraph: IN_GRAPH, dependencyStandardNameList: [HUB_NAME, SOURCE_STANDARD_NAME], sourceStandardName: SOURCE_STANDARD_NAME, blindingDeclaration: BLINDING_DECLARATION };
+const readerArgs = { inGraph: IN_GRAPH, dependencyStandardNameList: [HUB_NAME, SOURCE_STANDARD_NAME], sourceStandardName: SOURCE_STANDARD_NAME, blindingDeclaration: BLINDING_DECLARATION, hubName: HUB_NAME };
 const writerArgs = { inGraph: IN_GRAPH, applyLabel: APPLY_LABEL, sourceStandardName: SOURCE_STANDARD_NAME };
 // embedTextReaderFor — the bolt reader over a text-node graph bound into the driver double (the B3b conjuncts)
 const embedTextReaderFor = (scenario, graph) => {
@@ -132,8 +141,8 @@ const validEdge = () => ({
 });
 
 // writeThroughBoth — the same edge through the bolt writer (over boltState) and the double's writer (over graphDouble)
-const writeThroughBoth = (scenario, edge, callback) => {
-	const { boltState, graphDouble } = twoStates();
+const writeThroughBoth = (scenario, edge, callback, stateOptions) => {
+	const { boltState, graphDouble } = twoStates(stateOptions);
 	let boltWriter;
 	try {
 		boltWriter = boltWriterLib(scenario).graphWriterFactory(writerArgs);
@@ -199,7 +208,7 @@ const conjunctList = [
 		title: "the bolt reader's readSubjectNodes returns EXACTLY the source-standard nodes the double returns — a hub card is never a subject (the _source scope is in the Cypher)",
 		twinNameList: ['sourceScopeDropped'],
 		evaluate: (scenario, callback) => {
-			const { graphDouble } = twoStates();
+			const { graphDouble } = twoStates({ withForeignNeighbour: true });
 			const boltReader = boltReaderLib(scenario).graphReaderFactory(readerArgs);
 			const doubleReader = graphDouble.graphReaderFactory(readerArgs);
 			boltReader.readSubjectNodes((boltError, boltList) => {
@@ -276,10 +285,10 @@ const conjunctList = [
 				}
 				const boltReader = boltReaderLib(scenario).graphReaderFactory(readerArgs);
 				boltReader.forEvidence().readEdgesAmongSource({}, (readError, boltList) => {
-					const crossing = boltList.filter((oneEdge) => oneEdge.toStableId === validEdge().objectStableId);
-					callback('', { pass: !readError && boltList.length === 5 && crossing.length === 0, detail: readError ? String(readError).slice(0, 160) : `${boltList.length} among-source edges; ${crossing.length} crossing to the hub` });
+					const crossing = (boltList || []).filter((oneEdge) => oneEdge.toStableId === validEdge().objectStableId || oneEdge.toStableId === FOREIGN_NEIGHBOUR_STABLE_ID);
+					callback('', { pass: !readError && boltList.length === 5 && crossing.length === 0, detail: readError ? String(readError).slice(0, 160) : `${boltList.length} among-source edges; ${crossing.length} crossing to the hub or the foreign neighbour` });
 				});
-			});
+			}, { withForeignNeighbour: true });
 		},
 	},
 	{

@@ -281,6 +281,11 @@ const moduleFunction =
 				refuseRun('run: spec.hub is absent', 'a mapping plugin without a hub is a category error (BR-017 mirror); the recipe pairing names its hub');
 				return;
 			}
+			// ⟪ctdlHub P5⟫ a plugin maps toward ONE declared hub (its bridgeTarget export); the recipe pairing must name that hub
+			if (pluginEntry.targetHub !== spec.hub) {
+				refuseRun(`run: plugin '${bridge}' targets hub '${pluginEntry.targetHub}' but the recipe pairs it with hub '${spec.hub}'`, 'bridgeTarget.targetHub is the hub this plugin maps toward; a graph may hold several hubs and a bridge reads exactly its own');
+				return;
+			}
 			if (!isPlainObject(spec.config)) {
 				refuseRun('run: spec.config is absent', 'build.js composes config { limit, offset, sourceStandard, sourceStandardName, sourceVersion, hubVersion, pairWith, pairWithVersion, familyStandards }');
 				return;
@@ -290,11 +295,13 @@ const moduleFunction =
 				refuseRun(`run: spec.config carries key '${unknownConfigKey}', outside RUN_CONFIG_KEY_LIST (${RUN_CONFIG_KEY_LIST.join(', ')})`, 'the recipe\'s bridges[].params channel is CLOSED — nothing a recipe param says reaches the framework (RULING BF11, A6)');
 				return;
 			}
-			const { sourceStandardName, sourceVersion, hubVersion } = spec.config;
+			const { sourceStandardName, sourceVersion, hubVersion, hubStandardName } = spec.config;
 			const missingVersion = [
 				['sourceStandardName', sourceStandardName],
 				['sourceVersion', sourceVersion],
 				['hubVersion', hubVersion],
+				// ⟪ctdlHub P5⟫ the hub the reader is scoped to; build.js composes it from the hub bundle's declared standardName
+				['hubStandardName', hubStandardName],
 			].find(([, oneValue]) => !isNonBlank(oneValue === undefined || oneValue === null ? '' : String(oneValue)));
 			if (missingVersion !== undefined) {
 				refuseRun(`run: config.${missingVersion[0]} is absent or blank`, 'a block that cannot name both versions has no address (BR-056, Profile §4.7) — refused here, before the spend');
@@ -713,7 +720,7 @@ const moduleFunction =
 
 				// STEP 1 — the reader (ONE flatten, two views); cards; subjects
 				taskList.push((args, next) => {
-					const readerArgs = { inGraph, dependencyStandardNameList: [sourceStandardName, hubToken], sourceStandardName, blindingDeclaration: bridgeDeclaration.blindingDeclaration };
+					const readerArgs = { inGraph, dependencyStandardNameList: [sourceStandardName, hubToken], sourceStandardName, blindingDeclaration: bridgeDeclaration.blindingDeclaration, hubName: hubStandardName };
 					const readerRefusal = graphSeamRulesLib.readerConstructionRefusal(readerArgs);
 					if (readerRefusal) {
 						next(readerRefusal.message);
@@ -730,6 +737,8 @@ const moduleFunction =
 							next(refuse.byName({ moduleName, what: 'the hub double / graph carries ZERO property-tier cards', where: 'an empty pool is never a mapping run (BG-EMPTY)' }).message);
 							return;
 						}
+						// ⟪ctdlHub P5⟫ asserted on the FILTERED set: the reader returned only hubStandardName's cards, so a second hub
+						// here means the scope failed, and it is refused by name rather than mixed into one pool
 						const hubNameSet = new Set(cardList.map((oneCard) => oneCard.hubName));
 						if (hubNameSet.size !== 1) {
 							next(refuse.byName({ moduleName, what: `the cards name ${hubNameSet.size} hubs (${Array.from(hubNameSet).join(', ')})`, where: 'a pairing has ONE hub' }).message);

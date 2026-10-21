@@ -93,6 +93,14 @@ const moduleFunction =
 			     collect(DISTINCT mkEdge.mappingKind) AS mappingKindList,
 			     collect(DISTINCT mkEdge.mappingSource) AS mappingSourceList,
 			     count(CASE WHEN mkEdge IS NOT NULL AND mkEdge.mappingKind IS NULL THEN 1 END) AS unkindedMappingEdgeCount
+			OPTIONAL MATCH (hm {_source: root._source})-[hmEdge:EXACT_MATCH|CLOSE_MATCH]->(hmCard:HubReference) WHERE NOT hm:HubReference
+			WITH root, propertyCount, classCount, optionValueCount, exactMappedProperties, closeMappedProperties,
+			     mappingKindList, mappingSourceList, unkindedMappingEdgeCount,
+			     collect(DISTINCT CASE WHEN hmEdge IS NULL THEN null ELSE { hubName: hmCard.hubName, relation: type(hmEdge), subjectStableId: hm.stableId } END) AS hubMatchList
+			OPTIONAL MATCH (hd:HubDefinition)
+			WITH root, propertyCount, classCount, optionValueCount, exactMappedProperties, closeMappedProperties,
+			     mappingKindList, mappingSourceList, unkindedMappingEdgeCount, hubMatchList,
+			     collect(DISTINCT hd.hubName) AS hubNameList
 			OPTIONAL MATCH (any {_source: root._source})-[m]->(:HubReference) WHERE NOT any:HubReference
 			RETURN root._source AS sourceKey,
 			       root.standardKey AS standardKey, root.standardName AS standardName,
@@ -106,6 +114,7 @@ const moduleFunction =
 			       propertyCount, classCount, optionValueCount,
 			       exactMappedProperties, closeMappedProperties,
 			       mappingKindList, mappingSourceList, unkindedMappingEdgeCount,
+			       hubNameList, hubMatchList,
 			       collect(DISTINCT type(m)) AS mappingEdgeTypes
 			ORDER BY sourceKey`;
 
@@ -142,6 +151,18 @@ const moduleFunction =
 			const mappingKindList = sorted(oneRow.mappingKindList).filter((oneValue) => oneValue !== 'null');
 			const mappingSourceList = sorted(oneRow.mappingSourceList).filter((oneValue) => oneValue !== 'null');
 
+			// ⟪ctdlHub P5⟫ PER HUB, ONLY WHEN THE GRAPH HOLDS MORE THAN ONE. exactMappedProperties / closeMappedProperties keep their
+			// names and meaning (distinct subjects with that edge to ANY hub's card), so a single-hub graph's node is unchanged byte for
+			// byte; a multi-hub graph adds mappedPropertyCountByHub (JSON text: every hub of the graph, sorted, zero stated as 0) so
+			// the totals can be read by hub. Counted as the totals are: DISTINCT subjects per (hub, relation).
+			const hubNameList = sorted(oneRow.hubNameList);
+			const perHubCountText = hubNameList.length > 1
+				? JSON.stringify(hubNameList.reduce((byHub, oneHubName) => {
+					const subjectCountOf = (relationName) => new Set((oneRow.hubMatchList || []).filter((oneMatch) => oneMatch && oneMatch.hubName === oneHubName && oneMatch.relation === relationName).map((oneMatch) => oneMatch.subjectStableId)).size;
+					return { ...byHub, [oneHubName]: { exactMappedProperties: subjectCountOf('EXACT_MATCH'), closeMappedProperties: subjectCountOf('CLOSE_MATCH') } };
+				}, {}))
+				: null;
+
 			const stableId = `${definitionPrefix}${oneRow.sourceKey}`;
 			return {
 				stableId,
@@ -165,6 +186,7 @@ const moduleFunction =
 					optionValueCount: Number(oneRow.optionValueCount || 0),
 					exactMappedProperties: exact,
 					closeMappedProperties: close,
+					...(perHubCountText === null ? {} : { mappedPropertyCountByHub: perHubCountText }),
 					mappingKindList,
 					mappingSourceList,
 					...(oneRow.standardKind ? { standardKind: oneRow.standardKind } : {}),

@@ -103,7 +103,9 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // ⟪ctdlHub-101926 campaign merge, 2026-10-20 (INDIGO_LOOM; ruling SCARLET_ARROW)⟫ the two +5s above are independent: lane P2b's
 // five edgeType members and lane P3's five list-valued-name members do not overlap, so the merged registry carries both
 // (measured on the merge commit: 329 -> 339).
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13 + 5 + 5;
+// ⟪ctdlHub-101926 P5, 2026-10-20 (INDIGO_LOOM)⟫ +1 more, unrelated to V1: StandardDefinition.mappedPropertyCountByHub (present only in
+// a multi-hub graph: the per-hub match counts), projected as one selfDocField member (measured 339 -> 340).
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13 + 5 + 5 + 1;
 // ⟪campaign P3, W-C-2⟫ rows RETIRED from V1's own five: the real registry is AFTER_V1 + added − retired, and the pre-V1
 // reading (the remaining V1 rows removed) is BEFORE_V1 + added, unchanged.
 const SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1 = RETIRED_V1_EDGE_TYPE_NAME_LIST.length;

@@ -200,4 +200,7 @@ const subjectStableIdFor = ({ subjectIdentityList, sourceReader, xLog }, callbac
 
 const bridgeHooks = { walkSourceAssertions, subjectStableIdFor };
 
-module.exports = { bridgeDeclaration, bridgeHooks };
+// ⟪ctdlHub P5⟫ the hub this toy plugin maps toward (the sibling bridgeTarget export)
+const bridgeTarget = { targetHub: 'toyhub' };
+
+module.exports = { bridgeDeclaration, bridgeHooks, bridgeTarget };

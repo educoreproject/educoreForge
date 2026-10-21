@@ -371,6 +371,9 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 	const pescShape = (scenario) => {
 		scenario.forgesDirOverride = makePescForgesDir(scenario);
 		applyDeclarationEdit(scenario);
+		// ⟪ctdlHub P5⟫ the shipped plugin targets 'ceds' (its bridgeTarget export); this suite runs it on the toy hub DOUBLE, so the
+		// target is laid over as the toy's own, the way a declaration edit is laid over — the run-time pairing check is unchanged
+		scenario.pluginModuleOverrides[PLUGIN_NAME] = { ...(scenario.pluginModuleOverrides[PLUGIN_NAME] || {}), bridgeTarget: { targetHub: scenario.spec.hub } };
 		scenario.graph = cloneJson(runDouble);
 		if (scenario.graphEdit !== undefined) {
 			scenario.graphEdit(scenario.graph);

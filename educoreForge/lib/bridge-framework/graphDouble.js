@@ -88,8 +88,8 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 	};
 	const nodeByStableId = () => state.nodeList.reduce((soFar, oneNode) => ({ ...soFar, [oneNode.stableId]: oneNode }), {});
 
-	const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration } = {}) => {
-		const constructionError = graphSeamRulesLib.readerConstructionRefusal({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration });
+	const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration, hubName } = {}) => {
+		const constructionError = graphSeamRulesLib.readerConstructionRefusal({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration, hubName });
 		if (constructionError) {
 			throw constructionError;
 		}
@@ -99,9 +99,13 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			throw textSearchVocabulary.error;
 		}
 		const rawNodeRecordList = () => state.nodeList.map((oneNode) => ({ stableId: oneNode.stableId, labels: oneNode.labels.slice(), properties: { ...oneNode.properties } }));
+		// ⟪ctdlHub P5⟫ the bolt reader's card scope: a HubReference of the tier, of the ONE hub the reader was built for
+		const isTargetHubCard = (oneRecord, referenceTier) => oneRecord.labels.indexOf(graphSeamRulesLib.HUB_REFERENCE_LABEL) !== -1 && cypherEquals(oneRecord.properties.referenceTier, referenceTier) && cypherEquals(oneRecord.properties.hubName, hubName);
+		// ⟪ctdlHub P5⟫ the bolt reader's hub-layer exclusion: a HubReference or HubDefinition is never a source record
+		const isHubLayerRecord = (oneRecord) => graphSeamRulesLib.HUB_LAYER_LABEL_LIST.some((oneLabel) => oneRecord.labels.indexOf(oneLabel) !== -1);
 		const readHubCards = ({ referenceTier } = {}, callback) => {
 			state.readHubCardsCallCount += 1;
-			const cardList = rawNodeRecordList().filter((oneRecord) => oneRecord.labels.indexOf(graphSeamRulesLib.HUB_REFERENCE_LABEL) !== -1 && cypherEquals(oneRecord.properties.referenceTier, referenceTier));
+			const cardList = rawNodeRecordList().filter((oneRecord) => isTargetHubCard(oneRecord, referenceTier));
 			const shaped = graphSeamRulesLib.shapeHubCardList({ rawRecordList: cardList, referenceTier });
 			if (shaped.error) {
 				callback(shaped.error.message);
@@ -112,7 +116,7 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 		// sourceRecordList — the bolt readSourceRecords: _source EXACTLY the source standard, text nodes excluded BY ROLE
 		// (R-BR-2). A node with no role is kept, as `n.role IS NULL OR n.role <> $embedTextRole` keeps it. Every view's
 		// among-source edge read filters on this set, so an edge touching a text node is excluded at both ends too.
-		const sourceRecordList = () => rawNodeRecordList().filter((oneRecord) => cypherEquals(oneRecord.properties._source, sourceStandardName) && oneRecord.properties.role !== textSearchVocabulary.embedTextRole);
+		const sourceRecordList = () => rawNodeRecordList().filter((oneRecord) => cypherEquals(oneRecord.properties._source, sourceStandardName) && oneRecord.properties.role !== textSearchVocabulary.embedTextRole && !isHubLayerRecord(oneRecord));
 		const readSubjectNodes = (callback) => {
 			state.readSubjectNodesCallCount += 1;
 			callback('', sourceRecordList().map((oneRecord) => graphSeamRulesLib.blindedRecordFor({ record: graphSeamRulesLib.withoutEmbedding(oneRecord), blindingDeclaration })));
@@ -147,7 +151,7 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			graphSeamRulesLib.closedRetrievalView({
 				readHubVectors: ({ referenceTier } = {}, callback) => {
 					state.readHubVectorsCallCount += 1;
-					callback('', rawNodeRecordList().filter((oneRecord) => oneRecord.labels.indexOf(graphSeamRulesLib.HUB_REFERENCE_LABEL) !== -1 && cypherEquals(oneRecord.properties.referenceTier, referenceTier)).map(graphSeamRulesLib.retrievalRecordFor));
+					callback('', rawNodeRecordList().filter((oneRecord) => isTargetHubCard(oneRecord, referenceTier)).map(graphSeamRulesLib.retrievalRecordFor));
 				},
 				readSubjectVectors: ({ label } = {}, callback) => {
 					state.readSubjectVectorsCallCount += 1;
@@ -204,7 +208,7 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 					const nodeRecordList = rawNodeRecordList();
 					const nodeRecordByStableId = nodeRecordList.reduce((soFar, oneRecord) => ({ ...soFar, [oneRecord.stableId]: oneRecord }), {});
 					const cardRecordList = nodeRecordList
-						.filter((oneRecord) => oneRecord.labels.indexOf(graphSeamRulesLib.HUB_REFERENCE_LABEL) !== -1 && cypherEquals(oneRecord.properties.referenceTier, referenceTier))
+						.filter((oneRecord) => isTargetHubCard(oneRecord, referenceTier))
 						.sort((leftRecord, rightRecord) => compareStrings(leftRecord.stableId, rightRecord.stableId));
 					const cardStableIdSet = new Set(cardRecordList.map((oneRecord) => oneRecord.stableId));
 					const cardRowList = cardRecordList.map((oneRecord) => ({ cardStableId: cypherValue(oneRecord.properties.stableId), hubName: cypherValue(oneRecord.properties.hubName) }));

@@ -99,9 +99,9 @@ regConjunctList.push(
 regConjunctList.push(
 	refusalCase({
 	registry: twinRegistry, gateId: 'BG-REG', conjunctId: 'd_strayFileRefused',
-	title: 'a stray file under bridges/ that does not export { bridgeDeclaration, bridgeHooks } is a REFUSAL at construction, not an ignored file (D-S8)',
+	title: 'a stray file under bridges/ that does not export { bridgeDeclaration, bridgeHooks, bridgeTarget } is a REFUSAL at construction, not an ignored file (D-S8; ⟪ctdlHub P5⟫ bridgeTarget joined the required exports)',
 	shape: (scenario) => withScratchForges(scenario, (scratchForgesDir) => { fs.writeFileSync(path.join(scratchForgesDir, 'toy', 'bridges', 'notes.js'), "'use strict';\nmodule.exports = {};\n"); }),
-	regex: /plugin file .*notes\.js does not export \{ bridgeDeclaration, bridgeHooks \}/,
+	regex: /plugin file .*notes\.js does not export \{ bridgeDeclaration, bridgeHooks, bridgeTarget \}/,
 	twinName: 'ignoreStrayFile', fileName: REGISTRY_FILE,
 	find: '\t\t\tconst registered = registerPlugin({ pluginModule: loadModule(pluginFilePath), pluginFilePath, bundleDirPath });\n\t\t\tif (registered.error) {\n\t\t\t\tthrow registered.error;\n\t\t\t}',
 	replace: '\t\t\tconst registered = registerPlugin({ pluginModule: loadModule(pluginFilePath), pluginFilePath, bundleDirPath });\n\t\t\tif (registered.error) {\n\t\t\t\treturn;\n\t\t\t}',

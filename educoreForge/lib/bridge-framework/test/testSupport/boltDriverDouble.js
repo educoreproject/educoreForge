@@ -54,6 +54,11 @@ const parseParamConditionList = (whereText) => {
 		if (nullOrNotEqualsMatch && nullOrNotEqualsMatch[1] === nullOrNotEqualsMatch[3] && nullOrNotEqualsMatch[2] === nullOrNotEqualsMatch[4]) {
 			return { kind: 'propertyNullOrNotEquals', variableName: nullOrNotEqualsMatch[1], propertyName: nullOrNotEqualsMatch[2], parameterName: nullOrNotEqualsMatch[5] };
 		}
+		// ⟪ctdlHub P5⟫ NOT <v>:<Label> — the reader's hub-layer exclusion (HubReference, HubDefinition) on a source read
+		const lacksLabelMatch = /^NOT (\w+):(\w+)$/.exec(clauseText);
+		if (lacksLabelMatch) {
+			return { kind: 'lacksLabel', variableName: lacksLabelMatch[1], labelName: lacksLabelMatch[2] };
+		}
 		const typeMatch = /^type\((\w+)\)\s+IN\s+\$(\w+)$/.exec(clauseText);
 		if (typeMatch) {
 			return { kind: 'typeIn', variableName: typeMatch[1], parameterName: typeMatch[2] };
@@ -77,11 +82,13 @@ const CONDITION_HOLDS_BY_KIND = Object.freeze({
 	propertyNullOrNotEquals: ({ propertyValue, parameterValue }) => isAbsent(propertyValue) || propertyValue !== parameterValue,
 	typeIn: ({ bound, parameterValue }) => (Array.isArray(parameterValue) ? parameterValue : []).indexOf(bound.type) !== -1,
 	typeEquals: ({ bound, parameterValue }) => bound.type === parameterValue,
+	// a label test is never null: a bound node either carries the label or it does not
+	lacksLabel: ({ bound, condition }) => Boolean(bound) && bound.labels.indexOf(condition.labelName) === -1,
 });
 const conditionHolds = (oneCondition, bindingByVariable, parameters) => {
 	const bound = bindingByVariable[oneCondition.variableName];
 	const propertyValue = bound && oneCondition.propertyName !== undefined ? bound.properties[oneCondition.propertyName] : undefined;
-	return CONDITION_HOLDS_BY_KIND[oneCondition.kind]({ bound, propertyValue, parameterValue: parameters[oneCondition.parameterName] });
+	return CONDITION_HOLDS_BY_KIND[oneCondition.kind]({ bound, propertyValue, parameterValue: parameters[oneCondition.parameterName], condition: oneCondition });
 };
 
 const nodeMatches = (oneNode, conditionList, parameters, variableName) =>

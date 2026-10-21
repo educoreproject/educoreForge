@@ -2265,6 +2265,13 @@ const build = (recipe, deps, callback) => {
 					next(`bridge ${pairLabel}: resolving source bundle for standardName: ${sourceBundle.error}`);
 					return;
 				}
+				// ⟪ctdlHub P5⟫ hubStandardName — the hub bundle's declared standardName, by the same one canonical authority, so the
+				// bridge reads exactly its own hub's cards when a graph holds more than one hub (a hub's cards carry hubName = it, I12)
+				const hubBundle = components.forger.resolveBundle({ standard: bridge.hub });
+				if (hubBundle.error) {
+					next(`bridge ${pairLabel}: resolving hub bundle for standardName: ${hubBundle.error}`);
+					return;
+				}
 				bridgeMaker.run(
 					{
 						inGraph: args.depGraph,
@@ -2297,6 +2304,7 @@ const build = (recipe, deps, callback) => {
 							sourceStandardName: sourceBundle.standardName,
 							sourceVersion: resolvedVersionByToken[bridge.source],
 							hubVersion: resolvedVersionByToken[bridge.hub],
+							hubStandardName: hubBundle.standardName,
 							// pairWith + its resolved version reach a STRUCTURAL producer (ctdlFamilyStructure) so it
 							// knows its sibling pairing endpoint; undefined for a mapping bridge, which ignores them.
 							pairWith: bridge.pairWith,

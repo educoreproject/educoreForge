@@ -5,9 +5,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // pluginRegistry.js — the plugin registry: DATA, built by DISCOVERY (SPEC-bridgeFramework-v1.md §9; RULINGS
 // A2, D-S8; BR-003, BR-004). Built ONCE at seam-face construction over the convention
 // forges/<standardKey>/bridges/*.js and validated then — BEFORE any forge is spent. Each file exports
-// { bridgeDeclaration, bridgeHooks }; the registry KEY is bridgeDeclaration.bridgeName; the registry is frozen
+// { bridgeDeclaration, bridgeHooks, bridgeTarget } (⟪ctdlHub P5⟫ bridgeTarget: the hub it maps toward, a sibling export kept
+// OUT of the content-addressed declaration); the registry KEY is bridgeDeclaration.bridgeName; the registry is frozen
 // data entryByBridgeName[bridgeName] = { bridgeName, standardKey, bundleDirPath, pluginFilePath, bridgeDeclaration,
-// bridgeHooks, channelResolutionByKey, declarationDigest }.
+// bridgeHooks, targetHub, channelResolutionByKey, declarationDigest }.
 //
 // Refusals, all by name, all at construction: a duplicate bridgeName (both paths named); a plugin whose
 // standardKey ≠ its directory; a file under bridges/ that does not export the two names (a STRAY file is a
@@ -29,8 +30,12 @@ const BRIDGES_DIR_NAME = 'bridges';
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 
 const registerPlugin = ({ pluginModule, pluginFilePath, bundleDirPath } = {}) => {
-	if (!isPlainObject(pluginModule) || !Object.prototype.hasOwnProperty.call(pluginModule, 'bridgeDeclaration') || !Object.prototype.hasOwnProperty.call(pluginModule, 'bridgeHooks')) {
-		return { error: refuse.byName({ moduleName, what: `plugin file ${pluginFilePath} does not export { bridgeDeclaration, bridgeHooks }`, where: 'a stray or non-conforming file under bridges/ is a REFUSAL, not an ignored file (D-S8)' }) };
+	if (!isPlainObject(pluginModule) || ['bridgeDeclaration', 'bridgeHooks', 'bridgeTarget'].some((exportName) => !Object.prototype.hasOwnProperty.call(pluginModule, exportName))) {
+		return { error: refuse.byName({ moduleName, what: `plugin file ${pluginFilePath} does not export { bridgeDeclaration, bridgeHooks, bridgeTarget }`, where: 'a stray or non-conforming file under bridges/ is a REFUSAL, not an ignored file (D-S8)' }) };
+	}
+	const targetError = bridgePluginContractLib.validateBridgeTarget({ bridgeTarget: pluginModule.bridgeTarget });
+	if (targetError) {
+		return { error: new Error(`${targetError.message} [plugin ${pluginFilePath}]`) };
 	}
 	const validated = bridgePluginContractLib.validateBridgeDeclaration({ bridgeDeclaration: pluginModule.bridgeDeclaration, bundleDirPath });
 	if (validated.error) {
@@ -57,6 +62,7 @@ const registerPlugin = ({ pluginModule, pluginFilePath, bundleDirPath } = {}) =>
 			pluginFilePath,
 			bridgeDeclaration: pluginModule.bridgeDeclaration,
 			bridgeHooks: pluginModule.bridgeHooks,
+			targetHub: pluginModule.bridgeTarget.targetHub,
 			channelResolutionByKey: validated.channelResolutionByKey,
 			declarationCanonicalText,
 		}),

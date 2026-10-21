@@ -424,7 +424,7 @@ const readerDriverSwap = { modulePath: frameworkFile(READER_FILE), find: "\tcons
 const boltReaderOver = (scenario, graph) => {
 	boltDriverDouble.useState(graph);
 	const boltReaderLib = moduleDouble.loadWithMutations({ modulePath: frameworkFile(READER_FILE), mutationList: [readerDriverSwap].concat(scenario.frameworkMutationList) });
-	return boltReaderLib.graphReaderFactory({ inGraph: { boltUrl: 'bolt://double.invalid:7687', password: 'double' }, dependencyStandardNameList: [boltGraphLib.HUB_NAME, boltGraphLib.SOURCE_STANDARD_NAME], sourceStandardName: boltGraphLib.SOURCE_STANDARD_NAME, blindingDeclaration: [] });
+	return boltReaderLib.graphReaderFactory({ inGraph: { boltUrl: 'bolt://double.invalid:7687', password: 'double' }, dependencyStandardNameList: [boltGraphLib.HUB_NAME, boltGraphLib.SOURCE_STANDARD_NAME], sourceStandardName: boltGraphLib.SOURCE_STANDARD_NAME, blindingDeclaration: [], hubName: boltGraphLib.HUB_NAME });
 };
 const isTextNodeRecord = (oneRecord) => SOURCE_TEXT_STABLE_ID_LIST.indexOf(oneRecord.stableId) !== -1 || oneRecord.properties.role === EMBED_TEXT_ROLE;
 const touchesTextNode = (oneEdge) => oneEdge.type === EMBEDS_TEXT_OF || SOURCE_TEXT_STABLE_ID_LIST.indexOf(oneEdge.fromStableId) !== -1 || SOURCE_TEXT_STABLE_ID_LIST.indexOf(oneEdge.toStableId) !== -1;

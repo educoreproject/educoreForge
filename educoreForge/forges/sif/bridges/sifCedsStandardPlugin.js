@@ -239,4 +239,8 @@ const subjectStableIdFor = ({ subjectIdentityList, sourceReader, xLog }, callbac
 
 const bridgeHooks = { walkSourceAssertions, subjectStableIdFor };
 
-module.exports = { bridgeDeclaration, bridgeHooks };
+// ⟪ctdlHub P5; SCARLET_ARROW ruling A⟫ the hub this plugin maps toward, a SIBLING export: bridgeDeclaration is content-addressed
+// into every decision block, so the target is kept out of it; build.js checks it against the recipe pairing's hub
+const bridgeTarget = { targetHub: 'ceds' };
+
+module.exports = { bridgeDeclaration, bridgeHooks, bridgeTarget };

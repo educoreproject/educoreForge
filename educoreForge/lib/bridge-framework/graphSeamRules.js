@@ -66,6 +66,11 @@ const FIXED_MAPPING_CONFIDENCE_BY_MAPPING_SOURCE = Object.freeze(
 );
 
 const HUB_REFERENCE_LABEL = 'HubReference';
+// ⟪ctdlHub P5⟫ the hub LAYER: a hub's cards and its definition. A hub's nodes carry _source = hubName, which is also the hub
+// standard's own _source, so a reader scoped by _source alone would take them for the standard's nodes. They are never a
+// bridge subject, a walk node or an endpoint of an among-source edge (so a hub standard can also be a bridge source).
+const HUB_DEFINITION_LABEL = 'HubDefinition';
+const HUB_LAYER_LABEL_LIST = Object.freeze([HUB_REFERENCE_LABEL, HUB_DEFINITION_LABEL]);
 const PROPERTY_TIER = 'property';
 const CARD_LIST_SLOT_LIST = Object.freeze(TUPLE_LIST_FIELD_LIST.concat(['qualifierNames']));
 const CARD_REQUIRED_PROPERTY_LIST = Object.freeze(['stableId', 'canonicalKey', 'referenceTier', 'hubName', 'hubVersion', 'name']);
@@ -144,7 +149,7 @@ const PRODUCER_CONDITIONAL_EDGE_PROPERTY_NAME_LIST = Object.freeze(['mappingProv
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0;
 
-const readerConstructionRefusal = ({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration } = {}) => {
+const readerConstructionRefusal = ({ inGraph, dependencyStandardNameList, sourceStandardName, blindingDeclaration, hubName } = {}) => {
 	if (!isPlainObject(inGraph)) {
 		return refuse.byName({ moduleName, what: 'graphReaderFactory: inGraph is absent', where: 'the materialized dependency GraphHandle; there is no default' });
 	}
@@ -156,6 +161,10 @@ const readerConstructionRefusal = ({ inGraph, dependencyStandardNameList, source
 	}
 	if (!Array.isArray(blindingDeclaration) || blindingDeclaration.some((oneName) => !isNonEmptyString(oneName))) {
 		return refuse.byName({ moduleName, what: 'graphReaderFactory: blindingDeclaration must be a list of property names ([] valid, absent refused)', where: 'the ONE flatten applies the blinding declaration at entry (BR-090, BR-091)' });
+	}
+	// ⟪ctdlHub P5⟫ a graph may hold several hubs; the reader reads ONE, named, and every card read is scoped to it
+	if (!isNonEmptyString(hubName)) {
+		return refuse.byName({ moduleName, what: 'graphReaderFactory: hubName is required', where: 'the target hub\'s name (its HubReference.hubName); a graph may hold several hubs and the reader reads exactly one' });
 	}
 	return null;
 };
@@ -583,6 +592,8 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 };
 
 module.exports = {
+	HUB_DEFINITION_LABEL,
+	HUB_LAYER_LABEL_LIST,
 	HUB_REFERENCE_LABEL,
 	CARD_LIST_SLOT_LIST,
 	CARD_REQUIRED_PROPERTY_LIST,
