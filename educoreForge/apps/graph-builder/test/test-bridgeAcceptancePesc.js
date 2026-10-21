@@ -919,7 +919,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // (numstat from the old tag): lib/bridge-framework/test/test-bgNosub.js 8/1 ONLY — its seamDiffEmpty re-anchor in THIS SAME commit (both
 // tags cut here, so neither re-anchor moves the other gate). lib/vocabulary/ measured unchanged since the merge (empty numstat); no
 // bridge-framework source, bridge-maker, build.js or interfaces.js change.
-const P1_BASELINE_COMMIT = 'postCtdlP4PescCompose-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P4); the tag is cut ON this commit
+// ═══ RE-ANCHOR (2), 2026-10-20 (INDIGO_LOOM; ctdlHub-101926 P4; ruled by SCARLET_ARROW with seamDiffEmpty's) ═══ BG-COMPOSE-PESC
+// postCtdlP4PescCompose-102026 -> postCtdlP4FinisherPescCompose-102026, tag cut ON this commit. CENSUS over this gate's declared paths:
+// lib/bridge-framework/test/test-bgNosub.js 8/1 ONLY — its seamDiffEmpty re-anchor in THIS SAME commit. No bridge-framework source,
+// bridge-maker, build.js, interfaces.js or lib/vocabulary change.
+const P1_BASELINE_COMMIT = 'postCtdlP4FinisherPescCompose-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P4, finisher); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

@@ -937,7 +937,14 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // CEDS's prior behaviour; cedsHubFingerprint identical, standardBase 45a83bae unmoved by a real build), forges/ctdl/lib/ctdlHubDeclaration.js
 // 94/0 and forges/ctdl/lib/ctdlHubHooks.js 17/0 (the NEW CTDL hub role, ee5ff0bf; hooks {}). No build.js, forger, replay, replay-manager,
 // forge-framework or forge entry/forge-declaration change.
-const PHASE3_ANCHOR_TAG = 'postCtdlP4SeamDiffEmpty-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P4); the tag is cut ON this commit
+// ═══ RE-ANCHOR (2), 2026-10-20 (INDIGO_LOOM; ctdlHub-101926 P4; ruled by SCARLET_ARROW after the standardDefinition finisher fix) ═══
+// seamDiffEmpty (and its (i-live) companion): postCtdlP4SeamDiffEmpty-102026 -> postCtdlP4FinisherSeamDiffEmpty-102026, tag cut ON this
+// commit together with BG-COMPOSE-PESC's. CENSUS (numstat from the old tag, exactly four paths, all ruled, all under
+// apps/graph-builder/apps/replay-manager/lib/finishing/): lib/standard-definition-finisher.js 8/4 + test/test-standardDefinitionDisposition.js
+// 10/0 (01882ee4: a HubReference is never a mapping SUBJECT) and lib/schema-view-finisher.js 35/6 + test/test-schemaViewContractProjection.js
+// 39/2 (9737fbfe: the schema view documents a term-tier hub's HAS_<HUB>_TERM and HAS_TERM_REFERENCE). No build.js, forger, replay,
+// forge-framework or forge file change.
+const PHASE3_ANCHOR_TAG = 'postCtdlP4FinisherSeamDiffEmpty-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P4, finisher); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
