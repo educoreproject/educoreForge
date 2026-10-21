@@ -238,8 +238,9 @@ const loadFrameworkFactory = (scenario) =>
 // plugin module overrides laid over the loaded module BEFORE registration (inputFault twins edit a declaration)
 const buildRegistry = (scenario) => {
 	const forgesDirPath = scenario.forgesDirOverride === undefined || scenario.forgesDirOverride === null ? FIXTURE_FORGES_DIR : scenario.forgesDirOverride;
-	const requireModule = (oneFilePath) => {
-		const loaded = require(oneFilePath);
+	// ⟪hub-neutral bridge lane R3⟫ the overrides are laid over EVERY plugin module — a plugin file's or one composed from a standard
+	// bridging file — through the registry's pluginModuleTransform seam, so a twin edits a composed bridge exactly as a file plugin
+	const pluginModuleTransform = (loaded) => {
 		const overrideByName = scenario.pluginModuleOverrides;
 		const bridgeName = loaded && loaded.bridgeDeclaration ? loaded.bridgeDeclaration.bridgeName : undefined;
 		if (bridgeName !== undefined && overrideByName[bridgeName] !== undefined) {
@@ -255,7 +256,26 @@ const buildRegistry = (scenario) => {
 	// the registry is built through the SAME framework double as the run, so a mutation in bridgePluginContract.js
 	// (a disabled registration check) reaches registration too
 	const registryLib = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(FRAMEWORK_DIR, 'pluginRegistry.js'), mutationList: scenario.frameworkMutationList }) : pluginRegistryLib;
-	return registryLib.buildRegistryFromDirectory({ forgesDirPath, requireModule });
+	return registryLib.buildRegistryFromDirectory({ forgesDirPath, pluginModuleTransform });
+};
+
+// copyShippedHubBridging — ⟪hub-neutral bridge lane R3⟫ a scratch forges tree holding a SHIPPED standard bridging file composes it
+// with each paired hub's bridging declaration, found by that hub bundle's descriptor (hubBridgingLoader). This copies the shipped
+// hub's descriptor, its bridging module and the files that module names into the scratch tree, byte for byte, so the copy composes
+// exactly as the shipped tree does. The hub module itself is not copied: the loader never loads it.
+const copyShippedHubBridging = ({ forgesDirPath, hubToken }) => {
+	const shippedBundleDirPath = path.join(FRAMEWORK_DIR, '..', '..', 'forges', hubToken);
+	const scratchBundleDirPath = path.join(forgesDirPath, hubToken);
+	const loaded = require(path.join(FRAMEWORK_DIR, 'hubBridgingLoader')).loadHubBridging({ forgesDirPath: path.join(FRAMEWORK_DIR, '..', '..', 'forges'), hubToken });
+	if (loaded.error) {
+		throw loaded.error;
+	}
+	const relativePathList = ['parserDescriptor.ini', path.relative(shippedBundleDirPath, loaded.hubBridgingFilePath)]
+		.concat(loaded.hubBridging.promptIdentifierScan !== null && loaded.hubBridging.promptIdentifierScan.identifierListPath !== null ? [loaded.hubBridging.promptIdentifierScan.identifierListPath] : []);
+	relativePathList.forEach((relativePath) => {
+		fs.mkdirSync(path.dirname(path.join(scratchBundleDirPath, relativePath)), { recursive: true });
+		fs.copyFileSync(path.join(shippedBundleDirPath, relativePath), path.join(scratchBundleDirPath, relativePath));
+	});
 };
 
 const makeJudgeClient = (scenario) => {
@@ -375,6 +395,7 @@ module.exports = {
 	makeJudgmentCacheDouble,
 	makeMatchForensicsDouble,
 	makeScratchForgesCopy,
+	copyShippedHubBridging,
 	buildRegistry,
 	makeJudgeClient,
 	loadFrameworkFactory,

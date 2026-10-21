@@ -105,8 +105,8 @@ regConjunctList.push(
 	regex: /plugin file .*notes\.js does not export \{ bridgeDeclaration, bridgeHooks, bridgeTarget \}/,
 	twinName: 'ignoreStrayFile', fileName: REGISTRY_FILE,
 	// ⟪hub-neutral bridge lane R3⟫ re-anchored: the registration now runs once per (composed or file) plugin module, one level deeper
-	find: '\t\t\t\tconst registered = registerPlugin({ pluginModule: onePluginModule, pluginFilePath, bundleDirPath });\n\t\t\t\tif (registered.error) {\n\t\t\t\t\tthrow registered.error;\n\t\t\t\t}',
-	replace: '\t\t\t\tconst registered = registerPlugin({ pluginModule: onePluginModule, pluginFilePath, bundleDirPath });\n\t\t\t\tif (registered.error) {\n\t\t\t\t\treturn;\n\t\t\t\t}',
+	find: '\t\t\t\tconst registered = registerPlugin({ pluginModule: transformModule(onePluginModule), pluginFilePath, bundleDirPath });\n\t\t\t\tif (registered.error) {\n\t\t\t\t\tthrow registered.error;\n\t\t\t\t}',
+	replace: '\t\t\t\tconst registered = registerPlugin({ pluginModule: transformModule(onePluginModule), pluginFilePath, bundleDirPath });\n\t\t\t\tif (registered.error) {\n\t\t\t\t\treturn;\n\t\t\t\t}',
 	}),
 
 	refusalCase({

@@ -363,14 +363,16 @@ const nvRefusalCase = ({ conjunctId, title, shapeDeclaration, regex, twinName, f
 
 // shippedDeclaringPluginList — every forges/<bundle>/bridges/*.js whose declaration carries candidateRetrieval,
 // read from the tree rather than named, so a plugin added later is covered without an edit here
-const shippedDeclaringPluginList = () =>
-	fs
-		.readdirSync(FORGES_DIR, { withFileTypes: true })
-		.filter((oneEntry) => oneEntry.isDirectory() && fs.existsSync(path.join(FORGES_DIR, oneEntry.name, 'bridges')))
-		.reduce((soFar, oneEntry) => soFar.concat(fs.readdirSync(path.join(FORGES_DIR, oneEntry.name, 'bridges')).filter((oneFileName) => /\.js$/.test(oneFileName)).map((oneFileName) => ({ bundleDirPath: path.join(FORGES_DIR, oneEntry.name), pluginFilePath: path.join(FORGES_DIR, oneEntry.name, 'bridges', oneFileName) }))), [])
-		// ⟪ctdlHub P6⟫ a structural producer (exports { structuralDeclaration }, pluginRegistry's second shape) is no bridge plugin
-		.filter((onePlugin) => require(onePlugin.pluginFilePath).bridgeDeclaration !== undefined && require(onePlugin.pluginFilePath).bridgeDeclaration.candidateRetrieval !== undefined)
-		.sort((leftPlugin, rightPlugin) => (leftPlugin.pluginFilePath < rightPlugin.pluginFilePath ? -1 : 1));
+// ⟪hub-neutral bridge lane R3⟫ the shipped bridges are read through the REAL registry: a bridge may now be composed from a standard
+// bridging file and its hub's declaration, so its declaration is the registry entry's, not a file's export
+const shippedDeclaringPluginList = () => {
+	const shippedRegistry = require(path.join(__dirname, '..', 'pluginRegistry')).buildRegistryFromDirectory({ forgesDirPath: FORGES_DIR });
+	return Object.keys(shippedRegistry.entryByBridgeName)
+		.map((bridgeName) => shippedRegistry.entryByBridgeName[bridgeName])
+		.filter((oneEntry) => oneEntry.bridgeDeclaration.candidateRetrieval !== undefined)
+		.map((oneEntry) => ({ bundleDirPath: oneEntry.bundleDirPath, pluginFilePath: oneEntry.pluginFilePath, bridgeDeclaration: oneEntry.bridgeDeclaration, pluginLabel: oneEntry.bridgeName }))
+		.sort((leftPlugin, rightPlugin) => (leftPlugin.pluginLabel < rightPlugin.pluginLabel ? -1 : 1));
+};
 const toyFixturePluginList = () => fs.readdirSync(path.join(TOY_BUNDLE_DIR, 'bridges')).filter((oneFileName) => /\.js$/.test(oneFileName)).sort().map((oneFileName) => ({ bundleDirPath: TOY_BUNDLE_DIR, pluginFilePath: path.join(TOY_BUNDLE_DIR, 'bridges', oneFileName) }));
 
 const nvConjunctList = [
@@ -537,8 +539,8 @@ const nvConjunctList = [
 			const contractForRun = contractUnder(scenario);
 			const shippedList = shippedDeclaringPluginList();
 			const outcomeList = shippedList.concat(toyFixturePluginList()).map((onePlugin) => {
-				const validated = contractForRun.validateBridgeDeclaration({ bridgeDeclaration: require(onePlugin.pluginFilePath).bridgeDeclaration, bundleDirPath: onePlugin.bundleDirPath });
-				return { pluginFileName: path.basename(onePlugin.pluginFilePath), refusalText: validated.error === undefined ? '' : validated.error.message };
+				const validated = contractForRun.validateBridgeDeclaration({ bridgeDeclaration: onePlugin.bridgeDeclaration === undefined ? require(onePlugin.pluginFilePath).bridgeDeclaration : onePlugin.bridgeDeclaration, bundleDirPath: onePlugin.bundleDirPath });
+				return { pluginFileName: onePlugin.pluginLabel === undefined ? path.basename(onePlugin.pluginFilePath) : onePlugin.pluginLabel, refusalText: validated.error === undefined ? '' : validated.error.message };
 			});
 			const refusedList = outcomeList.filter((oneOutcome) => oneOutcome.refusalText !== '');
 			const countHolds = shippedList.length === EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT;

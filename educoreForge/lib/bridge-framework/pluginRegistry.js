@@ -111,11 +111,18 @@ const registerStructuralProducer = ({ producerModule, producerFilePath, bundleDi
 };
 
 // buildRegistryFromDirectory — discovery over forges/<standardKey>/bridges/*.js; THROWS by name on any refusal
-const buildRegistryFromDirectory = ({ forgesDirPath, requireModule } = {}) => {
+// pluginModuleTransform (optional, a TEST SEAM like requireModule): applied to every plugin module — a plugin file's or a
+// composed one — just before registration, so a suite can lay a declaration edit over a COMPOSED bridge as it always could over
+// a plugin file. Absent, each module is registered as loaded or composed.
+const buildRegistryFromDirectory = ({ forgesDirPath, requireModule, pluginModuleTransform } = {}) => {
 	if (typeof forgesDirPath !== 'string' || !fs.existsSync(forgesDirPath) || !fs.statSync(forgesDirPath).isDirectory()) {
 		throw refuse.byName({ moduleName, what: `forgesDirPath ${JSON.stringify(forgesDirPath)} is not a directory`, where: 'the seam face passes the tree\'s forges/ directory' });
 	}
 	const loadModule = typeof requireModule === 'function' ? requireModule : (oneFilePath) => require(oneFilePath);
+	if (pluginModuleTransform !== undefined && typeof pluginModuleTransform !== 'function') {
+		throw refuse.byName({ moduleName, what: `pluginModuleTransform is a ${typeof pluginModuleTransform}, not a function`, where: 'the optional test seam that lays an edit over each plugin module before registration' });
+	}
+	const transformModule = pluginModuleTransform === undefined ? (onePluginModule) => onePluginModule : pluginModuleTransform;
 	// each paired hub's bridging declaration, loaded once per registry by the hub bundle's declared location
 	const hubBridgingByToken = {};
 	const hubBridgingFor = (hubToken) => {
@@ -200,7 +207,7 @@ const buildRegistryFromDirectory = ({ forgesDirPath, requireModule } = {}) => {
 				? composedPluginModuleListFor({ bridgingModule: candidateModule, bridgingFilePath: pluginFilePath, bundleName: oneBundleName })
 				: [loadModule(pluginFilePath)];
 			pluginModuleList.forEach((onePluginModule) => {
-				const registered = registerPlugin({ pluginModule: onePluginModule, pluginFilePath, bundleDirPath });
+				const registered = registerPlugin({ pluginModule: transformModule(onePluginModule), pluginFilePath, bundleDirPath });
 				if (registered.error) {
 					throw registered.error;
 				}
