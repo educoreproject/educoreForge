@@ -66,10 +66,11 @@ harness.ok(
 	`${Object.isFrozen(HUB_DESCRIPTOR_CONTRACT)}`,
 );
 harness.equal(
-	'it names exactly the two hub keys the descriptor may carry',
+	'it names exactly the three hub keys the descriptor may carry (hubBridgingModule since the hub-neutral bridge lane R2)',
 	JSON.stringify(HUB_DESCRIPTOR_KEY_LIST),
-	JSON.stringify(['hubModule', 'hubNamespace']),
+	JSON.stringify(['hubModule', 'hubNamespace', 'hubBridgingModule']),
 );
+harness.equal('hubBridgingModule is OPTIONAL: a hub nothing bridges to declares none', HUB_DESCRIPTOR_CONTRACT.hubBridgingModule.requiredOnceAnyHubKeyPresent, false);
 harness.ok(
 	'every entry declares a kind that the ONE kind-checker registry can answer (no orphan kinds)',
 	HUB_DESCRIPTOR_KEY_LIST.every(
