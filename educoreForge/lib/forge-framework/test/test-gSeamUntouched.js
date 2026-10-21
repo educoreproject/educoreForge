@@ -229,7 +229,16 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 //                                                    spend gathered from forges and mapping bridges, every exit after the run dir writes it
 // The other five UNTOUCHED; the seam file list unchanged. Forge OUTPUT proven byte-identical to main for all 18 base subjects of the
 // recipes of record (the lane folder's evidence/R1/forgeOutputEquality).
-const PRE_MIGRATION_REF = 'postSpendLedgerR1OnMainGSeamUntouched-102126'; // re-anchored by VELVET_CHORUS (spend ledger lane R1, after R0; census REANCHOR-CENSUS-R1-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (VELVET_CHORUS; R5 shared forge and build surfaces) ═══ G-SEAM-UNTOUCHED
+// postSpendLedgerR1OnMainGSeamUntouched-102126 -> postSharedSurfacesR5GSeamUntouched-102126, tag cut ON this commit. CENSUS, measured with this
+// gate's own command from R1's tag: exactly TWO of the seven, both R5's own:
+//   apps/graph-builder/apps/forger/forger.js  91/4    the bundle-declared collectors (hub anchor prefixes, hub edge definitions) and the
+//                                                     resolveBundle fields fidelityGateModulePath / edgeDefinitionDeclarationPath / roundTripVerbModulePath
+//   apps/graph-builder/lib/build.js           56/112  runDeclaredFidelityGate replaces the hub-named gate (its body moved into the hub's bundle);
+//                                                     the hub fold's reports named for their hub; comments
+// The other five UNTOUCHED; the seam file list unchanged. Forge OUTPUT proven byte-identical to main for the 18 base subjects of the
+// recipes of record and the old SIF forge (the lane folder's evidence/R5/forgeOutputEquality).
+const PRE_MIGRATION_REF = 'postSharedSurfacesR5GSeamUntouched-102126'; // re-anchored by VELVET_CHORUS (R5 shared forge and build surfaces; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
