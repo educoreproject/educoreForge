@@ -1,0 +1,14 @@
+{
+  // ctdlHubRoundTrip — ctdlHub PLUS the RT-13 round-trip stage (ctdlHub-101926 P4 step 6): forge CTDL, fold its hub into the
+  // standardBase block, materialize, then run the DECLARED roundTripValidator against the product graph. The hub cards are
+  // in the graph the validator reads, so this is the proof that the hub invents nothing in CTDL's own statements. Expect
+  // inventedTotal 0, lostTotal 0, roundTripClean true.
+  "schemaVersion": "1.0.0",
+  "recipeName": "ctdlHubRoundTrip",
+  "kind": "dev",
+  "description": "CTDL standardBase with its folded hub, round-trip-validated (RT-13 stage).",
+  "roundTripStage": true,
+  "standards": [ { "token": "ctdl", "version": "current" } ],
+  "hubs": [ { "standard": "ctdl" } ],
+  "bridges": []
+}
