@@ -93,8 +93,12 @@ if (typeof flagValueOf('baselineCensusPath') === 'string') {
 	if (baselineCensus.hubToken !== hubToken) {
 		refuse(`the baseline counts hub token '${baselineCensus.hubToken}', this run '${hubToken}'`);
 	}
+	const classNameAbsentFromBaselineList = Object.keys(census.countByClass).filter((className) => baselineCensus.countByClass[className] === undefined);
+	if (classNameAbsentFromBaselineList.length !== 0) {
+		refuse(`the baseline counts no class ${classNameAbsentFromBaselineList.join(', ')}: the rules changed since it was written, so the two censuses do not measure the same things; re-record the baseline deliberately`);
+	}
 	Object.keys(census.countByClass).forEach((className) => {
-		const before = baselineCensus.countByClass[className] || { lineCount: 0, occurrenceCount: 0 };
+		const before = baselineCensus.countByClass[className];
 		const after = census.countByClass[className];
 		say(`  ${className.padEnd(17)} lines ${before.lineCount} -> ${after.lineCount}   occurrences ${before.occurrenceCount} -> ${after.occurrenceCount}`);
 	});

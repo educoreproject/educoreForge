@@ -103,10 +103,15 @@ const noToken = runTool([]);
 harness.equal('no --hubToken exits 1', noToken.status, 1);
 harness.match('no --hubToken is refused by name', `${noToken.stdout}${noToken.stderr}`, /--hubToken is required and absent/);
 const fakeBaselinePath = path.join(scratchTreePath, 'lowBaseline.json');
-fs.writeFileSync(fakeBaselinePath, JSON.stringify({ hubToken: 'ceds', treeHead: 'fixture', countByClass: { code: { lineCount: 0, occurrenceCount: 0 } } }));
+const zeroCountByClass = rules.countedClassNameList.reduce((soFar, className) => ({ ...soFar, [className]: { lineCount: 0, occurrenceCount: 0 } }), {});
+fs.writeFileSync(fakeBaselinePath, JSON.stringify({ hubToken: 'ceds', treeHead: 'fixture', countByClass: zeroCountByClass }));
 const rose = runTool(['--hubToken=ceds', `--baselineCensusPath=${fakeBaselinePath}`]);
 harness.equal('a code count above the baseline exits 1', rose.status, 1);
 harness.match('and says ROSE', rose.stdout, /code count ROSE: FAIL/);
+const partialBaselinePath = path.join(scratchTreePath, 'partialBaseline.json');
+fs.writeFileSync(partialBaselinePath, JSON.stringify({ hubToken: 'ceds', treeHead: 'fixture', countByClass: { code: { lineCount: 9999, occurrenceCount: 9999 } } }));
+const partial = runTool(['--hubToken=ceds', `--baselineCensusPath=${partialBaselinePath}`]);
+harness.match('a baseline missing a class is refused by name, never read as zero', `${partial.status} ${partial.stdout}${partial.stderr}`, /^1 [\s\S]*the baseline counts no class comments/);
 
 harness.section('(f) THE LANE GATE: this tree against the recorded baseline');
 const proofConfig = getConfig('noRebuildProof') || {};

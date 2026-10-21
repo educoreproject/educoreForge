@@ -121,7 +121,7 @@ const scratchDirectoryPath = fs.mkdtempSync(path.join(os.tmpdir(), 'renderOnlyJu
 const summary = { action: actionName, treeHead: execFileSync('git', ['-C', TREE_ROOT, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), sampleSize: gateSet.renderOnly.sampleSize, forensicsDirectoryPath: gateSet.renderOnly.forensicsDirectoryPath, startedAt: new Date().toISOString(), pairList: [] };
 const rekeyedList = [];
 const cloneByRecipe = {};
-const hubIndexCache = {};
+const hubCardRecordListByCacheName = {};
 
 const taskList = new taskListPlus();
 Object.keys(pairByBlockHash).forEach((decisionBlockHash) => {
@@ -150,10 +150,10 @@ Object.keys(pairByBlockHash).forEach((decisionBlockHash) => {
 		const sourceBlock = replayBlockLib.deserializeBlock(baseBlockTextFor(recipeBridge.source));
 		const sourceRawRecordList = sourceBlock.nodes.map((oneNode) => renderOnlyLib.rawRecordFor(oneNode));
 		const hubStandardName = standardNameOf(recipeBridge.hub);
-		const hubIndexKey = `${recipeName}::${recipeBridge.hub}`;
+		const hubCardRecordCacheName = `${recipeName}::${recipeBridge.hub}`;
 		const withHubCards = (hubDone) => {
-			if (hubIndexCache[hubIndexKey] !== undefined) {
-				hubDone('', hubIndexCache[hubIndexKey]);
+			if (hubCardRecordListByCacheName[hubCardRecordCacheName] !== undefined) {
+				hubDone('', hubCardRecordListByCacheName[hubCardRecordCacheName]);
 				return;
 			}
 			const hubBlock = replayBlockLib.deserializeBlock(baseBlockTextFor(recipeBridge.hub));
@@ -166,8 +166,8 @@ Object.keys(pairByBlockHash).forEach((decisionBlockHash) => {
 					hubDone(resolveError);
 					return;
 				}
-				hubIndexCache[hubIndexKey] = cardNodeList.map((oneNode) => renderOnlyLib.rawRecordFor(oneNode));
-				hubDone('', hubIndexCache[hubIndexKey]);
+				hubCardRecordListByCacheName[hubCardRecordCacheName] = cardNodeList.map((oneNode) => renderOnlyLib.rawRecordFor(oneNode));
+				hubDone('', hubCardRecordListByCacheName[hubCardRecordCacheName]);
 			});
 		};
 		withHubCards((hubError, hubCardRawRecordList) => {
