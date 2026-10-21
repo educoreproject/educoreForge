@@ -32,6 +32,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   declaredTargetRuleList       'fromHub' (the hub's declared-target rules) or null
 //   remodelTableRef              null, or { hubRemodelTable: <index into the hub's remodelTableRefList> }
 //   hubRemodelTableListLength    as hubAnchorListLength, for remodelTableRef
+// ⟪R3⟫ a bridge created AFTER the refactor declares instead: blindingOrder { standardBlindingNameList, pairedHubAnchors:
+//   'union' } (the union over every hub the standard pairs with; hubAnchorListLength null), and promptIdentifierScan 'fromHub'
+//   (the pair hub's own patterns and list). Every existing pair keeps the array form and 'fromHubWithLegacyListPath'.
 //
 //   validateStandardBridging({ standardBridging, bridgeHooksByFacetName, bundleDirName }) → Error | null
 
@@ -41,6 +44,14 @@ const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 // the declaration keys the composer writes; a template carrying one is refused (the value would be silently overwritten)
 const COMPOSED_DECLARATION_KEY_LIST = Object.freeze(['bridgeName', 'renderingAllowList', 'candidateRetrieval', 'promptIdentifierScan', 'blindingDeclaration', 'declaredTargetRuleList', 'remodelTableRef']);
 const PROMPT_IDENTIFIER_SCAN_FROM_HUB = 'fromHubWithLegacyListPath';
+// ⟪R3, bridges created after the refactor (Q-R6 revised)⟫ the hub's own scan, its list (if any) resolved beside the hub bundle
+const PROMPT_IDENTIFIER_SCAN_HUB_OWN = 'fromHub';
+const PROMPT_IDENTIFIER_SCAN_FORM_LIST = Object.freeze([PROMPT_IDENTIFIER_SCAN_FROM_HUB, PROMPT_IDENTIFIER_SCAN_HUB_OWN]);
+// ⟪R3, Q-R6 revised + SCARLET_ARROW ruling on P-c⟫ a new bridge's blinding: { standardBlindingNameList, pairedHubAnchors: 'union' }
+// = the standard's own names, then the sourceAnchorBlindingNameList of EVERY hub the standard pairs with (hub-token order, each
+// name once) — a superset of the recipe's hubs, ruled the safer reading. Existing pairs keep their exact list (the array form).
+const BLINDING_PAIRED_HUB_ANCHOR_MODE_LIST = Object.freeze(['union']);
+const isUnionBlindingOrder = (candidate) => isPlainObject(candidate) && Object.keys(candidate).sort().join(',') === 'pairedHubAnchors,standardBlindingNameList' && BLINDING_PAIRED_HUB_ANCHOR_MODE_LIST.indexOf(candidate.pairedHubAnchors) !== -1 && Array.isArray(candidate.standardBlindingNameList) && candidate.standardBlindingNameList.every(isNonEmptyString);
 const DECLARED_TARGET_RULES_FROM_HUB = 'fromHub';
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
@@ -52,8 +63,8 @@ const isIndexReference = (candidate, memberName) => isPlainObject(candidate) && 
 const KIND_CHECKER_REGISTRY = Object.freeze({
 	retrievalOrNone: (value) => (value === null || (isPlainObject(value) && value.embeddingModelVersion === undefined) ? '' : 'must be null or the pair\'s retrieval settings WITHOUT embeddingModelVersion (the hub declares it)'),
 	nameListOrNone: (value) => (value === null || (isNameList(value) && value.length > 0) ? '' : 'must be null or a non-empty list of field names'),
-	scanFromHubOrNone: (value) => (value === null || value === PROMPT_IDENTIFIER_SCAN_FROM_HUB ? '' : `must be null or '${PROMPT_IDENTIFIER_SCAN_FROM_HUB}'`),
-	blindingOrder: (value) => (Array.isArray(value) && value.every((oneMember) => isNonEmptyString(oneMember) || isIndexReference(oneMember, 'hubAnchor')) ? '' : 'must be a list of names and { hubAnchor: <index> } references'),
+	scanFromHubOrNone: (value) => (value === null || PROMPT_IDENTIFIER_SCAN_FORM_LIST.indexOf(value) !== -1 ? '' : `must be null or one of ${PROMPT_IDENTIFIER_SCAN_FORM_LIST.map((oneForm) => `'${oneForm}'`).join(', ')}`),
+	blindingOrder: (value) => ((Array.isArray(value) && value.every((oneMember) => isNonEmptyString(oneMember) || isIndexReference(oneMember, 'hubAnchor'))) || isUnionBlindingOrder(value) ? '' : `must be a list of names and { hubAnchor: <index> } references, or { standardBlindingNameList: [names], pairedHubAnchors: ${BLINDING_PAIRED_HUB_ANCHOR_MODE_LIST.map((oneMode) => `'${oneMode}'`).join(' | ')} }`),
 	lengthOrNone: (value) => (value === null || (Number.isInteger(value) && value >= 0) ? '' : 'must be null or a non-negative integer'),
 	rulesFromHubOrNone: (value) => (value === null || value === DECLARED_TARGET_RULES_FROM_HUB ? '' : `must be null or '${DECLARED_TARGET_RULES_FROM_HUB}'`),
 	remodelRefOrNone: (value) => (value === null || isIndexReference(value, 'hubRemodelTable') ? '' : 'must be null or { hubRemodelTable: <index> }'),
@@ -95,7 +106,7 @@ const pairRowRefusal = ({ pairRow, whatName }) => {
 	if (badName !== undefined) {
 		return refusal(`${whatName}.${badName} ${KIND_CHECKER_REGISTRY[PAIR_ROW_CONTRACT[badName]](pairRow[badName])}`, 'standardBridgingContract PAIR_ROW_CONTRACT');
 	}
-	const referencesAnchor = pairRow.blindingOrder.some((oneMember) => isPlainObject(oneMember));
+	const referencesAnchor = Array.isArray(pairRow.blindingOrder) && pairRow.blindingOrder.some((oneMember) => isPlainObject(oneMember));
 	if (referencesAnchor !== (pairRow.hubAnchorListLength !== null)) {
 		return refusal(`${whatName}.hubAnchorListLength is ${JSON.stringify(pairRow.hubAnchorListLength)} but blindingOrder ${referencesAnchor ? 'references' : 'references no'} hub anchor`, 'state the hub anchor list length exactly when an anchor is referenced by position');
 	}
@@ -180,6 +191,8 @@ module.exports = {
 	STANDARD_BRIDGING_KEY_LIST,
 	FACET_KEY_LIST,
 	PROMPT_IDENTIFIER_SCAN_FROM_HUB,
+	PROMPT_IDENTIFIER_SCAN_HUB_OWN,
+	isUnionBlindingOrder,
 	DECLARED_TARGET_RULES_FROM_HUB,
 	validateStandardBridging,
 	moduleName,

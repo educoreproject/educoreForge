@@ -49,7 +49,24 @@ const positionalRefusal = ({ whatName, listName, declaredLength, hubList, hubTok
 		? refuse.byName({ moduleName, what: `${whatName} reads the ${hubToken} hub's ${listName} by position, written when it had ${declaredLength} entr(ies); it now has ${hubList.length}`, where: 'a hub edit that changes a list another bridge reads by position must restate that bridge\'s pair row; nothing shifts silently' })
 		: null;
 
-const composeOne = ({ standardBridging, oneFacet, hubToken, pairRow, hubBridging, bridgeHooks }) => {
+// blindingNameListFor — the array form resolves anchors by position (today's exact order); the union form is the standard's names
+// then every paired hub's anchors in hub-token order, each name once (pairedHubBridgingList is already in that order)
+const blindingNameListFor = ({ pairRow, hubBridging, pairedHubBridgingList }) =>
+	standardBridgingContractLib.isUnionBlindingOrder(pairRow.blindingOrder)
+		? pairRow.blindingOrder.standardBlindingNameList.concat(...pairedHubBridgingList.map((onePairedHub) => onePairedHub.sourceAnchorBlindingNameList)).filter((oneName, oneIndex, nameList) => nameList.indexOf(oneName) === oneIndex)
+		: pairRow.blindingOrder.map((oneMember) => (isPlainObject(oneMember) ? hubBridging.sourceAnchorBlindingNameList[oneMember.hubAnchor] : oneMember));
+
+// promptIdentifierScanFor — 'fromHubWithLegacyListPath': the hub's patterns, today's per-plugin list path (digested); 'fromHub': the
+// hub's own scan, its list path made relative to the source bundle so it resolves beside the hub (promptIdentifierScan.js joins
+// forgesDir/<source>/<path>) and stays machine-independent in the digest
+const promptIdentifierScanFor = ({ pairRow, hubBridging, bridgeNameStem, hubToken }) => ({
+	identifierPatternList: hubBridging.promptIdentifierScan.identifierPatternList.map((onePattern) => ({ ...onePattern })),
+	identifierListPath: pairRow.promptIdentifierScan === standardBridgingContractLib.PROMPT_IDENTIFIER_SCAN_HUB_OWN
+		? (hubBridging.promptIdentifierScan.identifierListPath === null ? null : `../${hubToken}/${hubBridging.promptIdentifierScan.identifierListPath}`)
+		: legacyIdentifierListPathFor({ bridgeNameStem, hubToken }),
+});
+
+const composeOne = ({ standardBridging, oneFacet, hubToken, pairRow, hubBridging, pairedHubBridgingList, bridgeHooks }) => {
 	const whatName = `${standardBridging.standardKey} facet '${oneFacet.facetName}' → ${hubToken}`;
 	const template = oneFacet.declarationTemplate;
 	const bridgeName = derivedBridgeNameFor({ bridgeNameStem: standardBridging.bridgeNameStem, facetName: oneFacet.facetName, hubToken, matchBasis: template.matchBasis });
@@ -60,7 +77,7 @@ const composeOne = ({ standardBridging, oneFacet, hubToken, pairRow, hubBridging
 	if (anchorLengthError) {
 		return { error: anchorLengthError };
 	}
-	const outOfRangeAnchor = pairRow.blindingOrder.find((oneMember) => isPlainObject(oneMember) && hubBridging.sourceAnchorBlindingNameList[oneMember.hubAnchor] === undefined);
+	const outOfRangeAnchor = !Array.isArray(pairRow.blindingOrder) ? undefined : pairRow.blindingOrder.find((oneMember) => isPlainObject(oneMember) && hubBridging.sourceAnchorBlindingNameList[oneMember.hubAnchor] === undefined);
 	if (outOfRangeAnchor !== undefined) {
 		return { error: refuse.byName({ moduleName, what: `${whatName}: blindingOrder references hub anchor ${outOfRangeAnchor.hubAnchor}, outside the ${hubToken} hub's ${hubBridging.sourceAnchorBlindingNameList.length} anchor name(s)`, where: 'a positional reference names an entry the hub declares' }) };
 	}
@@ -74,13 +91,13 @@ const composeOne = ({ standardBridging, oneFacet, hubToken, pairRow, hubBridging
 	const bridgeDeclaration = {
 		...template,
 		bridgeName,
-		blindingDeclaration: pairRow.blindingOrder.map((oneMember) => (isPlainObject(oneMember) ? hubBridging.sourceAnchorBlindingNameList[oneMember.hubAnchor] : oneMember)),
+		blindingDeclaration: blindingNameListFor({ pairRow, hubBridging, pairedHubBridgingList }),
 		remodelTableRef: pairRow.remodelTableRef === null ? null : hubBridging.remodelTableRefList[pairRow.remodelTableRef.hubRemodelTable],
 		...(oneFacet.subjectRenderingAllowList === null ? {} : { renderingAllowList: { subject: oneFacet.subjectRenderingAllowList.slice(), candidate: (pairRow.candidateRenderingAllowList === null ? hubBridging.candidateRenderingAllowList : pairRow.candidateRenderingAllowList).slice() } }),
 		...(pairRow.candidateRetrieval === null ? {} : { candidateRetrieval: { ...pairRow.candidateRetrieval, embeddingModelVersion: hubBridging.embeddingModelVersion } }),
 		...(pairRow.promptIdentifierScan === null
 			? {}
-			: { promptIdentifierScan: { identifierPatternList: hubBridging.promptIdentifierScan.identifierPatternList.map((onePattern) => ({ ...onePattern })), identifierListPath: legacyIdentifierListPathFor({ bridgeNameStem: standardBridging.bridgeNameStem, hubToken }) } }),
+			: { promptIdentifierScan: promptIdentifierScanFor({ pairRow, hubBridging, bridgeNameStem: standardBridging.bridgeNameStem, hubToken }) }),
 		...(pairRow.declaredTargetRuleList === null ? {} : { declaredTargetRuleList: hubBridging.declaredTargetRuleList.map((oneRule) => ({ ...oneRule })) }),
 	};
 	return { pluginModule: { bridgeDeclaration, bridgeHooks, bridgeTarget: { targetHub: hubToken } } };
@@ -91,6 +108,13 @@ const composePluginModuleList = ({ standardBridging, bridgeHooksByFacetName, hub
 	if (contractError) {
 		return { error: contractError };
 	}
+	// every hub the standard pairs with, across its facets, in hub-token order: the union blinding form reads all of them
+	const pairedHubTokenList = Array.from(new Set([].concat(...standardBridging.facetList.map((oneFacet) => Object.keys(oneFacet.pairByHubToken))))).sort();
+	const unloadedHubToken = pairedHubTokenList.find((hubToken) => hubBridgingByToken[hubToken] === undefined);
+	if (unloadedHubToken !== undefined) {
+		return { error: refuse.byName({ moduleName, what: `${standardBridging.standardKey} pairs with hub '${unloadedHubToken}', whose bridging declaration was not loaded`, where: 'the registry loads every paired hub\'s declaration (hubBridgingLoader) before composing' }) };
+	}
+	const pairedHubBridgingList = pairedHubTokenList.map((hubToken) => hubBridgingByToken[hubToken]);
 	const pluginModuleList = [];
 	for (let facetIndex = 0; facetIndex < standardBridging.facetList.length; facetIndex++) {
 		const oneFacet = standardBridging.facetList[facetIndex];
@@ -101,7 +125,7 @@ const composePluginModuleList = ({ standardBridging, bridgeHooksByFacetName, hub
 			if (hubBridging === undefined) {
 				return { error: refuse.byName({ moduleName, what: `${standardBridging.standardKey} facet '${oneFacet.facetName}' pairs with hub '${hubToken}', whose bridging declaration was not loaded`, where: 'the registry loads every paired hub\'s declaration (hubBridgingLoader) before composing' }) };
 			}
-			const composed = composeOne({ standardBridging, oneFacet, hubToken, pairRow: oneFacet.pairByHubToken[hubToken], hubBridging, bridgeHooks: bridgeHooksByFacetName[oneFacet.facetName] });
+			const composed = composeOne({ standardBridging, oneFacet, hubToken, pairRow: oneFacet.pairByHubToken[hubToken], hubBridging, pairedHubBridgingList, bridgeHooks: bridgeHooksByFacetName[oneFacet.facetName] });
 			if (composed.error) {
 				return { error: composed.error };
 			}

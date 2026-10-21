@@ -115,10 +115,44 @@ const registerStructuralProducer = ({ producerModule, producerFilePath, bundleDi
 // pluginModuleTransform (optional, a TEST SEAM like requireModule): applied to every plugin module — a plugin file's or a
 // composed one — just before registration, so a suite can lay a declaration edit over a COMPOSED bridge as it always could over
 // a plugin file. Absent, each module is registered as loaded or composed.
-const buildRegistryFromDirectory = ({ forgesDirPath, requireModule, pluginModuleTransform } = {}) => {
+// bridgingOverlayDirPath (optional, a TEST/SCRATCH SEAM — ⟪R3 P-c, SCARLET_ARROW ruling⟫): an absolute directory mirroring
+// <bundle>/bridges/<file>.js; each file there REPLACES the tree's standard bridging file of the same path for this registry only
+// (a debug run of a pairing nobody has shipped). An overlay file with no tree counterpart, or whose counterpart is not a standard
+// bridging file, is refused by name; the overlay never adds or removes a file. Absent, the tree is read as it stands.
+const overlaidFilePathByTreePathFor = ({ forgesDirPath, bridgingOverlayDirPath }) => {
+	if (bridgingOverlayDirPath === undefined) {
+		return {};
+	}
+	if (typeof bridgingOverlayDirPath !== 'string' || !path.isAbsolute(bridgingOverlayDirPath) || !fs.existsSync(bridgingOverlayDirPath) || !fs.statSync(bridgingOverlayDirPath).isDirectory()) {
+		throw refuse.byName({ moduleName, what: `bridgingOverlayDirPath ${JSON.stringify(bridgingOverlayDirPath)} is not an absolute directory`, where: 'the overlay mirrors <bundle>/bridges/<file>.js' });
+	}
+	const overlaidFilePathByTreePath = {};
+	fs.readdirSync(bridgingOverlayDirPath, { withFileTypes: true }).filter((oneEntry) => oneEntry.isDirectory()).map((oneEntry) => oneEntry.name).sort().forEach((oneBundleName) => {
+		const overlayBridgesDirPath = path.join(bridgingOverlayDirPath, oneBundleName, BRIDGES_DIR_NAME);
+		const overlayFileNameList = fs.existsSync(overlayBridgesDirPath) ? fs.readdirSync(overlayBridgesDirPath).filter((oneName) => /\.js$/.test(oneName)).sort() : [];
+		if (overlayFileNameList.length === 0) {
+			throw refuse.byName({ moduleName, what: `overlay bundle ${oneBundleName} holds no ${BRIDGES_DIR_NAME}/*.js`, where: 'the overlay mirrors <bundle>/bridges/<file>.js' });
+		}
+		overlayFileNameList.forEach((oneFileName) => {
+			const treeFilePath = path.join(forgesDirPath, oneBundleName, BRIDGES_DIR_NAME, oneFileName);
+			const overlayFilePath = path.join(overlayBridgesDirPath, oneFileName);
+			if (!fs.existsSync(treeFilePath)) {
+				throw refuse.byName({ moduleName, what: `overlay file ${overlayFilePath} has no tree counterpart ${treeFilePath}`, where: 'an overlay replaces a standard bridging file; it never adds one' });
+			}
+			if (!Object.prototype.hasOwnProperty.call(require(treeFilePath), STANDARD_BRIDGING_EXPORT_NAME)) {
+				throw refuse.byName({ moduleName, what: `overlay file ${overlayFilePath} replaces ${treeFilePath}, which is not a standard bridging file`, where: 'only a standard bridging file may be overlaid' });
+			}
+			overlaidFilePathByTreePath[treeFilePath] = overlayFilePath;
+		});
+	});
+	return overlaidFilePathByTreePath;
+};
+
+const buildRegistryFromDirectory = ({ forgesDirPath, requireModule, pluginModuleTransform, bridgingOverlayDirPath } = {}) => {
 	if (typeof forgesDirPath !== 'string' || !fs.existsSync(forgesDirPath) || !fs.statSync(forgesDirPath).isDirectory()) {
 		throw refuse.byName({ moduleName, what: `forgesDirPath ${JSON.stringify(forgesDirPath)} is not a directory`, where: 'the seam face passes the tree\'s forges/ directory' });
 	}
+	const overlaidFilePathByTreePath = overlaidFilePathByTreePathFor({ forgesDirPath, bridgingOverlayDirPath });
 	const loadModule = typeof requireModule === 'function' ? requireModule : (oneFilePath) => require(oneFilePath);
 	if (pluginModuleTransform !== undefined && typeof pluginModuleTransform !== 'function') {
 		throw refuse.byName({ moduleName, what: `pluginModuleTransform is a ${typeof pluginModuleTransform}, not a function`, where: 'the optional test seam that lays an edit over each plugin module before registration' });
@@ -177,7 +211,8 @@ const buildRegistryFromDirectory = ({ forgesDirPath, requireModule, pluginModule
 			.map((oneEntry) => oneEntry.name)
 			.sort();
 		fileNameList.forEach((oneFileName) => {
-			const pluginFilePath = path.join(bridgesDirPath, oneFileName);
+			const treeFilePath = path.join(bridgesDirPath, oneFileName);
+			const pluginFilePath = overlaidFilePathByTreePath[treeFilePath] === undefined ? treeFilePath : overlaidFilePathByTreePath[treeFilePath];
 			pluginFilePathList.push(pluginFilePath);
 			// the forbidden-substrate scan runs on the FILE TEXT before the file is loaded: a plugin that requires a
 			// driver is refused by name, never executed (its require would otherwise run — or throw for its own reason)

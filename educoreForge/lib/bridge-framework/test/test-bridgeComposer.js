@@ -15,6 +15,10 @@
 //       composed key; a facet without hooks; an unknown pair key; a pair whose hub was not loaded
 //   (d) derived strings: the bridgeName rule reproduces every registered composed name; the legacy id-list path rule too
 //   (e) the composer and its contract name no hub
+//   (g) a bridge created AFTER the refactor (Q-R6 revised, SCARLET_ARROW): blinding is the UNION over every hub the standard
+//       pairs with (superset, ruled), and the identifier scan is the pair hub's own ('fromHub', its list resolved beside the hub)
+//   (h) the P-c overlay seam (bridgingOverlayDirPath, test/scratch only): the fixture lays edfi→ctdl over the tree; it composes
+//       with the union blinding and the CTDL hub's own scan; every shipped bridge is unchanged beside it; refusals by name
 //   (f) never-rendered names: RENDERING_NEVER_NAME_LIST names no hub's identifier properties; they reach each bridge through its
 //       composed blindingDeclaration, and BOTH nets (the declaration contract, the renderer) refuse an allow-listed blinded name
 
@@ -138,6 +142,50 @@ composedEntryList.forEach((oneEntry) => {
 
 harness.section('(e) no hub literal');
 harness.equal('the composer and its contract name no hub', [require.resolve('../bridgeComposer'), require.resolve('../standardBridgingContract')].filter((filePath) => /ceds|ctdl/i.test(fs.readFileSync(filePath, 'utf8'))).map((filePath) => path.basename(filePath)).join(','), '');
+
+harness.section('(g) new-bridge forms: union blinding over the paired hubs, the hub\'s own identifier scan');
+const toyHubyBridging = { ...toyHubBridging, hubToken: 'huby', sourceAnchorBlindingNameList: ['hubyId', 'hubxCode'], promptIdentifierScan: { identifierPatternList: [{ patternName: 'hubyCurie', regexSource: 'hy:[a-z]+' }], identifierListPath: 'lib/hubyIdList.json' }, remodelTableRefList: [] };
+const unionPairRow = { candidateRetrieval: { method: 'cosineTopK-v1', k: 5, floor: 0.3 }, candidateRenderingAllowList: null, promptIdentifierScan: 'fromHub', blindingOrder: { standardBlindingNameList: ['crossRefs'], pairedHubAnchors: 'union' }, hubAnchorListLength: null, declaredTargetRuleList: null, remodelTableRef: null, hubRemodelTableListLength: null };
+const twoHubStandardBridging = { standardKey: 'toy', bridgeNameStem: 'toy', facetList: [{ facetName: '', declarationTemplate: { standardKey: 'toy', matchBasis: 'derived' }, subjectRenderingAllowList: ['name'], pairByHubToken: { hubx: toyPairRow(), huby: unionPairRow } }] };
+const composedTwoHub = composerLib.composePluginModuleList({ standardBridging: twoHubStandardBridging, bridgeHooksByFacetName: { '': {} }, hubBridgingByToken: { hubx: toyHubBridging, huby: toyHubyBridging }, bundleDirName: 'toy' });
+harness.ok('a standard pairing two hubs, one by the union form, composes', composedTwoHub.error === undefined, composedTwoHub.error && composedTwoHub.error.message);
+const hubyDeclaration = ((composedTwoHub.pluginModuleList || []).find((oneModule) => oneModule.bridgeTarget.targetHub === 'huby') || { bridgeDeclaration: {} }).bridgeDeclaration;
+harness.equal('union blinding: the standard\'s names, then every paired hub\'s anchors in hub-token order, each once', JSON.stringify(hubyDeclaration.blindingDeclaration), JSON.stringify(['crossRefs', 'hubxId', 'hubxCode', 'hubyId']));
+harness.equal('the legacy pair beside it keeps its exact list', JSON.stringify(((composedTwoHub.pluginModuleList || []).find((oneModule) => oneModule.bridgeTarget.targetHub === 'hubx') || { bridgeDeclaration: {} }).bridgeDeclaration.blindingDeclaration), JSON.stringify(['hubxId', 'crossRefs', 'hubxCode']));
+harness.equal('fromHub: the pair hub\'s own patterns', JSON.stringify((hubyDeclaration.promptIdentifierScan || {}).identifierPatternList), JSON.stringify(toyHubyBridging.promptIdentifierScan.identifierPatternList));
+harness.equal('fromHub: the hub\'s list, resolved beside the hub bundle (no per-plugin list file)', (hubyDeclaration.promptIdentifierScan || {}).identifierListPath, '../huby/lib/hubyIdList.json');
+const noListComposed = composerLib.composePluginModuleList({ standardBridging: twoHubStandardBridging, bridgeHooksByFacetName: { '': {} }, hubBridgingByToken: { hubx: toyHubBridging, huby: { ...toyHubyBridging, promptIdentifierScan: { identifierPatternList: [], identifierListPath: null } } }, bundleDirName: 'toy' });
+harness.equal('fromHub: a hub declaring no list gives none', ((noListComposed.pluginModuleList || []).find((oneModule) => oneModule.bridgeTarget.targetHub === 'huby') || { bridgeDeclaration: { promptIdentifierScan: {} } }).bridgeDeclaration.promptIdentifierScan.identifierListPath, null);
+const unionWithLength = composerLib.composePluginModuleList({ standardBridging: { ...twoHubStandardBridging, facetList: [{ ...twoHubStandardBridging.facetList[0], pairByHubToken: { huby: { ...unionPairRow, hubAnchorListLength: 2 } } }] }, bridgeHooksByFacetName: { '': {} }, hubBridgingByToken: { huby: toyHubyBridging }, bundleDirName: 'toy' });
+harness.match('the union form with a positional length stated is refused', String((unionWithLength.error || {}).message), /hubAnchorListLength is 2 but blindingOrder references no hub anchor/);
+const badUnion = composerLib.composePluginModuleList({ standardBridging: { ...twoHubStandardBridging, facetList: [{ ...twoHubStandardBridging.facetList[0], pairByHubToken: { huby: { ...unionPairRow, blindingOrder: { standardBlindingNameList: ['crossRefs'], pairedHubAnchors: 'some' } } } }] }, bridgeHooksByFacetName: { '': {} }, hubBridgingByToken: { huby: toyHubyBridging }, bundleDirName: 'toy' });
+harness.match('an unknown union mode is refused by name', String((badUnion.error || {}).message), /blindingOrder must be/);
+
+harness.section('(h) the P-c overlay: a pairing nobody shipped, laid over the tree for a debug run');
+const PC_OVERLAY_DIR_PATH = path.join(TREE_ROOT, 'apps', 'graph-builder', 'test', 'fixtures', 'deCedsPcOverlay');
+const overlaidRegistry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: FORGES_DIR_PATH, bridgingOverlayDirPath: PC_OVERLAY_DIR_PATH });
+const pcEntry = overlaidRegistry.entryByBridgeName.edfiCtdlDerivedPlugin;
+harness.ok('the overlay registers edfiCtdlDerivedPlugin, targeting ctdl', pcEntry !== undefined && pcEntry.targetHub === 'ctdl');
+harness.equal('the shipped registry does NOT have it', registry.entryByBridgeName.edfiCtdlDerivedPlugin, undefined);
+const cedsAnchorList = hubBridgingLoaderLib.loadHubBridging({ forgesDirPath: FORGES_DIR_PATH, hubToken: 'ceds' }).hubBridging.sourceAnchorBlindingNameList;
+const ctdlAnchorList = hubBridgingLoaderLib.loadHubBridging({ forgesDirPath: FORGES_DIR_PATH, hubToken: 'ctdl' }).hubBridging.sourceAnchorBlindingNameList;
+harness.equal('its blinding is the union: crossRefs, then every hub edfi pairs with (ceds, ctdl)', JSON.stringify(pcEntry && pcEntry.bridgeDeclaration.blindingDeclaration), JSON.stringify(['crossRefs'].concat(cedsAnchorList, ctdlAnchorList)));
+harness.equal('its identifier scan is the CTDL hub\'s own', JSON.stringify(pcEntry && pcEntry.bridgeDeclaration.promptIdentifierScan), JSON.stringify({ identifierPatternList: hubBridgingLoaderLib.loadHubBridging({ forgesDirPath: FORGES_DIR_PATH, hubToken: 'ctdl' }).hubBridging.promptIdentifierScan.identifierPatternList, identifierListPath: null }));
+harness.equal('every shipped bridge is byte-identical beside it (the overlay copy keeps edfi→ceds exact)', Object.keys(registry.entryByBridgeName).filter((bridgeName) => overlaidRegistry.entryByBridgeName[bridgeName] === undefined || overlaidRegistry.entryByBridgeName[bridgeName].declarationCanonicalText !== registry.entryByBridgeName[bridgeName].declarationCanonicalText).join(','), '');
+const overlayRefusalFor = (bridgingOverlayDirPath) => {
+	try {
+		pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: FORGES_DIR_PATH, bridgingOverlayDirPath });
+		return '';
+	} catch (registryError) {
+		return registryError.message;
+	}
+};
+harness.match('a relative overlay directory is refused', overlayRefusalFor('apps/graph-builder/test/fixtures/deCedsPcOverlay'), /is not an absolute directory/);
+const strayOverlayDirPath = fs.mkdtempSync(path.join(require('os').tmpdir(), 'pcOverlay-'));
+fs.mkdirSync(path.join(strayOverlayDirPath, 'edfi', 'bridges'), { recursive: true });
+fs.writeFileSync(path.join(strayOverlayDirPath, 'edfi', 'bridges', 'edfiExtraBridging.js'), "module.exports = {};\n");
+harness.match('an overlay file with no tree counterpart is refused (an overlay never adds a file)', overlayRefusalFor(strayOverlayDirPath), /has no tree counterpart/);
+fs.rmSync(strayOverlayDirPath, { recursive: true, force: true });
 
 harness.section('(f) a hub\'s identifier names are never rendered, supplied through the composer');
 const bridgePluginContractLib = require('../bridgePluginContract');
