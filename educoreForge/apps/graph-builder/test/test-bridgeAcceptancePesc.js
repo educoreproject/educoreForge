@@ -948,7 +948,7 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // judgeOne) and judgeComponent.js (per-attempt spend records, the cache sidecar's filling spend); tests test-bgSpend.js and
 // testSupport/capturedSpendLedgerDelta.js (new), toyBridgeScenario.js, test-bgFanoutConsumers.js, test-bgJudgeConfig.js, test-bgJudgePredicate.js,
 // and test-bgNosub.js (its re-anchors, this commit). No vocabulary change; no PESC plugin edit.
-const P1_BASELINE_COMMIT = 'postSpendLedgerR1OnMainPescCompose-102126'; // re-anchored by VELVET_CHORUS (spend ledger lane R1, after R0; census REANCHOR-CENSUS-R1-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
+const P1_BASELINE_COMMIT = 'postHubNeutralR2PescCompose-102126'; // re-anchored by SCARLET_STREAM (hub-neutral lane R2, after R1 on main; census REANCHOR-CENSUS-R2-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
