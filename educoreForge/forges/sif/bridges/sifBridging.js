@@ -51,8 +51,11 @@ const CHANNEL_CEDS_ID = 'cedsIdColumn';
 const NODE_PROPERTY = Object.freeze({ cedsId: 'cedsId', crossRefs: 'crossRefs' });
 const ABSENT_ANCHOR_SENTINEL = '';
 
-const bridgeDeclaration = Object.freeze({
-	bridgeName: 'sifCedsStandardPlugin',
+// ⟪hub-neutral bridge lane R3, 2026-10-21⟫ MIGRATED from sifCedsStandardPlugin.js: this file now declares the STANDARD half of the
+// bridge; the hub half comes from the hub's own bridging declaration (forges/<hub>/lib/<hub>HubBridging.js) and the two compose
+// (lib/bridge-framework/bridgeComposer.js) into the SAME declaration, digest for digest (test-bridgeComposer (a), P-a1).
+
+const declarationTemplate = Object.freeze({
 	standardKey: 'sif',
 	pluginVersion: '1.0.0',
 	producerKind: 'authored',
@@ -116,18 +119,41 @@ const bridgeDeclaration = Object.freeze({
 	evidenceColumnMap: { subject: ['description', 'xpath', 'characteristics'], assertion: [] },
 	consistencyCheckColumnList: [], // the standard supplies ONLY the join key — nothing to cross-check it against
 	segmentNormalisationRuleList: [], // no path to normalise: subject identity is the node
-	remodelTableRef: 'ceds14PropertyRemodel', // the HUB-owned table, by REFERENCE (RULING P11) — 34 SIF elements reach it
 	classSideRemodelTable: [], // BR-036 SHOULD; empty in v1, as for Ed-Fi
-	// the five specification-declared mapping properties of the source's nodes (BR-090). SIF stamps the first
-	// three ([code fact] forgeSif.js:120, 355, 442) and stamps NEITHER option-value name — SPEC §11's citation of
-	// forgeSif.js:81 for those two is a spec error, verified and reported to the supervisor 2026-08-17, ruled:
-	// declare all five anyway. Blinding a property no node carries is a no-op, and the five stay uniform across
-	// both plugins so the blinding list reads as one contract rather than two dialects.
-	blindingDeclaration: ['cedsId', 'crossRefs', 'cedsOriginalAnchorPropertyName', 'cedsOptionCode', 'cedsOptionOriginalAnchorPropertyName'],
 	evidenceHooksDeclared: { nominate: false, walkEvidence: false, globalGuidance: false },
 	// globalGuidanceList is ABSENT because globalGuidance is false (RULING BR4: REQUIRED iff the hook is true,
 	// FORBIDDEN otherwise) — the same conditional the Ed-Fi plugin satisfies by omission
 	compatibilityDeclarationList: [],
+});
+
+const standardBridging = Object.freeze({
+	standardKey: 'sif',
+	bridgeNameStem: 'sif',
+	facetList: [
+		{
+			facetName: '',
+			declarationTemplate,
+			// (was on blindingDeclaration)
+			// the five specification-declared mapping properties of the source's nodes (BR-090). SIF stamps the first
+			// three ([code fact] forgeSif.js:120, 355, 442) and stamps NEITHER option-value name — SPEC §11's citation of
+			// forgeSif.js:81 for those two is a spec error, verified and reported to the supervisor 2026-08-17, ruled:
+			// declare all five anyway. Blinding a property no node carries is a no-op, and the five stay uniform across
+			// both plugins so the blinding list reads as one contract rather than two dialects.
+			subjectRenderingAllowList: null,
+			pairByHubToken: {
+				ceds: {
+					candidateRetrieval: null,
+					candidateRenderingAllowList: null,
+					promptIdentifierScan: null,
+					blindingOrder: [{ hubAnchor: 0 }, 'crossRefs', { hubAnchor: 1 }, { hubAnchor: 2 }, { hubAnchor: 3 }],
+					hubAnchorListLength: 4,
+					declaredTargetRuleList: null,
+					remodelTableRef: { hubRemodelTable: 0 },
+					hubRemodelTableListLength: 1,
+				},
+			},
+		},
+	],
 });
 
 // ---------------------------------------------------------------------
@@ -239,8 +265,6 @@ const subjectStableIdFor = ({ subjectIdentityList, sourceReader, xLog }, callbac
 
 const bridgeHooks = { walkSourceAssertions, subjectStableIdFor };
 
-// ⟪ctdlHub P5; SCARLET_ARROW ruling A⟫ the hub this plugin maps toward, a SIBLING export: bridgeDeclaration is content-addressed
-// into every decision block, so the target is kept out of it; build.js checks it against the recipe pairing's hub
-const bridgeTarget = { targetHub: 'ceds' };
+const bridgeHooksByFacetName = { '': bridgeHooks };
 
-module.exports = { bridgeDeclaration, bridgeHooks, bridgeTarget };
+module.exports = { standardBridging, bridgeHooksByFacetName };
