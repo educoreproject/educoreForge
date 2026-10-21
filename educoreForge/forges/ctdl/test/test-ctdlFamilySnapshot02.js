@@ -102,7 +102,7 @@ const descriptorValueOf = (bundleDirPath, valueName) => {
 	return valueMatch ? valueMatch[1].trim() : null;
 };
 const crossRefListOf = (forgeResult) => forgeResult.nodes.flatMap((oneNode) => JSON.parse(oneNode.properties.crossRefs));
-const withoutOneEdge = (forgeResult, expected) => ({ ...forgeResult, edges: forgeResult.edges.filter((oneEdge) => oneEdge !== forgeResult.edges.find((candidate) => candidate.type === expected.twinEdgeType && candidate.role !== 'DmeStandardRoot' && !/:root$/.test(candidate.fromRef.id))) });
+const withoutOneEdge = (forgeResult, expected) => ({ ...forgeResult, edges: forgeResult.edges.filter((oneEdge) => oneEdge !== forgeResult.edges.find((candidate) => candidate.type === expected.twinEdgeType && !/:root$/.test(candidate.fromRef.id))) });
 // the dropped crossRef is one no other property also carries (a datatype range is held twice: crossRefs and rangeDatatypeList)
 const withoutOneCrossRef = (forgeResult) => {
 	const nodeList = forgeResult.nodes.map((oneNode) => ({ ...oneNode, properties: { ...oneNode.properties } }));
