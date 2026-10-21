@@ -221,7 +221,7 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 //                                                                   only its own hub's cards in a multi-hub graph
 // forger.js, shape-forged-graph.js, replay-engine.js, replay-block.js, replayManager.js and round-trip-stage.js: UNTOUCHED. THE SEAM
 // FILE LIST IS UNCHANGED, no exclusion added; the red was observed at 1904fa96 in the full suite (DEVLOG-P5 checkpoint 5).
-const PRE_MIGRATION_REF = 'postCtdlP5GSeamUntouched-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P5); the tag is cut ON this commit
+const PRE_MIGRATION_REF = 'postCtdlP6GSeamUntouched-102126'; // re-anchored by STERLING_PORTAL (ctdlHub P6; census REANCHOR-CENSUS-P6-102126.md; GO SCARLET_ARROW 32dd4c0a); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

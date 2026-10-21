@@ -941,7 +941,7 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ═══ RE-ANCHOR (2), 2026-10-21 (INDIGO_LOOM; ctdlHub-101926 P5) ═══ postCtdlP5PescCompose-102026 -> postCtdlP5PescComposeB-102026, tag
 // cut ON this commit. CENSUS (diffed path list, numstat from the old tag): lib/bridge-framework/test/test-bgNosub.js ONLY, its (iii)
 // re-anchor (the constant and its comment), forced by G-SEAM-UNTOUCHED's re-anchor 79e7c6fa. No framework source moved.
-const P1_BASELINE_COMMIT = 'postCtdlP5PescComposeB-102026'; // re-anchored by INDIGO_LOOM (ctdlHub P5, second); the tag is cut ON this commit
+const P1_BASELINE_COMMIT = 'postCtdlP6PescCompose-102126'; // re-anchored by STERLING_PORTAL (ctdlHub P6; census REANCHOR-CENSUS-P6-102126.md; GO SCARLET_ARROW 32dd4c0a); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
