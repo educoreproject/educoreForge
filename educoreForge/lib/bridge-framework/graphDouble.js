@@ -113,6 +113,33 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			}
 			callback('', shaped.cardList);
 		};
+		// ⟪ctdlHub P6⟫ the bolt readHubTermCards: the term tier of the ONE hub, shaped by the SAME boundary
+		const readHubTermCards = (callback) => {
+			const shaped = graphSeamRulesLib.shapeHubTermCardList({ rawRecordList: rawNodeRecordList().filter((oneRecord) => isTargetHubCard(oneRecord, graphSeamRulesLib.TERM_REFERENCE_TIER)) });
+			if (shaped.error) {
+				callback(shaped.error.message);
+				return;
+			}
+			callback('', shaped.cardList);
+		};
+		// ⟪ctdlHub P6⟫ the bolt readTargetStandardRecords: _source EXACTLY the hub's standard, hub layer and text nodes excluded,
+		// no vector; the named edges among them, ordered (fromStableId, type, toStableId) as the bolt query orders them
+		const readTargetStandardRecords = ({ edgeTypeList } = {}, callback) => {
+			if (!Array.isArray(edgeTypeList)) {
+				callback(`${moduleName}: readTargetStandardRecords edgeTypeList ${JSON.stringify(edgeTypeList)} is not a list ([] for none); there is no default`);
+				return;
+			}
+			const recordList = rawNodeRecordList()
+				.filter((oneRecord) => cypherEquals(oneRecord.properties._source, hubName) && oneRecord.properties.role !== textSearchVocabulary.embedTextRole && !isHubLayerRecord(oneRecord))
+				.map(graphSeamRulesLib.withoutEmbedding)
+				.sort((leftRecord, rightRecord) => compareStrings(leftRecord.stableId, rightRecord.stableId));
+			const targetStableIdSet = new Set(recordList.map((oneRecord) => oneRecord.stableId));
+			const edgeList = state.edgeList
+				.filter((oneEdge) => targetStableIdSet.has(oneEdge.fromStableId) && targetStableIdSet.has(oneEdge.toStableId) && edgeTypeList.indexOf(oneEdge.type) !== -1)
+				.map((oneEdge) => ({ fromStableId: oneEdge.fromStableId, toStableId: oneEdge.toStableId, type: oneEdge.type }))
+				.sort((leftEdge, rightEdge) => compareStrings(leftEdge.fromStableId, rightEdge.fromStableId) || compareStrings(leftEdge.type, rightEdge.type) || compareStrings(leftEdge.toStableId, rightEdge.toStableId));
+			callback('', { recordList, edgeList });
+		};
 		// sourceRecordList — the bolt readSourceRecords: _source EXACTLY the source standard, text nodes excluded BY ROLE
 		// (R-BR-2). A node with no role is kept, as `n.role IS NULL OR n.role <> $embedTextRole` keeps it. Every view's
 		// among-source edge read filters on this set, so an edge touching a text node is excluded at both ends too.
@@ -228,7 +255,7 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			state.readerCloseCount += 1;
 			callback('');
 		};
-		return graphSeamRulesLib.closedReader({ readHubCards, readSubjectNodes, forWalk, forEvidence, forRetrieval, close });
+		return graphSeamRulesLib.closedReader({ readHubCards, readSubjectNodes, forWalk, forEvidence, forRetrieval, close, readHubTermCards, readTargetStandardRecords });
 	};
 
 	const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) => {
@@ -288,6 +315,49 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 			state.loadedEdgeList.push({ type: edgeType, fromRef: { id: subjectStableId }, toRef: { id: objectStableId }, properties: { ...edgeProperties } });
 			callback('', { edgeWritten: true });
 		};
+		// ⟪ctdlHub P6⟫ the double of writeDeclaredCorrespondenceEdge: the SAME closed rule with the endpoints read from the double,
+		// the same identity-hostile refusal, the same stamping and full-identity merge as writeMappingEdge above
+		const writeDeclaredCorrespondenceEdge = ({ subjectStableId, objectStableId, objectStandardName, edgeType, edgeProperties } = {}, callback) => {
+			const byStableId = nodeByStableId();
+			const subjectNode = byStableId[subjectStableId];
+			const objectNode = byStableId[objectStableId];
+			const refusal = graphSeamRulesLib.declaredCorrespondenceEdgeRefusal({
+				subjectStableId,
+				objectStableId,
+				objectStandardName,
+				edgeType,
+				edgeProperties,
+				sourceStandardName,
+				subjectEndpoint: subjectNode === undefined ? null : { sourceStandardName: subjectNode.properties._source },
+				objectEndpoint: objectNode === undefined ? null : { labels: objectNode.labels, sourceStandardName: objectNode.properties._source },
+			});
+			if (refusal) {
+				callback(refusal.message);
+				return;
+			}
+			const hostileNameList = Object.keys(edgeProperties || {}).filter((oneName) => identityHostileValue(edgeProperties[oneName]));
+			if (hostileNameList.length > 0) {
+				callback(`${moduleName} REFUSED: edge ${edgeType} ${subjectStableId} -> ${objectStableId} carries identity-hostile propert(ies): ${hostileNameList.join(', ')}. Nothing written.`);
+				return;
+			}
+			const declaredEndpointList = [subjectNode, objectNode];
+			declaredEndpointList.forEach((oneNode) => {
+				if (oneNode.labels.indexOf(applyLabel) === -1) {
+					oneNode.labels.push(applyLabel);
+				}
+				state.labelStampList.push({ stableId: oneNode.stableId, applyLabel });
+			});
+			const identityOf = (oneEdgeShape) => edgeConservationIdentityFor({ type: oneEdgeShape.type, fromRef: { id: oneEdgeShape.fromStableId }, toRef: { id: oneEdgeShape.toStableId }, properties: oneEdgeShape.properties });
+			const incomingShape = { fromStableId: subjectStableId, toStableId: objectStableId, type: edgeType, properties: { ...edgeProperties } };
+			if (state.edgeList.find((oneEdge) => identityOf(oneEdge) === identityOf(incomingShape)) === undefined) {
+				state.edgeList.push(incomingShape);
+			}
+			state.writtenEdgeList.push({ fromStableId: subjectStableId, toStableId: objectStableId, type: edgeType, properties: { ...edgeProperties }, applyLabel });
+			state.loadedNodeStableIdSet.add(subjectStableId);
+			state.loadedNodeStableIdSet.add(objectStableId);
+			state.loadedEdgeList.push({ type: edgeType, fromRef: { id: subjectStableId }, toRef: { id: objectStableId }, properties: { ...edgeProperties } });
+			callback('', { edgeWritten: true });
+		};
 		const close = (callback) => {
 			state.writerCloseCount += 1;
 			// ⟪JOB 5b⟫ same contract as the bolt writer: the loaded summary rides out on close's second
@@ -310,7 +380,7 @@ const graphDoubleFrom = ({ nodeList, edgeList } = {}) => {
 				}),
 			});
 		};
-		return graphSeamRulesLib.closedWriter({ writeMappingEdge, close });
+		return graphSeamRulesLib.closedWriter({ writeMappingEdge, close, writeDeclaredCorrespondenceEdge });
 	};
 
 	// harvestByLabel — the replay-engine harvest MATCH (a:L)-[r]->(b:L): every edge whose BOTH endpoints carry the label,

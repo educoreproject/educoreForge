@@ -74,6 +74,7 @@ const judgeConfigRecordLib = require('./judgeConfigRecord');
 const judgmentPartitionLib = require('./judgmentPartition');
 const materialisationFanoutLib = require('./materialisationFanout');
 const owningConstructDefinitionLib = require('./owningConstructDefinition');
+const declaredTargetResolutionLib = require('./declaredTargetResolution');
 const { judgeClientBoundToChoiceQuestionForm } = require('./judgeClientForChoiceQuestionForm');
 
 const { RELATIONSHIP_PRODUCER_SUFFIX, SKOS_EDGE_TYPES, MAPPING_PROPERTIES } = vocabularyLib;
@@ -89,7 +90,8 @@ const {
 	WALK_ASSERTION_KEY_LIST,
 	WALK_ASSERTION_FORBIDDEN_KEY_LIST,
 	CHANNEL_REPORT_KEY_LIST,
-	TUPLE_FIELD_LIST,
+	// ⟪ctdlHub P6⟫ the match fields read every DECLARABLE tuple field, termIri (declared identity's join) included
+	DECLARABLE_TUPLE_FIELD_LIST: TUPLE_FIELD_LIST,
 } = bridgePluginContractLib;
 
 const DEP_NAME_LIST = Object.freeze(['graphReaderFactory', 'graphWriterFactory', 'pluginRegistry', 'xLog', 'conflictDetector', 'judgeBudgetOverride']);
@@ -196,6 +198,10 @@ const moduleFunction =
 		const suffixRefusal = producerSuffixRefusal();
 		if (suffixRefusal) {
 			throw suffixRefusal;
+		}
+		// ⟪ctdlHub P6⟫ the match-edge shape harvests exactly the writer's SKOS set, so moving the list into the shape registry moved nothing
+		if (JSON.stringify(materialiserLib.EDGE_SHAPE_REGISTRY.skosMatchToHubCard.harvestEdgeTypeList) !== JSON.stringify(HARVEST_EDGE_TYPE_LIST)) {
+			throw refuse.byName({ moduleName, what: `the match-edge shape harvests [${materialiserLib.EDGE_SHAPE_REGISTRY.skosMatchToHubCard.harvestEdgeTypeList.join(', ')}], not the writer's [${HARVEST_EDGE_TYPE_LIST.join(', ')}]`, where: 'materialiser EDGE_SHAPE_REGISTRY.skosMatchToHubCard.harvestEdgeTypeList equals graphSeamRules.PREDICATE_BY_EDGE_TYPE' });
 		}
 		const retrievalRefusal = candidateRetrievalMethodRegistryLib.registryViolation();
 		if (retrievalRefusal) {
@@ -477,11 +483,14 @@ const moduleFunction =
 				// types this run's writer admits, read from the writer's own closed set (graphSeamRules.PREDICATE_BY_EDGE_TYPE,
 				// the §6 refusal). build.js harvests by it, so the harvest takes what the door can write and never a base
 				// edge whose two endpoints both carry the pair label, which fan-out makes common (Field -HAS_CHILD-> Field).
+				// ⟪ctdlHub P6⟫ the types THIS basis's edge shape writes (materialiser EDGE_SHAPE_REGISTRY): the SKOS match types for a
+				// match-edge basis (exactly HARVEST_EDGE_TYPE_LIST, asserted at construction), DECLARED_CORRESPONDENCE for a declared one
+				const runHarvestEdgeTypeList = materialiserLib.EDGE_SHAPE_REGISTRY[acquisitionRow.edgeShapeKind].harvestEdgeTypeList;
 				const conservationBearingRunReport = {
 					...undiscriminatedRunReport,
 					loadedConservationSummary: oneReportArgumentSet.loadedConservationSummary,
-					harvestEdgeTypeList: HARVEST_EDGE_TYPE_LIST,
-					blocks: undiscriminatedRunReport.blocks.map((oneBlock) => ({ ...oneBlock, loadedConservationSummary: oneReportArgumentSet.loadedConservationSummary, harvestEdgeTypeList: HARVEST_EDGE_TYPE_LIST })),
+					harvestEdgeTypeList: runHarvestEdgeTypeList,
+					blocks: undiscriminatedRunReport.blocks.map((oneBlock) => ({ ...oneBlock, loadedConservationSummary: oneReportArgumentSet.loadedConservationSummary, harvestEdgeTypeList: runHarvestEdgeTypeList })),
 				};
 				if (bridgeDeclaration.subjectDiscriminator === undefined) {
 					return conservationBearingRunReport;
@@ -719,7 +728,7 @@ const moduleFunction =
 				const taskList = new taskListPlus();
 
 				// STEP 1 — the reader (ONE flatten, two views); cards; subjects
-				taskList.push((args, next) => {
+				const readPropertyCardPool = (args, next) => {
 					const readerArgs = { inGraph, dependencyStandardNameList: [sourceStandardName, hubToken], sourceStandardName, blindingDeclaration: bridgeDeclaration.blindingDeclaration, hubName: hubStandardName };
 					const readerRefusal = graphSeamRulesLib.readerConstructionRefusal(readerArgs);
 					if (readerRefusal) {
@@ -767,7 +776,87 @@ const moduleFunction =
 							next('', { ...args, reader, cardList, cardListByCanonicalKey, contention, cardByStableId, hubName, subjectNodeList, subjectNodeByStableId });
 						});
 					});
+				};
+
+				// STEP 1 ⟪ctdlHub P6⟫ — THE POOL'S OWN POPULATION, by the acquisition row's poolProducerKind (a registry keyed by the row's
+				// member, never a test of the basis name). The hub-card bases read the hub's PROPERTY cards as they always have
+				// (readPropertyCardPool, byte-unchanged). Declared identity reads the target hub's TERM cards keyed by termIri; a declared
+				// bridge reads the target standard's BASE nodes (indexed for its rules, keyed per raw target in STEP 6, where the targets
+				// are known). Neither reads the property cards: their pool is not those cards, and a property card's embedding (which
+				// shapeHubCardList requires) is no business of a basis that judges nothing.
+				const readOwnPopulationPool = ({ populationRead }) => (args, next) => {
+					const readerArgs = { inGraph, dependencyStandardNameList: [sourceStandardName, hubToken], sourceStandardName, blindingDeclaration: bridgeDeclaration.blindingDeclaration, hubName: hubStandardName };
+					const readerRefusal = graphSeamRulesLib.readerConstructionRefusal(readerArgs);
+					if (readerRefusal) {
+						next(readerRefusal.message);
+						return;
+					}
+					const reader = graphReaderFactory(readerArgs);
+					say(`blinding declaration echoed by name before the first read of its own pool: [${bridgeDeclaration.blindingDeclaration.join(', ')}]`);
+					populationRead({ ...args, reader, hubName: hubStandardName }, (populationError, populated) => {
+						if (populationError) {
+							next(populationError);
+							return;
+						}
+						reader.readSubjectNodes((subjectError, subjectNodeList) => {
+							if (subjectError) {
+								next(`${moduleName}: readSubjectNodes: ${subjectError}`);
+								return;
+							}
+							if (subjectNodeList.length === 0) {
+								next(refuse.byName({ moduleName, what: `the source standard '${sourceStandardName}' has ZERO forged nodes in the dependency graph`, where: 'the source scope is EXACT (BR-023); nothing to map' }).message);
+								return;
+							}
+							const subjectNodeByStableId = subjectNodeList.reduce((soFar, oneNode) => ({ ...soFar, [oneNode.stableId]: oneNode }), {});
+							next('', { ...populated, subjectNodeList, subjectNodeByStableId });
+						});
+					});
+				};
+				const POOL_POPULATION_READ_BY_PRODUCER_KIND = Object.freeze({
+					canonicalKeyIndex: readPropertyCardPool,
+					vectorRetrieval: readPropertyCardPool,
+					termIriIndex: readOwnPopulationPool({ populationRead: (args, next) => {
+						args.reader.readHubTermCards((termError, termCardList) => {
+							if (termError) {
+								next(`${moduleName}: readHubTermCards: ${termError}`);
+								return;
+							}
+							if (termCardList.length === 0) {
+								next(refuse.byName({ moduleName, what: `hub '${args.hubName}' carries ZERO term-tier cards`, where: 'declared identity joins on the target hub\'s TERM cards; a hub without the term tier cannot be its target (BG-EMPTY)' }).message);
+								return;
+							}
+							const termVersionSet = new Set(termCardList.map((oneCard) => String(oneCard.hubVersion)));
+							if (termVersionSet.size !== 1 || !termVersionSet.has(String(hubVersion))) {
+								next(refuse.byName({ moduleName, what: `the term cards carry hubVersion ${Array.from(termVersionSet).join(', ')} but config.hubVersion is ${hubVersion}`, where: 'a re-versioned endpoint is refused, never guessed' }).message);
+								return;
+							}
+							const cardListByCanonicalKey = classificationLib.makeCardListByJoinField({ cardList: termCardList, joinFieldName: acquisitionRow.targetKeyTupleField });
+							const contention = censusLib.contentionCensus({ cardListByCanonicalKey, tier: graphSeamRulesLib.TERM_REFERENCE_TIER });
+							const cardByStableId = termCardList.reduce((soFar, oneCard) => ({ ...soFar, [oneCard.stableId]: oneCard }), {});
+							say(`term cards (the pool of declared identity): ${contention.cardCount} / distinct ${acquisitionRow.targetKeyTupleField} ${contention.distinctKeyCount} / contended ${contention.contendedKeyCount}`);
+							next('', { ...args, cardList: termCardList, cardListByCanonicalKey, contention, cardByStableId });
+						});
+					} }),
+					declaredTargetIndex: readOwnPopulationPool({ populationRead: (args, next) => {
+						const memberEdgeTypeList = Array.from(new Set(bridgeDeclaration.declaredTargetRuleList.filter((oneRule) => oneRule.memberEdgeType !== undefined).map((oneRule) => oneRule.memberEdgeType))).sort();
+						args.reader.readTargetStandardRecords({ edgeTypeList: memberEdgeTypeList }, (targetError, target) => {
+							if (targetError) {
+								next(`${moduleName}: readTargetStandardRecords: ${targetError}`);
+								return;
+							}
+							if (target.recordList.length === 0) {
+								next(refuse.byName({ moduleName, what: `the target standard '${hubStandardName}' has ZERO base nodes in the dependency graph`, where: 'a declared bridge resolves its targets to the target standard\'s base nodes; restore its base block (BG-EMPTY)' }).message);
+								return;
+							}
+							const declaredTargetIndex = declaredTargetResolutionLib.targetIndexFor({ targetRecordList: target.recordList, targetEdgeList: target.edgeList });
+							// the materialiser and the exporter read an object by stableId; a base node is flattened as a card is
+							const cardByStableId = target.recordList.reduce((soFar, oneRecord) => ({ ...soFar, [oneRecord.stableId]: { ...oneRecord.properties, stableId: oneRecord.stableId } }), {});
+							say(`target base nodes (the pool of a declared bridge): ${target.recordList.length} '${hubStandardName}' node(s), ${target.edgeList.length} ${memberEdgeTypeList.join('/') || '(no)'} edge(s); ${bridgeDeclaration.declaredTargetRuleList.length} declared rule(s)`);
+							next('', { ...args, cardList: null, cardListByCanonicalKey: null, contention: null, cardByStableId, declaredTargetIndex });
+						});
+					} }),
 				});
+				taskList.push((args, next) => POOL_POPULATION_READ_BY_PRODUCER_KIND[acquisitionRow.poolProducerKind](args, next));
 
 				// STEP 2 — verify document channels; digest forgedGraph channels from the subject nodes
 				taskList.push((args, next) => {
@@ -934,7 +1023,7 @@ const moduleFunction =
 						const suppliedTupleFields = {};
 						let fieldFault = null;
 						Object.keys(bridgeDeclaration.tupleFieldColumnMap)
-							.filter((oneField) => oneField !== 'canonicalKey')
+							.filter((oneField) => oneField !== acquisitionRow.targetKeyTupleField)
 							.forEach((oneField) => {
 								const rawValue = oneAssertion.tupleFieldValues[oneField];
 								if (rawValue === undefined || rawValue === null) {
@@ -962,7 +1051,7 @@ const moduleFunction =
 							if (isSentinelRawValue({ channel, rawValue: oneTarget.rawValue })) {
 								return;
 							}
-							const transformed = transformRegistryLib.applyTransform({ transformName: bridgeDeclaration.tupleFieldColumnMap.canonicalKey.transform, rawValue: String(oneTarget.rawValue) });
+							const transformed = transformRegistryLib.applyTransform({ transformName: bridgeDeclaration.tupleFieldColumnMap[acquisitionRow.targetKeyTupleField].transform, rawValue: String(oneTarget.rawValue) });
 							if (transformed.error) {
 								targetFault = refuse.byName({ moduleName, what: `assertion ${JSON.stringify(oneAssertion.sourceLocator)} target ${JSON.stringify(oneTarget.rawValue)}: ${transformed.error}`, where: 'the canonicalKey transform' });
 								return;
@@ -1372,6 +1461,31 @@ const moduleFunction =
 					// has no rows. The METHOD ROW decides the seats and names the trace (the cosineTopK-v1 rank and cosine; the
 					// embedTextVote-v1 votes, paths, cardTextCosine and neighbour trace); the trace is recorded on the record as
 					// forensics and never rendered — the pool reaches the judge sorted by stableId, which is what makes the order neutral.
+					// ⟪ctdlHub P6⟫ termIriIndex — the keyed pool over the TERM cards STEP 1b indexed by termIri: the same classification
+					// as canonicalKeyIndex, record for record (specified on one card, orphan on none), so nothing about it is new but the index
+					termIriIndex: (args, next) => poolProducerByKind.canonicalKeyIndex(args, next),
+					// ⟪ctdlHub P6⟫ declaredTargetIndex — each distinct raw target the walk named is resolved ONCE by the plugin's declared
+					// rules (declaredTargetResolution.js) against the target standard's base nodes, and the resolved nodes are indexed
+					// under that raw target; the keyed pool then classifies exactly as canonicalKeyIndex does. A raw target that resolves
+					// to nothing is an orphan record (named in the frozen block), and it is also named here with the rule that failed.
+					declaredTargetIndex: (args, next) => {
+						const rawTargetList = Array.from(new Set(args.leafList.reduce((soFar, oneLeaf) => soFar.concat(oneLeaf.assertionList.reduce((leafSoFar, oneAssertion) => leafSoFar.concat(oneAssertion.targetKeyList), [])), []))).sort(compareStrings);
+						const indexedCardList = [];
+						const unresolvedList = [];
+						rawTargetList.forEach((rawTarget) => {
+							const resolved = declaredTargetResolutionLib.resolveDeclaredTarget({ ruleList: bridgeDeclaration.declaredTargetRuleList, rawTarget, targetIndex: args.declaredTargetIndex });
+							if (resolved.stableIdList.length === 0) {
+								unresolvedList.push({ rawTarget, reason: resolved.ruleIndex === -1 ? 'noDeclaredRuleMatches' : `rule ${resolved.ruleIndex} (${bridgeDeclaration.declaredTargetRuleList[resolved.ruleIndex].ruleKind}) names no base node` });
+								return;
+							}
+							resolved.stableIdList.forEach((oneStableId) => indexedCardList.push({ ...args.cardByStableId[oneStableId], declaredTarget: rawTarget }));
+						});
+						const cardListByCanonicalKey = classificationLib.makeCardListByJoinField({ cardList: indexedCardList, joinFieldName: 'declaredTarget' });
+						const contention = censusLib.contentionCensus({ cardListByCanonicalKey, tier: 'baseNode' });
+						report.declaredTargetUnresolvedList = unresolvedList;
+						say(`declared targets: ${rawTargetList.length} distinct; resolved ${rawTargetList.length - unresolvedList.length} / ${rawTargetList.length}; unresolved ${unresolvedList.length}${unresolvedList.length ? `: ${unresolvedList.map((oneUnresolved) => `${oneUnresolved.rawTarget} (${oneUnresolved.reason})`).join('; ')}` : ''}`);
+						poolProducerByKind.canonicalKeyIndex({ ...args, cardListByCanonicalKey, contention }, (poolError, pooled) => (poolError ? next(poolError) : next('', { ...pooled, contention })));
+					},
 					vectorRetrieval: (args, next) => {
 						const retrievalDeclaration = bridgeDeclaration.candidateRetrieval;
 						const { retrievalMethodRow, retrievalState } = args;
@@ -1466,6 +1580,13 @@ const moduleFunction =
 
 				// STEP 7 — the JUDGE (bounded runner, index-collecting); the debug double is the only judge in B2
 				taskList.push((args, next) => {
+					// ⟪ctdlHub P6⟫ a basis whose row admits no judgment (the declared bases: the source NAMED the target) refuses a
+					// judged task by name rather than asking anyone: zero judge calls is that basis's contract, not a hope
+					if (acquisitionRow.admitsJudgment === false && args.judgedTaskList.length > 0) {
+						const firstJudged = args.judgedTaskList[0];
+						next(refuse.byName({ moduleName, what: `matchBasis '${bridgeDeclaration.matchBasis}' produced ${args.judgedTaskList.length} judged task(s) (first: subject ${firstJudged.baseRecord.subjectStableId}, target ${firstJudged.baseRecord.targetKey}, pool of ${firstJudged.pool.length})`, where: 'a declared basis judges nothing (admitsJudgment false): a target resolving to several objects is a rule or source defect to fix, never a question for a judge' }).message);
+						return;
+					}
 					if (args.judgedTaskList.length === 0) {
 						next('', { ...args, judgedRecordList: [], judgeKind: RUN_KIND_NONE });
 						return;

@@ -30,6 +30,8 @@ const { compareRecords, sha256Hex } = require('./decisionBlock');
 const { RENDERER_VERSION } = require('./evidenceRenderer');
 const { providerNameForJudgeModel, FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
+const { SOURCE_ACQUISITION_REGISTRY } = require('./bridgePluginContract');
+const { EDGE_TYPES, PROVENANCE_TIER, DECLARED_CORRESPONDENCE_PROPERTIES } = vocabularyLib;
 const { SKOS_EDGE_TYPES, MAPPING_PROPERTIES, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, composeMappingSource, JUDGE_SUMMARY_EDGE_PROPERTY_LIST, judgeSummaryRefusal } = vocabularyLib;
 
 const METHOD_BY_RESOLUTION = Object.freeze({ specified: 'semapv:ManualMappingCuration', judged: 'semapv:CompositeMatching' });
@@ -179,6 +181,56 @@ const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash,
 	return edgeProperties;
 };
 
+// ⟪ctdlHub P6⟫ declaredCorrespondencePropertiesFor — a DECLARED_CORRESPONDENCE edge's closed property set: the record's predicate
+// VERBATIM as sourcePredicate, the source standard as declaredBy, spec-authoritative, and the run identity a mapping edge also
+// carries. No provider, no match field, no confidence: it is not a match edge (graphSeamRules.declaredCorrespondenceEdgeRefusal).
+const declaredCorrespondencePropertiesFor = ({ record, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion }) => ({
+	[DECLARED_CORRESPONDENCE_PROPERTIES.SOURCE_PREDICATE]: record.predicate,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.DECLARED_BY]: sourceStandardName,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.PROVENANCE_TIER]: PROVENANCE_TIER.SPEC_AUTHORITATIVE,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.MATCH_BASIS]: block.header.matchBasis,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.RESOLUTION]: record.resolution,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.MAPPING_METHOD]: record.mappingMethod === undefined || record.mappingMethod === null ? METHOD_BY_RESOLUTION[record.resolution] : record.mappingMethod,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.MAPPING_KIND]: MAPPING_KIND_BY_RESOLUTION[record.resolution],
+	[DECLARED_CORRESPONDENCE_PROPERTIES.MAPPING_SOURCE]: mappingSourceFor({ record, block }).mappingSource,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.DECISION_BLOCK_HASH]: decisionBlockHash,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.MATCH_ID]: sha256Hex(`${decisionBlockHash}\n${record.subjectStableId}\n${record.predicate}\n${record.objectStableId}`),
+	[DECLARED_CORRESPONDENCE_PROPERTIES.SUBJECT_SOURCE]: sourceStandardName,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.SUBJECT_VERSION]: sourceVersion,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.OBJECT_SOURCE]: hubName,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.OBJECT_VERSION]: hubVersion,
+	[DECLARED_CORRESPONDENCE_PROPERTIES.ATTESTATION_CHANNEL_LIST]: record.attestationChannelList.slice(),
+});
+
+// ⟪ctdlHub P6⟫ EDGE_SHAPE_REGISTRY — what a picked record BECOMES, one row per acquisition-row edgeShapeKind (read off the
+// block's own matchBasis, so a frozen block replays as the shape it was frozen under): its edge type, its property set, the
+// writer door it goes through, the relationship types the harvest takes, and its SSSOM predicate_id. The match-edge row is
+// exactly the code that stood here before; the declared row is DECLARED_CORRESPONDENCE to a base node, predicate verbatim.
+const EDGE_SHAPE_REGISTRY = Object.freeze({
+	skosMatchToHubCard: Object.freeze({
+		edgeTypeFor: ({ record }) => SKOS_EDGE_TYPES[record.predicate],
+		propertiesFor: (shapeArgs) => edgePropertiesFor(shapeArgs),
+		write: ({ writer, fromStableId, record, edgeType, edgeProperties }, callback) => writer.writeMappingEdge({ subjectStableId: fromStableId, objectStableId: record.objectStableId, edgeType, edgeProperties }, callback),
+		harvestEdgeTypeList: Object.freeze(Object.keys(SKOS_EDGE_TYPES).map((onePredicate) => SKOS_EDGE_TYPES[onePredicate]).sort()),
+		sssomPredicateIdFor: (predicate) => `skos:${predicate}`,
+	}),
+	declaredCorrespondenceToBaseNode: Object.freeze({
+		edgeTypeFor: () => EDGE_TYPES.DECLARED_CORRESPONDENCE,
+		propertiesFor: (shapeArgs) => declaredCorrespondencePropertiesFor(shapeArgs),
+		write: ({ writer, fromStableId, record, edgeType, edgeProperties, hubName }, callback) => writer.writeDeclaredCorrespondenceEdge({ subjectStableId: fromStableId, objectStableId: record.objectStableId, objectStandardName: hubName, edgeType, edgeProperties }, callback),
+		harvestEdgeTypeList: Object.freeze([EDGE_TYPES.DECLARED_CORRESPONDENCE]),
+		sssomPredicateIdFor: (predicate) => predicate,
+	}),
+});
+// edgeShapeRowFor(block) → { edgeShapeRow } | { error } — the row the block's matchBasis names, refused by name when it names none
+const edgeShapeRowFor = (block) => {
+	const acquisitionRow = SOURCE_ACQUISITION_REGISTRY[block.header.matchBasis];
+	const edgeShapeRow = acquisitionRow === undefined ? undefined : EDGE_SHAPE_REGISTRY[acquisitionRow.edgeShapeKind];
+	return edgeShapeRow === undefined
+		? { error: refuse.byName({ moduleName, what: `block matchBasis '${block.header.matchBasis}' names no edge shape`, where: 'SOURCE_ACQUISITION_REGISTRY row edgeShapeKind → materialiser EDGE_SHAPE_REGISTRY' }).message }
+		: { edgeShapeRow };
+};
+
 const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField, runWindowMark } = {}, callback) => {
 	if (!block || !block.header || !Array.isArray(block.decisionRecordList)) {
 		callback(refuse.byName({ moduleName, what: 'materialiseBlock needs a parsed block ({ header, decisionRecordList })', where: 'decisionBlock.parseFrozenText' }).message);
@@ -229,6 +281,12 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 		callback(refuse.byName({ moduleName, what: `subject ${malformedSummaryPlanned.record.subjectStableId}: the frozen judge.judgeSummary is ${summary === null ? 'null' : judgeSummaryRefusal(summary)}`, where: 'a frozen record omits judgeSummary when the judge reported none, and carries the declared shape when it did (W-B-3)' }).message);
 		return;
 	}
+	const shapeLookup = edgeShapeRowFor(block);
+	if (shapeLookup.error) {
+		callback(shapeLookup.error);
+		return;
+	}
+	const { edgeShapeRow } = shapeLookup;
 	const writtenEdgeList = [];
 	let edgeIndex = 0;
 	const nextEdge = () => {
@@ -238,9 +296,9 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 		}
 		const { record: oneRecord, fromStableId, instanceStableId } = orderedList[edgeIndex];
 		edgeIndex += 1;
-		const edgeProperties = edgePropertiesFor({ record: oneRecord, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField });
-		const edgeType = SKOS_EDGE_TYPES[oneRecord.predicate];
-		writer.writeMappingEdge({ subjectStableId: fromStableId, objectStableId: oneRecord.objectStableId, edgeType, edgeProperties }, (writeError, written) => {
+		const edgeProperties = edgeShapeRow.propertiesFor({ record: oneRecord, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField });
+		const edgeType = edgeShapeRow.edgeTypeFor({ record: oneRecord });
+		edgeShapeRow.write({ writer, fromStableId, record: oneRecord, edgeType, edgeProperties, hubName }, (writeError, written) => {
 			if (writeError) {
 				callback(`${moduleName}: edge ${fromStableId} → ${oneRecord.objectStableId} (${oneRecord.predicate}, subject ${oneRecord.subjectStableId}): ${writeError}`);
 				return;
@@ -256,4 +314,4 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 	nextEdge();
 };
 
-module.exports = { materialiseBlock, edgePropertiesFor, mappingSourceFor, MAPPING_SOURCE_BY_RESOLUTION, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, mappingConfidenceFor, METHOD_BY_RESOLUTION, moduleName };
+module.exports = { materialiseBlock, EDGE_SHAPE_REGISTRY, edgeShapeRowFor, declaredCorrespondencePropertiesFor, edgePropertiesFor, mappingSourceFor, MAPPING_SOURCE_BY_RESOLUTION, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, mappingConfidenceFor, METHOD_BY_RESOLUTION, moduleName };

@@ -137,6 +137,49 @@ const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) =>
 				session.close().then(() => callback(`${moduleName}: ${runError.message}`)).catch(() => callback(`${moduleName}: ${runError.message}`));
 			});
 	};
+	// ⟪ctdlHub P6⟫ writeDeclaredCorrespondenceEdge — a DECLARED bridge's edge: DECLARED_CORRESPONDENCE from a source node to a BASE
+	// node of objectStandardName, under its own closed rule (graphSeamRules.declaredCorrespondenceEdgeRefusal), merged on the full
+	// property map exactly as writeMappingEdge merges, and counted into the same loaded set. The object is matched as a ForgedNode
+	// that is NOT a hub card, so a hub card can never receive one even if a rule pointed at it.
+	const writeDeclaredCorrespondenceEdge = ({ subjectStableId, objectStableId, objectStandardName, edgeType, edgeProperties } = {}, callback) => {
+		const shapeRefusal = graphSeamRulesLib.declaredCorrespondenceEdgeRefusal({ subjectStableId, objectStableId, objectStandardName, edgeType, edgeProperties, sourceStandardName });
+		if (shapeRefusal) {
+			callback(shapeRefusal.message);
+			return;
+		}
+		const hostileNameList = Object.keys(edgeProperties || {}).filter((oneName) => identityHostileValue(edgeProperties[oneName]));
+		if (hostileNameList.length > 0) {
+			callback(`${moduleName} REFUSED: edge ${edgeType} ${subjectStableId} -> ${objectStableId} carries identity-hostile propert(ies): ${hostileNameList.join(', ')}. Nothing written.`);
+			return;
+		}
+		const session = driver.session();
+		session
+			.run(`OPTIONAL MATCH (s:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) WITH s OPTIONAL MATCH (o:${FORGED_NODE_LABEL} {stableId: $objectStableId}) RETURN s._source AS subjectSource, s IS NOT NULL AS subjectPresent, labels(o) AS objectLabels, o._source AS objectSource, o IS NOT NULL AS objectPresent`, { subjectStableId, objectStableId })
+			.then((lookup) => {
+				const row = lookup.records[0];
+				const subjectEndpoint = row && row.get('subjectPresent') ? { sourceStandardName: row.get('subjectSource') } : null;
+				const objectEndpoint = row && row.get('objectPresent') ? { labels: row.get('objectLabels'), sourceStandardName: row.get('objectSource') } : null;
+				const endpointRefusal = graphSeamRulesLib.declaredCorrespondenceEdgeRefusal({ subjectStableId, objectStableId, objectStandardName, edgeType, edgeProperties, sourceStandardName, subjectEndpoint, objectEndpoint });
+				if (endpointRefusal) {
+					return session.close().then(() => callback(endpointRefusal.message));
+				}
+				return session
+					.run(`MATCH (s:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) MATCH (o:${FORGED_NODE_LABEL} {stableId: $objectStableId}) WHERE ${graphSeamRulesLib.HUB_LAYER_LABEL_LIST.map((oneLabel) => `NOT o:${oneLabel}`).join(' AND ')} SET s:\`${applyLabel}\`, o:\`${applyLabel}\` WITH s, o CALL apoc.merge.relationship(s, $edgeType, $edgeProperties, {}, o) YIELD rel RETURN count(rel) AS edgeCount`, { subjectStableId, objectStableId, edgeType, edgeProperties })
+					.then((written) => {
+						const edgeCount = written.records[0] ? written.records[0].get('edgeCount') : 0;
+						const wroteOne = neo4j.isInt(edgeCount) ? edgeCount.toNumber() === 1 : edgeCount === 1;
+						if (wroteOne) {
+							loadedNodeStableIdSet.add(subjectStableId);
+							loadedNodeStableIdSet.add(objectStableId);
+							loadedEdgeList.push({ type: edgeType, fromRef: { id: subjectStableId }, toRef: { id: objectStableId }, properties: { ...edgeProperties } });
+						}
+						return session.close().then(() => (wroteOne ? callback('', { edgeWritten: true }) : callback(`${moduleName}: MERGE ${subjectStableId} -[${edgeType}]-> ${objectStableId} reported ${String(edgeCount)} edges, not 1 — an un-counted write cannot be gated`)));
+					});
+			})
+			.catch((runError) => {
+				session.close().then(() => callback(`${moduleName}: ${runError.message}`)).catch(() => callback(`${moduleName}: ${runError.message}`));
+			});
+	};
 	// ⟪JOB 5b⟫ close RETURNS the loaded summary as its second callback argument rather than exposing a
 	// third member: the writer's member set is CLOSED to writeMappingEdge and close (BR-018), and a
 	// conservation summary is not a new capability of the seam — it is what the seam DID, reported as it
@@ -168,7 +211,7 @@ const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) =>
 	const close = (callback) => {
 		driver.close().then(() => callback('', { loadedConservationSummary: loadedConservationSummaryNow() })).catch((closeError) => callback(`${moduleName}: driver close: ${closeError.message}`));
 	};
-	return graphSeamRulesLib.closedWriter({ writeMappingEdge, close });
+	return graphSeamRulesLib.closedWriter({ writeMappingEdge, close, writeDeclaredCorrespondenceEdge });
 };
 
 module.exports = { graphWriterFactory, moduleName };

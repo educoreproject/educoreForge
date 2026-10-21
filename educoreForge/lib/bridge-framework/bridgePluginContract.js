@@ -44,6 +44,7 @@ const promptIdentifierScanLib = require('./promptIdentifierScan');
 const judgmentPartitionLib = require('./judgmentPartition');
 const materialisationFanoutLib = require('./materialisationFanout');
 const owningConstructDefinitionLib = require('./owningConstructDefinition');
+const declaredTargetResolutionLib = require('./declaredTargetResolution');
 // ⟪JOB 3, 2026-09-07⟫ SELECT_CATEGORY_ENUM — the single source of truth for the judge's verdict
 // categories. Required by the SAME path form confidenceBandTable.js:12 uses, from the same directory,
 // for the same reason: this file's JUDGE_CATEGORY_LIST must be derived from the contract rather than
@@ -60,11 +61,14 @@ const isPlainObject = (candidate) =>
 // ---------------------------------------------------------------------
 // THE CLOSED VOCABULARIES (SPEC §3.3 contracts.*) — data the record carries
 // ---------------------------------------------------------------------
-const MATCH_BASIS_LIST = Object.freeze(['standard', 'crosswalk', 'derived']);
+// ⟪ctdlHub P6⟫ declaredIdentity: a spoke term whose OWN IRI is a hub-native term IRI (the same IRI, never a judgment) →
+// EXACT_MATCH to that hub's TERM card. declared: a source's PUBLISHED assertion relating its own term to a DIFFERENT term of
+// another standard → DECLARED_CORRESPONDENCE to that standard's BASE node, the predicate verbatim (never a match edge).
+const MATCH_BASIS_LIST = Object.freeze(['standard', 'crosswalk', 'derived', 'declaredIdentity', 'declared']);
 const PRODUCER_KIND_LIST = Object.freeze(['authored', 'inferred']);
 // producerKind is DECLARED and CHECKED against matchBasis (RULING A1): the two documentary bases are authored;
 // a derived basis is inferred 1:1 (RULING §11.6 — the R6 reversal, owned)
-const PRODUCER_KIND_BY_MATCH_BASIS = Object.freeze({ standard: 'authored', crosswalk: 'authored', derived: 'inferred' });
+const PRODUCER_KIND_BY_MATCH_BASIS = Object.freeze({ standard: 'authored', crosswalk: 'authored', derived: 'inferred', declaredIdentity: 'authored', declared: 'authored' });
 
 // ---------------------------------------------------------------------
 // SOURCE_ACQUISITION_REGISTRY — ONE frozen row per matchBasis saying HOW a run acquires its subjects and its
@@ -84,6 +88,18 @@ const PRODUCER_KIND_BY_MATCH_BASIS = Object.freeze({ standard: 'authored', cross
 //   admitsMaterialisationFanout whether the optional materialisationFanout key (and so judgmentPartition, which requires
 //                              it) may be declared: true only where each subject is one graph node whose instances can be
 //                              read, and whose records carry them (phases B4p, B4a, 2026-09-28)
+//   targetKeyTupleField        ⟪ctdlHub P6⟫ the tuple field a walked target is JOINED on (the pool is keyed by it): canonicalKey
+//                              for the hub-card documentary bases, termIri for declared identity; null for a basis that walks
+//                              nothing. The tupleFieldColumnMap must name it.
+//   edgeShapeKind              ⟪ctdlHub P6⟫ what a picked record becomes in the graph, a row of the materialiser's
+//                              EDGE_SHAPE_REGISTRY: skosMatchToHubCard (a SKOS match edge to a HubReference card) or
+//                              declaredCorrespondenceToBaseNode (DECLARED_CORRESPONDENCE to a base node, predicate verbatim)
+//   admitsJudgment             ⟪ctdlHub P6⟫ false for a basis whose source names every target (the declared bases): a judged task
+//                              is refused by name in STEP 7 rather than asked, so zero judge calls is enforced, not hoped for
+//   declaredTargetRuleListPresence ⟪ctdlHub P6⟫ 'required' | 'forbidden': whether the declaration carries declaredTargetRuleList
+//                              (the namespace expansion rule a declared bridge resolves its raw targets by)
+//   objectReferenceTier        ⟪ctdlHub P6⟫ the tier of hub card a match edge of this basis may reach (the write seam reads it):
+//                              property for the hub-card bases, term for declared identity; null where the object is no card
 // ---------------------------------------------------------------------
 const EMPTY_NAME_LIST = Object.freeze([]);
 const DOCUMENTARY_REQUIRED_HOOK_NAME_LIST = Object.freeze(['walkSourceAssertions', 'subjectStableIdFor']);
@@ -95,6 +111,11 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		walkChannelSourceKind: 'forgedGraph',
 		subjectGroupProducerKind: 'walkAssertion',
 		poolProducerKind: 'canonicalKeyIndex',
+		targetKeyTupleField: 'canonicalKey',
+		edgeShapeKind: 'skosMatchToHubCard',
+		admitsJudgment: true,
+		declaredTargetRuleListPresence: 'forbidden',
+		objectReferenceTier: 'property',
 		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
 		forbiddenHookNameList: EMPTY_NAME_LIST,
 		requiredDeclarationKeyList: DOCUMENTARY_REQUIRED_KEY_LIST,
@@ -105,6 +126,11 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		walkChannelSourceKind: 'document',
 		subjectGroupProducerKind: 'walkAssertion',
 		poolProducerKind: 'canonicalKeyIndex',
+		targetKeyTupleField: 'canonicalKey',
+		edgeShapeKind: 'skosMatchToHubCard',
+		admitsJudgment: true,
+		declaredTargetRuleListPresence: 'forbidden',
+		objectReferenceTier: 'property',
 		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
 		forbiddenHookNameList: EMPTY_NAME_LIST,
 		requiredDeclarationKeyList: DOCUMENTARY_REQUIRED_KEY_LIST,
@@ -115,6 +141,11 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		walkChannelSourceKind: null,
 		subjectGroupProducerKind: 'graphLabel',
 		poolProducerKind: 'vectorRetrieval',
+		targetKeyTupleField: null,
+		edgeShapeKind: 'skosMatchToHubCard',
+		admitsJudgment: true,
+		declaredTargetRuleListPresence: 'forbidden',
+		objectReferenceTier: 'property',
 		// A derived plugin has NO hooks at all. There is no document to walk, and a graph-sourced subject IS its
 		// own stableId, so a subjectStableIdFor that returned anything but identity would be resolving a question
 		// nobody asked. Both mandatory hooks are therefore FORBIDDEN here, which makes a derived plugin pure
@@ -128,10 +159,48 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		forbiddenDeclarationKeyList: Object.freeze(['tupleFieldColumnMap', 'mappingProvider']),
 		admitsMaterialisationFanout: true,
 	}),
+	// ⟪ctdlHub P6, WORKORDER-P6 step 2⟫ the spoke's term IRI, walked off its forged node, joined on the target hub's TERM cards
+	// (termIriIndex: the cards of referenceTier 'term', keyed by termIri). Documentary in every other respect: the source
+	// names the target, so every record is specified or orphan, and nothing is judged.
+	declaredIdentity: Object.freeze({
+		walkChannelSourceKind: 'forgedGraph',
+		subjectGroupProducerKind: 'walkAssertion',
+		poolProducerKind: 'termIriIndex',
+		targetKeyTupleField: 'termIri',
+		edgeShapeKind: 'skosMatchToHubCard',
+		admitsJudgment: false,
+		declaredTargetRuleListPresence: 'forbidden',
+		objectReferenceTier: 'term',
+		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
+		forbiddenHookNameList: EMPTY_NAME_LIST,
+		requiredDeclarationKeyList: DOCUMENTARY_REQUIRED_KEY_LIST,
+		forbiddenDeclarationKeyList: DERIVED_ONLY_KEY_LIST,
+		admitsMaterialisationFanout: false,
+	}),
+	// ⟪ctdlHub P6, WORKORDER-P6 step 3⟫ the source's published cross-IRI assertions, walked off its forged nodes, each raw target
+	// resolved to a BASE node of the target standard by the plugin's declaredTargetRuleList (data: the namespace expansion rule),
+	// the predicate taken verbatim from the assertion (predicateSource kind declaredPredicate). An unresolved target is an orphan
+	// record, named in the block. Nothing is judged.
+	declared: Object.freeze({
+		walkChannelSourceKind: 'forgedGraph',
+		subjectGroupProducerKind: 'walkAssertion',
+		poolProducerKind: 'declaredTargetIndex',
+		targetKeyTupleField: 'canonicalKey',
+		edgeShapeKind: 'declaredCorrespondenceToBaseNode',
+		admitsJudgment: false,
+		declaredTargetRuleListPresence: 'required',
+		objectReferenceTier: null,
+		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
+		forbiddenHookNameList: EMPTY_NAME_LIST,
+		requiredDeclarationKeyList: DOCUMENTARY_REQUIRED_KEY_LIST,
+		forbiddenDeclarationKeyList: DERIVED_ONLY_KEY_LIST,
+		admitsMaterialisationFanout: false,
+	}),
 });
-const SOURCE_ACQUISITION_ROW_KEY_LIST = Object.freeze(['walkChannelSourceKind', 'subjectGroupProducerKind', 'poolProducerKind', 'requiredHookNameList', 'forbiddenHookNameList', 'requiredDeclarationKeyList', 'forbiddenDeclarationKeyList', 'admitsMaterialisationFanout']);
+const SOURCE_ACQUISITION_ROW_KEY_LIST = Object.freeze(['walkChannelSourceKind', 'subjectGroupProducerKind', 'poolProducerKind', 'requiredHookNameList', 'forbiddenHookNameList', 'requiredDeclarationKeyList', 'forbiddenDeclarationKeyList', 'admitsMaterialisationFanout', 'targetKeyTupleField', 'edgeShapeKind', 'admitsJudgment', 'declaredTargetRuleListPresence', 'objectReferenceTier']);
 const SUBJECT_GROUP_PRODUCER_KIND_LIST = Object.freeze(['walkAssertion', 'graphLabel']);
-const POOL_PRODUCER_KIND_LIST = Object.freeze(['canonicalKeyIndex', 'vectorRetrieval']);
+const POOL_PRODUCER_KIND_LIST = Object.freeze(['canonicalKeyIndex', 'vectorRetrieval', 'termIriIndex', 'declaredTargetIndex']);
+const EDGE_SHAPE_KIND_LIST = Object.freeze(['skosMatchToHubCard', 'declaredCorrespondenceToBaseNode']);
 const SUBJECT_SOURCE_KIND_LIST = Object.freeze(['graphLabel']);
 
 const RESOLUTION_LIST = Object.freeze(['specified', 'judged']);
@@ -139,9 +208,11 @@ const RESOLUTION_LIST = Object.freeze(['specified', 'judged']);
 // judge's return shape carries no predicate slot, so the plugin declares a predicateByCategory TABLE over the judge's
 // category and the block header stamps the rule. It is stamped, not hidden, so a later judge re-measures; 'judgeSlot-v1'
 // (below) is the rule under which the judge names the relation itself.
-const PREDICATE_SOURCE_KIND_LIST = Object.freeze(['column', 'labelTable', 'channelAssertion', 'judge']);
+// ⟪ctdlHub P6⟫ declaredPredicate: each assertion carries its OWN predicate (sourcePredicate), taken VERBATIM, and it must be one
+// of the plugin's declared predicateList (the correspondence predicates the plugin's locator table admits). The source asserts it.
+const PREDICATE_SOURCE_KIND_LIST = Object.freeze(['column', 'labelTable', 'channelAssertion', 'judge', 'declaredPredicate']);
 const PREDICATE_ASSERTED_BY_LIST = Object.freeze(['source', 'labelTable', 'channelAssertion', 'judge']);
-const PREDICATE_ASSERTED_BY_BY_SOURCE_KIND = Object.freeze({ column: 'source', labelTable: 'labelTable', channelAssertion: 'channelAssertion', judge: 'judge' });
+const PREDICATE_ASSERTED_BY_BY_SOURCE_KIND = Object.freeze({ column: 'source', labelTable: 'labelTable', channelAssertion: 'channelAssertion', judge: 'judge', declaredPredicate: 'source' });
 const PREDICATE_RULE_CATEGORY_TABLE_V1 = 'categoryTable-v1';
 // judgeSlot-v1: the judge names the relation itself, in a required predicate slot of its tool schema
 // (selectCandidateSchema.js), so no predicateByCategory table is declared (SPEC §9 A11).
@@ -171,6 +242,10 @@ const VARIANT_BY_BASIS_AND_PREDICATE_RULE = Object.freeze({
 	standard: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),
 	crosswalk: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),
 	derived: Object.freeze({ [PREDICATE_RULE_CATEGORY_TABLE_V1]: 'derived', [PREDICATE_RULE_JUDGE_SLOT_V1]: 'derivedJudgeSlot' }),
+	// ⟪ctdlHub P6⟫ the two declared bases judge nothing (every record is specified or orphan); the documentary variant row is
+	// registered so registration resolves one, as it does for standard and crosswalk, and nothing is ever rendered under it
+	declaredIdentity: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),
+	declared: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),
 });
 
 // ---------------------------------------------------------------------
@@ -270,7 +345,12 @@ const TUPLE_RANGE_FIELD_LIST = Object.freeze([
 	vocabularyLib.CANONICAL_ADDRESS_PROPERTIES.RANGE_CLASS_ID,
 	vocabularyLib.CANONICAL_ADDRESS_PROPERTIES.RANGE_DATATYPE,
 ]);
+// ⟪ctdlHub P6⟫ termIri: the join field of declared identity ONLY (a term card's IRI); no other basis may name it
 const TUPLE_FIELD_LIST = Object.freeze(['canonicalKey', 'domainId', 'propertyKey', ...TUPLE_RANGE_FIELD_LIST, 'valueKey', 'qualifierKeys']);
+// ⟪ctdlHub P6⟫ JOIN_ONLY_TUPLE_FIELD_LIST — a field a tupleFieldColumnMap may name as its JOIN key but that no hub card's tuple
+// carries (termIri: the term card's IRI). DECLARABLE_TUPLE_FIELD_LIST is what a declaration may name and what the match fields read.
+const JOIN_ONLY_TUPLE_FIELD_LIST = Object.freeze(['termIri']);
+const DECLARABLE_TUPLE_FIELD_LIST = Object.freeze(TUPLE_FIELD_LIST.concat(JOIN_ONLY_TUPLE_FIELD_LIST));
 // a tuple field name that is NOT a card field, with why — refused by name before the generic "not a tuple field"
 const RETIRED_TUPLE_FIELD_REASON_BY_NAME = Object.freeze({
 	range: `'range' is not a card field; it is the address-signature slot. Name the card's range property: one of ${TUPLE_RANGE_FIELD_LIST.join(' | ')}`,
@@ -434,6 +514,11 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	subjectIdentity: Object.freeze({ required: true, kind: 'subjectIdentity' }),
 	tupleFieldColumnMap: Object.freeze({ required: false, basisConditional: true, kind: 'tupleFieldColumnMap' }),
 	predicateSource: Object.freeze({ required: true, kind: 'predicateSource' }),
+	// ⟪ctdlHub P6⟫ the namespace expansion rule of a declared bridge, as DATA (R-7): how a raw target the source wrote resolves to
+	// a base node of the target standard. Required by matchBasis 'declared', forbidden by every other basis.
+	// Its presence is the acquisition row's declaredTargetRuleListPresence (required on 'declared', forbidden on every other
+	// basis), checked in validateBridgeDeclaration's cross-key rules, so the walk treats it as optional.
+	declaredTargetRuleList: Object.freeze({ optional: true, kind: 'declaredTargetRuleList' }),
 	subjectSource: Object.freeze({ required: false, basisConditional: true, kind: 'subjectSource' }),
 	candidateRetrieval: Object.freeze({ required: false, basisConditional: true, kind: 'candidateRetrieval' }),
 	renderingAllowList: Object.freeze({ required: false, basisConditional: true, kind: 'renderingAllowList' }),
@@ -614,6 +699,18 @@ const PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY = Object.freeze({
 	// judge's category (RULING §11.7 (a)). The kind carries NO column and NO table of its own: the table is the
 	// separate declaration key predicateByCategory, validated by its own kind checker, so the SSSOM comment and
 	// the block header can stamp the rule by name.
+	// declaredPredicate — each assertion's own sourcePredicate, verbatim, admitted only from the declared predicateList (a
+	// predicate outside it refuses the RUN by name, never coerced), with the source document cited
+	declaredPredicate: (value) => {
+		if (!isStringList(value.predicateList) || value.predicateList.length === 0 || value.predicateList.some((onePredicate) => !/^[a-z][A-Za-z0-9]*:[A-Za-z][A-Za-z0-9]*$/.test(onePredicate))) {
+			return `declaredPredicate needs predicateList: a non-empty list of CURIEs (owl:equivalentClass, skos:narrowMatch, …), each kept verbatim`;
+		}
+		if (!isPlainObject(value.assertedBy) || !isNonEmptyString(value.assertedBy.documentName) || !isNonEmptyString(value.assertedBy.citation)) {
+			return `declaredPredicate needs assertedBy: { documentName, citation } — the published source of the assertions`;
+		}
+		const extra = Object.keys(value).filter((oneName) => ['kind', 'predicateList', 'assertedBy'].indexOf(oneName) === -1);
+		return extra.length ? `kind 'declaredPredicate' carries unknown key '${extra[0]}'; the shape is exactly { kind, predicateList, assertedBy }` : '';
+	},
 	judge: (value) => {
 		if (value.table !== undefined || value.column !== undefined || value.predicate !== undefined) {
 			return `kind 'judge' carries no column, no table and no predicate — the relation comes from the judge, through the declaration's predicateByCategory table (predicateRule '${PREDICATE_RULE_CATEGORY_TABLE_V1}') or its own predicate slot (predicateRule '${PREDICATE_RULE_JUDGE_SLOT_V1}')`;
@@ -862,12 +959,25 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		}
 		return SUBJECT_IDENTITY_KIND_VALIDATOR_REGISTRY[value.kind](value, { bridgeDeclaration });
 	},
+	// ⟪ctdlHub P6⟫ the rule kinds live with their resolvers (declaredTargetResolution.js), so the checker and the resolver can never disagree
+	declaredTargetRuleList: (value) => declaredTargetResolutionLib.declaredTargetRuleListRefusal(value),
 	tupleFieldColumnMap: (value, { bridgeDeclaration }) => {
 		if (!isPlainObject(value)) {
 			return `must be an object tupleField → { column, transform } (got ${JSON.stringify(value)})`;
 		}
-		if (value.canonicalKey === undefined) {
-			return `MUST name canonicalKey (the join key); nothing is inferred`;
+		// ⟪ctdlHub P6⟫ the join field is the acquisition row's targetKeyTupleField (canonicalKey for the hub-card documentary
+		// bases, termIri for declared identity); the map must name it, and termIri belongs to declared identity alone
+		const joinRow = SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis];
+		if (joinRow === undefined || typeof joinRow.targetKeyTupleField !== 'string') {
+			return `matchBasis '${bridgeDeclaration.matchBasis}' names no join field (SOURCE_ACQUISITION_REGISTRY targetKeyTupleField), so no tupleFieldColumnMap can be checked`;
+		}
+		const joinFieldName = joinRow.targetKeyTupleField;
+		if (value[joinFieldName] === undefined) {
+			return `MUST name ${joinFieldName} (the join key of matchBasis '${bridgeDeclaration.matchBasis}'); nothing is inferred`;
+		}
+		const strayJoinField = ['canonicalKey', 'termIri'].find((oneField) => oneField !== joinFieldName && value[oneField] !== undefined);
+		if (strayJoinField !== undefined) {
+			return `names '${strayJoinField}', the join key of another basis; matchBasis '${bridgeDeclaration.matchBasis}' joins on ${joinFieldName}`;
 		}
 		const fieldList = Object.keys(value);
 		const walkChannelList = walkChannelListOf(bridgeDeclaration);
@@ -876,8 +986,8 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			if (RETIRED_TUPLE_FIELD_REASON_BY_NAME[oneField] !== undefined) {
 				return RETIRED_TUPLE_FIELD_REASON_BY_NAME[oneField];
 			}
-			if (TUPLE_FIELD_LIST.indexOf(oneField) === -1) {
-				return `'${oneField}' is not a tuple field (${listAsText(TUPLE_FIELD_LIST)})`;
+			if (DECLARABLE_TUPLE_FIELD_LIST.indexOf(oneField) === -1) {
+				return `'${oneField}' is not a tuple field (${listAsText(DECLARABLE_TUPLE_FIELD_LIST)})`;
 			}
 			const oneEntry = value[oneField];
 			if (!isPlainObject(oneEntry) || !isNonEmptyString(oneEntry.column) || !isNonEmptyString(oneEntry.transform)) {
@@ -1347,6 +1457,14 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 	if (bridgeDeclaration.materialisationFanout !== undefined && SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis].admitsMaterialisationFanout !== true) {
 		return refuseWith(`bridgeDeclaration carries materialisationFanout, which matchBasis '${bridgeDeclaration.matchBasis}' does not admit`, 'fan-out writes one subject node\'s answer to its instances; only a basis whose row sets admitsMaterialisationFanout has such subjects');
 	}
+	// ⟪ctdlHub P6⟫ declaredTargetRuleList: present exactly where the acquisition row requires it (a declared bridge), absent elsewhere
+	const ruleListPresence = SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis].declaredTargetRuleListPresence;
+	if (ruleListPresence === 'required' && bridgeDeclaration.declaredTargetRuleList === undefined) {
+		return refuseWith(`bridgeDeclaration is missing declaredTargetRuleList, which matchBasis '${bridgeDeclaration.matchBasis}' REQUIRES`, 'a declared bridge resolves every raw target by its declared namespace expansion rule; nothing is guessed (WORKORDER-P6 rules)');
+	}
+	if (ruleListPresence === 'forbidden' && bridgeDeclaration.declaredTargetRuleList !== undefined) {
+		return refuseWith(`bridgeDeclaration carries declaredTargetRuleList, which matchBasis '${bridgeDeclaration.matchBasis}' FORBIDS`, 'only a declared bridge resolves targets to base nodes by rule; the key would be read by nothing');
+	}
 	// judgmentPartition (phase B4p): it splits the instance list fan-out reads, so it requires fan-out (phase B4a), and
 	// through it the acquisition row's admission; its label renders only if the subject allow-list names the line it
 	// renders under; and a property it reads must not be one the plugin blinds, because a blinded property reads as
@@ -1488,6 +1606,7 @@ module.exports = {
 	SOURCE_ACQUISITION_ROW_KEY_LIST,
 	SUBJECT_GROUP_PRODUCER_KIND_LIST,
 	POOL_PRODUCER_KIND_LIST,
+	EDGE_SHAPE_KIND_LIST,
 	SUBJECT_SOURCE_KIND_LIST,
 	JUDGE_PROMPT_VARIANT_LIST,
 	JUDGE_CATEGORY_LIST,
@@ -1508,6 +1627,7 @@ module.exports = {
 	PREDICATE_ASSERTED_BY_BY_SOURCE_KIND,
 	LABEL_DISPOSITION_LIST,
 	TUPLE_FIELD_LIST,
+	DECLARABLE_TUPLE_FIELD_LIST,
 	TUPLE_RANGE_FIELD_LIST,
 	RETIRED_TUPLE_FIELD_REASON_BY_NAME,
 	TUPLE_LIST_FIELD_LIST,

@@ -876,6 +876,28 @@ const mappingSourceRefusal = (mappingSource) => {
 };
 const mappingSourceFamilyOf = (mappingSource) => mappingSource.slice(0, mappingSource.indexOf(MAPPING_SOURCE_SEPARATOR));
 const composeMappingSource = ({ family, sourceName }) => `${family}${MAPPING_SOURCE_SEPARATOR}${sourceName}`;
+// ⟪ctdlHub P6⟫ DECLARED_CORRESPONDENCE_PROPERTIES — the CLOSED property set of a DECLARED_CORRESPONDENCE edge (not a mapping edge,
+// so not MAPPING_PROPERTIES): the source's predicate VERBATIM, the standard that declared it, the tier (spec-authoritative: the
+// source published it), and the run identity it shares with mapping edges (basis, resolution, method, kind, source, block, match
+// id, endpoints' standards and versions, the attesting rows).
+const DECLARED_CORRESPONDENCE_PROPERTIES = Object.freeze({
+	SOURCE_PREDICATE: 'sourcePredicate',
+	DECLARED_BY: 'declaredBy',
+	PROVENANCE_TIER: 'provenanceTier',
+	MATCH_BASIS: MAPPING_PROPERTIES.MATCH_BASIS,
+	RESOLUTION: MAPPING_PROPERTIES.RESOLUTION,
+	MAPPING_METHOD: MAPPING_PROPERTIES.MAPPING_METHOD,
+	MAPPING_KIND: MAPPING_PROPERTIES.MAPPING_KIND,
+	MAPPING_SOURCE: MAPPING_PROPERTIES.MAPPING_SOURCE,
+	DECISION_BLOCK_HASH: MAPPING_PROPERTIES.DECISION_BLOCK_HASH,
+	MATCH_ID: MAPPING_PROPERTIES.MATCH_ID,
+	SUBJECT_SOURCE: MAPPING_PROPERTIES.SUBJECT_SOURCE,
+	SUBJECT_VERSION: MAPPING_PROPERTIES.SUBJECT_VERSION,
+	OBJECT_SOURCE: MAPPING_PROPERTIES.OBJECT_SOURCE,
+	OBJECT_VERSION: MAPPING_PROPERTIES.OBJECT_VERSION,
+	ATTESTATION_CHANNEL_LIST: MAPPING_PROPERTIES.ATTESTATION_CHANNEL_LIST,
+});
+const DECLARED_CORRESPONDENCE_PROPERTY_NAME_LIST = Object.freeze(Object.keys(DECLARED_CORRESPONDENCE_PROPERTIES).map((oneMember) => DECLARED_CORRESPONDENCE_PROPERTIES[oneMember]));
 // the property NAMES a mapping edge may carry — derived from the registry above; the writer's closed set
 const MAPPING_PROPERTY_NAME_LIST = Object.freeze(Object.keys(MAPPING_PROPERTIES).map((oneMember) => MAPPING_PROPERTIES[oneMember]));
 // MAPPING_EDGE_PROVENANCE_TIER_BY_PRODUCER_KIND and MAPPING_EDGE_PERMITTED_PROVENANCE_TIER_LIST are RETIRED with
@@ -1363,6 +1385,8 @@ const vocabulary = {
 	MAPPING_SOURCE_FAMILY,
 	MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY,
 	MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS,
+	DECLARED_CORRESPONDENCE_PROPERTIES,
+	DECLARED_CORRESPONDENCE_PROPERTY_NAME_LIST,
 	mappingSourceRefusal,
 	mappingSourceFamilyOf,
 	composeMappingSource,

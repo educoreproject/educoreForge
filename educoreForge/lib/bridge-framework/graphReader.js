@@ -13,6 +13,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     forWalk({ channelPropertyList })      the walk view — declared channel properties unblinded, other blinded names refused
 //     forEvidence()                         the blinded view (the renderer / judge / forensics view) — nodes AND edges (BR6)
 //     forRetrieval()                        the vector view: readHubVectors, readSubjectVectors, readEmbedTextVectors, readCardBaseEdges
+//     readHubTermCards(cb)                  ⟪ctdlHub P6⟫ the TERM cards of the hub NAMED hubName (declared identity's pool), no vector
+//     readTargetStandardRecords({ edgeTypeList }, cb)  ⟪ctdlHub P6⟫ the BASE nodes of the standard NAMED hubName (_source EXACT;
+//                                           hub layer and text nodes excluded; no vector) and the edges of edgeTypeList among them
+//                                           → { recordList, edgeList } (a declared bridge's pool)
 //     close(cb)
 //
 // Text nodes (role DME_ROLES.EMBED_TEXT) are excluded from readSourceRecords and from both ends of every among-source
@@ -122,6 +126,25 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 		);
 	};
 
+	// ⟪ctdlHub P6⟫ readHubTermCards — the term tier of the ONE hub the reader was built for
+	const readHubTermCards = (callback) => {
+		pagedNodeRead(
+			{ cypher: `MATCH (n:${graphSeamRulesLib.HUB_REFERENCE_LABEL}) WHERE n.referenceTier = $referenceTier AND n.hubName = $hubName RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`, parameters: { referenceTier: graphSeamRulesLib.TERM_REFERENCE_TIER, hubName } },
+			(readError, rawRecordList) => {
+				if (readError) {
+					callback(readError);
+					return;
+				}
+				const shaped = graphSeamRulesLib.shapeHubTermCardList({ rawRecordList });
+				if (shaped.error) {
+					callback(shaped.error.message);
+					return;
+				}
+				callback('', shaped.cardList);
+			},
+		);
+	};
+
 	// embedTextExclusionConditionFor — a text node is identified by ROLE and is never a source record, so never a
 	// subject, a walk node, an evidence node or an endpoint of an among-source edge (R-BR-2). IS NULL keeps a roleless
 	// node: in Cypher `null <> $x` is null, and a WHERE drops null.
@@ -139,6 +162,34 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 					return;
 				}
 				callback('', rawRecordList.map(graphSeamRulesLib.withoutEmbedding));
+			},
+		);
+	};
+
+	// ⟪ctdlHub P6⟫ readTargetStandardRecords — the target standard's base nodes (no vector) and the named edges among them
+	const readTargetStandardRecords = ({ edgeTypeList } = {}, callback) => {
+		if (!Array.isArray(edgeTypeList)) {
+			callback(`${moduleName}: readTargetStandardRecords edgeTypeList ${JSON.stringify(edgeTypeList)} is not a list ([] for none); there is no default`);
+			return;
+		}
+		pagedNodeRead(
+			{ cypher: `MATCH (n) WHERE ${embedTextExclusionConditionFor('n')} AND ${hubLayerExclusionConditionFor('n')} AND n._source = $targetStandardName RETURN n ORDER BY n.stableId SKIP $skip LIMIT $limit`, parameters: { targetStandardName: hubName, embedTextRole: textSearchVocabulary.embedTextRole } },
+			(readError, rawRecordList) => {
+				if (readError) {
+					callback(readError);
+					return;
+				}
+				const recordList = rawRecordList.map(graphSeamRulesLib.withoutEmbedding);
+				const session = driver.session();
+				session
+					.run(`MATCH (a)-[r]->(b) WHERE a._source = $targetStandardName AND b._source = $targetStandardName AND type(r) IN $edgeTypeList AND ${hubLayerExclusionConditionFor('a')} AND ${hubLayerExclusionConditionFor('b')} RETURN a.stableId AS fromStableId, b.stableId AS toStableId, type(r) AS edgeType ORDER BY fromStableId, edgeType, toStableId`, { targetStandardName: hubName, edgeTypeList })
+					.then((result) => {
+						const edgeList = result.records.map((oneRecord) => ({ fromStableId: oneRecord.get('fromStableId'), toStableId: oneRecord.get('toStableId'), type: oneRecord.get('edgeType') }));
+						session.close().then(() => callback('', { recordList, edgeList })).catch((closeError) => callback(`${moduleName}: session close: ${closeError.message}`));
+					})
+					.catch((runError) => {
+						session.close().then(() => callback(`${moduleName}: ${runError.message}`)).catch(() => callback(`${moduleName}: ${runError.message}`));
+					});
 			},
 		);
 	};
@@ -295,7 +346,7 @@ const graphReaderFactory = ({ inGraph, dependencyStandardNameList, sourceStandar
 	const close = (callback) => {
 		driver.close().then(() => callback('')).catch((closeError) => callback(`${moduleName}: driver close: ${closeError.message}`));
 	};
-	return graphSeamRulesLib.closedReader({ readHubCards, readSubjectNodes, forWalk, forEvidence, forRetrieval, close });
+	return graphSeamRulesLib.closedReader({ readHubCards, readSubjectNodes, forWalk, forEvidence, forRetrieval, close, readHubTermCards, readTargetStandardRecords });
 };
 
 module.exports = { graphReaderFactory, moduleName };

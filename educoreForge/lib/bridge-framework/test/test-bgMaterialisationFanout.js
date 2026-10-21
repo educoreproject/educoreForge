@@ -157,7 +157,8 @@ const contractConjunctList = [
 		judge: (scenario) => {
 			const contractLib = scenario.frameworkMutationList.length ? moduleDouble.loadWithMutations({ modulePath: frameworkFile(CONTRACT_FILE), mutationList: scenario.frameworkMutationList }) : require(frameworkFile(CONTRACT_FILE));
 			const admitsByBasis = Object.keys(contractLib.SOURCE_ACQUISITION_REGISTRY).sort().reduce((soFar, oneBasis) => ({ ...soFar, [oneBasis]: contractLib.SOURCE_ACQUISITION_REGISTRY[oneBasis].admitsMaterialisationFanout }), {});
-			return { pass: JSON.stringify(admitsByBasis) === JSON.stringify({ crosswalk: false, derived: true, standard: false }), detail: JSON.stringify(admitsByBasis) };
+			// ⟪ctdlHub P6⟫ the two declared bases (declaredIdentity, declared) are documentary and admit no fan-out
+			return { pass: JSON.stringify(admitsByBasis) === JSON.stringify({ crosswalk: false, declared: false, declaredIdentity: false, derived: true, standard: false }), detail: JSON.stringify(admitsByBasis) };
 		},
 	}),
 	// f1 runs the derived toy under a derived row that does NOT admit fan-out, so removing the check lets a whole plugin

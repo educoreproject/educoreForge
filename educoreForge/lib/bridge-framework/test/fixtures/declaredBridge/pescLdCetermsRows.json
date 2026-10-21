@@ -1,0 +1,120 @@
+{
+	"fixtureNote": "PESC_LD v0.0.2 TAP rows whose propertyID is ceterms: (ctdlHub P6 step 4). A TEST SPOKE, not a PESC forge: one node per row, termIri = the row propertyID verbatim.",
+	"sourceFile": "JSON-LD College Transcript_v0.0.2/Application Profile/PESC Transcript TAP_v0.0.1.json",
+	"sourceSha256": "504d4ee31a7f4b64a67a7c879bd02d07c107c185cba456c624be9c81ff4959b0",
+	"rowCount": 16,
+	"rowList": [
+		{
+			"shape": "CollegeTranscript",
+			"shapeID": "CollegeTranscriptShape",
+			"propertyID": "ceterms:hasPart",
+			"propertyLabel": "Has part",
+			"valueClass": "pesc:AcademicSummary\npesc:AwardSummary\npesc:ProgramSummary\npesc:SessionSummary"
+		},
+		{
+			"shape": "Person",
+			"shapeID": "PersonShape",
+			"propertyID": "ceterms:targetContactPoint",
+			"propertyLabel": "Contact",
+			"valueClass": "ceterms:ContactPoint"
+		},
+		{
+			"shape": "AcademicProgram",
+			"shapeID": "AcademicProgramShape",
+			"propertyID": "ceterms:hasPart",
+			"propertyLabel": "Has Part",
+			"valueClass": "ceds:C200328"
+		},
+		{
+			"shape": "AcademicProgram",
+			"shapeID": "AcademicProgramShape",
+			"propertyID": "ceterms:offeredBy",
+			"propertyLabel": "Offered By",
+			"valueClass": "ceds:C200239"
+		},
+		{
+			"shape": "AcademicProgram",
+			"shapeID": "AcademicProgramShape",
+			"propertyID": "ceterms:name",
+			"propertyLabel": "Academic Program Name",
+			"valueClass": ""
+		},
+		{
+			"shape": "AcademicSession",
+			"shapeID": "AcademicSessionShape",
+			"propertyID": "ceterms:name",
+			"propertyLabel": "Session Name",
+			"valueClass": ""
+		},
+		{
+			"shape": "Course",
+			"shapeID": "CourseShape",
+			"propertyID": "ceterms:offeredBy",
+			"propertyLabel": "Offered By",
+			"valueClass": "ceds:C200239"
+		},
+		{
+			"shape": "Organization",
+			"shapeID": "OrganizationShape",
+			"propertyID": "ceterms:name",
+			"propertyLabel": "Organization Name",
+			"valueClass": ""
+		},
+		{
+			"shape": "Organization",
+			"shapeID": "OrganizationShape",
+			"propertyID": "ceterms:targetContactPoint",
+			"propertyLabel": "Contact",
+			"valueClass": "ceterms:ContactPoint"
+		},
+		{
+			"shape": "Contact",
+			"shapeID": "ContactShape",
+			"propertyID": "ceterms:address",
+			"propertyLabel": "Address",
+			"valueClass": "ceterms:PostalAddress"
+		},
+		{
+			"shape": "Contact",
+			"shapeID": "ContactShape",
+			"propertyID": "ceterms:contactType",
+			"propertyLabel": "Contact Type",
+			"valueClass": ""
+		},
+		{
+			"shape": "PostalAddress",
+			"shapeID": "PostalAddressShape",
+			"propertyID": "ceterms:addressCountry",
+			"propertyLabel": "Country Code",
+			"valueClass": ""
+		},
+		{
+			"shape": "PostalAddress",
+			"shapeID": "PostalAddressShape",
+			"propertyID": "ceterms:addressLocality",
+			"propertyLabel": "Address Locality",
+			"valueClass": ""
+		},
+		{
+			"shape": "PostalAddress",
+			"shapeID": "PostalAddressShape",
+			"propertyID": "ceterms:addressRegion",
+			"propertyLabel": "Address Region",
+			"valueClass": ""
+		},
+		{
+			"shape": "PostalAddress",
+			"shapeID": "PostalAddressShape",
+			"propertyID": "ceterms:postalCode",
+			"propertyLabel": "Postal Code",
+			"valueClass": ""
+		},
+		{
+			"shape": "PostalAddress",
+			"shapeID": "PostalAddressShape",
+			"propertyID": "ceterms:streetAddress",
+			"propertyLabel": "Street Address",
+			"valueClass": ""
+		}
+	]
+}

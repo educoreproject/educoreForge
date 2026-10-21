@@ -31,7 +31,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
-const { TUPLE_LIST_FIELD_LIST, PRODUCER_KIND_BY_MATCH_BASIS } = require('./bridgePluginContract');
+const { TUPLE_LIST_FIELD_LIST, PRODUCER_KIND_BY_MATCH_BASIS, SOURCE_ACQUISITION_REGISTRY } = require('./bridgePluginContract');
+// ⟪ctdlHub P6⟫ the card tier a match edge of a basis may reach, read off its acquisition row (term for declared identity)
+const objectReferenceTierFor = (matchBasis) => (SOURCE_ACQUISITION_REGISTRY[matchBasis] === undefined ? undefined : SOURCE_ACQUISITION_REGISTRY[matchBasis].objectReferenceTier);
 
 const { JUDGE_PROVIDER_ROW_LIST, FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
@@ -71,10 +73,15 @@ const HUB_REFERENCE_LABEL = 'HubReference';
 // bridge subject, a walk node or an endpoint of an among-source edge (so a hub standard can also be a bridge source).
 const HUB_DEFINITION_LABEL = 'HubDefinition';
 const HUB_LAYER_LABEL_LIST = Object.freeze([HUB_REFERENCE_LABEL, HUB_DEFINITION_LABEL]);
-const PROPERTY_TIER = 'property';
 const CARD_LIST_SLOT_LIST = Object.freeze(TUPLE_LIST_FIELD_LIST.concat(['qualifierNames']));
 const CARD_REQUIRED_PROPERTY_LIST = Object.freeze(['stableId', 'canonicalKey', 'referenceTier', 'hubName', 'hubVersion', 'name']);
-const READER_MEMBER_LIST = Object.freeze(['readHubCards', 'readSubjectNodes', 'forWalk', 'forEvidence', 'forRetrieval', 'close']);
+// ⟪ctdlHub P6⟫ readHubTermCards (declared identity's pool: the target hub's TERM cards) and readTargetStandardRecords (a declared
+// bridge's pool: the target standard's BASE nodes and the edges among them that its rules walk)
+const READER_MEMBER_LIST = Object.freeze(['readHubCards', 'readSubjectNodes', 'forWalk', 'forEvidence', 'forRetrieval', 'close', 'readHubTermCards', 'readTargetStandardRecords']);
+// ⟪ctdlHub P6⟫ a TERM card carries no tuple (canonicalKey is absent by design); it is joined on termIri. No embedding is required:
+// declared identity judges nothing, so a vectorless term card is a lawful candidate, and the vector is dropped like any card's
+const TERM_CARD_REQUIRED_PROPERTY_LIST = Object.freeze(['stableId', 'termIri', 'referenceTier', 'hubName', 'hubVersion', 'name', 'uri']);
+const TERM_REFERENCE_TIER = 'term';
 const VIEW_MEMBER_LIST = Object.freeze(['readSourceNodes', 'readNodesByStableId', 'readEdgesAmongSource']);
 // the RETRIEVAL view is PURPOSE-SCOPED and closed to exactly four reads (RULING §11.4): readHubVectors and
 // readSubjectVectors return { stableId, embedding, embeddingModelVersion } and NOTHING else; the two text-node reads
@@ -90,7 +97,10 @@ const CARD_BASE_EDGE_FIELD_NAME_LIST = Object.freeze(['cardStableId', 'edgeType'
 // pilot's 2,777 (measured 2026-09-15), so a card without one is ordinary. VALUE and QUALIFIER are hub slots no
 // walk follows, so their edges are not returned.
 const CARD_BASE_SLOT_DISPOSITION = Object.freeze({ DOMAIN: 'required', PROPERTY: 'required', RANGE: 'optional' });
-const WRITER_MEMBER_LIST = Object.freeze(['writeMappingEdge', 'close']);
+// ⟪ctdlHub P6⟫ writeDeclaredCorrespondenceEdge: the door of a DECLARED bridge (DECLARED_CORRESPONDENCE to a base node), held by
+// its own closed rule (declaredCorrespondenceEdgeRefusal) rather than widening writeMappingEdge's: a match edge and a declared
+// correspondence never pass through one refusal set, so neither can drift into the other's shape
+const WRITER_MEMBER_LIST = Object.freeze(['writeMappingEdge', 'close', 'writeDeclaredCorrespondenceEdge']);
 const EDGE_TYPE_BY_PREDICATE = SKOS_EDGE_TYPES;
 const PREDICATE_BY_EDGE_TYPE = Object.freeze(Object.keys(SKOS_EDGE_TYPES).reduce((soFar, onePredicate) => ({ ...soFar, [SKOS_EDGE_TYPES[onePredicate]]: onePredicate }), {}));
 const JUDGED_ONLY_PROPERTY_LIST = Object.freeze([MAPPING_PROPERTIES.JUDGE_IDENTITY, MAPPING_PROPERTIES.RENDERER_VERSION, MAPPING_PROPERTIES.MAPPING_CONFIDENCE]);
@@ -218,6 +228,27 @@ const shapeHubCardList = ({ rawRecordList, referenceTier } = {}) => {
 		// vectors through the purpose-scoped forRetrieval() view instead, which returns nothing else.
 		// This is a CARD SHAPE change and NOT a rendered-text change: evidenceRenderer never printed either name,
 		// so the crosswalk variant's prompts stay byte-identical and its judgment cache keeps hitting (§11.8).
+		delete card.embedding;
+		delete card.embedText;
+		cardList.push(card);
+	}
+	return { cardList };
+};
+
+// shapeHubTermCardList — the term-card read boundary: every term card carries its identity fields, is tier 'term', and leaves
+// the boundary without its vector or embedText (as shapeHubCardList drops them), so nothing downstream can carry either
+const shapeHubTermCardList = ({ rawRecordList } = {}) => {
+	const cardList = [];
+	for (let recordIndex = 0; recordIndex < rawRecordList.length; recordIndex++) {
+		const oneRecord = rawRecordList[recordIndex];
+		const card = { ...oneRecord.properties, stableId: oneRecord.stableId };
+		const missing = TERM_CARD_REQUIRED_PROPERTY_LIST.find((oneName) => card[oneName] === undefined || card[oneName] === null || card[oneName] === '');
+		if (missing !== undefined) {
+			return { error: refuse.byName({ moduleName, what: `term card ${JSON.stringify(oneRecord.stableId)} lacks '${missing}'`, where: `every term card carries ${TERM_CARD_REQUIRED_PROPERTY_LIST.join(', ')}` }) };
+		}
+		if (card.referenceTier !== TERM_REFERENCE_TIER) {
+			return { error: refuse.byName({ moduleName, what: `term card ${card.stableId} is tier '${card.referenceTier}' in a '${TERM_REFERENCE_TIER}' read`, where: 'readHubTermCards reads the term tier only' }) };
+		}
 		delete card.embedding;
 		delete card.embedText;
 		cardList.push(card);
@@ -460,6 +491,61 @@ const closedHookArgs = (hookArgs) => closedShape({ target: hookArgs, memberList:
 const closedReader = (reader) => closedShape({ target: reader, memberList: READER_MEMBER_LIST, shapeName: 'graphReader' });
 const closedWriter = (writer) => closedShape({ target: writer, memberList: WRITER_MEMBER_LIST, shapeName: 'graphWriter' });
 
+// ⟪ctdlHub P6⟫ declaredCorrespondenceEdgeRefusal — the declared bridge's write seam: returns an Error or null. The edge type is
+// DECLARED_CORRESPONDENCE only; the properties are DECLARED_CORRESPONDENCE_PROPERTY_NAME_LIST exactly (every one present);
+// sourcePredicate is a CURIE kept verbatim and never a SKOS match predicate's short form; declaredBy and subjectSource name the
+// pairing's source; the tier is spec-authoritative; the subject is a node of the source and the object a BASE node of
+// objectStandardName — never a HubReference (a hub card is a match edge's object, not a correspondence's).
+// (read at CALL time from vocabularyLib, as the text-search vocabulary below is: the module-load destructure above predates
+// these rows and the vocabulary's require cycle makes a top-level read of a later row unsafe)
+const declaredCorrespondenceEdgeRefusal = ({ subjectStableId, objectStableId, objectStandardName, edgeType, edgeProperties, sourceStandardName, subjectEndpoint, objectEndpoint } = {}) => {
+	const { EDGE_TYPES, PROVENANCE_TIER, DECLARED_CORRESPONDENCE_PROPERTY_NAME_LIST } = vocabularyLib;
+	const DECLARED_CORRESPONDENCE_REQUIRED_VALUE_BY_NAME = { provenanceTier: PROVENANCE_TIER.SPEC_AUTHORITATIVE, matchBasis: 'declared', resolution: 'specified', mappingKind: MAPPING_KIND_BY_RESOLUTION.specified };
+	if (!isNonEmptyString(subjectStableId) || !isNonEmptyString(objectStableId) || !isNonEmptyString(objectStandardName)) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: subjectStableId ${JSON.stringify(subjectStableId)} / objectStableId ${JSON.stringify(objectStableId)} / objectStandardName ${JSON.stringify(objectStandardName)}`, where: 'both endpoints by stableId, and the standard the object must belong to' });
+	}
+	if (edgeType !== EDGE_TYPES.DECLARED_CORRESPONDENCE) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: edgeType '${edgeType}' is not ${EDGE_TYPES.DECLARED_CORRESPONDENCE}`, where: 'a declared bridge writes DECLARED_CORRESPONDENCE and nothing else; it never writes a match edge (R6)' });
+	}
+	if (!isPlainObject(edgeProperties)) {
+		return refuse.byName({ moduleName, what: 'writeDeclaredCorrespondenceEdge: edgeProperties is not an object', where: 'DECLARED_CORRESPONDENCE_PROPERTY_NAME_LIST' });
+	}
+	const outside = Object.keys(edgeProperties).find((oneName) => DECLARED_CORRESPONDENCE_PROPERTY_NAME_LIST.indexOf(oneName) === -1);
+	if (outside !== undefined) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: edge property '${outside}' is outside DECLARED_CORRESPONDENCE_PROPERTY_NAME_LIST (${DECLARED_CORRESPONDENCE_PROPERTY_NAME_LIST.join(', ')})`, where: 'the closed set' });
+	}
+	const missing = DECLARED_CORRESPONDENCE_PROPERTY_NAME_LIST.find((oneName) => edgeProperties[oneName] === undefined || edgeProperties[oneName] === null || edgeProperties[oneName] === '');
+	if (missing !== undefined) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: edge property '${missing}' is absent`, where: 'every DECLARED_CORRESPONDENCE edge carries the whole closed set' });
+	}
+	const wrongValueName = Object.keys(DECLARED_CORRESPONDENCE_REQUIRED_VALUE_BY_NAME).find((oneName) => edgeProperties[oneName] !== DECLARED_CORRESPONDENCE_REQUIRED_VALUE_BY_NAME[oneName]);
+	if (wrongValueName !== undefined) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: ${wrongValueName} is ${JSON.stringify(edgeProperties[wrongValueName])}, not ${JSON.stringify(DECLARED_CORRESPONDENCE_REQUIRED_VALUE_BY_NAME[wrongValueName])}`, where: 'a declared correspondence is specified, authored, spec-authoritative, matchBasis declared' });
+	}
+	if (!/^[a-z][A-Za-z0-9]*:[A-Za-z][A-Za-z0-9]*$/.test(String(edgeProperties.sourcePredicate)) || SKOS_PREDICATES.indexOf(edgeProperties.sourcePredicate) !== -1) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: sourcePredicate ${JSON.stringify(edgeProperties.sourcePredicate)} is not a verbatim CURIE`, where: 'the source\'s predicate as published (owl:equivalentClass, skos:narrowMatch, …), never a translated match predicate' });
+	}
+	if (edgeProperties.declaredBy !== sourceStandardName || edgeProperties.subjectSource !== sourceStandardName) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: declaredBy '${edgeProperties.declaredBy}' / subjectSource '${edgeProperties.subjectSource}' is not the pairing's source '${sourceStandardName}'`, where: 'the standard that published the assertion is the source the walk read' });
+	}
+	if (edgeProperties.objectSource !== objectStandardName) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: objectSource '${edgeProperties.objectSource}' is not the target standard '${objectStandardName}'`, where: 'the object standard is the bridge target' });
+	}
+	if (subjectEndpoint === null) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: subject ${subjectStableId} is not in the graph`, where: 'both endpoints exist before a declared edge is written' });
+	}
+	if (subjectEndpoint !== undefined && subjectEndpoint.sourceStandardName !== undefined && subjectEndpoint.sourceStandardName !== sourceStandardName) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: subject ${subjectStableId} is a '${subjectEndpoint.sourceStandardName}' node, not '${sourceStandardName}'`, where: 'a declared correspondence starts at a node the source owns' });
+	}
+	if (objectEndpoint === null) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: object ${objectStableId} is not in the graph`, where: 'the resolved target must exist' });
+	}
+	if (objectEndpoint !== undefined && (HUB_LAYER_LABEL_LIST.some((oneLabel) => objectEndpoint.labels.indexOf(oneLabel) !== -1) || objectEndpoint.sourceStandardName !== objectStandardName)) {
+		return refuse.byName({ moduleName, what: `writeDeclaredCorrespondenceEdge: object ${objectStableId} is not a base node of '${objectStandardName}' (labels ${objectEndpoint.labels.join(', ')}, _source ${objectEndpoint.sourceStandardName})`, where: 'a declared correspondence reaches a BASE node of the target standard, never a hub card' });
+	}
+	return null;
+};
+
 // mappingEdgeRefusal — the §6 write seam: returns an Error or null
 const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgeProperties, sourceStandardName, subjectEndpoint, objectEndpoint } = {}) => {
 	if (!isNonEmptyString(subjectStableId) || !isNonEmptyString(objectStableId)) {
@@ -582,8 +668,8 @@ const mappingEdgeRefusal = ({ subjectStableId, objectStableId, edgeType, edgePro
 	if (!Array.isArray(objectEndpoint.labels) || objectEndpoint.labels.indexOf(HUB_REFERENCE_LABEL) === -1) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: object endpoint '${objectStableId}' is not a ${HUB_REFERENCE_LABEL}`, where: 'conservativity: a mapping edge points at a hub card (BG-CONSERV a)' });
 	}
-	if (objectEndpoint.referenceTier !== undefined && objectEndpoint.referenceTier !== PROPERTY_TIER) {
-		return refuse.byName({ moduleName, what: `writeMappingEdge: object endpoint '${objectStableId}' is a '${objectEndpoint.referenceTier}'-tier card`, where: 'NO edge to a value-tier card exists in v1 (BR-080, BG-VALUE c)' });
+	if (objectEndpoint.referenceTier !== undefined && objectEndpoint.referenceTier !== objectReferenceTierFor(edgeProperties.matchBasis)) {
+		return refuse.byName({ moduleName, what: `writeMappingEdge: object endpoint '${objectStableId}' is a '${objectEndpoint.referenceTier}'-tier card and matchBasis '${edgeProperties.matchBasis}' reaches '${objectReferenceTierFor(edgeProperties.matchBasis)}' cards`, where: 'NO edge to a value-tier card exists in v1 (BR-080, BG-VALUE c); a basis reaches the tier its acquisition row names (objectReferenceTier: term for declared identity, ctdlHub P6)' });
 	}
 	if (subjectEndpoint.sourceStandardName !== sourceStandardName) {
 		return refuse.byName({ moduleName, what: `writeMappingEdge: subject endpoint '${subjectStableId}' has _source ${JSON.stringify(subjectEndpoint.sourceStandardName)}, not the pairing's source '${sourceStandardName}'`, where: 'conservativity (BG-CONSERV a)' });
@@ -598,6 +684,9 @@ module.exports = {
 	CARD_LIST_SLOT_LIST,
 	CARD_REQUIRED_PROPERTY_LIST,
 	READER_MEMBER_LIST,
+	declaredCorrespondenceEdgeRefusal,
+	TERM_REFERENCE_TIER,
+	shapeHubTermCardList,
 	VIEW_MEMBER_LIST,
 	RETRIEVAL_VIEW_MEMBER_LIST,
 	RETRIEVAL_RECORD_KEY_LIST,

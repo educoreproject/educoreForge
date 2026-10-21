@@ -22,7 +22,9 @@ const { TUPLE_LIST_FIELD_LIST } = require('./bridgePluginContract');
 const compareStrings = (leftValue, rightValue) => (leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0);
 const sortByStableId = (list) => list.slice().sort((leftCard, rightCard) => compareStrings(String(leftCard.stableId), String(rightCard.stableId)));
 
-// the multimap: get() returns a LIST for every key ([] when absent); set() on an existing key is refused
+// the multimap: get() returns a LIST for every key ([] when absent); set() on an existing key is refused.
+// ⟪ctdlHub P6⟫ keyed by a NAMED join field: canonicalKey for the property cards (makeCardListByCanonicalKey, unchanged), termIri
+// for the term cards of declared identity, the raw declared target for a declared bridge's resolved base nodes
 const makeCardListByCanonicalKey = ({ cardList } = {}) => {
 	if (!Array.isArray(cardList)) {
 		throw refuse.byName({ moduleName, what: 'makeCardListByCanonicalKey needs cardList (an array)', where: 'the resolver builds the index from reader.readHubCards' });
@@ -50,6 +52,22 @@ const makeCardListByCanonicalKey = ({ cardList } = {}) => {
 	const worstContention = () => Object.keys(listByKey).reduce((soFar, oneKey) => Math.max(soFar, listByKey[oneKey].length), 0);
 	const sumOfListLengths = () => Object.keys(listByKey).reduce((soFar, oneKey) => soFar + listByKey[oneKey].length, 0);
 	return Object.freeze({ get, add, set, keyList, cardCount: () => cardCount, distinctKeyCount, contendedKeyCount, worstContention, sumOfListLengths });
+};
+// ⟪ctdlHub P6⟫ makeCardListByJoinField — the SAME multimap keyed by a NAMED join field (termIri for declared identity's term cards,
+// declaredTarget for a declared bridge's resolved base nodes): each card is indexed through a COPY whose canonicalKey is the join
+// value, so the one index type (and its refusals) serves every pool; the cards themselves are untouched
+const makeCardListByJoinField = ({ cardList, joinFieldName } = {}) => {
+	if (!Array.isArray(cardList)) {
+		throw refuse.byName({ moduleName, what: 'makeCardListByJoinField needs cardList (an array)', where: 'the pool population read in STEP 1' });
+	}
+	if (typeof joinFieldName !== 'string' || joinFieldName.length === 0) {
+		throw refuse.byName({ moduleName, what: `makeCardListByJoinField needs joinFieldName (got ${JSON.stringify(joinFieldName)})`, where: 'the acquisition row names the field the pool is joined on; there is no default' });
+	}
+	const unjoinable = cardList.find((oneCard) => !oneCard || typeof oneCard[joinFieldName] !== 'string' || oneCard[joinFieldName].length === 0);
+	if (unjoinable !== undefined) {
+		throw refuse.byName({ moduleName, what: `a card without its join field '${joinFieldName}' cannot be indexed (stableId ${JSON.stringify(unjoinable && unjoinable.stableId)})`, where: 'every card of a pool carries the field the pool is joined on' });
+	}
+	return makeCardListByCanonicalKey({ cardList: cardList.map((oneCard) => ({ ...oneCard, canonicalKey: oneCard[joinFieldName] })) });
 };
 
 const asSortedList = (value) => (Array.isArray(value) ? value.map(String).sort() : value === undefined || value === null || value === '' ? [] : [String(value)]);
@@ -127,6 +145,7 @@ const classifyTarget = (context) => {
 
 module.exports = {
 	makeCardListByCanonicalKey,
+	makeCardListByJoinField,
 	filterPoolByTuple,
 	tupleFieldEquals,
 	sortByStableId,

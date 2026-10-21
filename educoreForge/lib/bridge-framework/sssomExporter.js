@@ -32,7 +32,7 @@ const fs = require('fs');
 const path = require('path');
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
-const { plannedEdgeList } = require('./materialiser');
+const { plannedEdgeList, edgeShapeRowFor } = require('./materialiser');
 const { METHOD_BY_RESOLUTION } = require('./materialiser');
 
 const { sssomJustificationRefusal, SSSOM_COLUMN_BY_EDGE_PROPERTY, MAPPING_PROPERTIES, JUDGE_SUMMARY_EDGE_PROPERTY_LIST } = vocabularyLib;
@@ -46,6 +46,7 @@ const EXTENSION_PROPERTY_BASE = 'https://w3id.org/EDUcore/sssom/extension#';
 // the judged subject in this extension column. It exists only in a fanned-out export; any other export is unchanged.
 const JUDGED_SUBJECT_COLUMN = 'judged_subject_id';
 const MAPPING_SET_ID_URN_BASE = 'urn:educore:decisionBlock:';
+const DECLARED_PREDICATE_SLOT_NAME = 'declared_predicate';
 const URN_SCHEME_PREFIX = 'urn';
 const URN_SCHEME_EXPANSION = 'urn:';
 // yamlScalar — every metadata value QUOTED as a YAML double-quoted scalar (JSON string syntax is valid YAML): a bare value
@@ -196,6 +197,13 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 	const columnList = COLUMN_LIST.concat(conditionalColumnList);
 	const extensionSlotNameList = EXTENSION_SLOT_NAME_LIST.concat(conditionalColumnList);
 	const plannedList = plannedEdgeList(decisionBlock.decisionRecordList);
+	// ⟪ctdlHub P6⟫ predicate_id per the block's edge shape: skos:<relation> for a match edge, the source's own CURIE verbatim for a
+	// declared correspondence (owl:equivalentClass is a lawful SSSOM predicate_id; it is never rewritten into a skos match)
+	const shapeLookup = edgeShapeRowFor(decisionBlock);
+	if (shapeLookup.error) {
+		callback(shapeLookup.error);
+		return;
+	}
 	for (let edgeIndex = 0; edgeIndex < plannedList.length; edgeIndex++) {
 		const { record: oneRecord, fromStableId } = plannedList[edgeIndex];
 		// ⟪G-2, adversarial review D4 2026-08-17⟫ RECORD-FIRST, byte-identical to the expression in
@@ -228,7 +236,7 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 		judgedSubjectSet.add(oneRecord.subjectStableId);
 		rowList.push({
 			subject_id: fromStableId,
-			predicate_id: `skos:${oneRecord.predicate}`,
+			predicate_id: shapeLookup.edgeShapeRow.sssomPredicateIdFor(oneRecord.predicate),
 			object_id: card.uri,
 			mapping_justification: justification,
 			object_label: card.name,
@@ -256,7 +264,8 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 	// DERIVED from the declaration's curie map, never literals — and, because a URN is CURIE-shaped ('urn:…'), the URN scheme is
 	// itself declared in curie_map (`urn: "urn:"`, an identity expansion) so a strict validator resolves it. Measured with
 	// sssom-py 0.4.21: `sssom validate` exits 0 on this shape; the framework's PROXY (parseSssomTsv) had accepted the old shape.
-	const extensionDefinitionList = extensionSlotNameList.map((oneSlot) => ({ slot_name: oneSlot, property: `${EXTENSION_PROPERTY_BASE}${oneSlot}`, type_hint: 'xsd:string' }));
+	const declaredAwareExtensionSlotNameList = setLevelSlots.declaredPredicateProvenance === undefined ? extensionSlotNameList : extensionSlotNameList.concat([DECLARED_PREDICATE_SLOT_NAME]);
+	const extensionDefinitionList = declaredAwareExtensionSlotNameList.map((oneSlot) => ({ slot_name: oneSlot, property: `${EXTENSION_PROPERTY_BASE}${oneSlot}`, type_hint: 'xsd:string' }));
 	const headerLineList = [
 		'#curie_map:',
 		...Object.keys(effectiveCurieMap)
@@ -298,6 +307,11 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 	}
 	if (setLevelSlots.channelAssertionProvenance !== undefined) {
 		headerLineList.push(`#channel_assertion: ${yamlScalar(JSON.stringify(setLevelSlots.channelAssertionProvenance))}`);
+	}
+	// ⟪ctdlHub P6⟫ a declared bridge's predicate provenance (the admitted predicate list and its citation); its slot is declared
+	// under extension_definitions only in such an export, so every other export is byte-unchanged
+	if (setLevelSlots.declaredPredicateProvenance !== undefined) {
+		headerLineList.push(`#declared_predicate: ${yamlScalar(JSON.stringify(setLevelSlots.declaredPredicateProvenance))}`);
 	}
 	const subjectCensus = { subjectCount: subjectSet.size, rowCount: rowList.length, note: 'rows are per (subject stableId, predicate, object); several source subjects sharing one leaf yield ONE row' };
 	headerLineList.push(`#subject_census: ${yamlScalar(JSON.stringify(isFannedOut ? { ...subjectCensus, judgedSubjectCount: judgedSubjectSet.size } : subjectCensus))}`);

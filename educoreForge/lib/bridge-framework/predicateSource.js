@@ -8,6 +8,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                          predicateAssertedBy 'source' (the column asserts a relation) / 'labelTable' (the
 //                          plugin's table reads the source's confidence label)
 //   channelAssertion     → the ONE declared predicate for every row; predicateAssertedBy 'channelAssertion'
+//   declaredPredicate    → ⟪ctdlHub P6⟫ each row's OWN sourcePredicate, verbatim; one outside the declared predicateList
+//                          refuses the RUN by name (labelCensus), never coerced; predicateAssertedBy 'source'
 // The judge is NEVER a source of predicate (v1). A label with no table row, or a sentinelOnly label on a
 // real-target row, refuses the RUN (labelCensus); a `refused`-disposition row is refused BY ROW and counted.
 
@@ -31,6 +33,8 @@ const PREDICATE_SOURCE_KIND_REGISTRY = Object.freeze({
 	column: Object.freeze({ readsTable: true, rowFor: tableRowFor, provenanceOf: (predicateSource) => predicateSource.table, provenanceSlotName: 'labelTableProvenance' }),
 	labelTable: Object.freeze({ readsTable: true, rowFor: tableRowFor, provenanceOf: (predicateSource) => predicateSource.table, provenanceSlotName: 'labelTableProvenance' }),
 	channelAssertion: Object.freeze({ readsTable: false, rowFor: () => null, provenanceOf: (predicateSource) => predicateSource, provenanceSlotName: 'channelAssertionProvenance' }),
+	// ⟪ctdlHub P6⟫ readsAssertionPredicate: the row's own sourcePredicate IS the relation (and its label, for the census)
+	declaredPredicate: Object.freeze({ readsTable: false, readsAssertionPredicate: true, rowFor: () => null, provenanceOf: (predicateSource) => predicateSource, provenanceSlotName: 'declaredPredicateProvenance' }),
 	// judge — the relation comes from the JUDGE: under predicateRule categoryTable-v1 through the plugin's declared
 	// predicateByCategory table (RULING §11.7 (a)), under judgeSlot-v1 through the judge's own predicate slot. readsTable is FALSE in this registry's sense: there is no per-ROW label to look up,
 	// because a derived subject has no source row. The set-level provenance it exports is the RULE ITSELF —
@@ -47,6 +51,12 @@ const PREDICATE_SOURCE_KIND_REGISTRY = Object.freeze({
 const labelRowFor = ({ predicateSource, assertion } = {}) => {
 	const predicateAssertedBy = PREDICATE_ASSERTED_BY_BY_SOURCE_KIND[predicateSource.kind];
 	const kindRow = PREDICATE_SOURCE_KIND_REGISTRY[predicateSource.kind];
+	if (kindRow.readsAssertionPredicate === true) {
+		const sourcePredicate = assertion.sourcePredicate === undefined || assertion.sourcePredicate === null ? '' : String(assertion.sourcePredicate);
+		return predicateSource.predicateList.indexOf(sourcePredicate) === -1
+			? { disposition: 'unmapped', sourceLabel: sourcePredicate }
+			: { disposition: 'predicate', predicate: sourcePredicate, predicateAssertedBy, sourceLabel: sourcePredicate };
+	}
 	if (!kindRow.readsTable) {
 		// channelAssertion names ONE predicate for every row. The judge kind names none here BY DESIGN — its
 		// relation is resolved after the judgment, from the category, in the framework's pick-predicate
@@ -112,7 +122,7 @@ const labelCensus = ({ predicateSource, assertionList, isSentinelAssertion, subj
 		return {
 			error: refuse.byName({
 				moduleName,
-				what: `label ${JSON.stringify(firstUnmapped)} in column '${predicateSource.column}' (${subjectList.length} row${subjectList.length === 1 ? '' : 's'}; sample subjects: ${subjectList.slice(0, 3).join(' | ')}) has no entry in the table`,
+				what: `label ${JSON.stringify(firstUnmapped)} in ${predicateSource.column === undefined ? `the declared predicateList (${(predicateSource.predicateList || []).join(', ')})` : `column '${predicateSource.column}'`} (${subjectList.length} row${subjectList.length === 1 ? '' : 's'}; sample subjects: ${subjectList.slice(0, 3).join(' | ')}) has no entry in the table`,
 				where: 'add the row or refuse the label explicitly (BR-046, RULING P4); a table that has quietly stopped covering its source must not stay green',
 			}),
 		};
