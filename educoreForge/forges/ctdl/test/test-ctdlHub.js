@@ -20,6 +20,9 @@
 //   b  the declaration is admitted by the hub declaration contract; the hooks are {}
 //   c  the tier counts and the skip report, exactly as derived from the base
 //   d  every card passes the field table under the hub's own scope (zero refusals)
+//   f  ⟪step 6⟫ the CTDL round trip over a graph holding the base AND its hub stays clean (invented 0, lost 0): the hub layer
+//      (HubReference, HubDefinition and the edges touching them) is ours, not CTDL's, and the reader is scoped by role to
+//      exclude it — the same layer ruling CEDS's round-trip compiler states (SPEC-hubKitRole §4.6)
 //   e  spot cards: term cards for ceterms:Credential, ceterms:name and accommodation:AccessibleHousing; the property card
 //      (ceterms:Credential, ceterms:name) carries rangeDatatypeList ['rdf:langString'] and its HAS_TERM_REFERENCE lands on
 //      the ceterms:name term card; exactly one HubDefinition, hubName 'CTDL'
@@ -39,6 +42,8 @@ EXIT STATUS
 require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
 const harness = require('../../../test/testLib/harness')(moduleName);
 
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
@@ -52,6 +57,9 @@ const forgeDeclaration = require('../lib/ctdlForgeDeclaration');
 const { validateHubDeclaration } = require(path.join(TREE_ROOT, 'lib', 'hub-framework', 'hubDeclarationContract'));
 const { HUB_CARD_FIELD_TABLE, cardFieldRefusal } = require(path.join(TREE_ROOT, 'lib', 'hub-framework', 'hubCardFieldTable'));
 const { HUB_TERM_REFERENCE_EDGE_TYPE } = require(path.join(TREE_ROOT, 'lib', 'vocabulary', 'vocabulary'));
+const roundTripHarness = require(path.join(TREE_ROOT, 'lib', 'forge-framework', 'roundTripHarness', 'roundTripHarness'))();
+const validator = require('../roundTripValidator');
+const SNAPSHOT_DIR_PATH = path.join(__dirname, '..', 'assets', 'standardSourceData', '01');
 const HUB_NAMESPACE = require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'apps', 'forger', 'forger')).resolveBundle({ standard: 'ctdl' }).hubNamespace;
 
 const cardsOfTier = (hub, referenceTier) => hub.nodes.filter((oneNode) => oneNode.properties.referenceTier === referenceTier);
@@ -179,6 +187,14 @@ forgeCtdl.forge({ sourcePath: SOURCE_FILE_PATH, skipEmbedding: true }, (forgeErr
 			const verdict = judgeByConjunct[oneTwin.conjunctRefId](oneTwin.subject());
 			harness.ok(`${oneTwin.conjunctRefId} observed RED under '${oneTwin.twinName}'`, !verdict.pass, verdict.detail);
 		});
-		harness.report();
+		harness.section('f — the round trip over base + hub (step 6)');
+		const outputPath = fs.mkdtempSync(path.join(os.tmpdir(), 'ctdlHubRoundTrip-'));
+		const baseAndHub = { nodes: base.nodes.concat(hub.nodes), edges: base.edges.concat(hub.edges) };
+		validator.validateWithReader({ reader: roundTripHarness.graphDoubleFrom({ forgeResult: baseAndHub }), snapshotPath: SNAPSHOT_DIR_PATH, outputPath }, (validateError, verdict) => {
+			harness.accepts('f: the validator runs over base + hub', validateError ? [validateError] : []);
+			harness.ok('f: invented 0, lost 0, roundTripClean over base + hub', Boolean(verdict) && verdict.inventedTotal === 0 && verdict.lostTotal === 0 && verdict.roundTripClean === true, verdict && `invented ${verdict.inventedTotal} lost ${verdict.lostTotal} clean ${verdict.roundTripClean}`);
+			fs.rmSync(outputPath, { recursive: true, force: true });
+			harness.report();
+		});
 	});
 });

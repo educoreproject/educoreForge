@@ -33,6 +33,13 @@ const DESCRIPTION_PRECEDENCE_LIST = Object.freeze(['dct:description', 'rdfs:comm
 const USAGE_NOTE_PREDICATE = 'vann:usageNote';
 const STATUS_PREDICATE = 'vs:term_status';
 const ROOT_ROLE = 'DmeStandardRoot';
+// ⟪ctdlHub P4 step 6⟫ THE GRAPH CAN HOLD TWO LAYERS AND ONLY ONE OF THEM ROUND-TRIPS (the layer ruling CEDS's round-trip compiler
+// states, SPEC-hubKitRole §4.6). Layer 1 is the vocabulary as forged: the four Dme* roles, the root, and the edges between them.
+// Layer 2 is OUR hub — HubReference and HubDefinition nodes and every edge touching one (HAS_CTDL_*, IN_HUB,
+// HAS_TERM_REFERENCE). The source states none of it, so reading it back would INVENT statements. The hub layer is excluded
+// BY ROLE, named here, so the exclusion is a stated decision: any OTHER unknown role or edge still faults by name.
+const { EQUIVALENCE_NODE_LABELS } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const HUB_LAYER_ROLE_LIST = Object.freeze([EQUIVALENCE_NODE_LABELS.HUB_REFERENCE, EQUIVALENCE_NODE_LABELS.HUB_DEFINITION]);
 
 // the graph edges that express a native reference, read in BOTH directions where the source states both
 // (meta:domainFor is the inverse of schema:domainIncludes; meta:hasConcept of skos:inScheme). An inverse is read back ONLY
@@ -216,6 +223,9 @@ const moduleFunction =
 				let fault;
 				graph.nodes.forEach((oneNode) => {
 					const { stableId, role, properties } = oneNode;
+					if (HUB_LAYER_ROLE_LIST.indexOf(role) !== -1) {
+						return; // Layer 2, ours: see HUB_LAYER_ROLE_LIST
+					}
 					if (role === ROOT_ROLE && properties.foreignTermEntryList === undefined) {
 						fault = `the root '${stableId}' carries no foreignTermEntryList (the forge always writes it, '[]' when the source has no foreign entry)`;
 						return;
@@ -255,6 +265,10 @@ const moduleFunction =
 				});
 				graph.edges.forEach((oneEdge) => {
 					const reading = STRUCTURAL_READING.find((oneReading) => oneReading.edgeType === oneEdge.type && oneReading.locator === oneEdge.properties.locator);
+					const touchesHubLayer = HUB_LAYER_ROLE_LIST.indexOf(roleById[oneEdge.fromStableId]) !== -1 || HUB_LAYER_ROLE_LIST.indexOf(roleById[oneEdge.toStableId]) !== -1;
+					if (touchesHubLayer) {
+						return; // a hub edge (HAS_CTDL_*, IN_HUB, HAS_TERM_REFERENCE) states nothing the source said
+					}
 					const touchesRoot = roleById[oneEdge.fromStableId] === ROOT_ROLE || roleById[oneEdge.toStableId] === ROOT_ROLE;
 					if (touchesRoot) {
 						return; // root scaffolding (HAS_CLASS, an orphan's HAS_OPTION_SET, a domainless property's HAS_PROPERTY) states nothing
