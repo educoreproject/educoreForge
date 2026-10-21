@@ -40,6 +40,12 @@ DESCRIPTION
                                      ({ ruleName, edgeType, fromStableId?, locator?, expectedCount }) admits, counted exactly
                     A1 additions     a1.additionalReferenceCountByLocatorAndPrefix: crossRefs a later row carries beyond the
                                      source census (P2b E11), declared per (locator, prefix)
+       external     the census sections familyEdges, hubEdges and otherExternalEdges, matched by (section, type, from, to):
+                    an edge on one side only must be admitted by an externalEdgeRuleList row ({ ruleName, section, side:
+                    oracleOnly | candidateOnly, edgeType, fromStableId?, toStableId?, expectedCount }), counted exactly;
+                    an edge on both sides compares its properties as intra edges do
+     REQUIRED in every allowance, stated even when empty: candidateOnlyEdgeRuleList, externalEdgeRuleList and
+     a1.additionalReferenceCountByLocatorAndPrefix. An absent one is refused by name; it is never read as "nothing declared".
      Prints one verdict line per row and the first unexplained differences.
 
 EXIT STATUS
@@ -86,6 +92,27 @@ const specRelative = (relativePath) => path.resolve(path.dirname(allowanceSpecPa
 if (oracleCensus.sourceName !== allowanceSpec.standardSource || candidateCensus.sourceName !== allowanceSpec.standardSource) {
 	refuse(`the spec is for '${allowanceSpec.standardSource}' but the censuses are '${oracleCensus.sourceName}' (oracle) and '${candidateCensus.sourceName}' (candidate)`);
 }
+// ⟪ctdlHub step 0b⟫ fields every allowance must state, even as empty: absent is refused, never read as "nothing declared"
+const absentSpecFieldNameList = [
+	['candidateOnlyEdgeRuleList', allowanceSpec.candidateOnlyEdgeRuleList],
+	['externalEdgeRuleList', allowanceSpec.externalEdgeRuleList],
+	['a1.additionalReferenceCountByLocatorAndPrefix', allowanceSpec.a1 && allowanceSpec.a1.additionalReferenceCountByLocatorAndPrefix],
+].filter(([, fieldValue]) => fieldValue === undefined).map(([fieldName]) => fieldName);
+if (absentSpecFieldNameList.length !== 0) {
+	refuse(`${allowanceSpecPath}: required and absent: ${absentSpecFieldNameList.join(', ')}. State an empty list or {} when nothing is declared.`);
+}
+const EXTERNAL_EDGE_SECTION_LIST = ['familyEdges', 'hubEdges', 'otherExternalEdges'];
+const EXTERNAL_EDGE_SIDE_LIST = ['oracleOnly', 'candidateOnly'];
+const malformedExternalRuleTextList = allowanceSpec.externalEdgeRuleList
+	.map((oneRule) => [
+		EXTERNAL_EDGE_SECTION_LIST.indexOf(oneRule.section) === -1 ? `rule '${oneRule.ruleName}' names section '${oneRule.section}' (allowed: ${EXTERNAL_EDGE_SECTION_LIST.join(', ')})` : '',
+		EXTERNAL_EDGE_SIDE_LIST.indexOf(oneRule.side) === -1 ? `rule '${oneRule.ruleName}' names side '${oneRule.side}' (allowed: ${EXTERNAL_EDGE_SIDE_LIST.join(', ')})` : '',
+		typeof oneRule.ruleName !== 'string' || typeof oneRule.edgeType !== 'string' || !Number.isInteger(oneRule.expectedCount) ? `rule ${JSON.stringify(oneRule)} lacks ruleName, edgeType or an integer expectedCount` : '',
+	].filter(Boolean).join('; '))
+	.filter(Boolean);
+if (malformedExternalRuleTextList.length !== 0) {
+	refuse(`${allowanceSpecPath}: externalEdgeRuleList: ${malformedExternalRuleTextList.join('; ')}`);
+}
 
 const prefixOf = (iriText) => `${iriText}`.split(':')[0];
 const stableText = (oneValue) => JSON.stringify(oneValue);
@@ -125,7 +152,7 @@ const oracleEdgeBySignature = oracleCensus.intraEdges.reduce((bySignature, oneEd
 const candidateEdgeBySignature = candidateCensus.intraEdges.reduce((bySignature, oneEdge) => ({ ...bySignature, [edgeSignatureOf(oneEdge)]: oneEdge }), {});
 Object.keys(oracleEdgeBySignature).filter((oneSignature) => !candidateEdgeBySignature[oneSignature]).forEach((oneSignature) => noteUnexplained('edge absent from candidate', { edgeSignature: oneSignature }));
 // edges the allowance ADDS (e.g. A6): matched by a declared rule { ruleName, edgeType, fromStableId, expectedCount }, counted per rule
-const candidateOnlyEdgeRuleList = allowanceSpec.candidateOnlyEdgeRuleList || [];
+const candidateOnlyEdgeRuleList = allowanceSpec.candidateOnlyEdgeRuleList;
 const candidateOnlyEdgeCountByRule = candidateOnlyEdgeRuleList.reduce((counts, oneRule) => ({ ...counts, [oneRule.ruleName]: 0 }), {});
 Object.keys(candidateEdgeBySignature).filter((oneSignature) => !oracleEdgeBySignature[oneSignature]).forEach((oneSignature) => {
 	const oneEdge = candidateEdgeBySignature[oneSignature];
@@ -142,6 +169,39 @@ Object.keys(oracleEdgeBySignature).filter((oneSignature) => candidateEdgeBySigna
 	const candidateEdgeText = stableText(candidateEdgeBySignature[oneSignature].properties);
 	if (oracleEdgeText !== candidateEdgeText) {
 		noteUnexplained('edge properties differ', { edgeSignature: oneSignature, oracleValue: oracleEdgeText, candidateValue: candidateEdgeText });
+	}
+});
+
+// ---------------------------------------------------------------- external edges (ctdlHub step 0b)
+// The three census sections whose edges leave the standard. Matched by (section, type, from, to); an edge on one side only must
+// be admitted by an externalEdgeRuleList row of that side and section (edgeType, and optionally fromStableId / toStableId),
+// counted exactly; an edge on both sides compares its properties as intra edges do.
+const externalEdgeListOf = (oneCensus, sectionName) => (sectionName === 'familyEdges'
+	? Object.keys(oneCensus.familyEdges).sort().flatMap((pairName) => oneCensus.familyEdges[pairName].edgeList)
+	: oneCensus[sectionName]);
+const externalEdgeBySignatureOf = (oneCensus) => EXTERNAL_EDGE_SECTION_LIST.reduce((bySignature, sectionName) => externalEdgeListOf(oneCensus, sectionName)
+	.reduce((sectionBySignature, oneEdge) => ({ ...sectionBySignature, [`${sectionName}|${edgeSignatureOf(oneEdge)}`]: { sectionName, oneEdge } }), bySignature), {});
+const oracleExternalBySignature = externalEdgeBySignatureOf(oracleCensus);
+const candidateExternalBySignature = externalEdgeBySignatureOf(candidateCensus);
+const externalEdgeRuleList = allowanceSpec.externalEdgeRuleList;
+const externalEdgeCountByRule = externalEdgeRuleList.reduce((counts, oneRule) => ({ ...counts, [oneRule.ruleName]: 0 }), {});
+const admitOneSided = ({ sideName, ownBySignature, otherBySignature, unexplainedKindText }) => Object.keys(ownBySignature).filter((oneSignature) => !otherBySignature[oneSignature]).forEach((oneSignature) => {
+	const { sectionName, oneEdge } = ownBySignature[oneSignature];
+	const matchedRule = externalEdgeRuleList.find((oneRule) => oneRule.side === sideName && oneRule.section === sectionName && oneRule.edgeType === oneEdge.type
+		&& (oneRule.fromStableId === undefined || oneRule.fromStableId === oneEdge.from) && (oneRule.toStableId === undefined || oneRule.toStableId === oneEdge.to));
+	if (matchedRule === undefined) {
+		noteUnexplained(unexplainedKindText, { edgeSignature: oneSignature });
+		return;
+	}
+	externalEdgeCountByRule[matchedRule.ruleName] += 1;
+});
+admitOneSided({ sideName: 'oracleOnly', ownBySignature: oracleExternalBySignature, otherBySignature: candidateExternalBySignature, unexplainedKindText: 'external edge absent from candidate' });
+admitOneSided({ sideName: 'candidateOnly', ownBySignature: candidateExternalBySignature, otherBySignature: oracleExternalBySignature, unexplainedKindText: 'external edge absent from oracle' });
+Object.keys(oracleExternalBySignature).filter((oneSignature) => candidateExternalBySignature[oneSignature]).forEach((oneSignature) => {
+	const oracleEdgeText = stableText(withoutNames(oracleExternalBySignature[oneSignature].oneEdge.properties, allowanceSpec.ignoredOracleEdgePropertyList));
+	const candidateEdgeText = stableText(candidateExternalBySignature[oneSignature].oneEdge.properties);
+	if (oracleEdgeText !== candidateEdgeText) {
+		noteUnexplained('external edge properties differ', { edgeSignature: oneSignature, oracleValue: oracleEdgeText, candidateValue: candidateEdgeText });
 	}
 });
 
@@ -220,7 +280,7 @@ const expectedCrossRefTotalsByKey = Object.keys(sourceReferenceCensus)
 	.filter((totalsName) => seamPrefixList.indexOf(totalsName.split(' -> ')[1].replace(/:$/, '')) === -1)
 	.reduce((totals, totalsName) => ({ ...totals, [totalsName]: sourceReferenceCensus[totalsName] }), {});
 // ⟪P2b E11⟫ references under a claimed prefix to terms the source does not define, now carried: declared per (locator, prefix)
-Object.keys(a1.additionalReferenceCountByLocatorAndPrefix || {}).forEach((totalsName) => {
+Object.keys(a1.additionalReferenceCountByLocatorAndPrefix).forEach((totalsName) => {
 	expectedCrossRefTotalsByKey[totalsName] = (expectedCrossRefTotalsByKey[totalsName] || 0) + a1.additionalReferenceCountByLocatorAndPrefix[totalsName];
 });
 const a1TotalsMismatchList = [...new Set(Object.keys(expectedCrossRefTotalsByKey).concat(Object.keys(candidateCrossRefTotalsByKey)))]
@@ -256,6 +316,16 @@ rowEvidence.A5 = {
 rowEvidence.nodes = { verdict: unexplainedList.some((oneItem) => /^node |^role |^labels /.test(oneItem.kindText)) ? FAIL : PASS, detail: `${oracleCensus.nodes.length} oracle / ${candidateCensus.nodes.length} candidate nodes; stableIds, roles and labels (L1) compared` };
 rowEvidence.edges = { verdict: unexplainedList.some((oneItem) => /^edge /.test(oneItem.kindText)) ? FAIL : PASS, detail: `${oracleCensus.intraEdges.length} oracle / ${candidateCensus.intraEdges.length} candidate intra-standard edges; (type, from, to) and properties compared` };
 rowEvidence.properties = { verdict: unexplainedList.some((oneItem) => /^property /.test(oneItem.kindText)) ? FAIL : PASS, detail: 'every other property identical, or named by A3 (removed/added), A4, V1 or M1' };
+rowEvidence.externalEdges = {
+	verdict: unexplainedList.some((oneItem) => /^external edge /.test(oneItem.kindText)) ? FAIL : PASS,
+	detail: `${Object.keys(oracleExternalBySignature).length} oracle / ${Object.keys(candidateExternalBySignature).length} candidate edges in ${EXTERNAL_EDGE_SECTION_LIST.join(', ')}; one-sided edges admitted only by externalEdgeRuleList, shared edges' properties compared`,
+};
+externalEdgeRuleList.forEach((oneRule) => {
+	rowEvidence[oneRule.ruleName] = {
+		verdict: externalEdgeCountByRule[oneRule.ruleName] === oneRule.expectedCount ? PASS : FAIL,
+		detail: `${externalEdgeCountByRule[oneRule.ruleName]} ${oneRule.side} ${oneRule.section} ${oneRule.edgeType} edge(s)${oneRule.fromStableId ? ` from ${oneRule.fromStableId}` : ''}${oneRule.toStableId ? ` to ${oneRule.toStableId}` : ''} (expected ${oneRule.expectedCount})`,
+	};
+});
 
 candidateOnlyEdgeRuleList.forEach((oneRule) => {
 	rowEvidence[oneRule.ruleName] = {
@@ -263,7 +333,7 @@ candidateOnlyEdgeRuleList.forEach((oneRule) => {
 		detail: `${candidateOnlyEdgeCountByRule[oneRule.ruleName]} candidate-only ${oneRule.edgeType}${oneRule.locator ? ` (locator ${oneRule.locator})` : ''} edge(s)${oneRule.fromStableId ? ` from ${oneRule.fromStableId}` : ''} (expected ${oneRule.expectedCount})`,
 	};
 });
-const rowNameOrder = ['nodes', 'edges', 'properties', 'A1', 'A2', 'A5'].concat(candidateOnlyEdgeRuleList.map((oneRule) => oneRule.ruleName));
+const rowNameOrder = ['nodes', 'edges', 'externalEdges', 'properties', 'A1', 'A2', 'A5'].concat(candidateOnlyEdgeRuleList.map((oneRule) => oneRule.ruleName), externalEdgeRuleList.map((oneRule) => oneRule.ruleName));
 const overallVerdict = rowNameOrder.every((rowName) => rowEvidence[rowName].verdict === PASS) && unexplainedList.length === 0 ? PASS : FAIL;
 rowNameOrder.forEach((rowName) => xLog.result(`[${rowName}] ${rowEvidence[rowName].verdict} — ${rowEvidence[rowName].detail}\n`));
 unexplainedList.slice(0, UNEXPLAINED_SHOW_LIMIT).forEach((oneItem) => xLog.result(`  UNEXPLAINED ${JSON.stringify(oneItem)}\n`));
