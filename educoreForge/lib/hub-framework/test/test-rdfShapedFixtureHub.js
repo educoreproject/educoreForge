@@ -46,6 +46,10 @@
 //      (its disagreeing allDomainIds field is not read), and the root-only ex:orphanProperty has none
 //   j  ⟪ctdlHub P4⟫ CONTROL — the same base under domainAddressing 'domainFields' (the CEDS read) mints ex:issuedOn on
 //      its FIELD's domain alone (@Organization): the mode, not the base, decides
+//   k  ⟪ctdlHub P4⟫ hubVersionSegment: a hubVersion with whitespace is REFUSED BY NAME under 'verbatim' and minted under
+//      'whitespaceToUnderscore' as one '_' per whitespace run in the IRI path segment only — the hubVersion field stays raw
+//      and the addressSignature still hashes the raw hubVersion; a character outside the IRI-unreserved set that the rule
+//      does not rewrite is refused under both
 //
 // RED TWINS (each a changed COPY of the derived result, nothing re-derived): a conjunct whose twin is not observed red
 // in this suite's output fails the suite.
@@ -268,6 +272,33 @@ const sharedIriBase = JSON.parse(JSON.stringify(FIXTURE_BASE));
 sharedIriBase.nodes.find((oneNode) => oneNode.stableId === 'ex:Expired').properties.uri = 'ex:Active';
 const sharedIri = deriveHub({ hubDeclaration: FIXTURE_DECLARATION, baseNodeEdges: sharedIriBase });
 harness.match('h: two base nodes carrying ex:Active are REFUSED BY NAME', sharedIri.hubError, /two base nodes carry the term IRI 'ex:Active'/);
+
+harness.section('k — hubVersionSegment: the hubVersion as an IRI path segment');
+const deriveAt = ({ hubVersion, hubVersionSegment }) => {
+	let outcome;
+	try {
+		hubFramework({ hubDeclaration: { ...FIXTURE_DECLARATION, hubVersionSegment }, hooks: {}, forgeStandardSource: FIXTURE_DECLARATION.hubName })({ hubVersion, hubNamespace: HUB_NAMESPACE })
+			.forgeHub(FIXTURE_BASE, (hubError, hub) => {
+				outcome = { hubError: String(hubError || ''), hub };
+			});
+	} catch (factoryRefusal) {
+		outcome = { hubError: String(factoryRefusal.message) };
+	}
+	return outcome;
+};
+const spacedVerbatim = deriveAt({ hubVersion: 'Release 20260101', hubVersionSegment: 'verbatim' });
+harness.match('k: verbatim REFUSES a hubVersion with a space, naming it', spacedVerbatim.hubError, /hubVersion 'Release 20260101'.*verbatim/);
+const spacedSlug = deriveAt({ hubVersion: 'Release \t 20260101', hubVersionSegment: 'whitespaceToUnderscore' });
+harness.equal('k: whitespaceToUnderscore mints', spacedSlug.hubError, '');
+const slugCard = spacedSlug.hub ? cardsOfTier(spacedSlug.hub, 'property')[0] : undefined;
+harness.ok('k: the card IRI carries ONE underscore for the whitespace run', Boolean(slugCard) && slugCard.properties.uri === `${HUB_NAMESPACE}Release_20260101/${slugCard.properties.addressSignature}` && slugCard.stableId === slugCard.properties.uri, slugCard && slugCard.properties.uri);
+harness.equal('k: the hubVersion card field stays RAW', slugCard && slugCard.properties.hubVersion, 'Release \t 20260101');
+const rawSignatureInput = slugCard && ADDRESS_SIGNATURE_FIELD_ORDER.map((oneField) => ({ hubName: 'FIXTURE', canonicalKey: slugCard.properties.canonicalKey, domainId: slugCard.properties.domainId, propertyKey: slugCard.properties.propertyKey, range: '', valueKey: '', qualifierKeys: '', hubVersion: 'Release \t 20260101' })[oneField]).join('|');
+harness.equal('k: the addressSignature hashes the RAW hubVersion', slugCard && slugCard.properties.addressSignature, rawSignatureInput && sha256Hex(rawSignatureInput));
+const slashSlug = deriveAt({ hubVersion: 'v1/2', hubVersionSegment: 'whitespaceToUnderscore' });
+harness.match('k: a character outside the unreserved set the rule does not rewrite is REFUSED (whitespaceToUnderscore)', slashSlug.hubError, /hubVersion 'v1\/2'.*whitespaceToUnderscore/);
+harness.match('k: and REFUSED under verbatim', deriveAt({ hubVersion: 'v1/2', hubVersionSegment: 'verbatim' }).hubError, /hubVersion 'v1\/2'.*verbatim/);
+harness.equal('k: CONTROL — a clean version mints identically under both rules', JSON.stringify(deriveAt({ hubVersion: HUB_VERSION, hubVersionSegment: 'verbatim' }).hub.nodes), JSON.stringify(shipped.hub.nodes));
 
 harness.section('j — CONTROL: the same base under domainAddressing \'domainFields\' (the CEDS read)');
 const underDomainFields = deriveHub({ hubDeclaration: { ...FIXTURE_DECLARATION, domainAddressing: 'domainFields' }, baseNodeEdges: FIXTURE_BASE });

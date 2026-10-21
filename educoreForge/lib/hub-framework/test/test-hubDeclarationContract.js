@@ -187,13 +187,13 @@ const withoutKey = (oneName) => {
 };
 
 harness.ok(
-	'HUB_DECLARATION_CONTRACT is frozen and names the eight §4.4 fields, the four ctdlHub P3 fields and P4\'s domainAddressing',
+	'HUB_DECLARATION_CONTRACT is frozen and names the eight §4.4 fields, the four ctdlHub P3 fields and P4\'s domainAddressing and hubVersionSegment',
 	Object.isFrozen(contract.HUB_DECLARATION_CONTRACT) &&
 		JSON.stringify(contract.HUB_DECLARATION_KEY_LIST) ===
 			JSON.stringify([
 				'hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted',
 				'sourceIdFieldName', 'baseFieldNames', 'qualifiedReference', 'provenanceLabel',
-				'tierList', 'rangeAddressing', 'domainAddressing', 'rootFieldNames', 'embedTextTemplateByTier',
+				'tierList', 'rangeAddressing', 'domainAddressing', 'hubVersionSegment', 'rootFieldNames', 'embedTextTemplateByTier',
 			]),
 	JSON.stringify(contract.HUB_DECLARATION_KEY_LIST),
 );
@@ -218,7 +218,7 @@ harness.match(
 );
 
 harness.section('H1 DECLARATION — REFUSAL CLASS 2: a missing REQUIRED key, one per field');
-['hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted', 'sourceIdFieldName', 'baseFieldNames', 'provenanceLabel', 'tierList', 'rangeAddressing', 'domainAddressing', 'rootFieldNames', 'embedTextTemplateByTier'].forEach(
+['hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted', 'sourceIdFieldName', 'baseFieldNames', 'provenanceLabel', 'tierList', 'rangeAddressing', 'domainAddressing', 'hubVersionSegment', 'rootFieldNames', 'embedTextTemplateByTier'].forEach(
 	(oneName) => {
 		harness.match(
 			`a declaration missing '${oneName}' is REFUSED BY NAME (absent is absent, never defaulted)`,
@@ -279,6 +279,10 @@ harness.match('an unknown rangeAddressing mode is REFUSED, listing the admissibl
 // ⟪ctdlHub P4⟫ where a property's domains are read: base fields (CEDS) or HAS_PROPERTY edges (CTDL)
 harness.equal('CONTROL: CEDS declares domainFields (the pre-P4 domain read)', liveDeclaration.domainAddressing, 'domainFields');
 harness.equal('CONTROL: a CTDL-shaped declaration with domainAddressing hasPropertyEdges is ADMITTED', declarationRefusalFor(withDeclared({ domainAddressing: 'hasPropertyEdges' })), '');
+// ⟪ctdlHub P4⟫ how hubVersion becomes the card IRI's path segment (SCARLET_ARROW ruling B)
+harness.equal('CONTROL: CEDS declares verbatim (its version needs no rewriting)', liveDeclaration.hubVersionSegment, 'verbatim');
+harness.equal('CONTROL: a declaration with hubVersionSegment whitespaceToUnderscore is ADMITTED', declarationRefusalFor(withDeclared({ hubVersionSegment: 'whitespaceToUnderscore' })), '');
+harness.match('an unknown hubVersionSegment rule is REFUSED BY NAME, listing the admissible ones', declarationRefusalFor(withDeclared({ hubVersionSegment: 'percentEncode' })), /hubVersionSegment.*must be one of verbatim, whitespaceToUnderscore \(got "percentEncode"\)/);
 harness.match('an unknown domainAddressing mode is REFUSED BY NAME, listing the admissible ones', declarationRefusalFor(withDeclared({ domainAddressing: 'parentId' })), /domainAddressing.*must be one of domainFields, hasPropertyEdges \(got "parentId"\)/);
 harness.match(
 	'a rootFieldNames map MISSING a root field is REFUSED — it is read into sourceProvenance, which is block bytes',

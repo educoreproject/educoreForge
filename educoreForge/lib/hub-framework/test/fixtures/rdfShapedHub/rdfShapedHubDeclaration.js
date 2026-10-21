@@ -38,6 +38,8 @@ const hubDeclaration = {
 	rangeAddressing: 'rangeAsMeaning',
 	// ⟪ctdlHub P4⟫ as CTDL: a property's domains are the classes with a HAS_PROPERTY edge to it, never a base field
 	domainAddressing: 'hasPropertyEdges',
+	// ⟪ctdlHub P4⟫ as CTDL: a release label like 'Release 20260327' becomes 'Release_20260327' in the card IRI
+	hubVersionSegment: 'whitespaceToUnderscore',
 	rootFieldNames: {
 		standardKey: 'standardKey',
 		snapshotKey: 'snapshotKey',

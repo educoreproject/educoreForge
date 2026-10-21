@@ -50,6 +50,8 @@ const moduleName = 'hub-framework';
 //   domainAddressing                 domainFields (CEDS: allDomainIds, else domainId, read off the property node) |
 //                                    hasPropertyEdges (CTDL: the classes with a HAS_PROPERTY edge to the property) —
 //                                    DOMAIN_ADDRESSING_REGISTRY below
+//   hubVersionSegment                verbatim (CEDS) | whitespaceToUnderscore (CTDL): the card IRI's version path segment,
+//                                    then refused unless IRI-unreserved — HUB_VERSION_SEGMENT_REGISTRY below
 //
 // ⚠ THE HONESTY CLAUSE, AND IT IS NOT A FORMALITY (SPEC §4.4). A FRAMEWORK EXTRACTED FROM ONE HUB IS
 // PROVEN ON ONE, WHICH IS PROVEN ON NONE. The 2c clause named three CEDS-shaped places where the boundary would move
@@ -119,6 +121,7 @@ const {
 	validateHubHooks,
 	RANGE_ADDRESSING_MODE_LIST,
 	DOMAIN_ADDRESSING_MODE_LIST,
+	HUB_VERSION_SEGMENT_RULE_LIST,
 } = require(path.join(__dirname, 'hubDeclarationContract'));
 // ⟪campaign P3, W-C-5⟫ the ONE declaration of a card's fields: it builds the slotProfile and checks every emitted card
 const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, slotProfileFromFieldTable, cardFieldRefusal } = require(path.join(__dirname, 'hubCardFieldTable'));
@@ -273,6 +276,25 @@ if (unimplementedDomainModeList.length || unadmittedDomainModeList.length) {
 	);
 }
 
+// ⟪ctdlHub P4⟫ HUB_VERSION_SEGMENT_REGISTRY — the seam behind hubDeclaration.hubVersionSegment: hubVersion -> the card IRI's
+// version path segment. ONLY the IRI uses it: the hubVersion card field stays raw and addressSignature hashes the raw value.
+//
+// @interface HubVersionSegmentRule — (hubVersion: string) -> string, the path segment before the unreserved-set check
+const HUB_VERSION_SEGMENT_REGISTRY = Object.freeze({
+	verbatim: (hubVersion) => hubVersion,
+	whitespaceToUnderscore: (hubVersion) => hubVersion.replace(/\s+/g, '_'),
+});
+// RFC 3987 iunreserved, ASCII part: what may stand in a path segment without escaping
+const IRI_UNRESERVED_SEGMENT_PATTERN = /^[A-Za-z0-9._~-]+$/;
+const unimplementedSegmentRuleList = HUB_VERSION_SEGMENT_RULE_LIST.filter((ruleName) => HUB_VERSION_SEGMENT_REGISTRY[ruleName] === undefined);
+const unadmittedSegmentRuleList = Object.keys(HUB_VERSION_SEGMENT_REGISTRY).filter((ruleName) => HUB_VERSION_SEGMENT_RULE_LIST.indexOf(ruleName) === -1);
+if (unimplementedSegmentRuleList.length || unadmittedSegmentRuleList.length) {
+	throw new Error(
+		`${moduleName}: REFUSED AT LOAD — HUB_VERSION_SEGMENT_REGISTRY implements [${Object.keys(HUB_VERSION_SEGMENT_REGISTRY).join(', ')}] ` +
+			`but the declaration contract admits [${HUB_VERSION_SEGMENT_RULE_LIST.join(', ')}]; they must be the same list.`,
+	);
+}
+
 // single-element PG-JSON array -> scalar. The replay engine scalarizes single-element arrays,
 // so the same property reads back as an array from a fresh forge and as a bare value from a
 // deserialized block; both shapes must land in the same place.
@@ -363,6 +385,16 @@ const moduleFunction =
 				`${moduleName}: REFUSED — required factory argument(s) absent or empty: ` +
 					`${absentFactoryArgs.join(', ')}. Both hubVersion and hubNamespace are required; ` +
 					`there is no default.`,
+			);
+		}
+		// ⟪ctdlHub P4⟫ the version path segment of every card IRI: refused BY NAME unless IRI-unreserved after the rule, so an
+		// invalid IRI (a space, a slash) can never be minted silently
+		const hubVersionSegmentText = HUB_VERSION_SEGMENT_REGISTRY[hubDeclaration.hubVersionSegment](hubVersion);
+		if (!IRI_UNRESERVED_SEGMENT_PATTERN.test(hubVersionSegmentText)) {
+			throw new Error(
+				`${moduleName}: REFUSED — hubVersion '${hubVersion}' becomes the IRI path segment '${hubVersionSegmentText}' under ` +
+					`hubVersionSegment '${hubDeclaration.hubVersionSegment}', which holds a character outside the IRI-unreserved set ` +
+					`[A-Za-z0-9._~-]; declare a rule that rewrites it, or fix the version the bundle reads.`,
 			);
 		}
 
@@ -721,7 +753,7 @@ const moduleFunction =
 					valueKey,
 					qualifierKeys: sortedQualifierKeys,
 				});
-				const cardUri = `${hubNamespace}${hubVersion}/${addressSignature}`;
+				const cardUri = `${hubNamespace}${hubVersionSegmentText}/${addressSignature}`;
 
 				// name (§1.2): the card's display/matching name — value tier the value's own name,
 				// property tier (qualified included) the property's own name; NO " [qualifier]"
@@ -1003,7 +1035,7 @@ const moduleFunction =
 					return undefined;
 				}
 				const addressSignature = termAddressSignatureFor({ termIri });
-				const cardUri = `${hubNamespace}${hubVersion}/${addressSignature}`;
+				const cardUri = `${hubNamespace}${hubVersionSegmentText}/${addressSignature}`;
 				const cardProperties = {
 					_source: hubName,
 					role: EQUIVALENCE_NODE_LABELS.HUB_REFERENCE,

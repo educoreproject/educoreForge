@@ -16,7 +16,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                              canonicalKeyName, canonicalKeyMinted, sourceIdFieldName,
 //                              baseFieldNames, qualifiedReference, provenanceLabel; and since ctdlHub P3
 //                              tierList, rangeAddressing, rootFieldNames, embedTextTemplateByTier; and since ctdlHub P4
-//                              domainAddressing
+//                              domainAddressing, hubVersionSegment
 // The second was deliberately NOT declared in 2a, when nothing validated it: a contract entry nobody
 // walks is dead surface, the same judgment RULING FB8 made when it deleted refuse.requiredKeys.
 //
@@ -234,6 +234,14 @@ const RANGE_ADDRESSING_MODE_LIST = Object.freeze(['singleRangeSlot', 'rangeAsMea
 //                     property whose only HAS_PROPERTY is from the root has no class domain and is skip-reported)
 const DOMAIN_ADDRESSING_MODE_LIST = Object.freeze(['domainFields', 'hasPropertyEdges']);
 
+// ⟪ctdlHub P4⟫ how the hubVersion becomes the PATH SEGMENT of every card IRI (SCARLET_ARROW ruling B). The IRIs become
+// stableIds that bridges target for good, so the segment must be readable and valid. The derivation behind each rule is
+// the hub framework's HUB_VERSION_SEGMENT_REGISTRY; after the rule, any character outside the IRI-unreserved set is refused.
+//   verbatim                the hubVersion as it is (CEDS: '14.0.0.0')
+//   whitespaceToUnderscore  each run of whitespace becomes one '_' (CTDL: 'Release 20260327' -> 'Release_20260327', the
+//                           form the block key already uses)
+const HUB_VERSION_SEGMENT_RULE_LIST = Object.freeze(['verbatim', 'whitespaceToUnderscore']);
+
 // the tiers a hub may declare are the vocabulary's own (REFERENCE_TIER), never a list retyped here
 const REFERENCE_TIER_VALUE_LIST = Object.freeze(Object.keys(REFERENCE_TIER).map((tierConstantName) => REFERENCE_TIER[tierConstantName]));
 
@@ -254,6 +262,7 @@ const HUB_DECLARATION_CONTRACT = Object.freeze({
 	rangeAddressing: Object.freeze({ required: true, kind: 'rangeAddressing' }),
 	// ⟪ctdlHub P4⟫ REQUIRED, never defaulted: a hub that forgot where its domains live must not silently read CEDS's fields
 	domainAddressing: Object.freeze({ required: true, kind: 'domainAddressing' }),
+	hubVersionSegment: Object.freeze({ required: true, kind: 'hubVersionSegment' }),
 	rootFieldNames: Object.freeze({ required: true, kind: 'rootFieldNameMap' }),
 	embedTextTemplateByTier: Object.freeze({ required: true, kind: 'embedTextTemplateByTier' }),
 });
@@ -339,6 +348,10 @@ const DECLARATION_KIND_CHECKER_REGISTRY = Object.freeze({
 		DOMAIN_ADDRESSING_MODE_LIST.indexOf(value) !== -1
 			? ''
 			: `must be one of ${DOMAIN_ADDRESSING_MODE_LIST.join(', ')} (got ${JSON.stringify(value)})`,
+	hubVersionSegment: (value) =>
+		HUB_VERSION_SEGMENT_RULE_LIST.indexOf(value) !== -1
+			? ''
+			: `must be one of ${HUB_VERSION_SEGMENT_RULE_LIST.join(', ')} (got ${JSON.stringify(value)})`,
 	// the same discipline as baseFieldNameMap: every root field the derivation reads is declared, and nothing else
 	rootFieldNameMap: (value) => {
 		if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -507,6 +520,7 @@ module.exports = {
 	ROOT_FIELD_NAME_LIST,
 	RANGE_ADDRESSING_MODE_LIST,
 	DOMAIN_ADDRESSING_MODE_LIST,
+	HUB_VERSION_SEGMENT_RULE_LIST,
 	validateHubDeclaration,
 	validateHubHooks,
 	moduleName,

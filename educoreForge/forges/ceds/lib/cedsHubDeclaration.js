@@ -70,6 +70,8 @@ const hubDeclaration = {
 	rangeAddressing: 'singleRangeSlot',
 	// ⟪ctdlHub P4⟫ a property's domains are the fields the CEDS forge lifts onto it (allDomainIds, else domainId): the pre-P4 read
 	domainAddressing: 'domainFields',
+	// ⟪ctdlHub P4⟫ CEDS's version ('14.0.0.0') is already IRI-unreserved: the card IRI carries it as it is
+	hubVersionSegment: 'verbatim',
 	// where on the DmeStandardRoot each sourceProvenance field is read (sourceProvenance is block bytes)
 	rootFieldNames: {
 		standardKey: 'standardKey',
