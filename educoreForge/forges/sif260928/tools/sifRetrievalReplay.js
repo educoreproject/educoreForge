@@ -41,7 +41,8 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const { graphReaderFactory } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'graphReader'));
 const sifYardstickScorer = require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'test', 'bridgeAcceptance', 'sifYardstickScorer'));
 const replayLib = require(path.join(__dirname, 'sifRetrievalReplayLib'));
-const { bridgeDeclaration } = require(path.join(__dirname, '..', 'bridges', 'sif260928CedsDerivedPlugin'));
+// ⟪hub-neutral bridge lane R3⟫ the bridge is composed (sif260928Bridging.js + the CEDS hub's declaration): read it through the registry
+const { bridgeDeclaration } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'pluginRegistry')).buildRegistryFromDirectory({ forgesDirPath: path.join(TREE_ROOT, 'forges') }).entryByBridgeName.sif260928CedsDerivedPlugin;
 
 const RUN_SPEC_FIELD_NAME_LIST = Object.freeze(['containerName', 'decisionBlockFilePath', 'annotationFilePath', 'questionMapFilePath', 'cardListFilePath', 'remodelTableFilePath', 'sourceStandardName', 'hubToken', 'poolMedianLimit', 'cellList', 'twinExcludedPropertyNameListList', 'outputDirPath']);
 const CELL_FIELD_NAME_LIST = Object.freeze(['cellName', 'hitsPerText', 'minScore', 'k']);

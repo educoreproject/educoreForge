@@ -32,7 +32,8 @@ const TREE_ROOT = path.join(__dirname, '..', '..', '..');
 require(path.join(TREE_ROOT, 'test', 'testLib', 'testAppStartup'))({ moduleName, helpText });
 const { xLog, commandLineParameters } = process.global;
 const auditLib = require(path.join(__dirname, 'sifPromptIdentifierAuditLib'));
-const { bridgeDeclaration } = require(path.join(__dirname, '..', 'bridges', 'sif260928CedsDerivedPlugin'));
+// ⟪hub-neutral bridge lane R3⟫ the bridge is composed (sif260928Bridging.js + the CEDS hub's declaration): read it through the registry
+const { bridgeDeclaration } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'pluginRegistry')).buildRegistryFromDirectory({ forgesDirPath: path.join(TREE_ROOT, 'forges') }).entryByBridgeName.sif260928CedsDerivedPlugin;
 
 const refuseAndExit = (refusalText) => {
 	xLog.error(`${moduleName}: REFUSED: ${refusalText}`);

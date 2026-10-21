@@ -1,4 +1,5 @@
 'use strict';
+// ⟪hub-neutral bridge lane R3⟫ the pesc260805 bridges are composed from bridges/pescBridging.js; read them by NAME (testSupport/shippedBridge)
 
 // p1_optionSetKeyPurity.js — LUNAR_PRISM (P1), 2026-08-17. READ-ONLY. RETAINED per O-7.
 //
@@ -37,7 +38,7 @@ const UNIT_SEPARATOR = '\u0001';
 
 // READ FROM THE SHIPPED DECLARATION, never restated — two derivations of one list held against each
 // other is exactly the drift this project keeps finding.
-const shippedDeclaration = require(path.join(BUNDLE_DIR, 'bridges', 'pescOptionSetCedsDerivedPlugin')).bridgeDeclaration;
+const shippedDeclaration = require(path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'testSupport', 'shippedBridge')).shippedBridgeDeclarationFor('pescOptionSetCedsDerivedPlugin');
 const SUBJECT_ALLOW_LIST = shippedDeclaration.renderingAllowList.subject;
 
 const driver = neo4j.driver(BOLT_URL, neo4j.auth.basic('neo4j', NEO4J_PASSWORD), { encrypted: false });

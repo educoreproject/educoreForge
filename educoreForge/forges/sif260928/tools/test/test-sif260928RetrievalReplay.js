@@ -56,7 +56,8 @@ const SOURCE_STANDARD_NAME = 'SIF260928';
 const SOURCE_VERSION = '4.3';
 const HUB_NAME = toyEmbedTextBoltGraphLib.HUB_NAME;
 const SHIPPED_BRIDGES_DIR = path.join(BUNDLE_DIR, 'bridges');
-const shippedDeclaration = () => cloneJson(require(path.join(SHIPPED_BRIDGES_DIR, `${PLUGIN_NAME}.js`)).bridgeDeclaration);
+// ⟪hub-neutral bridge lane R3⟫ the shipped bridge is composed; read by NAME through the registry
+const shippedDeclaration = () => require(path.join(FRAMEWORK_TEST_DIR, 'testSupport', 'shippedBridge')).shippedBridgeDeclarationFor(PLUGIN_NAME);
 const DECLARED_RETRIEVAL = shippedDeclaration().candidateRetrieval;
 
 // THE TOY: two SIF questions on the framework's toy hub. The model question has a name text and a CONTEXT text; the
@@ -153,6 +154,8 @@ const writeToyScopeList = (forgesDirPath) => {
 const replayShape = (scenario) => {
 	scenario.forgesDirOverride = scenarioLib.makeScratchForgesCopy();
 	copyDirectory(SHIPPED_BRIDGES_DIR, path.join(scenario.forgesDirOverride, STANDARD_KEY, 'bridges'));
+	// ⟪hub-neutral bridge lane R3⟫ the copy composes with the hub's declaration, found by the hub bundle's descriptor
+	scenarioLib.copyShippedHubBridging({ forgesDirPath: scenario.forgesDirOverride, hubToken: 'ceds' });
 	// ⟪campaign P4a⟫ the shipped plugin declares an evaluation scope (subjectSource.scopeStableIdListPath, since goldJev A
 	// 51d14f7): 5,017 real Question stableIds, which this two-Question toy graph cannot hold, so the framework rightly
 	// refused. The double writes ITS OWN scope list — the toy's two Questions — at the path the shipped declaration names.

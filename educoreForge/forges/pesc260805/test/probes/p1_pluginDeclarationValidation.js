@@ -1,4 +1,5 @@
 'use strict';
+// ⟪hub-neutral bridge lane R3⟫ the pesc260805 bridges are composed from bridges/pescBridging.js; read them by NAME (testSupport/shippedBridge)
 
 // p1_pluginDeclarationValidation.js — LUNAR_PRISM (P1), 2026-08-17.
 //
@@ -48,7 +49,7 @@ const refusalTextFor = (candidate) => {
 const digestByPluginName = {};
 
 PLUGIN_NAME_LIST.forEach((onePluginName) => {
-	const pluginModule = require(path.join(bundleDirPath, 'bridges', onePluginName));
+	const pluginModule = require(path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'testSupport', 'shippedBridge')).shippedBridgeEntryFor(onePluginName);
 	const shipped = pluginModule.bridgeDeclaration;
 	const shippedRefusal = refusalTextFor(shipped);
 	assert({ name: `CONTROL ${onePluginName} — the SHIPPED declaration validates`, pass: shippedRefusal === '', detail: shippedRefusal || 'ACCEPTED' });
@@ -80,7 +81,7 @@ assert({
 
 // the NEGATIVES are driven through the property-tier declaration; they exercise the VALIDATOR, which
 // is shared, so driving them twice would prove nothing twice.
-const shipped = require(path.join(bundleDirPath, 'bridges', PLUGIN_NAME_LIST[0])).bridgeDeclaration;
+const shipped = require(path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'testSupport', 'shippedBridge')).shippedBridgeDeclarationFor(PLUGIN_NAME_LIST[0]);
 
 const negativeList = [
 	{ name: 'NEGATIVE 1 unknown top-level key is refused BY NAME (why the dedup rule lives on disk, not in the declaration)', mutate: (d) => ({ ...d, dedupRule: { concepts: 2213 } }), expectText: "unknown key 'dedupRule'" },

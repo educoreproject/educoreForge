@@ -1,4 +1,5 @@
 'use strict';
+// ⟪hub-neutral bridge lane R3⟫ the pesc260805 bridges are composed from bridges/pescBridging.js; read them by NAME (testSupport/shippedBridge)
 
 // p2_curiePrefixCandidates.js — LUNAR_PRISM (P2), 2026-08-17. RETAINED per O-7 and per SABLE_RIVER's
 // standing CP-P2 condition: EVERY MEASUREMENT SCRIPT BEHIND A NUMBER IN THE REPORT LIVES IN THE REPO.
@@ -30,7 +31,7 @@ const moduleName = 'p2_curiePrefixCandidates';
 const TREE_ROOT = path.join(__dirname, '..', '..', '..', '..');
 const contractLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'bridgePluginContract'));
 const bundleDirPath = path.join(TREE_ROOT, 'forges', 'pesc260805');
-const shippedDeclaration = require(path.join(bundleDirPath, 'bridges', 'pescCedsDerivedPlugin')).bridgeDeclaration;
+const shippedDeclaration = require(path.join(__dirname, '..', '..', '..', '..', 'lib', 'bridge-framework', 'test', 'testSupport', 'shippedBridge')).shippedBridgeDeclarationFor('pescCedsDerivedPlugin');
 
 // THE EXPORTER'S RULE, REPRODUCED FROM SOURCE. If sssomExporter.js:197 ever changes, this line must
 // change with it — and a paraphrase that drifts is exactly the failure this project keeps finding, so

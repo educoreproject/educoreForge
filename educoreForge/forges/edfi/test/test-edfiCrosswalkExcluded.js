@@ -55,7 +55,8 @@ const BUNDLE_DIR_PATH = path.join(__dirname, '..');
 const SNAPSHOT_PATH = path.join(BUNDLE_DIR_PATH, 'assets', 'standardSourceData', '04');
 const HOOKS_FILE_PATH = path.join(BUNDLE_DIR_PATH, 'lib', 'edfiHooks.js');
 const WALK_FILE_PATH = path.join(BUNDLE_DIR_PATH, 'lib', 'forgeEdfiContractGraph.js');
-const DERIVED_PLUGIN_FILE_PATH = path.join(BUNDLE_DIR_PATH, 'bridges', 'edfiCedsDerivedPlugin.js');
+// ⟪hub-neutral bridge lane R3⟫ the Ed-Fi derived bridge is now composed from edfiBridging.js and the CEDS hub's declaration
+const DERIVED_PLUGIN_FILE_PATH = path.join(BUNDLE_DIR_PATH, 'bridges', 'edfiBridging.js');
 
 const RETIRED_FOLDER_NAME = 'cedsAuthoredCrosswalk_DO_NOT_USE';
 const FORMER_FOLDER_NAME = 'cedsAuthoredCrosswalk';
@@ -72,7 +73,11 @@ const RETIRED_CSV_FILE_NAME_LIST = Object.freeze(['EdFiEntityDescriptorsToCEDS.c
 // RE-ANCHORED 2026-10-21 by ctdlHub-101926 P5 (INDIGO_LOOM; ruled by SCARLET_ARROW; observed red at 1904fa96, 16/17): 1a305c20… ->
 // f03afc44…. Census (numstat from a7643a27, 5/1): the bridgeTarget = { targetHub: 'ceds' } SIBLING export (ruling A) and its comment,
 // module.exports naming it. bridgeDeclaration untouched (declarationDigest unmoved, measured by phase C). Still no channel.
-const DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A = 'f03afc44b39b131947986fb7c3d4d550ca65a5a1ba234ad59eda9e5d3e683414';
+// RE-ANCHORED 2026-10-21 by the hub-neutral bridge lane R3 (SCARLET_STREAM; observed red: the pinned file was deleted): f03afc44… ->
+// 6a979732…, the file now forges/edfi/bridges/edfiBridging.js — the plugin MIGRATED to a standard bridging declaration (the
+// declaration's hub half moved to forges/ceds/lib/cedsHubBridging.js); the COMPOSED declaration's digest equals the plugin's
+// (test-bridgeComposer (a)), and the bridge still declares no source channel (read below from the composed bridge).
+const DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A = '6a979732d83edbac0aacf62fe0a275ed11786b1c977022a97770a38c575c361d';
 
 // a node property naming CEDS, or a cross-reference of any kind, can only have come from a crosswalk:
 // Ed-Fi's own MetaEd publishes no CEDS anchor (the walk's scan uses the same rule)
@@ -153,10 +158,10 @@ const judgeUnread = () => {
 };
 
 const judgeDerived = () => {
-	const derivedPlugin = require(DERIVED_PLUGIN_FILE_PATH);
+	const derivedPlugin = require(path.join(FRAMEWORK_DIR_PATH, '..', 'bridge-framework', 'test', 'testSupport', 'shippedBridge')).shippedBridgeEntryFor('edfiCedsDerivedPlugin');
 	const actualSha256 = sha256OfFile(DERIVED_PLUGIN_FILE_PATH);
 	return [
-		{ label: 'DERIVED: edfiCedsDerivedPlugin.js is byte-identical to its pinned bytes (campaign P3 W-B-5 re-anchor)', pass: actualSha256 === DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A, detail: `sha256 ${actualSha256}` },
+		{ label: 'DERIVED: edfiBridging.js is byte-identical to its pinned bytes (campaign P3 W-B-5 re-anchor; R3 re-anchor)', pass: actualSha256 === DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A, detail: `sha256 ${actualSha256}` },
 		{ label: 'DERIVED: edfiCedsDerivedPlugin declares no source channel (it opens no file)', pass: Array.isArray(derivedPlugin.bridgeDeclaration.sourceChannelList) && derivedPlugin.bridgeDeclaration.sourceChannelList.length === 0, detail: JSON.stringify(derivedPlugin.bridgeDeclaration.sourceChannelList) },
 	];
 };
