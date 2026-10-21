@@ -246,6 +246,9 @@ const moduleFunction =
 					mappingSourceList: oneRecord.get('mappingSourceList'),
 					unkindedMappingEdgeCount: oneRecord.get('unkindedMappingEdgeCount'),
 					mappingEdgeTypes: oneRecord.get('mappingEdgeTypes'),
+					// ⟪ctdlHub P5⟫ the per-hub columns, copied like every other (shapeOne reads them for mappedPropertyCountByHub)
+					hubNameList: oneRecord.get('hubNameList'),
+					hubMatchList: oneRecord.get('hubMatchList'),
 				}));
 
 				// A mapping edge with no mappingKind cannot be classified, and calling its standard an island, or

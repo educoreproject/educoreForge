@@ -20,6 +20,9 @@
 //   (j) ⟪ctdlHub P5⟫ a graph holding TWO OR MORE hubs gives each StandardDefinition mappedPropertyCountByHub: per hub, the
 //       distinct subjects with an EXACT_MATCH / CLOSE_MATCH to that hub's cards, every hub listed (zero stated, not omitted);
 //       a single-hub graph carries no such property, so single-hub output is unchanged byte for byte
+//   (j′) ⟪ctdlHub P5⟫ THROUGH EMIT, not shapeOne alone: a two-hub row read by record.get carries the map to the emitted node.
+//       (The first build showed the gap: emit copies record fields one by one and the per-hub columns were not copied, so
+//       (j), which calls shapeOne directly, passed while DEV_p5TwoHubs got no map. Measured, then this conjunct, red first.)
 //   (k) ⟪ctdlHub P5⟫ the derivation cypher reads the per-hub matches by the card's hubName, hub-layer subjects excluded, and the
 //       graph's hub names from its HubDefinitions
 //   (h) ⟪lane FIX, Fix 3⟫ a root with no forge-declared descriptionSource is REFUSED by name; (h') a root's descriptionSource
@@ -147,6 +150,14 @@ const conjunctJudgeByRefId = {
 		const singleUnchanged = !Object.prototype.hasOwnProperty.call(single, 'mappedPropertyCountByHub');
 		done({ pass: singleUnchanged && two.mappedPropertyCountByHub === expectedText && two.exactMappedProperties === 2, detail: `single hub: ${singleUnchanged ? 'no property' : JSON.stringify(single.mappedPropertyCountByHub)}; three hubs: ${two.mappedPropertyCountByHub}` });
 	},
+	jPrime_perHubMapSurvivesEmit: (finisher, done) => {
+		const twoHubRow = rootRow({ exactMappedProperties: 1, mappingKindList: ['inferred'], mappingSourceList: ['bridge-jev'], hubNameList: ['CTDL', 'CEDS'], hubMatchList: [{ hubName: 'CEDS', relation: 'EXACT_MATCH', subjectStableId: 'toy:a' }] });
+		finisher.emit({ readQuery: readQueryOver([twoHubRow]) }, (emitError, emitted) => {
+			const node = emitted && emitted.nodes ? emitted.nodes.find((oneNode) => oneNode.properties.sourceKey === 'Toy') : undefined;
+			const expectedText = JSON.stringify({ CEDS: { exactMappedProperties: 1, closeMappedProperties: 0 }, CTDL: { exactMappedProperties: 0, closeMappedProperties: 0 } });
+			done({ pass: !emitError && Boolean(node) && node.properties.mappedPropertyCountByHub === expectedText, detail: emitError ? String(emitError).slice(0, 160) : `emitted map ${node ? node.properties.mappedPropertyCountByHub : 'NO NODE'}` });
+		});
+	},
 	k_cypherReadsPerHubMatches: (finisher, done) => {
 		const wantedList = ['WHERE NOT hm:HubReference', 'hubName: hmCard.hubName', 'collect(DISTINCT hd.hubName) AS hubNameList', 'hubNameList, hubMatchList'];
 		const missingList = wantedList.filter((oneText) => finisher.DERIVATION_CYPHER.indexOf(oneText) === -1);
@@ -209,6 +220,7 @@ const TWIN_LIST = [
 	},
 	{ conjunctRefId: 'i_hubCardNeverAMappingSubject', twinName: 'hubCardCountedAsMappingSubject', find: 'OPTIONAL MATCH (mk {_source: root._source})-[mkEdge]->(:HubReference) WHERE NOT mk:HubReference', replace: 'OPTIONAL MATCH (mk {_source: root._source})-[mkEdge]->(:HubReference)' },
 	{ conjunctRefId: 'j_perHubCountsOnlyWithTwoHubs', twinName: 'perHubMapAlwaysWritten', find: 'const perHubCountText = hubNameList.length > 1', replace: 'const perHubCountText = true' },
+	{ conjunctRefId: 'jPrime_perHubMapSurvivesEmit', twinName: 'perHubColumnsNotCopied', find: "\t\t\t\t\thubNameList: oneRecord.get('hubNameList'),\n", replace: '' },
 	{ conjunctRefId: 'k_cypherReadsPerHubMatches', twinName: 'perHubReadWithoutHubLayerExclusion', find: 'WHERE NOT hm:HubReference', replace: '' },
 	{ conjunctRefId: 'c_unkindedEdgeRefusedByName', twinName: 'refusalRemoved', find: '\t\t\t\tif (unkindedRowList.length > 0) {', replace: '\t\t\t\tif (false) {' },
 	{
