@@ -69,6 +69,10 @@ const moduleFunction =
 		// ----- THE DERIVATION QUERY. One pass, read-only. Counts are per-standard and deterministic
 		//   functions of the built graph. The EXACT/CLOSE counts are read from match presence; the mapping kinds and
 		//   sources from the mappingKind / mappingSource on the edges (lane P), never from the edge type or the producer.
+		//   ⟪ctdlHub P4⟫ A HUBREFERENCE IS NEVER A MAPPING SUBJECT. A hub's cards carry _source = hubName, the same _source as its
+		//   standard, so a hub-internal card -> card edge (HAS_TERM_REFERENCE: property card -> term card, 7,076 on the CTDL hub)
+		//   matched the mapping patterns below and was refused as an unkinded mapping edge. Every match whose subject is the
+		//   standard's node therefore excludes hub-layer sources BY LABEL — the layer ruling CEDS's round-trip compiler states.
 		const DERIVATION_CYPHER = `
 			MATCH (root:\`${rootRole}\`)
 			OPTIONAL MATCH (root)<-[:HAS_CLASS|HAS_PROPERTY*1..]-()
@@ -79,17 +83,17 @@ const moduleFunction =
 			WITH root, propertyCount, count(DISTINCT c) AS classCount
 			OPTIONAL MATCH (ov {_source: root._source}) WHERE ov.role = 'DmeOptionValue'
 			WITH root, propertyCount, classCount, count(DISTINCT ov) AS optionValueCount
-			OPTIONAL MATCH (e {_source: root._source})-[:EXACT_MATCH]->(:HubReference)
+			OPTIONAL MATCH (e {_source: root._source})-[:EXACT_MATCH]->(:HubReference) WHERE NOT e:HubReference
 			WITH root, propertyCount, classCount, optionValueCount, count(DISTINCT e) AS exactMappedProperties
-			OPTIONAL MATCH (cl {_source: root._source})-[:CLOSE_MATCH]->(:HubReference)
+			OPTIONAL MATCH (cl {_source: root._source})-[:CLOSE_MATCH]->(:HubReference) WHERE NOT cl:HubReference
 			WITH root, propertyCount, classCount, optionValueCount, exactMappedProperties,
 			     count(DISTINCT cl) AS closeMappedProperties
-			OPTIONAL MATCH (mk {_source: root._source})-[mkEdge]->(:HubReference)
+			OPTIONAL MATCH (mk {_source: root._source})-[mkEdge]->(:HubReference) WHERE NOT mk:HubReference
 			WITH root, propertyCount, classCount, optionValueCount, exactMappedProperties, closeMappedProperties,
 			     collect(DISTINCT mkEdge.mappingKind) AS mappingKindList,
 			     collect(DISTINCT mkEdge.mappingSource) AS mappingSourceList,
 			     count(CASE WHEN mkEdge IS NOT NULL AND mkEdge.mappingKind IS NULL THEN 1 END) AS unkindedMappingEdgeCount
-			OPTIONAL MATCH (any {_source: root._source})-[m]->(:HubReference)
+			OPTIONAL MATCH (any {_source: root._source})-[m]->(:HubReference) WHERE NOT any:HubReference
 			RETURN root._source AS sourceKey,
 			       root.standardKey AS standardKey, root.standardName AS standardName,
 			       root.version AS version, root.versionSource AS versionSource,

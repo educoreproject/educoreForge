@@ -13,6 +13,10 @@
 //   (e) a card whose ROOT carries standardKind and standardUsageTips (declared by the standard's forge; lane R, 2026-10-05)
 //       carries exactly those; a card whose root carries neither carries NEITHER (never invented text)
 //   (f) the derivation cypher reads standardKind and standardUsageTips FROM THE ROOT (not from a side file)
+//   (i) ⟪ctdlHub P4⟫ a HubReference is never a mapping SUBJECT: every derivation match whose subject is a standard's node
+//       (e, cl, mk, any) excludes hub-layer sources, so a hub's own card -> card edge (HAS_TERM_REFERENCE, 7,076 on the CTDL
+//       hub) is not counted as an unkinded mapping edge; a real spoke -> HubReference edge with no mappingKind still refuses
+//       (conjunct c, unchanged; and measured live on DEV_p4CtdlHub, DEVLOG-P4 checkpoint 9)
 //   (h) ⟪lane FIX, Fix 3⟫ a root with no forge-declared descriptionSource is REFUSED by name; (h') a root's descriptionSource
 //       is carried to its card
 //   (the declaration's own refusals — missing kind, kind outside STANDARD_KIND_LIST, empty tips — are gated in
@@ -124,6 +128,11 @@ const conjunctJudgeByRefId = {
 		const pass = finisher.DERIVATION_CYPHER.indexOf('root.standardKind AS standardKind, root.standardUsageTips AS standardUsageTips') !== -1;
 		done({ pass, detail: pass ? 'reads standardKind and standardUsageTips from the root' : 'the derivation cypher does not read them from the root' });
 	},
+	i_hubCardNeverAMappingSubject: (finisher, done) => {
+		const exclusionTextList = ['e', 'cl', 'mk', 'any'].map((subjectName) => `WHERE NOT ${subjectName}:HubReference`);
+		const missingList = exclusionTextList.filter((exclusionText) => finisher.DERIVATION_CYPHER.indexOf(exclusionText) === -1);
+		done({ pass: missingList.length === 0, detail: missingList.length === 0 ? 'every mapping-subject match excludes hub-layer sources' : `missing: ${missingList.join('; ')}` });
+	},
 	d_cypherCollectsKindAndSource: (finisher, done) => {
 		const pass = finisher.DERIVATION_CYPHER.indexOf('collect(DISTINCT mkEdge.mappingKind) AS mappingKindList') !== -1 && finisher.DERIVATION_CYPHER.indexOf('collect(DISTINCT mkEdge.mappingSource) AS mappingSourceList') !== -1;
 		done({ pass, detail: pass ? 'collects mappingKind and mappingSource from the edges' : 'the derivation cypher does not collect them' });
@@ -179,6 +188,7 @@ const TWIN_LIST = [
 		find: "const mappingSourceList = sorted(oneRow.mappingSourceList).filter((oneValue) => oneValue !== 'null');",
 		replace: "const mappingSourceList = (oneRow.mappingSourceList || []).filter((oneValue) => oneValue !== 'null');",
 	},
+	{ conjunctRefId: 'i_hubCardNeverAMappingSubject', twinName: 'hubCardCountedAsMappingSubject', find: 'OPTIONAL MATCH (mk {_source: root._source})-[mkEdge]->(:HubReference) WHERE NOT mk:HubReference', replace: 'OPTIONAL MATCH (mk {_source: root._source})-[mkEdge]->(:HubReference)' },
 	{ conjunctRefId: 'c_unkindedEdgeRefusedByName', twinName: 'refusalRemoved', find: '\t\t\t\tif (unkindedRowList.length > 0) {', replace: '\t\t\t\tif (false) {' },
 	{
 		conjunctRefId: 'd_cypherCollectsKindAndSource',
