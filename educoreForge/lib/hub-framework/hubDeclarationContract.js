@@ -98,6 +98,15 @@ const HUB_DESCRIPTOR_CONTRACT = Object.freeze({
 		kind: 'namespaceUriRoot',
 		whatItIs: 'the ONE declared home of this hub\'s URI root; every card uri is minted from it',
 	}),
+	// ⟪hub-neutral bridge lane R2, 2026-10-21⟫ where this hub declares the HUB HALF of a bridge toward it (lib/bridge-framework/
+	// hubBridgingContract.js), read only by the bridge framework's loader (hubBridgingLoader.js). NOT required: a hub nothing
+	// bridges to declares none, and the loader refuses by name when a bridge asks for one that is absent. The hub module never
+	// requires the file, so declaring it cannot move the forged hub output.
+	hubBridgingModule: Object.freeze({
+		requiredOnceAnyHubKeyPresent: false,
+		kind: 'bundleRelativeModulePath',
+		whatItIs: 'the kit-relative path of this hub\'s bridging declaration, e.g. lib/<hub>HubBridging.js',
+	}),
 });
 
 const HUB_DESCRIPTOR_KEY_LIST = Object.freeze(Object.keys(HUB_DESCRIPTOR_CONTRACT));

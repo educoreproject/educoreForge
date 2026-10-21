@@ -948,12 +948,7 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // judgeOne) and judgeComponent.js (per-attempt spend records, the cache sidecar's filling spend); tests test-bgSpend.js and
 // testSupport/capturedSpendLedgerDelta.js (new), toyBridgeScenario.js, test-bgFanoutConsumers.js, test-bgJudgeConfig.js, test-bgJudgePredicate.js,
 // and test-bgNosub.js (its re-anchors, this commit). No vocabulary change; no PESC plugin edit.
-// ═══ RE-ANCHOR, 2026-10-21 (VELVET_CHORUS; R5 shared forge and build surfaces) ═══ BG-COMPOSE-PESC postSpendLedgerR1OnMainPescCompose-102126
-// -> postSharedSurfacesR5PescCompose-102126, tag cut ON this commit. CENSUS over this gate's paths (numstat from R1's tag; all R5's): build.js
-// 56/112 (the declared fidelity gate, hub-named reports); interfaces.js 3/2 (comments: the bundle factory's anchor map, HAS_<HUB>_*);
-// lib/vocabulary/ vocabulary-definitions.js 2/5 and test/testSupport/pureProxyFingerprintProbe.js 1/1 (as (ii)); and test-bgNosub.js (its
-// re-anchors, this commit). No lib/bridge-framework source, no bridge-maker, no PESC plugin edit: frameworkFingerprint unchanged.
-const P1_BASELINE_COMMIT = 'postSharedSurfacesR5PescCompose-102126'; // re-anchored by VELVET_CHORUS (R5 shared forge and build surfaces; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
+const P1_BASELINE_COMMIT = 'postHubNeutralR2PescCompose-102126'; // re-anchored by SCARLET_STREAM (hub-neutral lane R2, after R1 on main; census REANCHOR-CENSUS-R2-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
