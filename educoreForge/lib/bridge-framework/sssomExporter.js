@@ -162,7 +162,11 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 		}
 		return BUILT_IN_PREFIX_LIST.indexOf(prefix) === -1 && !declaredPrefixSet.has(prefix) ? `${slotName} prefix '${prefix}' is not declared in curie_map (${Array.from(declaredPrefixSet).join(', ')})` : '';
 	};
-	const subjectPrefixRefusal = declaredPrefixSet.has(setLevelSlots.subjectCuriePrefix) ? '' : `subjectCuriePrefix '${setLevelSlots.subjectCuriePrefix}' is not declared in curie_map`;
+	// ⟪ctdlHub P6⟫ a standard whose subjects carry several CURIE prefixes (CTDL: financialAid:, support:, …) declares the others in
+	// additionalSubjectCuriePrefixList; each is a subject prefix like the first, declared in curie_map like the first
+	const subjectCuriePrefixList = [setLevelSlots.subjectCuriePrefix].concat(setLevelSlots.additionalSubjectCuriePrefixList === undefined ? [] : setLevelSlots.additionalSubjectCuriePrefixList);
+	const undeclaredSubjectPrefix = subjectCuriePrefixList.find((onePrefix) => !declaredPrefixSet.has(onePrefix));
+	const subjectPrefixRefusal = undeclaredSubjectPrefix === undefined ? '' : `subjectCuriePrefix '${undeclaredSubjectPrefix}' is not declared in curie_map`;
 	if (subjectPrefixRefusal) {
 		refuseWith(subjectPrefixRefusal, 'curie_map declares every non-built-in prefix (Profile §4.6)');
 		return;
@@ -228,8 +232,8 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 		// subject_id IS the forged stableId VERBATIM — a forged id already carries its standard's prefix
 		// (`toy:property/…`, `<standard>:property/…`); prepending would double it (RULING BR2). A stableId that does NOT
 		// begin with the declared subjectCuriePrefix is a contract violation and is REFUSED by name, never repaired.
-		if (fromStableId.indexOf(`${setLevelSlots.subjectCuriePrefix}:`) !== 0) {
-			refuseWith(`subjectStableId '${fromStableId}' does not begin with the declared subjectCuriePrefix '${setLevelSlots.subjectCuriePrefix}:'`, 'subject_id is the forged stableId verbatim (RULING BR2); the prefix is never prepended and never repaired');
+		if (!subjectCuriePrefixList.some((onePrefix) => fromStableId.indexOf(`${onePrefix}:`) === 0)) {
+			refuseWith(`subjectStableId '${fromStableId}' does not begin with the declared subjectCuriePrefix '${subjectCuriePrefixList.map((onePrefix) => `${onePrefix}:`).join("' or '")}'`, 'subject_id is the forged stableId verbatim (RULING BR2); the prefix is never prepended and never repaired');
 			return;
 		}
 		subjectSet.add(fromStableId);

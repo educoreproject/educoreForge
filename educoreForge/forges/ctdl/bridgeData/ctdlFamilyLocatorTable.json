@@ -1,0 +1,21 @@
+{
+	"tableNote": "ctdlHub-101926 P6 (WORKORDER-P6 rules): THE ONE LOCATOR TABLE of the CTDL family. Every crossRef locator a CTDL-family forge records is in exactly one of the two lists. A STRUCTURE locator relates two family terms structurally and is written by the family-structure producer (ctdlFamilyStructure) as the July edge types; a CORRESPONDENCE locator is a published cross-IRI assertion and is written by a declared bridge as DECLARED_CORRESPONDENCE with the predicate verbatim (never a match edge, R6). A locator in neither list is refused by name by every reader of this table. rdfs:subClassOf across standards is STRUCTURE (it is in the July oracle's 506 family edges); rdfs:subPropertyOf is CORRESPONDENCE. meta:domainFor is structure (the class side of schema:domainIncludes): measured 2026-10-21, it adds no family edge the domainIncludes reading does not already make.",
+	"structureLocatorList": [
+		{ "locator": "schema:domainIncludes", "edgeType": "HAS_PROPERTY", "direction": "targetToSource" },
+		{ "locator": "schema:rangeIncludes", "edgeType": "REFERENCES", "direction": "sourceToTarget" },
+		{ "locator": "rdfs:subClassOf", "edgeType": "SUBCLASS_OF", "direction": "sourceToTarget" },
+		{ "locator": "meta:targetScheme", "edgeType": "HAS_OPTION_SET", "direction": "sourceToTarget" },
+		{ "locator": "meta:domainFor", "edgeType": "HAS_PROPERTY", "direction": "sourceToTarget" }
+	],
+	"correspondenceLocatorList": [
+		"owl:equivalentClass",
+		"owl:equivalentProperty",
+		"owl:sameAs",
+		"rdfs:subPropertyOf",
+		"skos:exactMatch",
+		"skos:closeMatch",
+		"skos:broadMatch",
+		"skos:narrowMatch",
+		"skos:relatedMatch"
+	]
+}

@@ -703,10 +703,13 @@ const moduleFunction =
 										...(subjectMatchField === null ? {} : { subjectMatchField }),
 										objectMatchField,
 										subjectCuriePrefix: bridgeDeclaration.subjectCuriePrefix,
+										...(bridgeDeclaration.additionalSubjectCuriePrefixList === undefined ? {} : { additionalSubjectCuriePrefixList: bridgeDeclaration.additionalSubjectCuriePrefixList.slice() }),
 										[predicateSourceLib.PREDICATE_SOURCE_KIND_REGISTRY[bridgeDeclaration.predicateSource.kind].provenanceSlotName]: labelTableOf(bridgeDeclaration),
 									};
 									const curieMap = { [bridgeDeclaration.subjectCuriePrefix]: `urn:educore:${bridgeDeclaration.standardKey}:`, [bridgeDeclaration.sourceCuriePrefix.prefix]: bridgeDeclaration.sourceCuriePrefix.iri, [OBJECT_MATCH_FIELD_HUB_PREFIX]: `urn:educore:hub:${block.header.hubName}:` };
-									sssomExporterLib.toSssomTsv({ decisionBlock: block, decisionBlockHash, cardByStableId, curieMap, setLevelSlots, outputPath }, (exportError, exported) => {
+									// ⟪ctdlHub P6⟫ every additional subject prefix is declared in curie_map beside the first
+									const subjectAwareCurieMap = bridgeDeclaration.additionalSubjectCuriePrefixList === undefined ? curieMap : bridgeDeclaration.additionalSubjectCuriePrefixList.reduce((soFar, onePrefix) => ({ ...soFar, [onePrefix]: `urn:educore:${bridgeDeclaration.standardKey}:${onePrefix}:` }), curieMap);
+									sssomExporterLib.toSssomTsv({ decisionBlock: block, decisionBlockHash, cardByStableId, curieMap: subjectAwareCurieMap, setLevelSlots, outputPath }, (exportError, exported) => {
 										if (exportError) {
 											tailCallback(exportError);
 											return;

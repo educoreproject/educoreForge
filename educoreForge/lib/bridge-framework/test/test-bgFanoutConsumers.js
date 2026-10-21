@@ -283,7 +283,7 @@ const unprefixedFieldShape = (scenario) => {
 	scenario.graph.nodeList = scenario.graph.nodeList.map((oneNode) => (oneNode.stableId !== STAFF_IDENTIFIER ? oneNode : { ...oneNode, stableId: UNPREFIXED_STAFF_IDENTIFIER, properties: { ...oneNode.properties, stableId: UNPREFIXED_STAFF_IDENTIFIER } }));
 	scenario.graph.edgeList = scenario.graph.edgeList.map((oneEdge) => ({ ...oneEdge, fromStableId: renamed(oneEdge.fromStableId), toStableId: renamed(oneEdge.toStableId) }));
 };
-const PREFIX_CHECK_FIND = '\t\tif (fromStableId.indexOf(`${setLevelSlots.subjectCuriePrefix}:`) !== 0) {';
+const PREFIX_CHECK_FIND = '\t\tif (!subjectCuriePrefixList.some((onePrefix) => fromStableId.indexOf(`${onePrefix}:`) === 0)) {';
 const prefixConjunctList = [
 	runConjunct({
 		conjunctId: 'c1_fanoutExportPassesPrefixCheckWithFields',

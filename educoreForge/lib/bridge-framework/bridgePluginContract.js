@@ -510,6 +510,9 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	mappingProvider: Object.freeze({ required: false, basisConditional: true, kind: 'mappingProvider' }),
 	sourceCuriePrefix: Object.freeze({ required: true, kind: 'curiePrefix' }),
 	subjectCuriePrefix: Object.freeze({ required: true, kind: 'nonEmptyString' }),
+	// ⟪ctdlHub P6⟫ the OTHER CURIE prefixes a source's subject stableIds carry, when they carry more than one (CTDL concepts:
+	// financialAid:, support:). Plain-optional: absent, every subject begins with subjectCuriePrefix, as before.
+	additionalSubjectCuriePrefixList: Object.freeze({ optional: true, kind: 'curiePrefixList' }),
 	sourceChannelList: Object.freeze({ required: true, kind: 'sourceChannelList' }),
 	subjectIdentity: Object.freeze({ required: true, kind: 'subjectIdentity' }),
 	tupleFieldColumnMap: Object.freeze({ required: false, basisConditional: true, kind: 'tupleFieldColumnMap' }),
@@ -959,6 +962,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		}
 		return SUBJECT_IDENTITY_KIND_VALIDATOR_REGISTRY[value.kind](value, { bridgeDeclaration });
 	},
+	curiePrefixList: (value) => (Array.isArray(value) && value.length > 0 && value.every((onePrefix) => typeof onePrefix === 'string' && /^[A-Za-z][A-Za-z0-9]*$/.test(onePrefix)) && new Set(value).size === value.length ? '' : `must be a non-empty list of distinct CURIE-safe prefixes (letters and digits) (got ${JSON.stringify(value)})`),
 	// ⟪ctdlHub P6⟫ the rule kinds live with their resolvers (declaredTargetResolution.js), so the checker and the resolver can never disagree
 	declaredTargetRuleList: (value) => declaredTargetResolutionLib.declaredTargetRuleListRefusal(value),
 	tupleFieldColumnMap: (value, { bridgeDeclaration }) => {
