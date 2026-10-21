@@ -11,7 +11,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // A bridging file exports exactly { standardBridging, bridgeHooksByFacetName }:
 //   standardBridging = {
 //     standardKey        the bundle directory (BR-009)
-//     bridgeNameStem     the camel-case stem every derived name starts with (pescCollegeTranscript1v8v0, edfi, sif260928)
+//     bridgeNameStem     the camel-case stem every derived name starts with (pescCollegeTranscript1v8v0, sif260928)
 //     facetList          one row per subject family: { facetName, declarationTemplate, subjectRenderingAllowList, pairByHubToken }
 //   }
 //   facetName                ''  for a standard's only family, else a capitalised word ('OptionSet') that joins the bridgeName
