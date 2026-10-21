@@ -1,0 +1,13 @@
+{
+	"_comment": "hub-literal-census.js rules (R0 proof kit, 2026-10-21). classRuleList is FIRST MATCH WINS over the tree-relative path; a .js file reaching class 'source' is split into 'code' and 'comments' by where each occurrence sits. falsePositiveWordList: whole words (letter/digit/underscore runs) whose embedded token is not the hub's name, each measured. A token embedded mid-word in lower case (referencedStableId, DisplacedStudent) is not counted by rule, so only words that START with the token yet are not the hub need a row here.",
+	"classRuleList": [
+		{ "className": "retired", "pathPatternList": ["^codeAttic/", "^experiments/", "/retiredBridges/"] },
+		{ "className": "testsAndFixtures", "pathPatternList": ["(^|/)test/", "(^|/)tests/", "(^|/)fixtures/", "(^|/)testSupport/", "(^|/)probes/"] },
+		{ "className": "docs", "pathPatternList": ["\\.md$", "(^|/)README[^/]*$", "\\.txt$", "\\.html$"] },
+		{ "className": "assets", "pathPatternList": ["^forges/[^/]+/assets/", "/bridgeData/"] },
+		{ "className": "source", "pathPatternList": ["\\.js$"] },
+		{ "className": "data", "pathPatternList": [".*"] }
+	],
+	"countedClassNameList": ["code", "comments", "data", "testsAndFixtures", "docs", "assets", "retired"],
+	"falsePositiveWordList": ["cedStanding", "cedSubjectCreditCodeType"]
+}
