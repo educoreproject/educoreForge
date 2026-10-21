@@ -61,8 +61,10 @@ const sifHooks = require('./lib/sifHooks')(); // H2/H3 — sourceLoaderList, des
 
 const moduleFunction =
 	({ moduleName } = {}) =>
-	({ embedder } = {}) =>
-		forgeFramework({ embedder }).injectStandardHooks({ forgeDeclaration, hooks: sifHooks });
+	({ embedder, hubAnchorPrefixByHubToken } = {}) =>
+		// hubAnchorPrefixByHubToken (R5 S2): SIF's 'CEDS ID' column is normalized by the kit's hubAnchorValue from the CEDS
+		// bundle's own declaration, which the forger collects; this bundle forwards it and holds no prefix table of its own
+		forgeFramework({ embedder, ...(hubAnchorPrefixByHubToken === undefined ? {} : { hubAnchorPrefixByHubToken }) }).injectStandardHooks({ forgeDeclaration, hooks: sifHooks });
 
 // END OF moduleFunction() ============================================================
 

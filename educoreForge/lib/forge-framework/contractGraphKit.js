@@ -35,14 +35,10 @@ const DME_ROLE_VALUE_LIST = Object.freeze(Object.values(DME_ROLES));
 const EDGE_TYPE_VALUE_LIST = Object.freeze(Object.values(EDGE_TYPES));
 const RETIRED_MAPPING_EDGE_TYPE_LIST = Object.freeze(Object.values(MAPPING_EDGE_TYPES));
 
-// the CEDS anchor normalizer's registry (ceds/lib/normalize.js:20-25) — one copy, framework-owned
-const CEDS_ANCHOR_PREFIX_BY_KIND = Object.freeze({
-	class: 'C',
-	property: 'P',
-	optionSet: 'OS',
-	optionValue: 'OV',
-});
-const CEDS_ANCHOR_DIGIT_RE = /(\d+)(?!.*\d)/;
+// ⟪R5 S2, 2026-10-21⟫ the anchor's numeric core (the last digit run of the raw value). The PREFIX per kind and the
+// digit count are the HUB's: each hub bundle declares them (forges/<hub>/parserDescriptor.ini anchorPrefixDeclaration=), the
+// forger collects them into hubAnchorPrefixByHubToken and the bundle hands that to the kit. The kit names no hub.
+const HUB_ANCHOR_DIGIT_RE = /(\d+)(?!.*\d)/;
 
 // the surface as data (SPEC §3.4): member name → arity, kind
 const CONTRACT_GRAPH_KIT_SURFACE = Object.freeze({
@@ -58,7 +54,7 @@ const CONTRACT_GRAPH_KIT_SURFACE = Object.freeze({
 	carriedProperties: Object.freeze({ arity: 1, kind: 'function', returns: 'object' }),
 	crossRefsJson: Object.freeze({ arity: 1, kind: 'function', returns: 'string' }),
 	searchTextElementFor: Object.freeze({ arity: 1, kind: 'function', returns: 'element' }),
-	cedsAnchorValue: Object.freeze({ arity: 1, kind: 'function', returns: '{ cedsAnchorValue } | { absent: true }' }),
+	hubAnchorValue: Object.freeze({ arity: 1, kind: 'function', returns: '{ hubAnchorValue } | { absent: true }' }),
 	isCleanStableId: Object.freeze({ arity: 1, kind: 'function', returns: 'boolean' }),
 	rootStableId: Object.freeze({ kind: 'string' }),
 	emitOptionValue: Object.freeze({ arity: 1, kind: 'function', returns: 'node' }),
@@ -73,7 +69,7 @@ const universalMintPropertyNameListFor = ({ stableUriPropertyName }) =>
 const isPlainObject = (candidate) =>
 	candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 
-const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {} } = {}) => {
+const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}, hubAnchorPrefixByHubToken } = {}) => {
 	if (!isPlainObject(forgeDeclaration)) {
 		throw refuse.byName({ moduleName, what: 'forgeDeclaration is not an object', where: 'the framework creates the kit from the validated H1 declaration' });
 	}
@@ -413,22 +409,30 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 	};
 
 	// ---------------------------------------------------------------
-	// cedsAnchorValue — the ONE normalizer (D14); a JOIN-KEY value, never an address
+	// hubAnchorValue — the ONE normalizer (D14); a JOIN-KEY value, never an address. ⟪R5 S2⟫ hub-generic: the hub
+	// whose id the source carries names its prefixes and digit count (its anchorPrefixDeclaration); absent, refused by name.
 	// ---------------------------------------------------------------
-	const cedsAnchorValue = ({ rawValue, kind } = {}) => {
-		const prefix = CEDS_ANCHOR_PREFIX_BY_KIND[kind];
+	const hubAnchorValue = ({ hubToken, rawValue, kind } = {}) => {
+		if (hubAnchorPrefixByHubToken === undefined || hubAnchorPrefixByHubToken === null) {
+			throw refuse.byName({ moduleName, what: `hubAnchorValue: no hub anchor declarations were handed to this bundle (asked for hub '${hubToken}')`, where: 'the forger collects every bundle\'s anchorPrefixDeclaration and passes { hubAnchorPrefixByHubToken } to the bundle factory; a direct caller passes forger.hubAnchorPrefixByHubTokenFor()' });
+		}
+		const anchorDeclaration = hubAnchorPrefixByHubToken[hubToken];
+		if (anchorDeclaration === undefined) {
+			throw refuse.byName({ moduleName, what: `hubAnchorValue: no bundle declares anchors for hub '${hubToken}'`, where: `declared hubs: ${Object.keys(hubAnchorPrefixByHubToken).sort().join(', ') || '(none)'}` });
+		}
+		const prefix = anchorDeclaration.anchorPrefixByKind[kind];
 		if (prefix === undefined) {
-			throw refuse.byName({ moduleName, what: `cedsAnchorValue: unknown kind '${kind}'`, where: `kind is one of ${Object.keys(CEDS_ANCHOR_PREFIX_BY_KIND).join(', ')}` });
+			throw refuse.byName({ moduleName, what: `hubAnchorValue: unknown kind '${kind}' for hub '${hubToken}'`, where: `kind is one of ${Object.keys(anchorDeclaration.anchorPrefixByKind).join(', ')}` });
 		}
 		const trimmedValue = rawValue === undefined || rawValue === null ? '' : `${rawValue}`.trim();
 		if (trimmedValue === '' || hubAnchorAbsentSentinelList.indexOf(trimmedValue) !== -1) {
 			return { absent: true };
 		}
-		const digitMatch = trimmedValue.match(CEDS_ANCHOR_DIGIT_RE);
+		const digitMatch = trimmedValue.match(HUB_ANCHOR_DIGIT_RE);
 		if (!digitMatch) {
-			throw refuse.byName({ moduleName, what: `cedsAnchorValue: could not extract a numeric CEDS anchor from '${rawValue}' for kind '${kind}'`, where: 'a present-but-unnormalizable anchor is a refusal, never data (R3)' });
+			throw refuse.byName({ moduleName, what: `hubAnchorValue: could not extract a numeric '${hubToken}' anchor from '${rawValue}' for kind '${kind}'`, where: 'a present-but-unnormalizable anchor is a refusal, never data (R3)' });
 		}
-		return { cedsAnchorValue: `${prefix}${digitMatch[1].padStart(6, '0')}` };
+		return { hubAnchorValue: `${prefix}${digitMatch[1].padStart(anchorDeclaration.anchorDigitCount, '0')}` };
 	};
 
 	// ---------------------------------------------------------------
@@ -506,7 +510,7 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 		carriedProperties,
 		crossRefsJson,
 		searchTextElementFor,
-		cedsAnchorValue,
+		hubAnchorValue,
 		isCleanStableId,
 		get rootStableId() {
 			return kitState.rootStableId;
@@ -517,4 +521,4 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 	return { kit, kitInternals };
 };
 
-module.exports = { contractGraphKit, CONTRACT_GRAPH_KIT_SURFACE, CEDS_ANCHOR_PREFIX_BY_KIND, universalMintPropertyNameListFor, moduleName };
+module.exports = { contractGraphKit, CONTRACT_GRAPH_KIT_SURFACE, universalMintPropertyNameListFor, moduleName };

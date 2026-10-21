@@ -25,7 +25,8 @@ process.global.xLog = process.global.xLog || {
 };
 
 const normalize = require('../lib/normalize');
-const bundle = require('../forgeSif')({ embedder: null });
+// R5 S2: the bundle is handed the forger's map of hub anchor declarations, as the forger hands it (the old SIF forge normalizes its 'CEDS ID' column through it)
+const bundle = require('../forgeSif')({ embedder: null, hubAnchorPrefixByHubToken: require('../../../apps/graph-builder/apps/forger/forger').hubAnchorPrefixByHubTokenFor().hubAnchorPrefixByHubToken });
 const { DME_ROLES, EDGE_TYPES } = require('../../../lib/vocabulary/vocabulary');
 const sifForgeDeclaration = require('../lib/sifForgeDeclaration');
 

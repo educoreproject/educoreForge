@@ -73,6 +73,8 @@ const STANDARD_SOURCE = forgeDeclaration.standardSource;
 
 // the native annotation column, declared once in H1 and read here as the crossRef locator.
 const CEDS_ANCHOR_PROPERTY_NAME = forgeDeclaration.mappingInstruction.cedsOriginalAnchorPropertyName[0];
+// the hub whose ids SIF's anchor column carries; its bundle declares how such an id is written (R5 S2)
+const ANCHOR_HUB_TOKEN = 'ceds';
 
 // ---- CHARACTERISTICS: SIF's own cardinality-and-obligation statement (bespoke :110-116) ----------
 //
@@ -372,14 +374,14 @@ const moduleFunction =
 				// The kit REFUSES a present-but-unnormalizable anchor by name where the bespoke threw
 				// its own R3 error; both refuse, and the kit's names the kind and the raw value.
 				if (roleSpec.kind === 'field' && props.cedsId != null && `${props.cedsId}`.trim() !== '') {
-					const anchor = kit.cedsAnchorValue({ kind: 'property', rawValue: props.cedsId });
+					const anchor = kit.hubAnchorValue({ hubToken: ANCHOR_HUB_TOKEN, kind: 'property', rawValue: props.cedsId });
 					if (!anchor.absent) {
-						carriedProperties.cedsId = anchor.cedsAnchorValue; // the property -specified resolves on
+						carriedProperties.cedsId = anchor.hubAnchorValue; // the property -specified resolves on
 						carriedProperties.cedsOriginalAnchorPropertyName = [CEDS_ANCHOR_PROPERTY_NAME];
 						crossRefsForNode = kit.crossRefsJson([
 							{
 								system: 'ceds',
-								id: anchor.cedsAnchorValue,
+								id: anchor.hubAnchorValue,
 								raw: `${props.cedsId}`,
 								locator: CEDS_ANCHOR_PROPERTY_NAME,
 							},
