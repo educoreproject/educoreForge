@@ -14,6 +14,8 @@
 //       candidateOnlyEdgeRuleList, externalEdgeRuleList (no silent default)
 //   (e) an externalEdgeRuleList row naming an unknown section or side is refused by name
 //   (f) the clean case PASSES: every external difference declared, every count met
+//   (g) ⟪ctdlHub P4 E14⟫ an addedPropertyCountRuleList row counts the nodes of a role carrying an added property and the
+//       entries it holds, exactly; a wrong count FAILS its row; the field is REQUIRED like the other rule lists
 // Each negative is a run of the real tool whose output names the specific defect (harness doctrine: a rejection for the
 // wrong reason is a false green).
 
@@ -78,6 +80,7 @@ const allowanceOf = (overrideByName) => ({
 	a5: { propertyName: 'foreignTerms', foreignTermCountsPath: 'foreignTermCounts.json' },
 	candidateOnlyEdgeRuleList: [],
 	externalEdgeRuleList: CLEAN_EXTERNAL_EDGE_RULE_LIST,
+	addedPropertyCountRuleList: [],
 	...overrideByName,
 });
 
@@ -151,6 +154,27 @@ const absentCandidateOnlyRun = runTool({ allowanceSpec: withoutTopField('candida
 harness.match('(d) absent candidateOnlyEdgeRuleList is refused by name', absentCandidateOnlyRun.outputText, /REFUSED: .*candidateOnlyEdgeRuleList/);
 const absentExternalRun = runTool({ allowanceSpec: withoutTopField('externalEdgeRuleList'), candidateCensus: CANDIDATE_CENSUS });
 harness.match('(d) absent externalEdgeRuleList is refused by name', absentExternalRun.outputText, /REFUSED: .*externalEdgeRuleList/);
+const absentAddedCountRun = runTool({ allowanceSpec: withoutTopField('addedPropertyCountRuleList'), candidateCensus: CANDIDATE_CENSUS });
+harness.match('(d) absent addedPropertyCountRuleList is refused by name', absentAddedCountRun.outputText, /REFUSED: .*addedPropertyCountRuleList/);
+
+// ---------------------------------------------------------------- (g) added-property counts
+harness.section('(g) an added property is counted exactly, by nodes and by entries');
+const taggedClassNode = { ...classNode, properties: { ...classNode.properties, tagList: ['a', 'b'] } };
+const taggedCandidateCensus = { ...CANDIDATE_CENSUS, nodes: [taggedClassNode, rootNode] };
+const tagAllowanceOf = (ruleOverride) => allowanceOf({
+	a3AddedPropertyListByRole: { DmeClass: ['tagList'] },
+	addedPropertyCountRuleList: [{ ruleName: 'G1', role: 'DmeClass', propertyName: 'tagList', expectedNodeCount: 1, expectedEntryCount: 2, ...ruleOverride }],
+});
+const countPassRun = runTool({ allowanceSpec: tagAllowanceOf({}), candidateCensus: taggedCandidateCensus });
+harness.equal('(g) exact counts: exit 0', countPassRun.exitCode, 0);
+harness.match('(g) the row reports both counts', countPassRun.outputText, /\[G1\] PASS — tagList on 1 DmeClass node\(s\) \(expected 1\), 2 entries \(expected 2\)/);
+const entryCountRun = runTool({ allowanceSpec: tagAllowanceOf({ expectedEntryCount: 3 }), candidateCensus: taggedCandidateCensus });
+harness.equal('(g) wrong entry count: exit 1', entryCountRun.exitCode, 1);
+harness.match('(g) the wrong entry count is named', entryCountRun.outputText, /\[G1\] FAIL — tagList on 1 DmeClass node\(s\) \(expected 1\), 2 entries \(expected 3\)/);
+const nodeCountRun = runTool({ allowanceSpec: tagAllowanceOf({ expectedNodeCount: 0 }), candidateCensus: taggedCandidateCensus });
+harness.match('(g) the wrong node count is named', nodeCountRun.outputText, /\[G1\] FAIL — tagList on 1 DmeClass node\(s\) \(expected 0\)/);
+const malformedCountRun = runTool({ allowanceSpec: tagAllowanceOf({ expectedEntryCount: 'two' }), candidateCensus: taggedCandidateCensus });
+harness.match('(g) a count rule without integer counts is refused by name', malformedCountRun.outputText, /REFUSED: .*addedPropertyCountRuleList.*G1/);
 
 // ---------------------------------------------------------------- (e) malformed rule rows
 harness.section('(e) an external rule naming an unknown section or side is refused by name');

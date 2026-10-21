@@ -40,12 +40,15 @@ DESCRIPTION
                                      ({ ruleName, edgeType, fromStableId?, locator?, expectedCount }) admits, counted exactly
                     A1 additions     a1.additionalReferenceCountByLocatorAndPrefix: crossRefs a later row carries beyond the
                                      source census (P2b E11), declared per (locator, prefix)
+                    added counts     addedPropertyCountRuleList: an A3-added property counted exactly ({ ruleName, role,
+                                     propertyName, expectedNodeCount, expectedEntryCount }; a list counts its entries,
+                                     a scalar counts one)
        external     the census sections familyEdges, hubEdges and otherExternalEdges, matched by (section, type, from, to):
                     an edge on one side only must be admitted by an externalEdgeRuleList row ({ ruleName, section, side:
                     oracleOnly | candidateOnly, edgeType, fromStableId?, toStableId?, expectedCount }), counted exactly;
                     an edge on both sides compares its properties as intra edges do
-     REQUIRED in every allowance, stated even when empty: candidateOnlyEdgeRuleList, externalEdgeRuleList and
-     a1.additionalReferenceCountByLocatorAndPrefix. An absent one is refused by name; it is never read as "nothing declared".
+     REQUIRED in every allowance, stated even when empty: candidateOnlyEdgeRuleList, externalEdgeRuleList,
+     addedPropertyCountRuleList and a1.additionalReferenceCountByLocatorAndPrefix. An absent one is refused by name; it is never read as "nothing declared".
      Prints one verdict line per row and the first unexplained differences.
 
 EXIT STATUS
@@ -96,6 +99,7 @@ if (oracleCensus.sourceName !== allowanceSpec.standardSource || candidateCensus.
 const absentSpecFieldNameList = [
 	['candidateOnlyEdgeRuleList', allowanceSpec.candidateOnlyEdgeRuleList],
 	['externalEdgeRuleList', allowanceSpec.externalEdgeRuleList],
+	['addedPropertyCountRuleList', allowanceSpec.addedPropertyCountRuleList],
 	['a1.additionalReferenceCountByLocatorAndPrefix', allowanceSpec.a1 && allowanceSpec.a1.additionalReferenceCountByLocatorAndPrefix],
 ].filter(([, fieldValue]) => fieldValue === undefined).map(([fieldName]) => fieldName);
 if (absentSpecFieldNameList.length !== 0) {
@@ -112,6 +116,12 @@ const malformedExternalRuleTextList = allowanceSpec.externalEdgeRuleList
 	.filter(Boolean);
 if (malformedExternalRuleTextList.length !== 0) {
 	refuse(`${allowanceSpecPath}: externalEdgeRuleList: ${malformedExternalRuleTextList.join('; ')}`);
+}
+// ⟪ctdlHub P4 E14⟫ an A3-added property counted exactly: { ruleName, role, propertyName, expectedNodeCount, expectedEntryCount }
+const malformedCountRuleList = allowanceSpec.addedPropertyCountRuleList.filter((oneRule) => typeof oneRule.ruleName !== 'string' || typeof oneRule.role !== 'string'
+	|| typeof oneRule.propertyName !== 'string' || !Number.isInteger(oneRule.expectedNodeCount) || !Number.isInteger(oneRule.expectedEntryCount));
+if (malformedCountRuleList.length !== 0) {
+	refuse(`${allowanceSpecPath}: addedPropertyCountRuleList: ${malformedCountRuleList.map((oneRule) => `rule '${oneRule.ruleName}' needs string ruleName, role and propertyName and integer expectedNodeCount and expectedEntryCount (got ${JSON.stringify(oneRule)})`).join('; ')}`);
 }
 
 const prefixOf = (iriText) => `${iriText}`.split(':')[0];
@@ -333,7 +343,16 @@ candidateOnlyEdgeRuleList.forEach((oneRule) => {
 		detail: `${candidateOnlyEdgeCountByRule[oneRule.ruleName]} candidate-only ${oneRule.edgeType}${oneRule.locator ? ` (locator ${oneRule.locator})` : ''} edge(s)${oneRule.fromStableId ? ` from ${oneRule.fromStableId}` : ''} (expected ${oneRule.expectedCount})`,
 	};
 });
-const rowNameOrder = ['nodes', 'edges', 'externalEdges', 'properties', 'A1', 'A2', 'A5'].concat(candidateOnlyEdgeRuleList.map((oneRule) => oneRule.ruleName), externalEdgeRuleList.map((oneRule) => oneRule.ruleName));
+const addedPropertyCountRuleList = allowanceSpec.addedPropertyCountRuleList;
+addedPropertyCountRuleList.forEach((oneRule) => {
+	const carrierNodeList = candidateCensus.nodes.filter((oneNode) => oneNode.role === oneRule.role && oneNode.properties[oneRule.propertyName] !== undefined);
+	const entryCount = carrierNodeList.reduce((total, oneNode) => total + [].concat(oneNode.properties[oneRule.propertyName]).length, 0);
+	rowEvidence[oneRule.ruleName] = {
+		verdict: carrierNodeList.length === oneRule.expectedNodeCount && entryCount === oneRule.expectedEntryCount ? PASS : FAIL,
+		detail: `${oneRule.propertyName} on ${carrierNodeList.length} ${oneRule.role} node(s) (expected ${oneRule.expectedNodeCount}), ${entryCount} entries (expected ${oneRule.expectedEntryCount})`,
+	};
+});
+const rowNameOrder = ['nodes', 'edges', 'externalEdges', 'properties', 'A1', 'A2', 'A5'].concat(candidateOnlyEdgeRuleList.map((oneRule) => oneRule.ruleName), externalEdgeRuleList.map((oneRule) => oneRule.ruleName), addedPropertyCountRuleList.map((oneRule) => oneRule.ruleName));
 const overallVerdict = rowNameOrder.every((rowName) => rowEvidence[rowName].verdict === PASS) && unexplainedList.length === 0 ? PASS : FAIL;
 rowNameOrder.forEach((rowName) => xLog.result(`[${rowName}] ${rowEvidence[rowName].verdict} — ${rowEvidence[rowName].detail}\n`));
 unexplainedList.slice(0, UNEXPLAINED_SHOW_LIMIT).forEach((oneItem) => xLog.result(`  UNEXPLAINED ${JSON.stringify(oneItem)}\n`));
