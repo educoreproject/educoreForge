@@ -140,7 +140,7 @@ if (resolved.error) {
 
 xLog.status(`[${moduleName}] forging ${resolved.standardName} in memory (NO embeddings)`);
 
-require(resolved.entryPath)({ embedder: null }).forge(
+require(resolved.entryPath)({ embedder: null, hubAnchorPrefixByHubToken: forgerModule.hubAnchorPrefixByHubTokenFor().hubAnchorPrefixByHubToken }).forge(
 	{ sourcePath: resolved.defaultSource, owner: ':golden', skipEmbedding: true },
 	(forgeErr, forged) => {
 		if (forgeErr) {

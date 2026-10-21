@@ -149,7 +149,7 @@ const declaredEmbeddingDims = embedder ? embedder.resolveEmbeddingIdentity().emb
 
 xLog.status(`[${moduleName}] forging ${resolved.standardName} in memory (vectorize=${vectorize})`);
 
-require(resolved.entryPath)({ embedder }).forge(
+require(resolved.entryPath)({ embedder, hubAnchorPrefixByHubToken: forgerModule.hubAnchorPrefixByHubTokenFor().hubAnchorPrefixByHubToken }).forge(
 	{ sourcePath: resolved.defaultSource, owner: ':golden', skipEmbedding: !vectorize },
 	(forgeErr, forged) => {
 		if (forgeErr) {
