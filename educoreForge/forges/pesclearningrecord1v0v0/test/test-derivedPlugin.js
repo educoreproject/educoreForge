@@ -85,7 +85,9 @@ const cloneJson = scenarioLib.cloneJson;
 // ---------------------------------------------------------------------
 const PLUGIN_NAME = 'pescLearningRecord1v0v0CedsDerivedPlugin';
 const STANDARD_KEY = 'pesclearningrecord1v0v0';
-const PLUGIN_FILE_NAME = `${PLUGIN_NAME}.js`;
+// ⟪hub-neutral bridge lane R3⟫ the shipped bridge is composed from this standard bridging file and the CEDS hub's declaration
+const PLUGIN_FILE_NAME = 'pescLearningRecord1v0v0Bridging.js';
+const { shippedBridgeDeclarationFor } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'test', 'testSupport', 'shippedBridge'));
 const REAL_FORGES_DIR = path.join(TREE_ROOT, 'forges');
 const SHIPPED_BRIDGES_DIR = path.join(BUNDLE_DIR, 'bridges');
 const IDENTIFIER_LIST_FILE_NAME = 'pescLearningRecord1v0v0CedsIdList.json';
@@ -148,6 +150,8 @@ const makePescForgesDir = (scenario) => {
 	const forgesDirPath = scenarioLib.makeScratchForgesCopy();
 	const bridgesDirPath = path.join(forgesDirPath, STANDARD_KEY, 'bridges');
 	copyDirectory(SHIPPED_BRIDGES_DIR, bridgesDirPath);
+	// ⟪hub-neutral bridge lane R3⟫ the copy composes with the hub's declaration, found by the hub bundle's descriptor
+	scenarioLib.copyShippedHubBridging({ forgesDirPath, hubToken: 'ceds' });
 	const transformFile = (fileName, transform) => {
 		if (transform !== undefined) {
 			const filePath = path.join(bridgesDirPath, fileName);
@@ -161,7 +165,7 @@ const makePescForgesDir = (scenario) => {
 	}
 	return forgesDirPath;
 };
-const shippedDeclaration = () => cloneJson(require(path.join(SHIPPED_BRIDGES_DIR, PLUGIN_FILE_NAME)).bridgeDeclaration);
+const shippedDeclaration = () => shippedBridgeDeclarationFor(PLUGIN_NAME);
 const applyDeclarationEdit = (scenario) => {
 	if (scenario.declarationEdit !== undefined) {
 		const bridgeDeclaration = shippedDeclaration();
@@ -393,8 +397,8 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 	// ------------------------------- B1-REGISTER
 	const registryOutcomeFor = (scenario) => {
 		const forgesDirPath = makePescForgesDir(scenario);
-		const requireModule = (pluginFilePath) => {
-			const loaded = require(pluginFilePath);
+		// ⟪hub-neutral bridge lane R3⟫ laid over each plugin module (file or composed) through the registry's transform seam
+		const pluginModuleTransform = (loaded) => {
 			if (scenario.declarationEdit === undefined || loaded.bridgeDeclaration.bridgeName !== PLUGIN_NAME) {
 				return loaded;
 			}
@@ -404,7 +408,7 @@ const buildGateDeclarationList = ({ forgedGraph, runDouble }) => {
 		};
 		// the registry THROWS by name on any refusal, which is its declared interface; the throw is the observation
 		try {
-			const registry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath, requireModule });
+			const registry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath, pluginModuleTransform });
 			return { looked: pluginRegistryLib.lookupPlugin({ registry, bridgeName: PLUGIN_NAME, standardKey: STANDARD_KEY }) };
 		} catch (registryThrow) {
 			return { thrownText: registryThrow.message };

@@ -73,7 +73,9 @@ const cloneJson = scenarioLib.cloneJson;
 // the plugin under test, and the frozen literals it is measured against
 const PLUGIN_NAME = 'sif260928CedsDerivedPlugin';
 const STANDARD_KEY = 'sif260928';
-const PLUGIN_FILE_NAME = `${PLUGIN_NAME}.js`;
+// ⟪hub-neutral bridge lane R3⟫ the shipped bridge is composed from this standard bridging file and the CEDS hub's declaration
+const PLUGIN_FILE_NAME = 'sif260928Bridging.js';
+const { shippedBridgeDeclarationFor } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'test', 'testSupport', 'shippedBridge'));
 const REAL_FORGES_DIR = path.join(TREE_ROOT, 'forges');
 const SHIPPED_BRIDGES_DIR = path.join(BUNDLE_DIR, 'bridges');
 const IDENTIFIER_LIST_FILE_NAME = 'sif260928CedsIdList.json';
@@ -142,6 +144,8 @@ const makeSifForgesDir = (scenario) => {
 	const forgesDirPath = scenarioLib.makeScratchForgesCopy();
 	const bridgesDirPath = path.join(forgesDirPath, STANDARD_KEY, 'bridges');
 	copyDirectory(SHIPPED_BRIDGES_DIR, bridgesDirPath);
+	// ⟪hub-neutral bridge lane R3⟫ the copy composes with the hub's declaration, found by the hub bundle's descriptor
+	scenarioLib.copyShippedHubBridging({ forgesDirPath, hubToken: 'ceds' });
 	if (scenario.pluginTextTransform !== undefined) {
 		const pluginFilePath = path.join(bridgesDirPath, PLUGIN_FILE_NAME);
 		fs.writeFileSync(pluginFilePath, scenario.pluginTextTransform(fs.readFileSync(pluginFilePath, 'utf8')));
@@ -157,7 +161,7 @@ const makeSifForgesDir = (scenario) => {
 	return forgesDirPath;
 };
 // declarationOverrideFor — a twin's declaration edit, laid over the shipped declaration by the harness
-const shippedDeclaration = () => cloneJson(require(path.join(SHIPPED_BRIDGES_DIR, PLUGIN_FILE_NAME)).bridgeDeclaration);
+const shippedDeclaration = () => shippedBridgeDeclarationFor(PLUGIN_NAME);
 const applyDeclarationEdit = (scenario) => {
 	if (scenario.declarationEdit !== undefined) {
 		const bridgeDeclaration = shippedDeclaration();
@@ -283,12 +287,12 @@ const writtenEdgeLineListOf = (outcome) => edgesOf(outcome).map((oneEdge) => `${
 // THROWS by name on any refusal, which is its declared interface, so the throw is caught here as the observation
 const registryOutcomeFor = (scenario) => {
 	const forgesDirPath = makeSifForgesDir(scenario);
-	const requireModule = (pluginFilePath) => {
-		const loaded = require(pluginFilePath);
+	// ⟪hub-neutral bridge lane R3⟫ laid over each plugin module (file or composed) through the registry's transform seam
+	const pluginModuleTransform = (loaded) => {
 		return scenario.declarationEdit !== undefined && loaded.bridgeDeclaration.bridgeName === PLUGIN_NAME ? { bridgeDeclaration: (() => { const edited = shippedDeclaration(); scenario.declarationEdit(edited); return edited; })(), bridgeHooks: loaded.bridgeHooks } : loaded;
 	};
 	try {
-		const registry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath, requireModule });
+		const registry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath, pluginModuleTransform });
 		const looked = pluginRegistryLib.lookupPlugin({ registry, bridgeName: PLUGIN_NAME, standardKey: STANDARD_KEY });
 		return { looked, forgesDirPath };
 	} catch (registryThrow) {
