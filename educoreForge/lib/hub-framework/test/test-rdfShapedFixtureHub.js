@@ -4,26 +4,31 @@
 // on, ranges as meaning (rangeAsMeaning), HAS_TERM_REFERENCE between the tiers. The base (fixtures/rdfShapedHub/) is
 // small enough that every expected number is derived by hand below. PURE: no forge, no graph, no I/O beyond the fixture.
 //
-// THE FIXTURE BASE: 3 classes, 4 properties, 1 option set (scheme) with 3 values (concepts).
+// THE FIXTURE BASE: 3 classes, 5 properties, 1 option set (scheme) with 3 values (concepts). Domains are read from the
+// HAS_PROPERTY edges (domainAddressing 'hasPropertyEdges', as CTDL; ⟪ctdlHub P4⟫):
 //   ex:name            domains Person, Credential, Organization   range: datatype xsd:string
 //   ex:holder          domain  Credential                         range: classes Person, Organization (REFERENCES)
 //   ex:status          domains Credential, Organization           range: option set StatusScheme AND datatype xsd:string
-//   ex:orphanProperty  NO domain                                  range: datatype xsd:date
+//   ex:issuedOn        domains Credential, Person BY EDGE ONLY    range: datatype xsd:date
+//                      ⟪ctdlHub P4⟫ its allDomainIds field DELIBERATELY DISAGREES (['ex:Organization']), so a derivation
+//                      that read the field instead of the edges would mint ONE card on Organization, not two
+//   ex:orphanProperty  NO class domain: its only HAS_PROPERTY is from the ROOT (CTDL's 12 root-parented properties)
+//                                                                  range: datatype xsd:date
 //
 // EXPECTED COUNTS, AND WHY:
-//   term      11 = 3 classes + 4 properties + 1 scheme + 3 concepts. The domain-less property still gets one: a term
+//   term      12 = 3 classes + 5 properties + 1 scheme + 3 concepts. The domain-less property still gets one: a term
 //                  card needs only an IRI, not a tuple.
-//   property   6 = name 3 domains + holder 1 + status 2 + orphanProperty 0. ranges do NOT multiply property cards:
-//                  status has two ranges and still one card per domain (rangeAsMeaning; PLAN §5 risk 4).
+//   property   8 = name 3 domains + holder 1 + status 2 + issuedOn 2 + orphanProperty 0. ranges do NOT multiply
+//                  property cards: status has two ranges and still one card per domain (rangeAsMeaning; PLAN §5 risk 4).
 //   value      6 = status's 2 domains x 1 option set x 3 concepts.
-//   HAS_TERM_REFERENCE 6 = one per property card; the ex:name term card receives 3 of them.
-//   nodes     24 = 11 + 6 + 6 + 1 HubDefinition.
-//   edges     80 = term 11 x (HAS_FIXTURE_TERM + IN_HUB) = 22
+//   HAS_TERM_REFERENCE 8 = one per property card; the ex:name term card receives 3 of them.
+//   nodes     27 = 12 + 8 + 6 + 1 HubDefinition.
+//   edges     90 = term 12 x (HAS_FIXTURE_TERM + IN_HUB) = 24
 //                + property cards: DOMAIN + PROPERTY + IN_HUB + HAS_TERM_REFERENCE = 4 each, plus one RANGE per range
-//                  NODE: name 3 x 4 = 12 (a datatype is not a node), holder 1 x (4 + 2) = 6, status 2 x (4 + 1) = 10
-//                  -> 28
+//                  NODE: name 3 x 4 = 12 (a datatype is not a node), holder 1 x (4 + 2) = 6, status 2 x (4 + 1) = 10,
+//                  issuedOn 2 x 4 = 8 -> 36
 //                + value cards: DOMAIN + PROPERTY + RANGE + VALUE + IN_HUB = 5 each x 6 = 30
-//   skip       1: ex:orphanProperty, reason zeroDeclaredDomains (property tier only).
+//   skip       1: ex:orphanProperty, reason zeroDeclaredDomains (property tier only); the root is not a class domain.
 //
 // CONJUNCTS
 //   a  the counts above, exactly
@@ -37,6 +42,10 @@
 //   g  CONTROL — the same base under a declaration WITHOUT the term tier mints no term card and no HAS_TERM_REFERENCE,
 //      and its slotProfile carries no termAddressSignatureFieldOrder (the CEDS case, in miniature)
 //   h  a base where two nodes share one IRI is REFUSED BY NAME (a term card is one per IRI)
+//   i  ⟪ctdlHub P4⟫ domains come from the HAS_PROPERTY edges: ex:issuedOn has exactly the cards @Credential and @Person
+//      (its disagreeing allDomainIds field is not read), and the root-only ex:orphanProperty has none
+//   j  ⟪ctdlHub P4⟫ CONTROL — the same base under domainAddressing 'domainFields' (the CEDS read) mints ex:issuedOn on
+//      its FIELD's domain alone (@Organization): the mode, not the base, decides
 //
 // RED TWINS (each a changed COPY of the derived result, nothing re-derived): a conjunct whose twin is not observed red
 // in this suite's output fails the suite.
@@ -68,7 +77,7 @@ const FIXTURE_DECLARATION = require(path.join(FIXTURE_DIR, 'rdfShapedHubDeclarat
 const HUB_VERSION = '20260101';
 const HUB_NAMESPACE = 'https://w3id.org/EDUcore/FIXTURE/hub/';
 
-const EXPECTED_COUNT = Object.freeze({ termTier: 11, propertyTier: 6, valueTier: 6, termReferenceEdge: 6, nodeTotal: 24, edgeTotal: 80, skipRow: 1 });
+const EXPECTED_COUNT = Object.freeze({ termTier: 12, propertyTier: 8, valueTier: 6, termReferenceEdge: 8, nodeTotal: 27, edgeTotal: 90, skipRow: 1 });
 
 const sha256Hex = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 
@@ -175,6 +184,15 @@ const judgeByConjunct = {
 			.filter((faultText) => faultText !== '');
 		return { pass: faultList.length === 0, detail: faultList.slice(0, 3).join(' | ') || 'every card admitted' };
 	},
+	i_domainsFromHasPropertyEdges: ({ hub }) => {
+		const domainIdListOf = (propertyKey) => cardsOfTier(hub, 'property').filter((oneCard) => oneCard.properties.propertyKey === propertyKey).map((oneCard) => oneCard.properties.domainId).sort();
+		const issuedOnDomainIdList = domainIdListOf('ex:issuedOn');
+		const orphanDomainIdList = domainIdListOf('ex:orphanProperty');
+		return {
+			pass: JSON.stringify(issuedOnDomainIdList) === JSON.stringify(['ex:Credential', 'ex:Person']) && orphanDomainIdList.length === 0,
+			detail: `ex:issuedOn cards @[${issuedOnDomainIdList.join(', ')}] (expected Credential, Person); ex:orphanProperty cards @[${orphanDomainIdList.join(', ')}] (expected none)`,
+		};
+	},
 };
 
 const reorderedBase = { nodes: FIXTURE_BASE.nodes.slice().reverse(), edges: FIXTURE_BASE.edges.slice().reverse() };
@@ -206,6 +224,11 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'e_deterministicUnderReorder', twinName: 'reorderedOutputUnsorted', subject: () => ({ ...shippedSubject(), reorderedHub: { ...reordered.hub, nodes: reordered.hub.nodes.slice().reverse() } }) },
 	{ conjunctRefId: 'f_everyCardPassesTheFieldTable', twinName: 'strayFieldOnATermCard', subject: withHub((hub) => {
 		hub.nodes.find((oneNode) => oneNode.properties.referenceTier === 'term').properties.domainId = 'ex:Person';
+		return hub;
+	}) },
+	// the field reading's answer, transplanted: the Person card of ex:issuedOn re-pointed at Organization
+	{ conjunctRefId: 'i_domainsFromHasPropertyEdges', twinName: 'fieldDomainInsteadOfEdge', subject: withHub((hub) => {
+		hub.nodes.find((oneNode) => oneNode.properties.referenceTier === 'property' && oneNode.properties.propertyKey === 'ex:issuedOn' && oneNode.properties.domainId === 'ex:Person').properties.domainId = 'ex:Organization';
 		return hub;
 	}) },
 ];
@@ -245,5 +268,15 @@ const sharedIriBase = JSON.parse(JSON.stringify(FIXTURE_BASE));
 sharedIriBase.nodes.find((oneNode) => oneNode.stableId === 'ex:Expired').properties.uri = 'ex:Active';
 const sharedIri = deriveHub({ hubDeclaration: FIXTURE_DECLARATION, baseNodeEdges: sharedIriBase });
 harness.match('h: two base nodes carrying ex:Active are REFUSED BY NAME', sharedIri.hubError, /two base nodes carry the term IRI 'ex:Active'/);
+
+harness.section('j — CONTROL: the same base under domainAddressing \'domainFields\' (the CEDS read)');
+const underDomainFields = deriveHub({ hubDeclaration: { ...FIXTURE_DECLARATION, domainAddressing: 'domainFields' }, baseNodeEdges: FIXTURE_BASE });
+harness.equal('j: derives', underDomainFields.hubError, '');
+harness.equal(
+	'j: ex:issuedOn is minted on its FIELD\'s domain alone — the mode decides where domains are read, the base is the same',
+	cardsOfTier(underDomainFields.hub, 'property').filter((oneCard) => oneCard.properties.propertyKey === 'ex:issuedOn').map((oneCard) => oneCard.properties.domainId).join(','),
+	'ex:Organization',
+);
+harness.equal('j: the three properties whose field and edges agree mint the same cards in both modes', cardsOfTier(underDomainFields.hub, 'property').filter((oneCard) => oneCard.properties.propertyKey !== 'ex:issuedOn').map((oneCard) => oneCard.stableId).sort().join(','), cardsOfTier(shipped.hub, 'property').filter((oneCard) => oneCard.properties.propertyKey !== 'ex:issuedOn').map((oneCard) => oneCard.stableId).sort().join(','));
 
 harness.report();

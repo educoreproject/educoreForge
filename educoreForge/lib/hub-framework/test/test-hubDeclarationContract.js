@@ -187,13 +187,13 @@ const withoutKey = (oneName) => {
 };
 
 harness.ok(
-	'HUB_DECLARATION_CONTRACT is frozen and names the eight §4.4 fields plus the four ctdlHub P3 fields',
+	'HUB_DECLARATION_CONTRACT is frozen and names the eight §4.4 fields, the four ctdlHub P3 fields and P4\'s domainAddressing',
 	Object.isFrozen(contract.HUB_DECLARATION_CONTRACT) &&
 		JSON.stringify(contract.HUB_DECLARATION_KEY_LIST) ===
 			JSON.stringify([
 				'hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted',
 				'sourceIdFieldName', 'baseFieldNames', 'qualifiedReference', 'provenanceLabel',
-				'tierList', 'rangeAddressing', 'rootFieldNames', 'embedTextTemplateByTier',
+				'tierList', 'rangeAddressing', 'domainAddressing', 'rootFieldNames', 'embedTextTemplateByTier',
 			]),
 	JSON.stringify(contract.HUB_DECLARATION_KEY_LIST),
 );
@@ -218,7 +218,7 @@ harness.match(
 );
 
 harness.section('H1 DECLARATION — REFUSAL CLASS 2: a missing REQUIRED key, one per field');
-['hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted', 'sourceIdFieldName', 'baseFieldNames', 'provenanceLabel', 'tierList', 'rangeAddressing', 'rootFieldNames', 'embedTextTemplateByTier'].forEach(
+['hubName', 'hubDisplayName', 'canonicalKeyName', 'canonicalKeyMinted', 'sourceIdFieldName', 'baseFieldNames', 'provenanceLabel', 'tierList', 'rangeAddressing', 'domainAddressing', 'rootFieldNames', 'embedTextTemplateByTier'].forEach(
 	(oneName) => {
 		harness.match(
 			`a declaration missing '${oneName}' is REFUSED BY NAME (absent is absent, never defaulted)`,
@@ -276,6 +276,10 @@ harness.match('an unknown tier is REFUSED BY NAME', declarationRefusalFor(withDe
 harness.match('an empty tierList is REFUSED', declarationRefusalFor(withDeclared({ tierList: [] })), /must be a non-empty array of reference tiers/);
 harness.match('a repeated tier is REFUSED', declarationRefusalFor(withDeclared({ tierList: ['property', 'property', 'value'] })), /names tier 'property' twice/);
 harness.match('an unknown rangeAddressing mode is REFUSED, listing the admissible ones', declarationRefusalFor(withDeclared({ rangeAddressing: 'rangeAsHash' })), /must be one of singleRangeSlot, rangeAsMeaning/);
+// ⟪ctdlHub P4⟫ where a property's domains are read: base fields (CEDS) or HAS_PROPERTY edges (CTDL)
+harness.equal('CONTROL: CEDS declares domainFields (the pre-P4 domain read)', liveDeclaration.domainAddressing, 'domainFields');
+harness.equal('CONTROL: a CTDL-shaped declaration with domainAddressing hasPropertyEdges is ADMITTED', declarationRefusalFor(withDeclared({ domainAddressing: 'hasPropertyEdges' })), '');
+harness.match('an unknown domainAddressing mode is REFUSED BY NAME, listing the admissible ones', declarationRefusalFor(withDeclared({ domainAddressing: 'parentId' })), /domainAddressing.*must be one of domainFields, hasPropertyEdges \(got "parentId"\)/);
 harness.match(
 	'a rootFieldNames map MISSING a root field is REFUSED — it is read into sourceProvenance, which is block bytes',
 	declarationRefusalFor(withDeclared({ rootFieldNames: (({ sourceUrl, ...rest }) => rest)(liveDeclaration.rootFieldNames) })),

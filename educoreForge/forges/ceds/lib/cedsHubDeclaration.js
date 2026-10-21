@@ -68,6 +68,8 @@ const hubDeclaration = {
 	tierList: ['property', 'value'],
 	// one range per card (option set XOR class XOR datatype), hashed into the address slot 'range'
 	rangeAddressing: 'singleRangeSlot',
+	// ⟪ctdlHub P4⟫ a property's domains are the fields the CEDS forge lifts onto it (allDomainIds, else domainId): the pre-P4 read
+	domainAddressing: 'domainFields',
 	// where on the DmeStandardRoot each sourceProvenance field is read (sourceProvenance is block bytes)
 	rootFieldNames: {
 		standardKey: 'standardKey',

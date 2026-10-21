@@ -46,6 +46,10 @@ const moduleName = 'hub-framework';
 //                                    meaning, never hashed) — RANGE_ADDRESSING_REGISTRY below
 //   rootFieldNames                   where on the root the five sourceProvenance fields are read (BLOCK BYTES)
 //   embedTextTemplateByTier          embedText as declared slots, one template per tier
+// and, since ctdlHub P4 (2026-10-20), one more, REQUIRED, declared by CEDS as exactly its pre-P4 behaviour:
+//   domainAddressing                 domainFields (CEDS: allDomainIds, else domainId, read off the property node) |
+//                                    hasPropertyEdges (CTDL: the classes with a HAS_PROPERTY edge to the property) —
+//                                    DOMAIN_ADDRESSING_REGISTRY below
 //
 // ⚠ THE HONESTY CLAUSE, AND IT IS NOT A FORMALITY (SPEC §4.4). A FRAMEWORK EXTRACTED FROM ONE HUB IS
 // PROVEN ON ONE, WHICH IS PROVEN ON NONE. The 2c clause named three CEDS-shaped places where the boundary would move
@@ -114,6 +118,7 @@ const {
 	validateHubDeclaration,
 	validateHubHooks,
 	RANGE_ADDRESSING_MODE_LIST,
+	DOMAIN_ADDRESSING_MODE_LIST,
 } = require(path.join(__dirname, 'hubDeclarationContract'));
 // ⟪campaign P3, W-C-5⟫ the ONE declaration of a card's fields: it builds the slotProfile and checks every emitted card
 const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, slotProfileFromFieldTable, cardFieldRefusal } = require(path.join(__dirname, 'hubCardFieldTable'));
@@ -231,6 +236,43 @@ if (unimplementedModeList.length || unadmittedModeList.length) {
 	);
 }
 
+// ⟪ctdlHub P4⟫ DOMAIN_ADDRESSING_REGISTRY — THE POLYMORPHIC SEAM behind hubDeclaration.domainAddressing: where pass 1 finds
+// the domains of a property. One property card (and its value cards) is minted per domain id returned.
+//
+// @interface DomainAddressingMode — (domainIndexes) -> declaredDomainIdListOf, where domainIndexes is
+//     { baseFieldNames, classNodeListOfProperty }
+//   and declaredDomainIdListOf(propertyNode) returns the property's domain ids (an empty list: the property is
+//   skip-reported zeroDeclaredDomains by the caller, never refused and never dropped)
+//
+// The contract (hubDeclarationContract DOMAIN_ADDRESSING_MODE_LIST) names the admissible modes; this registry must
+// implement exactly those, checked at load below.
+const DOMAIN_ADDRESSING_REGISTRY = Object.freeze({
+	// TODAY'S BEHAVIOUR, MOVED AND NOT CHANGED (CEDS). The forge lifts the domains onto the property node: every id in
+	// allDomainIds, else the single domainId. Field order is kept, because it is the order CEDS's cards were always minted in.
+	domainFields: ({ baseFieldNames }) => (propertyNode) => {
+		const allDeclaredDomainIds = domainListOf(propertyNode.properties[baseFieldNames.allDomainIds]);
+		return allDeclaredDomainIds.length
+			? allDeclaredDomainIds
+			: domainListOf(propertyNode.properties[baseFieldNames.domainId]);
+	},
+	// CTDL. The domains exist only as HAS_PROPERTY edges (schema:domainIncludes, forged as class -> property). Every DmeClass
+	// with such an edge is a domain; an edge from the root (a property no class declares) is not. Ids are read through
+	// baseFieldNames.domainId, distinct and sorted, so the card order cannot follow the base's edge order.
+	hasPropertyEdges: ({ baseFieldNames, classNodeListOfProperty }) => (propertyNode) =>
+		(classNodeListOfProperty[propertyNode.stableId] || [])
+			.map((classNode) => v1(classNode.properties[baseFieldNames.domainId]))
+			.filter((domainId, domainIndex, domainIdList) => domainIdList.indexOf(domainId) === domainIndex)
+			.sort(compareText),
+});
+const unimplementedDomainModeList = DOMAIN_ADDRESSING_MODE_LIST.filter((modeName) => DOMAIN_ADDRESSING_REGISTRY[modeName] === undefined);
+const unadmittedDomainModeList = Object.keys(DOMAIN_ADDRESSING_REGISTRY).filter((modeName) => DOMAIN_ADDRESSING_MODE_LIST.indexOf(modeName) === -1);
+if (unimplementedDomainModeList.length || unadmittedDomainModeList.length) {
+	throw new Error(
+		`${moduleName}: REFUSED AT LOAD — DOMAIN_ADDRESSING_REGISTRY implements [${Object.keys(DOMAIN_ADDRESSING_REGISTRY).join(', ')}] ` +
+			`but the declaration contract admits [${DOMAIN_ADDRESSING_MODE_LIST.join(', ')}]; they must be the same list.`,
+	);
+}
+
 // single-element PG-JSON array -> scalar. The replay engine scalarizes single-element arrays,
 // so the same property reads back as an array from a fresh forge and as a bare value from a
 // deserialized block; both shapes must land in the same place.
@@ -335,6 +377,7 @@ const moduleFunction =
 			provenanceLabel,
 			tierList,
 			rangeAddressing,
+			domainAddressing,
 			rootFieldNames,
 			embedTextTemplateByTier,
 		} = hubDeclaration;
@@ -539,6 +582,8 @@ const moduleFunction =
 			// every native class it REFERENCES. Building them for a singleRangeSlot hub changes nothing it emits.
 			const optionSetNodeListOfProperty = {};
 			const referencedClassNodeListOfProperty = {};
+			// ⟪ctdlHub P4⟫ read only by domainAddressing hasPropertyEdges: the CLASSES that declare each property
+			const classNodeListOfProperty = {};
 			baseEdges.forEach((oneEdge) => {
 				const fromNode = nodeByStableId[oneEdge.fromRef.id];
 				const toNode = nodeByStableId[oneEdge.toRef.id];
@@ -548,6 +593,9 @@ const moduleFunction =
 				if (oneEdge.type === EDGE_TYPES.HAS_PROPERTY) {
 					(propertyNodesOfClass[fromNode.stableId] =
 						propertyNodesOfClass[fromNode.stableId] || []).push(toNode);
+					if (v1(fromNode.properties.role) === DME_ROLES.CLASS) {
+						(classNodeListOfProperty[toNode.stableId] = classNodeListOfProperty[toNode.stableId] || []).push(fromNode);
+					}
 				} else if (oneEdge.type === EDGE_TYPES.HAS_OPTION_SET) {
 					optionSetNodeOfProperty[fromNode.stableId] = toNode;
 					(optionSetNodeListOfProperty[fromNode.stableId] =
@@ -569,6 +617,7 @@ const moduleFunction =
 				referencedClassNodeListOfProperty,
 				recordDerivationFault,
 			});
+			const declaredDomainIdListOf = DOMAIN_ADDRESSING_REGISTRY[domainAddressing]({ baseFieldNames, classNodeListOfProperty });
 
 			// ---- MEANING copy: carried only when CEDS said something (absent stays absent) ----
 			const carryProseField = ({ cardProperties, cardFieldName, sourceValue }) => {
@@ -1028,13 +1077,10 @@ const moduleFunction =
 				const propertyProps = propertyNode.properties;
 				const propertyKey = v1(propertyProps[baseFieldNames.canonicalKey]);
 
-				// EVERY DECLARED DOMAIN, shape-agnostically (the incumbent's multi-domain rule:
-				// each declared domain is a different idea; addressSignature includes domainId so
+				// EVERY DECLARED DOMAIN, as the hub's declared domainAddressing mode finds them (the incumbent's
+				// multi-domain rule: each declared domain is a different idea; addressSignature includes domainId so
 				// the per-domain cards are distinct by construction)
-				const allDeclaredDomainIds = domainListOf(propertyProps[baseFieldNames.allDomainIds]);
-				const declaredDomainIds = allDeclaredDomainIds.length
-					? allDeclaredDomainIds
-					: domainListOf(propertyProps[baseFieldNames.domainId]);
+				const declaredDomainIds = declaredDomainIdListOf(propertyNode);
 				if (!declaredDomainIds.length) {
 					skipReport.push({
 						reason: 'zeroDeclaredDomains',

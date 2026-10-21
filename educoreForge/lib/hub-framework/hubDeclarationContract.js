@@ -15,7 +15,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   HUB_DECLARATION_CONTRACT   the H1 DATA table of SPEC §4.4 (Phase 2c) — hubName, hubDisplayName,
 //                              canonicalKeyName, canonicalKeyMinted, sourceIdFieldName,
 //                              baseFieldNames, qualifiedReference, provenanceLabel; and since ctdlHub P3
-//                              tierList, rangeAddressing, rootFieldNames, embedTextTemplateByTier
+//                              tierList, rangeAddressing, rootFieldNames, embedTextTemplateByTier; and since ctdlHub P4
+//                              domainAddressing
 // The second was deliberately NOT declared in 2a, when nothing validated it: a contract entry nobody
 // walks is dead surface, the same judgment RULING FB8 made when it deleted refuse.requiredKeys.
 //
@@ -226,6 +227,13 @@ const ROOT_FIELD_NAME_LIST = Object.freeze(['standardKey', 'snapshotKey', 'publi
 //                    are minted per option set the property targets (CTDL: schema:rangeIncludes is a hint, not a key)
 const RANGE_ADDRESSING_MODE_LIST = Object.freeze(['singleRangeSlot', 'rangeAsMeaning']);
 
+// ⟪ctdlHub P4⟫ where a property's DOMAINS are read. The derivation behind each mode is the hub framework's
+// DOMAIN_ADDRESSING_REGISTRY, which refuses at load unless it implements exactly these names.
+//   domainFields      the base FIELDS baseFieldNames.allDomainIds, else baseFieldNames.domainId (CEDS: the forge lifts them)
+//   hasPropertyEdges  every DmeClass with a HAS_PROPERTY edge to the property (CTDL: its domains exist only as edges; a
+//                     property whose only HAS_PROPERTY is from the root has no class domain and is skip-reported)
+const DOMAIN_ADDRESSING_MODE_LIST = Object.freeze(['domainFields', 'hasPropertyEdges']);
+
 // the tiers a hub may declare are the vocabulary's own (REFERENCE_TIER), never a list retyped here
 const REFERENCE_TIER_VALUE_LIST = Object.freeze(Object.keys(REFERENCE_TIER).map((tierConstantName) => REFERENCE_TIER[tierConstantName]));
 
@@ -244,6 +252,8 @@ const HUB_DECLARATION_CONTRACT = Object.freeze({
 	// tierList and rangeAddressing precede embedTextTemplateByTier because its checker reads both.
 	tierList: Object.freeze({ required: true, kind: 'tierList' }),
 	rangeAddressing: Object.freeze({ required: true, kind: 'rangeAddressing' }),
+	// ⟪ctdlHub P4⟫ REQUIRED, never defaulted: a hub that forgot where its domains live must not silently read CEDS's fields
+	domainAddressing: Object.freeze({ required: true, kind: 'domainAddressing' }),
 	rootFieldNames: Object.freeze({ required: true, kind: 'rootFieldNameMap' }),
 	embedTextTemplateByTier: Object.freeze({ required: true, kind: 'embedTextTemplateByTier' }),
 });
@@ -325,6 +335,10 @@ const DECLARATION_KIND_CHECKER_REGISTRY = Object.freeze({
 		RANGE_ADDRESSING_MODE_LIST.indexOf(value) !== -1
 			? ''
 			: `must be one of ${RANGE_ADDRESSING_MODE_LIST.join(', ')} (got ${JSON.stringify(value)})`,
+	domainAddressing: (value) =>
+		DOMAIN_ADDRESSING_MODE_LIST.indexOf(value) !== -1
+			? ''
+			: `must be one of ${DOMAIN_ADDRESSING_MODE_LIST.join(', ')} (got ${JSON.stringify(value)})`,
 	// the same discipline as baseFieldNameMap: every root field the derivation reads is declared, and nothing else
 	rootFieldNameMap: (value) => {
 		if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -492,6 +506,7 @@ module.exports = {
 	BASE_FIELD_NAME_LIST,
 	ROOT_FIELD_NAME_LIST,
 	RANGE_ADDRESSING_MODE_LIST,
+	DOMAIN_ADDRESSING_MODE_LIST,
 	validateHubDeclaration,
 	validateHubHooks,
 	moduleName,

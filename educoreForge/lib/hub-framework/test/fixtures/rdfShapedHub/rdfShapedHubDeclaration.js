@@ -36,6 +36,8 @@ const hubDeclaration = {
 	},
 	tierList: ['term', 'property', 'value'],
 	rangeAddressing: 'rangeAsMeaning',
+	// ⟪ctdlHub P4⟫ as CTDL: a property's domains are the classes with a HAS_PROPERTY edge to it, never a base field
+	domainAddressing: 'hasPropertyEdges',
 	rootFieldNames: {
 		standardKey: 'standardKey',
 		snapshotKey: 'snapshotKey',
