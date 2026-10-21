@@ -31,8 +31,11 @@
 // pattern, the bare six-digit form by the id list beside this file (a copy of the SIF list, 2,731 ids, because a
 // plugin's paths resolve against its own bundle).
 
-const bridgeDeclaration = Object.freeze({
-	bridgeName: 'pescCollegeTranscript1v8v0CedsDerivedPlugin',
+// ⟪hub-neutral bridge lane R3, 2026-10-21⟫ MIGRATED from pescCollegeTranscript1v8v0CedsDerivedPlugin.js: this file now declares the STANDARD half of the
+// bridge; the hub half comes from the hub's own bridging declaration (forges/<hub>/lib/<hub>HubBridging.js) and the two compose
+// (lib/bridge-framework/bridgeComposer.js) into the SAME declaration, digest for digest (test-bridgeComposer (a), P-a1).
+
+const declarationTemplate = Object.freeze({
 	standardKey: 'pesccollegetranscript1v8v0',
 	pluginVersion: '1.0.0',
 	producerKind: 'inferred',
@@ -45,23 +48,6 @@ const bridgeDeclaration = Object.freeze({
 	subjectIdentity: { kind: 'forgedNode', property: 'stableId' },
 	// every element declaration the forge minted, narrowed to the ones a College Transcript can carry
 	subjectSource: { kind: 'graphLabel', label: 'PescCollegeTranscript1v8v0Element', scopeStableIdListPath: 'bridges/pescCollegeTranscript1v8v0ReachableSubjects.json' },
-	// SIF's retrieval cell (D2 sweep cell 3), a START until phase B2 sweeps under its own pre-written rule. neighbourVote
-	// is null because the measured cohort vote hurt SIF and PESC has not been measured.
-	candidateRetrieval: {
-		method: 'embedTextVote-v1',
-		hitsPerText: 40,
-		minScore: 0.30,
-		k: 40,
-		embeddingModelVersion: 'voyage-4-large',
-		neighbourVote: null,
-	},
-	// THE JUDGE'S VIEW (DESIGN-pescBridge §2.1). documentSection is not a node property: it is the partition label,
-	// rendered into each unit's prompt, and the contract requires it here. contextPathSampleList holds two readable
-	// paths from every section the declaration occurs in; a one-element list reaches the graph as a scalar.
-	renderingAllowList: {
-		subject: ['documentSection', 'name', 'effectiveDocumentation', 'owningTypeName', 'typeName', 'contextPathSampleList', 'minOccursAsWritten', 'maxOccursAsWritten', 'codeListName', 'codeListDocumentation'],
-		candidate: ['name', 'propertyDefinition', 'domainName', 'domainDefinition', 'rangeOptionSetName', 'rangeOptionSetDefinition', 'rangeClassName', 'rangeClassDefinition', 'componentIdeaList'],
-	},
 	judgePromptVariant: 'derivedJudgeSlotOwningDefinition',
 	// ⟪lane JEVQ, ruling COPPER_RIVER 2026-10-13⟫ the split question's form, per bridge: the owning-definition form
 	choiceQuestionFormName: 'owningConstructDefinitionState',
@@ -76,18 +62,7 @@ const bridgeDeclaration = Object.freeze({
 	evidenceColumnMap: { subject: [], assertion: [] },
 	consistencyCheckColumnList: [],
 	segmentNormalisationRuleList: [],
-	remodelTableRef: null,
 	classSideRemodelTable: [],
-	// sectionPath must NOT appear here: the partition reads it from the occurrences, and the contract refuses a
-	// partition on a blinded property
-	blindingDeclaration: ['cedsId', 'crossRefs', 'cedsOriginalAnchorPropertyName', 'cedsOptionCode', 'cedsOptionOriginalAnchorPropertyName'],
-	promptIdentifierScan: {
-		identifierPatternList: [
-			{ patternName: 'cedsPropertyId', regexSource: 'P\\d{6}' },
-			{ patternName: 'cedsClassId', regexSource: 'C\\d{6}' },
-		],
-		identifierListPath: 'bridges/pescCollegeTranscript1v8v0CedsIdList.json',
-	},
 	blockRecordsJudgeConfig: true,
 	// each declaration's occurrences, read once through the forge's declaration → occurrence edge and frozen with its
 	// record, so the materialiser writes one edge per occurrence
@@ -108,11 +83,43 @@ const bridgeDeclaration = Object.freeze({
 	compatibilityDeclarationList: [],
 });
 
+const standardBridging = Object.freeze({
+	standardKey: 'pesccollegetranscript1v8v0',
+	bridgeNameStem: 'pescCollegeTranscript1v8v0',
+	facetList: [
+		{
+			facetName: '',
+			declarationTemplate,
+			// (was on candidateRetrieval)
+			// SIF's retrieval cell (D2 sweep cell 3), a START until phase B2 sweeps under its own pre-written rule. neighbourVote
+			// is null because the measured cohort vote hurt SIF and PESC has not been measured.
+			// (was on renderingAllowList)
+			// THE JUDGE'S VIEW (DESIGN-pescBridge §2.1). documentSection is not a node property: it is the partition label,
+			// rendered into each unit's prompt, and the contract requires it here. contextPathSampleList holds two readable
+			// paths from every section the declaration occurs in; a one-element list reaches the graph as a scalar.
+			// (was on blindingDeclaration)
+			// sectionPath must NOT appear here: the partition reads it from the occurrences, and the contract refuses a
+			// partition on a blinded property
+			subjectRenderingAllowList: ['documentSection', 'name', 'effectiveDocumentation', 'owningTypeName', 'typeName', 'contextPathSampleList', 'minOccursAsWritten', 'maxOccursAsWritten', 'codeListName', 'codeListDocumentation'],
+			pairByHubToken: {
+				ceds: {
+					candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 40, minScore: 0.3, k: 40, neighbourVote: null },
+					candidateRenderingAllowList: null,
+					promptIdentifierScan: 'fromHubWithLegacyListPath',
+					blindingOrder: [{ hubAnchor: 0 }, 'crossRefs', { hubAnchor: 1 }, { hubAnchor: 2 }, { hubAnchor: 3 }],
+					hubAnchorListLength: 4,
+					declaredTargetRuleList: null,
+					remodelTableRef: null,
+					hubRemodelTableListLength: null,
+				},
+			},
+		},
+	],
+});
+
 // NO HOOKS: both documentary hooks are forbidden on a derived basis
 const bridgeHooks = {};
 
-// ⟪ctdlHub P5; SCARLET_ARROW ruling A⟫ the hub this plugin maps toward, a SIBLING export: bridgeDeclaration is content-addressed
-// into every decision block, so the target is kept out of it; build.js checks it against the recipe pairing's hub
-const bridgeTarget = { targetHub: 'ceds' };
+const bridgeHooksByFacetName = { '': bridgeHooks };
 
-module.exports = { bridgeDeclaration, bridgeHooks, bridgeTarget };
+module.exports = { standardBridging, bridgeHooksByFacetName };
