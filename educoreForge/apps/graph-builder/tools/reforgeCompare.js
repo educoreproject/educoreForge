@@ -85,7 +85,7 @@ const { xLog, commandLineParameters } = process.global;
 const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus'))();
 const reforgeCompareLib = require(path.join(__dirname, '..', 'lib', 'reforge-compare'));
 // the CEDS round-trip compiler's resolver, as -stampPromotion and graphStructureCheck use it (its module export is a factory)
-const { resolveContainerBolt } = require(path.join(TREE_ROOT, 'forges', 'ceds', 'lib', 'roundTripCompiler'))();
+const { resolveContainerBolt } = require(path.join(TREE_ROOT, 'lib', 'graph-connection', 'containerBolt')); // R5 S6: names no standard
 
 const VOLATILE_FIELD_LIST_FILE_PATH = path.join(__dirname, '..', 'lib', 'reforgeVolatileFieldList.json');
 const STORE_TABLE_RULES_FILE_PATH = path.join(__dirname, '..', 'lib', 'reforgeStoreTableRules.json');

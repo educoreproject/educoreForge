@@ -1527,7 +1527,7 @@ const goldEvalCheckAction = (callback) => {
 		const neo4j = require('neo4j-driver');
 		// the candidate and every live predecessor are opened READ-ONLY, bolt port and credential read from the container
 		const openGraphReader = ({ containerName }, openCallback) => {
-			requireCedsRoundTripCompiler()().resolveContainerBolt({ containerName }, (resolveError, resolved) => {
+			require(path.join(__dirname, '..', '..', '..', 'lib', 'graph-connection', 'containerBolt')).resolveContainerBolt({ containerName }, (resolveError, resolved) => {
 				if (resolveError) {
 					openCallback(resolveError);
 					return;
@@ -1782,7 +1782,7 @@ const stampPromotionAction = (callback) => {
 
 	// the bolt port and credential are read from the container, as -cedsRoundTrip reads them
 	taskList.push((args, next) => {
-		requireCedsRoundTripCompiler()().resolveContainerBolt({ containerName }, (resolveError, resolved) => {
+		require(path.join(__dirname, '..', '..', '..', 'lib', 'graph-connection', 'containerBolt')).resolveContainerBolt({ containerName }, (resolveError, resolved) => {
 			if (resolveError) {
 				next(`graphBuilder -stampPromotion: ${resolveError}`);
 				return;
