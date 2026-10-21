@@ -33,8 +33,14 @@ const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const bridgePluginContractLib = require('./bridgePluginContract');
 const structuralProducerContractLib = require('./structuralProducerContract');
+// ⟪hub-neutral bridge lane R3, 2026-10-21⟫ the THIRD module shape: a standard bridging file, composed with each paired hub's
+// bridging declaration into ordinary plugin modules (bridgeComposer.js), each then registered exactly as a plugin file is
+const bridgeComposerLib = require('./bridgeComposer');
+const hubBridgingLoaderLib = require('./hubBridgingLoader');
 
 const BRIDGES_DIR_NAME = 'bridges';
+const STANDARD_BRIDGING_EXPORT_NAME = 'standardBridging';
+const STANDARD_BRIDGING_EXPORT_NAME_LIST = Object.freeze([STANDARD_BRIDGING_EXPORT_NAME, 'bridgeHooksByFacetName']);
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 
 const registerPlugin = ({ pluginModule, pluginFilePath, bundleDirPath } = {}) => {
@@ -110,6 +116,38 @@ const buildRegistryFromDirectory = ({ forgesDirPath, requireModule } = {}) => {
 		throw refuse.byName({ moduleName, what: `forgesDirPath ${JSON.stringify(forgesDirPath)} is not a directory`, where: 'the seam face passes the tree\'s forges/ directory' });
 	}
 	const loadModule = typeof requireModule === 'function' ? requireModule : (oneFilePath) => require(oneFilePath);
+	// each paired hub's bridging declaration, loaded once per registry by the hub bundle's declared location
+	const hubBridgingByToken = {};
+	const hubBridgingFor = (hubToken) => {
+		if (hubBridgingByToken[hubToken] === undefined) {
+			const loaded = hubBridgingLoaderLib.loadHubBridging({ forgesDirPath, hubToken });
+			if (loaded.error) {
+				throw loaded.error;
+			}
+			hubBridgingByToken[hubToken] = loaded.hubBridging;
+		}
+		return hubBridgingByToken[hubToken];
+	};
+	const composedPluginModuleListFor = ({ bridgingModule, bridgingFilePath, bundleName }) => {
+		const exportNameList = Object.keys(bridgingModule).sort();
+		if (exportNameList.join(',') !== STANDARD_BRIDGING_EXPORT_NAME_LIST.slice().sort().join(',')) {
+			throw refuse.byName({ moduleName, what: `standard bridging file ${bridgingFilePath} exports [${exportNameList.join(', ')}], not exactly { ${STANDARD_BRIDGING_EXPORT_NAME_LIST.join(', ')} }`, where: 'a standard bridging file is its declaration plus its hooks' });
+		}
+		const standardBridging = bridgingModule[STANDARD_BRIDGING_EXPORT_NAME];
+		const pairedHubTokenList = Array.isArray(standardBridging && standardBridging.facetList)
+			? Array.from(new Set([].concat(...standardBridging.facetList.map((oneFacet) => Object.keys((oneFacet && oneFacet.pairByHubToken) || {}))))).sort()
+			: [];
+		const composed = bridgeComposerLib.composePluginModuleList({
+			standardBridging,
+			bridgeHooksByFacetName: bridgingModule.bridgeHooksByFacetName,
+			hubBridgingByToken: pairedHubTokenList.reduce((soFar, hubToken) => Object.assign(soFar, { [hubToken]: hubBridgingFor(hubToken) }), {}),
+			bundleDirName: bundleName,
+		});
+		if (composed.error) {
+			throw new Error(`${composed.error.message} [standard bridging file ${bridgingFilePath}]`);
+		}
+		return composed.pluginModuleList;
+	};
 	const entryByBridgeName = {};
 	const structuralEntryByName = {};
 	const pluginFilePathList = [];
@@ -156,18 +194,25 @@ const buildRegistryFromDirectory = ({ forgesDirPath, requireModule } = {}) => {
 				structuralEntryByName[registeredProducer.entry.producerName] = registeredProducer.entry;
 				return;
 			}
-			const registered = registerPlugin({ pluginModule: loadModule(pluginFilePath), pluginFilePath, bundleDirPath });
-			if (registered.error) {
-				throw registered.error;
-			}
-			if (structuralEntryByName[registered.entry.bridgeName] !== undefined) {
-				throw refuse.byName({ moduleName, what: `name '${registered.entry.bridgeName}' is declared by TWO files: ${structuralEntryByName[registered.entry.bridgeName].producerFilePath} and ${pluginFilePath}`, where: 'a bridge name is unique across plugins and structural producers' });
-			}
-			const existing = entryByBridgeName[registered.entry.bridgeName];
-			if (existing !== undefined) {
-				throw refuse.byName({ moduleName, what: `bridgeName '${registered.entry.bridgeName}' is declared by TWO plugin files: ${existing.pluginFilePath} and ${pluginFilePath}`, where: 'the registry key is unique; rename one' });
-			}
-			entryByBridgeName[registered.entry.bridgeName] = registered.entry;
+			// ⟪hub-neutral bridge lane R3⟫ a standard bridging file composes one plugin module per (facet, paired hub); every one
+			// passes the SAME registration below as a plugin file's module, and names the bridging file as its pluginFilePath
+			const pluginModuleList = isPlainObject(candidateModule) && Object.prototype.hasOwnProperty.call(candidateModule, STANDARD_BRIDGING_EXPORT_NAME)
+				? composedPluginModuleListFor({ bridgingModule: candidateModule, bridgingFilePath: pluginFilePath, bundleName: oneBundleName })
+				: [loadModule(pluginFilePath)];
+			pluginModuleList.forEach((onePluginModule) => {
+				const registered = registerPlugin({ pluginModule: onePluginModule, pluginFilePath, bundleDirPath });
+				if (registered.error) {
+					throw registered.error;
+				}
+				if (structuralEntryByName[registered.entry.bridgeName] !== undefined) {
+					throw refuse.byName({ moduleName, what: `name '${registered.entry.bridgeName}' is declared by TWO files: ${structuralEntryByName[registered.entry.bridgeName].producerFilePath} and ${pluginFilePath}`, where: 'a bridge name is unique across plugins and structural producers' });
+				}
+				const existing = entryByBridgeName[registered.entry.bridgeName];
+				if (existing !== undefined) {
+					throw refuse.byName({ moduleName, what: `bridgeName '${registered.entry.bridgeName}' is declared by TWO plugin files: ${existing.pluginFilePath} and ${pluginFilePath}`, where: 'the registry key is unique; rename one' });
+				}
+				entryByBridgeName[registered.entry.bridgeName] = registered.entry;
+			});
 		});
 	});
 	return Object.freeze({ entryByBridgeName: Object.freeze(entryByBridgeName), structuralEntryByName: Object.freeze(structuralEntryByName), pluginFilePathList: Object.freeze(pluginFilePathList), structuralProducerFilePathList: Object.freeze(structuralProducerFilePathList), forgesDirPath });
