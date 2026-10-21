@@ -941,7 +941,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ═══ RE-ANCHOR (2), 2026-10-21 (INDIGO_LOOM; ctdlHub-101926 P5) ═══ postCtdlP5PescCompose-102026 -> postCtdlP5PescComposeB-102026, tag
 // cut ON this commit. CENSUS (diffed path list, numstat from the old tag): lib/bridge-framework/test/test-bgNosub.js ONLY, its (iii)
 // re-anchor (the constant and its comment), forced by G-SEAM-UNTOUCHED's re-anchor 79e7c6fa. No framework source moved.
-const P1_BASELINE_COMMIT = 'postHubNeutralR0PescCompose-102126'; // re-anchored by SCARLET_STREAM (de-hub lane A R0; census REANCHOR-CENSUS-R0-102126.md; GO SCARLET_ARROW 1174c14f); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (VELVET_CHORUS; spend ledger lane R1, after R0; GO SCARLET_ARROW) ═══ BG-COMPOSE-PESC postHubNeutralR0PescCompose-102126
+// -> postSpendLedgerR1OnMainPescCompose-102126, tag cut ON this commit. CENSUS over this gate's paths (numstat from R0's tag; all R1's): bridge-maker/lib
+// debugJudge.js, jevJudgeClient.js, jevOpusJudgeClient.js, llmClient.js, ollamaJudgeClient.js (each lists its paid calls); interfaces.js (forger
+// resultKeys; rerank resultKeys gains spendCallList); build.js; lib/bridge-framework/ bridge-framework.js (judgeSpend's money members, the pricer to
+// judgeOne) and judgeComponent.js (per-attempt spend records, the cache sidecar's filling spend); tests test-bgSpend.js and
+// testSupport/capturedSpendLedgerDelta.js (new), toyBridgeScenario.js, test-bgFanoutConsumers.js, test-bgJudgeConfig.js, test-bgJudgePredicate.js,
+// and test-bgNosub.js (its re-anchors, this commit). No vocabulary change; no PESC plugin edit.
+const P1_BASELINE_COMMIT = 'postSpendLedgerR1OnMainPescCompose-102126'; // re-anchored by VELVET_CHORUS (spend ledger lane R1, after R0; census REANCHOR-CENSUS-R1-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
