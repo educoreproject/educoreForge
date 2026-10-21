@@ -1,5 +1,5 @@
 {
-	"profileNote": "The CTDL forge's knowledge of its own JSON-LD vocabulary, as data (ctdlHub-101926 P1). nativePrefixList is the bundle's OWN allowlist (FBB-001 / ruling R4); every other @id is foreign. predicateDispositionByName names EVERY predicate a native entry may carry: a predicate absent from it is REFUSED by name, never ignored. The SKOS mapping family and owl:sameAs are named although snapshot 01 uses only narrowMatch and relatedMatch, so a cross-IRI declaration in any of them is carried verbatim (R6: carriage never depends on the forge recognising the predicate's meaning).",
+	"profileNote": "The CTDL forge's knowledge of its own JSON-LD vocabulary, as data (ctdlHub-101926 P1). nativePrefixList is the bundle's OWN allowlist (FBB-001 / ruling R4); every other @id is foreign. predicateDispositionByName names EVERY predicate a native entry may carry: a predicate absent from it is REFUSED by name, never ignored. The SKOS mapping family and owl:sameAs are named although snapshot 01 uses only narrowMatch and relatedMatch, so a cross-IRI declaration in any of them is carried verbatim (R6: carriage never depends on the forge recognising the predicate's meaning). P10 (Release 20260927) added format and pathwayType: CTDL's own concept prefixes for its new native schemes ceterms:Format and ceterms:PathwayType, listed by Credential Engine under 'Controlled Vocabulary Concepts References (SKOS)' at https://purl.org/ctdl/vocabs/ beside every other native concept prefix (credreg.net/ctdl/terms, read 2026-10-21). elm (European Learning Model), new in the same release, is listed among the external namespaces and stays foreign.",
 	"standardSource": "CTDL",
 	"sourceFileName": "ctdl-schema.json",
 	"descriptionTemplateSubject": "Credential Transparency Description Language (Credential Engine)",
@@ -23,6 +23,7 @@
 		"creditUnit",
 		"deliveryType",
 		"financialAid",
+		"format",
 		"inputType",
 		"learnMethod",
 		"lifeCycle",
@@ -32,6 +33,7 @@
 		"lrOutcome",
 		"lrSource",
 		"orgType",
+		"pathwayType",
 		"residency",
 		"scheduleFrequency",
 		"scheduleTiming",

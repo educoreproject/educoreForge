@@ -1,0 +1,11 @@
+standard: CTDLASN — Credential Transparency Description Language, Achievement Standards Network (CTDL-ASN)
+publishedVersion: 20260626
+publishedVersionEvidence: stated by credreg, not by the file: https://credreg.net/ctdlasn/terms read 2026-10-21 says "Release 20260626", "This is the June 2026 CTDL-ASN release", "Release ID: 20260626 Release Date: 26/06/2026 Release Status: vs:stable". The JSON-LD carries no version. Page text kept at dataStores/ctdlHub_101926/p10Runs/sourceAcquisition-102126/ctdlasnTermsPage.txt
+upstreamUrl: https://credreg.net/ctdlasn/schema/encoding/json
+publisher: Credential Engine
+retrieved: 2026-10-21 (INDIGO_CASCADE, ctdlHub-101926 P10; the PLAIN encoding, as snapshot 01; real Chrome driven by Playwright, document.body.innerText of the JSON response; curl is refused by the Cloudflare challenge)
+version: Release 20260626
+sources:
+  - https://credreg.net/ctdlasn/schema/encoding/json   (ctdlasn.json — JSON-LD, plain encoding)
+note: JSON-LD vocabulary. @graph holds rdfs:Class (11), rdf:Property (137), skos:ConceptScheme (2),
+      skos:Concept (8): 158 entries (snapshot 01: 122). @ids are CURIEs and are the native stableIds.

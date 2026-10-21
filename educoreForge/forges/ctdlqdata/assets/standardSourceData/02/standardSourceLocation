@@ -1,0 +1,12 @@
+standard: CTDLQData — Credential Transparency Description Language, Quantitative Data (CTDL-QData)
+publishedVersion: 20260626
+publishedVersionEvidence: stated by credreg, not by the file: https://credreg.net/qdata/terms read 2026-10-21 says "Release 20260626", "This is the June 2026 QData release", "Release ID: 20260626 Release Date: 06/26/2026 Release Status: vs:stable". The serialization carries only @context + @graph. Page text kept at dataStores/ctdlHub_101926/p10Runs/sourceAcquisition-102126/qdataTermsPage.txt
+upstreamUrl: https://credreg.net/qdata/schema/encoding/json?includemetaproperties=false
+publisher: Credential Engine
+retrieved: 2026-10-21 (INDIGO_CASCADE, ctdlHub-101926 P10; the includemetaproperties=false STRIPPED encoding, as snapshot 01; real Chrome driven by Playwright, document.body.innerText of the JSON response; curl is refused by the Cloudflare challenge)
+version: Release 20260626
+sources:
+  - https://credreg.net/qdata/schema/encoding/json?includemetaproperties=false   (qdata.json — JSON-LD, stripped encoding)
+note: JSON-LD vocabulary. @graph holds rdfs:Class (18), rdf:Property (125), skos:ConceptScheme (8),
+      skos:Concept (113): 264 entries (snapshot 01: 245). @ids are CURIEs and are the native stableIds.
+      Snapshot 01 was fetched from credreg.com; credreg.net serves the same schema family (credreg.com was not re-tried).

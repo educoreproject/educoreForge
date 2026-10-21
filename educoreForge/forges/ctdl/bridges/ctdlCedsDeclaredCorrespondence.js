@@ -2,7 +2,7 @@
 
 // ctdlCedsDeclaredCorrespondence.js — ⟪ctdlHub-101926 P6 step 5; rulings R6, R-2, R-7⟫ the DECLARED SEAM from CTDL to CEDS: every
 // assertion CTDL publishes about a CEDS term, carried by the CTDL forge VERBATIM as declaredCorrespondenceList [{ predicate,
-// target }] on its own concept nodes (53 entries on 52 nodes in Release 20260327: owl:equivalentClass 26, skos:narrowMatch 22,
+// target }] on its own concept nodes (53 entries on 52 nodes in Release 20260327 and again in Release 20260927, P10: owl:equivalentClass 26, skos:narrowMatch 22,
 // skos:relatedMatch 5), becomes ONE DECLARED_CORRESPONDENCE edge to the CEDS BASE node it names, with the predicate verbatim. It is
 // never a match edge (TQ question Q-T1): no predicate is translated into EXACT/CLOSE/BROAD/NARROW, and no CEDS hub card is touched.
 //
@@ -38,9 +38,9 @@ const bridgeDeclaration = Object.freeze({
 	mappingProvider: {
 		url: 'https://credreg.net/ctdl/terms',
 		verifiedBy: {
-			sessionName: 'STERLING_PORTAL',
+			sessionName: 'INDIGO_CASCADE',
 			date: '2026-10-21',
-			note: 'Credential Engine, publisher of CTDL. curl -L from this machine on 2026-10-21 returned HTTP 403 for https://credreg.net/ctdl/terms, https://credreg.net/ and https://credentialengine.org/ (the sites sit behind a Cloudflare challenge, as forges/ctdl/assets/standardSourceData/01/README_PROVENANCE.md records for the schema fetch of 2026-06-23); the host answers, the page was not read by machine. The assertions themselves are read from the CTDL forge snapshot, Release 20260327 (ctdl-schema.json, sha256 037152225d97…).',
+			note: 'Credential Engine, publisher of CTDL. curl is refused by the credreg.net Cloudflare challenge; on 2026-10-21 (ctdlHub P10) the page was read through a real Chrome driven by Playwright and states "Release 20260927", "This is the September 2026 CTDL release". The assertions themselves are read from the CTDL forge snapshot 02, Release 20260927 (ctdl-schema.json, sha256 bf5dd4b5c975…). Earlier verification (STERLING_PORTAL, 2026-10-21) was against snapshot 01, Release 20260327.',
 		},
 	},
 	sourceCuriePrefix: { prefix: 'ceterms', iri: 'https://purl.org/ctdl/terms/' },
@@ -74,7 +74,7 @@ const bridgeDeclaration = Object.freeze({
 		kind: 'declaredPredicate',
 		predicateList: ['owl:equivalentClass', 'skos:narrowMatch', 'skos:relatedMatch'],
 		assertedBy: {
-			documentName: 'CTDL schema, Release 20260327 (forges/ctdl/assets/standardSourceData/01/ctdl-schema.json)',
+			documentName: 'CTDL schema, Release 20260927 (forges/ctdl/assets/standardSourceData/02/ctdl-schema.json)',
 			citation: "Each CTDL concept's own JSON-LD entry states owl:equivalentClass, skos:narrowMatch or skos:relatedMatch with a ceds: target; the CTDL forge carries each statement verbatim as a declaredCorrespondenceList entry { predicate, target } (ctdlHub P1, allowance A2: 53 entries on 52 nodes). The predicate written on the edge is the source's own.",
 		},
 	},
