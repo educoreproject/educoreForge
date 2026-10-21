@@ -142,9 +142,9 @@ const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) =>
 	// property map exactly as writeMappingEdge merges, and counted into the same loaded set. The object is matched as a ForgedNode
 	// that is NOT a hub card, so a hub card can never receive one even if a rule pointed at it.
 	const writeDeclaredCorrespondenceEdge = ({ subjectStableId, objectStableId, objectStandardName, edgeType, edgeProperties } = {}, callback) => {
-		const shapeRefusal = graphSeamRulesLib.declaredCorrespondenceEdgeRefusal({ subjectStableId, objectStableId, objectStandardName, edgeType, edgeProperties, sourceStandardName });
-		if (shapeRefusal) {
-			callback(shapeRefusal.message);
+		const declaredShapeRefusal = graphSeamRulesLib.declaredCorrespondenceEdgeRefusal({ subjectStableId, objectStableId, objectStandardName, edgeType, edgeProperties, sourceStandardName });
+		if (declaredShapeRefusal) {
+			callback(declaredShapeRefusal.message);
 			return;
 		}
 		const hostileNameList = Object.keys(edgeProperties || {}).filter((oneName) => identityHostileValue(edgeProperties[oneName]));
@@ -154,26 +154,26 @@ const graphWriterFactory = ({ inGraph, applyLabel, sourceStandardName } = {}) =>
 		}
 		const session = driver.session();
 		session
-			.run(`OPTIONAL MATCH (s:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) WITH s OPTIONAL MATCH (o:${FORGED_NODE_LABEL} {stableId: $objectStableId}) RETURN s._source AS subjectSource, s IS NOT NULL AS subjectPresent, labels(o) AS objectLabels, o._source AS objectSource, o IS NOT NULL AS objectPresent`, { subjectStableId, objectStableId })
+			.run(`OPTIONAL MATCH (subjectNode:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) WITH subjectNode OPTIONAL MATCH (objectNode:${FORGED_NODE_LABEL} {stableId: $objectStableId}) RETURN subjectNode._source AS subjectSource, subjectNode IS NOT NULL AS subjectPresent, labels(objectNode) AS objectLabels, objectNode._source AS objectSource, objectNode IS NOT NULL AS objectPresent`, { subjectStableId, objectStableId })
 			.then((lookup) => {
 				const row = lookup.records[0];
 				const subjectEndpoint = row && row.get('subjectPresent') ? { sourceStandardName: row.get('subjectSource') } : null;
 				const objectEndpoint = row && row.get('objectPresent') ? { labels: row.get('objectLabels'), sourceStandardName: row.get('objectSource') } : null;
-				const endpointRefusal = graphSeamRulesLib.declaredCorrespondenceEdgeRefusal({ subjectStableId, objectStableId, objectStandardName, edgeType, edgeProperties, sourceStandardName, subjectEndpoint, objectEndpoint });
-				if (endpointRefusal) {
-					return session.close().then(() => callback(endpointRefusal.message));
+				const declaredEndpointRefusal = graphSeamRulesLib.declaredCorrespondenceEdgeRefusal({ subjectStableId, objectStableId, objectStandardName, edgeType, edgeProperties, sourceStandardName, subjectEndpoint, objectEndpoint });
+				if (declaredEndpointRefusal) {
+					return session.close().then(() => callback(declaredEndpointRefusal.message));
 				}
 				return session
-					.run(`MATCH (s:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) MATCH (o:${FORGED_NODE_LABEL} {stableId: $objectStableId}) WHERE ${graphSeamRulesLib.HUB_LAYER_LABEL_LIST.map((oneLabel) => `NOT o:${oneLabel}`).join(' AND ')} SET s:\`${applyLabel}\`, o:\`${applyLabel}\` WITH s, o CALL apoc.merge.relationship(s, $edgeType, $edgeProperties, {}, o) YIELD rel RETURN count(rel) AS edgeCount`, { subjectStableId, objectStableId, edgeType, edgeProperties })
-					.then((written) => {
-						const edgeCount = written.records[0] ? written.records[0].get('edgeCount') : 0;
-						const wroteOne = neo4j.isInt(edgeCount) ? edgeCount.toNumber() === 1 : edgeCount === 1;
-						if (wroteOne) {
+					.run(`MATCH (subjectNode:${FORGED_NODE_LABEL} {stableId: $subjectStableId}) MATCH (objectNode:${FORGED_NODE_LABEL} {stableId: $objectStableId}) WHERE ${graphSeamRulesLib.HUB_LAYER_LABEL_LIST.map((oneLabel) => `NOT objectNode:${oneLabel}`).join(' AND ')} SET subjectNode:\`${applyLabel}\`, objectNode:\`${applyLabel}\` WITH subjectNode, objectNode CALL apoc.merge.relationship(subjectNode, $edgeType, $edgeProperties, {}, objectNode) YIELD rel RETURN count(rel) AS edgeCount`, { subjectStableId, objectStableId, edgeType, edgeProperties })
+					.then((declaredWritten) => {
+						const edgeCount = declaredWritten.records[0] ? declaredWritten.records[0].get('edgeCount') : 0;
+						const wroteExactlyOne = neo4j.isInt(edgeCount) ? edgeCount.toNumber() === 1 : edgeCount === 1;
+						if (wroteExactlyOne) {
 							loadedNodeStableIdSet.add(subjectStableId);
 							loadedNodeStableIdSet.add(objectStableId);
 							loadedEdgeList.push({ type: edgeType, fromRef: { id: subjectStableId }, toRef: { id: objectStableId }, properties: { ...edgeProperties } });
 						}
-						return session.close().then(() => (wroteOne ? callback('', { edgeWritten: true }) : callback(`${moduleName}: MERGE ${subjectStableId} -[${edgeType}]-> ${objectStableId} reported ${String(edgeCount)} edges, not 1 — an un-counted write cannot be gated`)));
+						return session.close().then(() => (wroteExactlyOne ? callback('', { edgeWritten: true }) : callback(`${moduleName}: MERGE ${subjectStableId} -[${edgeType}]-> ${objectStableId} reported ${String(edgeCount)} edges, not 1 — an un-counted write cannot be gated`)));
 					});
 			})
 			.catch((runError) => {
@@ -231,9 +231,9 @@ const structuralWriterFactory = ({ inGraph, pairStandardNameList } = {}) => {
 	const driver = neo4j.driver(inGraph.boltUrl, neo4j.auth.basic(typeof inGraph.user === 'string' ? inGraph.user : NEO4J_USER, inGraph.password), { encrypted: false });
 	const loadedEdgeList = [];
 	const writeStructuralEdge = ({ fromStableId, toStableId, edgeType, edgeProperties } = {}, callback) => {
-		const shapeRefusal = graphSeamRulesLib.structuralEdgeRefusal({ fromStableId, toStableId, edgeType, edgeProperties, pairStandardNameList });
-		if (shapeRefusal) {
-			callback(shapeRefusal.message);
+		const structuralShapeRefusal = graphSeamRulesLib.structuralEdgeRefusal({ fromStableId, toStableId, edgeType, edgeProperties, pairStandardNameList });
+		if (structuralShapeRefusal) {
+			callback(structuralShapeRefusal.message);
 			return;
 		}
 		const session = driver.session();
@@ -243,19 +243,19 @@ const structuralWriterFactory = ({ inGraph, pairStandardNameList } = {}) => {
 				const row = lookup.records[0];
 				const fromEndpoint = row && row.get('fromPresent') ? { labels: row.get('fromLabels'), sourceStandardName: row.get('fromSource') } : null;
 				const toEndpoint = row && row.get('toPresent') ? { labels: row.get('toLabels'), sourceStandardName: row.get('toSource') } : null;
-				const endpointRefusal = graphSeamRulesLib.structuralEdgeRefusal({ fromStableId, toStableId, edgeType, edgeProperties, pairStandardNameList, fromEndpoint, toEndpoint });
-				if (endpointRefusal) {
-					return session.close().then(() => callback(endpointRefusal.message));
+				const structuralEndpointRefusal = graphSeamRulesLib.structuralEdgeRefusal({ fromStableId, toStableId, edgeType, edgeProperties, pairStandardNameList, fromEndpoint, toEndpoint });
+				if (structuralEndpointRefusal) {
+					return session.close().then(() => callback(structuralEndpointRefusal.message));
 				}
 				return session
 					.run(`MATCH (a:${FORGED_NODE_LABEL} {stableId: $fromStableId}) MATCH (b:${FORGED_NODE_LABEL} {stableId: $toStableId}) CALL apoc.merge.relationship(a, $edgeType, $edgeProperties, {}, b) YIELD rel RETURN count(rel) AS edgeCount`, { fromStableId, toStableId, edgeType, edgeProperties })
 					.then((written) => {
 						const edgeCount = written.records[0] ? written.records[0].get('edgeCount') : 0;
-						const wroteOne = neo4j.isInt(edgeCount) ? edgeCount.toNumber() === 1 : edgeCount === 1;
-						if (wroteOne) {
+						const wroteExactlyOne = neo4j.isInt(edgeCount) ? edgeCount.toNumber() === 1 : edgeCount === 1;
+						if (wroteExactlyOne) {
 							loadedEdgeList.push({ type: edgeType, fromRef: { id: fromStableId }, toRef: { id: toStableId }, properties: { ...edgeProperties } });
 						}
-						return session.close().then(() => (wroteOne ? callback('', { edgeWritten: true }) : callback(`${moduleName}: MERGE ${fromStableId} -[${edgeType}]-> ${toStableId} reported ${String(edgeCount)} edges, not 1 — an un-counted write cannot be gated`)));
+						return session.close().then(() => (wroteExactlyOne ? callback('', { edgeWritten: true }) : callback(`${moduleName}: MERGE ${fromStableId} -[${edgeType}]-> ${toStableId} reported ${String(edgeCount)} edges, not 1 — an un-counted write cannot be gated`)));
 					});
 			})
 			.catch((runError) => {
