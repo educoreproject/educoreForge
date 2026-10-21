@@ -118,7 +118,7 @@ const RECIPE_SCHEMA = {
 					// where `hub` stands for a mapping bridge (design_bridgeResolution_072526 §6: "the sibling
 					// sub-standard stands where the hub would"). A dedicated field rather than an overloaded
 					// `hub` keeps hub-ABSENCE the honest signal of a structural bridge and keeps `hub` meaning
-					// exactly "a declared CEDS hub". Layer-2 referential enforces: EITHER a hub (mapping) OR a
+					// exactly "a declared hub" (any standard whose kit declares hubModule=). Layer-2 referential enforces: EITHER a hub (mapping) OR a
 					// pairWith (structural), never both and — for a hubless bridge — never neither; a pairWith
 					// is a declared standard, distinct from source. Version-keying composes the block on
 					// source@ver + pairWith@ver, so BOTH endpoints are version-keyed.

@@ -16,7 +16,7 @@
 // nonzero. That is WIRING, and wiring needs one real fault injection observed once. A
 // hermetic test of a decision nobody invokes is a very tidy way to prove nothing.
 //
-// Run: node lib/ceds-fidelity-judgment/test/test-cedsFidelityJudgment.js [-verbose]
+// Run: node forges/ceds/test/test-cedsFidelityJudgment.js [-verbose]
 
 const path = require('path');
 
@@ -42,7 +42,7 @@ EXIT STATUS
 require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText() });
 
 const harness = require('../../../test/testLib/harness')(moduleName);
-const { judgeFidelity, resolveAllowance } = require('../ceds-fidelity-judgment')();
+const { judgeFidelity, resolveAllowance } = require('../lib/fidelityJudgment')();
 
 const clean = { sourceStatements: 239761, matched: 239761, lost: 0, invented: 0 };
 
@@ -68,7 +68,7 @@ harness.match('the count is named', lostCreator.reason, /23251 CEDS statement\(s
 harness.match(
 	'and the operator is told how to attribute it',
 	lostCreator.reason,
-	/-cedsRoundTrip --containerName=DEV_someGraph/,
+	/-roundTripCompile --standard=ceds --containerName=DEV_someGraph/,
 );
 harness.match(
 	'and how to accept it deliberately, with the number spelled out',

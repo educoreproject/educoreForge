@@ -498,7 +498,7 @@ const workingManifestEditor = (overrides) => ({ standardsDatabase } = {}) =>
 	);
 
 // ⟪R-P2-1, 2026-08-03⟫ the SELF-ANNOUNCING hermetic double for the R-1 in-build fidelity gate.
-// The REAL gate (build.js runCedsFidelityGate, the production default) reaches a LIVE graph over
+// The REAL gate (build.js runDeclaredFidelityGate running the CEDS bundle's declared gate, the production default) reaches a LIVE graph over
 // bolt via `docker inspect`, which no hermetic double provides — so from R-1's in-build landing
 // (92aecda) until this seam existed, every ceds-recipe stage here died at materialize. The stub
 // ANNOUNCES ITSELF in the captured xLog (asserted below), because a gate that quietly does not
@@ -686,7 +686,7 @@ const runBuildWith = (recipe, componentOverrides, callback) => {
 			xLog,
 			standardsDatabase: standardsDatabase,
 			components,
-			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
+			fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 		},
 		(err, result) => callback({ err, result, xLog, standardsDatabase }),
 	);
@@ -948,7 +948,7 @@ const stageSpendLedger = (whenDone) => {
 	const spendBuild = ({ buildLogsDirPath, spendPricingFilePath, components }, cb) =>
 		buildLib.build(
 			spendProbeRecipe,
-			{ xLog: capturingXLog(), standardsDatabase: standardsDatabaseDouble(), components: { forger: spendingForger(), replayManager: workingReplayManager(), bridgeMaker: judgingBridgeMaker(), manifestEditor: workingManifestEditor(), ...components }, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub, buildLogsDirPath, spendPricingFilePath, lifetimeLedgerFilePath },
+			{ xLog: capturingXLog(), standardsDatabase: standardsDatabaseDouble(), components: { forger: spendingForger(), replayManager: workingReplayManager(), bridgeMaker: judgingBridgeMaker(), manifestEditor: workingManifestEditor(), ...components }, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub, fidelityGateRunner: announcedFidelityGateStub, buildLogsDirPath, spendPricingFilePath, lifetimeLedgerFilePath },
 			(err, result) => cb({ err, result }),
 		);
 	const ledgerIn = (buildLogsDirPath) => {
@@ -1240,7 +1240,7 @@ const stageRebridgeWiring = () => {
 		const xLog = capturingXLog();
 		const standardsDatabase = standardsDatabaseDouble();
 		const components = { forger: workingForger(), replayManager: workingReplayManager(), bridgeMaker: captureBridgeMaker, manifestEditor: workingManifestEditor() };
-		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub, ...extraDeps }, (err, result) => cb({ err, result }));
+		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub, ...extraDeps }, (err, result) => cb({ err, result }));
 	};
 
 	// scoped --rebridge WITH a stub llmClient injected: the build runs the (doubled) pre-pass path hermetically.
@@ -1484,7 +1484,7 @@ const stageRealManifestEditor = () => {
 		{
 			xLog,
 			standardsDatabase: standardsDatabase,
-			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
+			fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 			components: {
 				forger: workingForger(),
 				replayManager: workingReplayManager(),
@@ -1769,7 +1769,7 @@ const stageHubFoldedIntoBase = () => {
 		{
 			xLog,
 			standardsDatabase,
-			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
+			fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 			components: {
 				forger: hubFoldingForger(syntheticCedsBaseNodeEdges),
 				replayManager: retainingReplayManager(),
@@ -2058,7 +2058,7 @@ const stageStoreReaderRefusal = () => {
 				bridgeMaker: workingBridgeMaker(),
 				manifestEditor: workingManifestEditor(),
 			},
-			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub,
+			fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub,
 			roundTripStageRunner: announcedRoundTripStageStub,
 		},
 		(err, result) => {
@@ -2150,9 +2150,11 @@ const buildCapturingVectorize = (vectorizeDep, done) => {
 	const deps = {
 		xLog,
 		standardsDatabase,
-		// hermetic: the real R-1 gate no-ops here (no ceds token) but the real RT-13 runner
-		// would write its stage summary into the canonical buildLogs home — stubbed, announced.
+		// hermetic: the real RT-13 runner would write its stage summary into the canonical buildLogs home — stubbed, announced.
+		// ⟪R5 S4⟫ the real R-1 runner resolves each recipe standard's bundle to find a declared gate, and this fixture's
+		// standards have no bundle on disk (refused by name, test-fidelityAttestation (i)) — stubbed, announced.
 		roundTripStageRunner: announcedRoundTripStageStub,
+		fidelityGateRunner: announcedFidelityGateStub,
 		embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, // campaign P2 (W-A-11): no live graph to count
 		components: {
 			forger: capturingForger,
@@ -2325,7 +2327,7 @@ const stageManifestPersistedToStore = () => {
 				{
 					xLog: capturingXLog(),
 					standardsDatabase,
-					cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
+					fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 					components: {
 						forger: workingForger(),
 						replayManager: workingReplayManager(),

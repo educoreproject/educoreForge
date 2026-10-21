@@ -147,7 +147,7 @@ honestly, under its own definition.** Only a parser sharing no code with ours co
 ### AND THE INDEPENDENT INSTRUMENT DID NOT RUN IN THIS BUILD
 
 `lib/rdf-independent-check/` (rdflib, applying the RDF/XML spec's own parsing rules) is **not part of
-the RT-13 round-trip stage.** It is reached through `graphBuilder -cedsRoundTrip` / `-cedsGates`, and
+the RT-13 round-trip stage.** It is reached through `graphBuilder -roundTripCompile --standard=ceds` / `-roundTripGates --standard=ceds`, and
 this run produced **no independent-check artifact for CEDS** — the only bundle in this build that
 produced one is `pesc260805`.
 
@@ -216,8 +216,8 @@ jq '{roundTripClean,reproduced,lostTotal,contentGapTotal,explicitlyOmittedTotal,
 suite, and the independent rdflib check:
 
 ```bash
-node apps/graph-builder/graphBuilder.js -cedsRoundTrip --containerName=<name>
-node apps/graph-builder/graphBuilder.js -cedsGates --containerName=<name> --reportJsonPath=<the .json>
+node apps/graph-builder/graphBuilder.js -roundTripCompile --standard=ceds --containerName=<name>
+node apps/graph-builder/graphBuilder.js -roundTripGates --standard=ceds --containerName=<name> --reportJsonPath=<the .json>
 ```
 
 ---
