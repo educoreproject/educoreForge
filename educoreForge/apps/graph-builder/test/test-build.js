@@ -1049,8 +1049,32 @@ const stageMultiBlockFamily = () => {
 		harness.match('  ctdl::ctdlasn block is version-keyed + _struct-suffixed, root-first', famLog.text(), /-> relationship ctdl@current_rel_ctdlasn@current_struct /);
 		harness.match('  ctdl::ctdlqdata block is version-keyed + _struct-suffixed, root-first', famLog.text(), /-> relationship ctdl@current_rel_ctdlqdata@current_struct /);
 		harness.match('  ctdlasn::ctdlqdata block (the cross-pair) is version-keyed + _struct-suffixed', famLog.text(), /-> relationship ctdlasn@current_rel_ctdlqdata@current_struct /);
-		stageRebridgeWiring();
+		stageFrozenBlockRequired();
 	});
+};
+
+// =====================================================================
+// FROZEN BLOCK REQUIRED (trap T1, R0 proof kit 2026-10-21) — a recipe whose kind requires frozen decision blocks
+// (RECIPE_KIND_RULE golden) REFUSES a mapping bridge that materialised from no frozen block outside the --rebridge scope:
+// otherwise a renamed or moved bridge yields zero edges and the build looks clean. A dev recipe keeps the status line.
+// The rule itself is gated in test-frozenDecisionBlockRule.js; this stage proves build.js applies it.
+// =====================================================================
+const stageFrozenBlockRequired = () => {
+	harness.section('FROZEN BLOCK REQUIRED — a golden recipe refuses a mapping bridge with no frozen decision block (T1)');
+	const noFrozenBlockBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, producer: 'inferred', mode: 'materialise', note: 'no frozen decision block', counts: null }) }));
+	// the doubles call back synchronously, so the whole stage chain is ONE call stack; this stage adds two builds to it, and
+	// starts on a fresh stack so the chain after it does not overflow (measured: without it, later stages hit the limit)
+	setImmediate(() => runBuildWith({ ...cedsCtdlRecipe, kind: 'golden' }, { bridgeMaker: noFrozenBlockBridgeMaker }, ({ err: goldenErr }) => {
+		harness.match(
+			'a golden recipe is REFUSED, naming the pairKey and the recipe',
+			goldenErr || '',
+			/bridge ctdl::ceds: no frozen decision block for ceds@current::ctdl@current::ctdlAuthoredBridge::inferred in golden recipe cedsCtdl/,
+		);
+		runBuildWith({ ...cedsCtdlRecipe, kind: 'dev' }, { bridgeMaker: noFrozenBlockBridgeMaker }, ({ err: devErr }) => {
+			harness.equal('the same pairing in a dev recipe builds (zero edges, as before)', devErr, '');
+			setImmediate(stageRebridgeWiring);
+		});
+	}));
 };
 
 // =====================================================================
