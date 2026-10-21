@@ -158,13 +158,15 @@ const callableArgumentKeyViolation = (fn, argKeys, label) => {
 //     promptSegments: ['Judge CASE structural matches by owning-class term overlap, not surface wording.'],
 //   }
 //
-// THE GATE: evidencePackageViolation(evidencePackage) -> ''|reason. Refuses BY NAME:
+// THE GATE: evidencePackageViolation(evidencePackage, { hubIdentifierNameList }) -> ''|reason. Refuses BY NAME:
+//   - hubIdentifierNameList absent or not a list of names (the hub's own identifier properties, its bridging
+//     declaration's sourceAnchorBlindingNameList: ⟪hub-neutral bridge lane R3⟫ this contract names no hub)
 //   - missing/malformed candidate, cosine, considerations.tuple, considerations.notes (per entry)
 //   - a malformed `nomination` (present but missing nominatedBy/rationale)
 //   - promptSegments not an array of strings
 //   - promptSegments NOT deduped (⟪A2⟫)
 //   - a per-candidate segment SMUGGLED into promptSegments — detected by scanning promptSegments for
-//     any candidate-identifying token (stableId/canonicalKey/cedsId/valueKey/name) drawn from the
+//     any candidate-identifying token (stableId/canonicalKey/valueKey/name, and the hub's identifier properties) drawn from the
 //     pool itself; a segment naming a SPECIFIC candidate is per-candidate material by definition,
 //     wherever it physically sits.
 //
@@ -200,11 +202,11 @@ const CONSIDERATIONS_REQUIRED_KEYS = ['tuple', 'notes'];
 // candidateIdentifyingTokens — the tokens a promptSegments entry must never mention verbatim (the
 // smuggling heuristic). Deliberately conservative: only reasonably-specific string identifiers (>= 4
 // chars) count, so a short generic word never false-positives the gate.
-const candidateIdentifyingTokens = (candidate) => {
+const candidateIdentifyingTokens = (candidate, hubIdentifierNameList) => {
 	if (!candidate || typeof candidate !== 'object') {
 		return [];
 	}
-	return [candidate.stableId, candidate.canonicalKey, candidate.cedsId, candidate.valueKey, candidate.name].filter(
+	return [candidate.stableId, candidate.canonicalKey, candidate.valueKey, candidate.name].concat(hubIdentifierNameList.map((oneName) => candidate[oneName])).filter(
 		(oneToken) => typeof oneToken === 'string' && oneToken.trim().length >= 4,
 	);
 };
@@ -299,9 +301,12 @@ const candidateEvidenceViolation = (entry, index) => {
 	return '';
 };
 
-const evidencePackageViolation = (evidencePackage) => {
+const evidencePackageViolation = (evidencePackage, { hubIdentifierNameList } = {}) => {
 	if (!evidencePackage || typeof evidencePackage !== 'object') {
 		return 'evidencePackage: not an object';
+	}
+	if (!Array.isArray(hubIdentifierNameList) || !hubIdentifierNameList.every((oneName) => typeof oneName === 'string' && oneName !== '')) {
+		return `evidencePackage: hubIdentifierNameList ${JSON.stringify(hubIdentifierNameList)} is not a list of names — the hub's identifier properties come from its bridging declaration (sourceAnchorBlindingNameList); there is no default hub`;
 	}
 	// ⟪SOURCE-PRESENCE HARDENING, 2026-07-31⟫ — see EVIDENCE_PACKAGE_REQUIRED_KEYS' rider: a package
 	// without a NAMED source element renders a prompt with no subject, and the judge judges blind.
@@ -340,7 +345,7 @@ const evidencePackageViolation = (evidencePackage) => {
 		);
 	}
 	for (const oneCandidateEvidence of evidencePackage.pool) {
-		const tokens = candidateIdentifyingTokens(oneCandidateEvidence.candidate);
+		const tokens = candidateIdentifyingTokens(oneCandidateEvidence.candidate, hubIdentifierNameList);
 		for (const oneToken of tokens) {
 			const leaked = evidencePackage.promptSegments.find((oneSegment) => oneSegment.includes(oneToken));
 			if (leaked !== undefined) {
@@ -967,6 +972,7 @@ module.exports = {
 	DECLARED_FACET_NAMES,
 	evidencePackageViolation,
 	candidateEvidenceViolation,
+	candidateIdentifyingTokens,
 
 	// 2. match/compose
 	MATCH_COMPOSE_SHAPE,

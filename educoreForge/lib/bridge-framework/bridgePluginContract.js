@@ -282,18 +282,23 @@ const judgePromptVariantFor = ({ bridgeDeclaration }) => {
 };
 // RENDERING_NEVER_NAME_LIST — property names that may never appear in a renderingAllowList on EITHER side,
 // refused at declaration time. Measured on the live schema (D0 review §C1/§C2 re-verified by GRANITE_VALLEY
-// against GOLD_EVAL_260816): every one is an identifier, contains one, or is the vector itself. TQ's
-// instruction was literally "no cedsId properties", so cedsId and its siblings are named here BY NAME rather
-// than left to the plugin's own blindingDeclaration to remember.
+// against GOLD_EVAL_260816): every one is an identifier, contains one, or is the vector itself.
+// ⟪hub-neutral bridge lane R3, 2026-10-21⟫ the list is HUB-NEUTRAL: a hub's own identifier properties (TQ's "no
+// <hub>Id properties", named once in the hub's bridging declaration as sourceAnchorBlindingNameList) reach every
+// bridge to that hub through the composer, inside the bridge's blindingDeclaration. What a bridge blinds it may
+// never render: neverRenderedNameListFor joins the two, and both nets (this contract and the renderer) use it.
 const RENDERING_NEVER_NAME_LIST = Object.freeze([
 	'stableId', 'canonicalKey', 'addressSignature', '_id', '_source', 'parentId',
 	'uri', 'propertyUri', 'domainUri', 'anchorUri', 'valueUri', 'rangeUri',
 	'propertyKey', 'valueKey', 'domainId', 'propertyNotation', 'valueNotation', 'rangeOptionSetId',
 	'rangeClassId', 'qualifierKeys', 'hubName', 'hubVersion', 'role',
 	'embedding', 'embedText', 'embedSourceProperty', 'embeddingModelVersion',
-	'crossRefs', 'cedsId', 'cedsOriginalAnchorPropertyName', 'cedsOptionCode', 'cedsOptionOriginalAnchorPropertyName',
+	'crossRefs',
 	'metaEdId', 'edfiStableId', 'sourceFileRelativePath', 'sourceLineNumber', 'sourceInputName', 'annotationKind',
 ]);
+// neverRenderedNameListFor(blindingDeclaration) → RENDERING_NEVER_NAME_LIST plus every name the bridge blinds. A
+// blindingDeclaration that is not a list contributes nothing HERE because its own kind checker refuses it by name.
+const neverRenderedNameListFor = (blindingDeclaration) => RENDERING_NEVER_NAME_LIST.concat(Array.isArray(blindingDeclaration) ? blindingDeclaration.filter((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) === -1) : []);
 // ⟪JOB 3, judgeProviderRegistry, 2026-09-07 — THIS LIST IS NOW DERIVED, AND THE COMMENT ABOVE IT WAS WRONG⟫
 // It used to read: "the judge's category enum (llmClient CATEGORY_ENUM, MIRRORED as data — llmClient.js is
 // UNTOUCHED in this order per TQ)". Both halves had gone stale. The "UNTOUCHED per TQ" was provenance from
@@ -1136,10 +1141,11 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 	candidateRetrieval: (value) => candidateRetrievalReason(value),
 	// renderingAllowList — the POSITIVE blinding mechanism (RULING §11.4). The rendered subject block and the
 	// rendered candidate block carry ONLY these property names. Two refusals here, both at DECLARATION time:
-	// an empty side (a rendering of nothing is not a judgement), and any name on RENDERING_NEVER_NAME_LIST —
+	// an empty side (a rendering of nothing is not a judgement), and any name on RENDERING_NEVER_NAME_LIST or blinded —
 	// so a plugin cannot allow-list an identifier even by accident. The renderer enforces the list itself; this
 	// is the earlier of the two nets.
-	renderingAllowList: (value) => {
+	renderingAllowList: (value, { bridgeDeclaration }) => {
+		const neverRenderedNameList = neverRenderedNameListFor(bridgeDeclaration.blindingDeclaration);
 		if (!isPlainObject(value) || !isStringList(value.subject) || !isStringList(value.candidate)) {
 			return `must be { subject: [propertyNames], candidate: [propertyNames] } (got ${JSON.stringify(value)})`;
 		}
@@ -1153,9 +1159,9 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		}
 		for (let sideIndex = 0; sideIndex < 2; sideIndex++) {
 			const oneSide = ['subject', 'candidate'][sideIndex];
-			const forbidden = value[oneSide].find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);
+			const forbidden = value[oneSide].find((oneName) => neverRenderedNameList.indexOf(oneName) !== -1);
 			if (forbidden !== undefined) {
-				return `renderingAllowList.${oneSide} names '${forbidden}', which is on RENDERING_NEVER_NAME_LIST (${listAsText(RENDERING_NEVER_NAME_LIST)}) — an identifier is never rendered to the judge (§4 the bias audit; TQ named cedsId by name)`;
+				return `renderingAllowList.${oneSide} names '${forbidden}', which is on RENDERING_NEVER_NAME_LIST or the bridge's blindingDeclaration (${listAsText(neverRenderedNameList)}) — an identifier is never rendered to the judge (§4 the bias audit)`;
 			}
 			const duplicate = value[oneSide].find((oneName, oneIndex) => value[oneSide].indexOf(oneName) !== oneIndex);
 			if (duplicate !== undefined) {
@@ -1624,6 +1630,7 @@ module.exports = {
 	CHOICE_QUESTION_FORM_NAME_LIST,
 	judgePromptVariantFor,
 	RENDERING_NEVER_NAME_LIST,
+	neverRenderedNameListFor,
 	PREDICATE_SOURCE_KIND_VALIDATOR_REGISTRY,
 	RESOLUTION_LIST,
 	PREDICATE_SOURCE_KIND_LIST,

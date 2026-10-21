@@ -434,8 +434,8 @@ const blindConjunctList = [
 		regex: /renderingAllowList\.candidate names 'canonicalKey', which is on RENDERING_NEVER_NAME_LIST/,
 		twinName: 'allowNeverNames',
 		fileName: CONTRACT_FILE,
-		find: '\t\t\tconst forbidden = value[oneSide].find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);',
-		replace: '\t\t\tconst forbidden = undefined; void RENDERING_NEVER_NAME_LIST;',
+		find: '\t\t\tconst forbidden = value[oneSide].find((oneName) => neverRenderedNameList.indexOf(oneName) !== -1);',
+		replace: '\t\t\tconst forbidden = undefined; void neverRenderedNameList;',
 	}),
 	// ⟪H-1, adversarial review D4 2026-08-17⟫ The reviewer neutered renderedBlockRefusal and bgDerived, bgBlind
 	// and bgDecl ALL STAYED GREEN. The comment beside that function says it "has to be able to catch me being
@@ -453,7 +453,7 @@ const blindConjunctList = [
 		shape: (scenario) => {
 			derivedShape(scenario);
 			// bypass net #1 (bridgePluginContract's allow-list validation) so the leak can actually reach the renderer
-			scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CONTRACT_FILE), find: '\t\t\tconst forbidden = value[oneSide].find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);', replace: '\t\t\tconst forbidden = undefined; void RENDERING_NEVER_NAME_LIST;' });
+			scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, CONTRACT_FILE), find: '\t\t\tconst forbidden = value[oneSide].find((oneName) => neverRenderedNameList.indexOf(oneName) !== -1);', replace: '\t\t\tconst forbidden = undefined; void neverRenderedNameList;' });
 			overrideDerivedDeclaration(scenario, (declaration) => {
 				declaration.renderingAllowList = { ...declaration.renderingAllowList, candidate: declaration.renderingAllowList.candidate.concat(['canonicalKey']) };
 			});
@@ -461,7 +461,7 @@ const blindConjunctList = [
 		regex: /the rendered prompt carries property 'canonicalKey', which is on RENDERING_NEVER_NAME_LIST/,
 		twinName: 'secondNetRemoved',
 		fileName: RENDERER_FILE,
-		find: '\tconst leaked = renderedNameList.find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);',
+		find: '\tconst leaked = renderedNameList.find((oneName) => neverRenderedNameList.indexOf(oneName) !== -1);',
 		replace: '\tconst leaked = undefined; void renderedNameList;',
 	}),
 ];

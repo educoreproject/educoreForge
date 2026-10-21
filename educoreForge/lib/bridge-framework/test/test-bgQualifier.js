@@ -64,6 +64,7 @@ const questionInputFor = ({ candidatePool, judgePromptVariant = 'derivedJudgeSlo
 	promptSegmentList: [],
 	judgePromptVariant,
 	renderingAllowList: judgePromptVariant === 'crosswalk' ? undefined : edfiDeclaration.renderingAllowList,
+	blindingNameList: edfiDeclaration.blindingDeclaration,
 });
 const UNQUALIFIED_POOL = [seatFor({ stableId: 'hub:a', name: 'Has Organization Identifier', domainName: 'Organization' }), seatFor({ stableId: 'hub:b', name: 'Organization Name', domainName: 'Organization' }), seatFor({ stableId: 'hub:c', name: 'School Identifier', domainName: 'K12 School' })];
 const QUALIFIED_POOL = [seatFor({ stableId: 'hub:a', name: 'Has Organization Identifier', domainName: 'Organization', qualifierNames: ['School Identifier'] }), seatFor({ stableId: 'hub:b', name: 'Has Organization Identifier', domainName: 'Organization', qualifierNames: ['Local Education Agency Identifier'] }), seatFor({ stableId: 'hub:c', name: 'Organization Name', domainName: 'Organization' })];

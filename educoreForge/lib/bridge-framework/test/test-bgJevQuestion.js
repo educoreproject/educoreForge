@@ -63,6 +63,8 @@ const SURVEY_DEFINITION = 'A survey to identified or anonymous respondents.';
 const renderInputFor = ({ judgePromptVariant, owningConstructDefinition, owningConstructDefinitionAbsentReason }) => {
 	const renderInput = cloneJson(OLD_JUDGE_RENDER_INPUT);
 	renderInput.judgePromptVariant = judgePromptVariant;
+	// ⟪R3⟫ the shipped Ed-Fi bridge's blinding list (the captured input predates the parameter; it changes no rendered byte)
+	renderInput.blindingNameList = require('./testSupport/shippedBridge').shippedBridgeDeclarationFor('edfiCedsDerivedPlugin').blindingDeclaration;
 	if (owningConstructDefinition !== undefined) {
 		renderInput.sourceElement.owningConstructDefinition = owningConstructDefinition;
 		renderInput.sourceElement.owningConstructDefinitionAbsentReason = owningConstructDefinitionAbsentReason;

@@ -1740,7 +1740,7 @@ const moduleFunction =
 								return;
 							}
 							const decoratedPool = candidatePool.map((oneSeat) => (hookState.nominatedByStableId[oneSeat.card.stableId] !== undefined ? { ...oneSeat, nominatedBy: bridgeDeclaration.bridgeName, nominationRationale: hookState.nominatedByStableId[oneSeat.card.stableId] } : oneSeat));
-							const question = evidenceRendererLib.renderQuestion({ sourceElement, candidatePool: decoratedPool, globalGuidanceList, perCandidateNoteByStableId: hookState.perCandidateNoteByStableId, promptSegmentList: hookState.promptSegmentList, judgePromptVariant, renderingAllowList: bridgeDeclaration.renderingAllowList });
+							const question = evidenceRendererLib.renderQuestion({ sourceElement, candidatePool: decoratedPool, globalGuidanceList, perCandidateNoteByStableId: hookState.perCandidateNoteByStableId, promptSegmentList: hookState.promptSegmentList, judgePromptVariant, renderingAllowList: bridgeDeclaration.renderingAllowList, blindingNameList: bridgeDeclaration.blindingDeclaration });
 							if (question.error) {
 								taskDone(question.error.message);
 								return;

@@ -130,6 +130,7 @@ const renderSampleFor = ({ bridgeEntry, frozenBlock, sampleSize, sourceStandardN
 			promptSegmentList: [],
 			judgePromptVariant,
 			renderingAllowList: bridgeDeclaration.renderingAllowList,
+			blindingNameList: bridgeDeclaration.blindingDeclaration,
 		});
 		if (question.error) {
 			return { ...unitIdentity, error: question.error.message };

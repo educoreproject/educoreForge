@@ -8,7 +8,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // key half).
 //
 //   renderQuestion({ sourceElement, candidatePool, globalGuidanceList, perCandidateNoteByStableId,
-//                    promptSegmentList, judgePromptVariant, renderingAllowList })
+//                    promptSegmentList, judgePromptVariant, renderingAllowList, blindingNameList })
+//     blindingNameList  the bridge's blindingDeclaration: what a bridge blinds it never renders (with RENDERING_NEVER_NAME_LIST);
+//                       required, as a list, by every variant that renders by allow-list
 //     → { systemPrompt, userPrompt, promptHash, renderedPoolStableIdList, choiceEnum, rendererVersion, judgePredicateRule,
 //         cardCollapseList, qualifiedCardStableIdList } | { error }
 //
@@ -52,7 +54,7 @@ const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const representationPolicyLib = require('./representationPolicy');
 const graphSeamRulesLib = require('./graphSeamRules');
 const componentIdeaSplitterLib = require('./componentIdeaSplitter');
-const { JUDGE_PROMPT_VARIANT_LIST, RENDERING_NEVER_NAME_LIST } = require('./bridgePluginContract');
+const { JUDGE_PROMPT_VARIANT_LIST, RENDERING_NEVER_NAME_LIST, neverRenderedNameListFor } = require('./bridgePluginContract');
 
 const RENDERER_VERSION = 'bridgeEvidenceRenderer-v1';
 // ⟪RULING 14:55 AS AMENDED (seq 32/33)⟫ the version and the DERIVED SYSTEM PROMPT stay BYTE-UNCHANGED. The
@@ -457,7 +459,7 @@ if (misnamedFormVariantList.length > 0) {
 // renderedBlockRefusal — the POSITIVE half of the id gate, applied to the bytes actually produced. The
 // allow-list makes a leak structurally impossible; this asserts it anyway, because "impossible by
 // construction" is a claim about code I just wrote and the gate has to be able to catch me being wrong.
-const renderedBlockRefusal = ({ lineList, variantRow }) => {
+const renderedBlockRefusal = ({ lineList, variantRow, neverRenderedNameList }) => {
 	if (!variantRow.requiresRenderingAllowList) {
 		return null;
 	}
@@ -465,11 +467,11 @@ const renderedBlockRefusal = ({ lineList, variantRow }) => {
 		.map((oneLine) => /^\s+([A-Za-z_][A-Za-z0-9_]*):/.exec(oneLine))
 		.filter((oneMatch) => oneMatch !== null)
 		.map((oneMatch) => oneMatch[1]);
-	const leaked = renderedNameList.find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);
-	return leaked === undefined ? null : refuse.byName({ moduleName, what: `the rendered prompt carries property '${leaked}', which is on RENDERING_NEVER_NAME_LIST`, where: 'an identifier never reaches the judge under a retrieved basis (§4 the bias audit); the allow-list should have made this unreachable — reaching it is a defect in the renderer, not in the declaration' });
+	const leaked = renderedNameList.find((oneName) => neverRenderedNameList.indexOf(oneName) !== -1);
+	return leaked === undefined ? null : refuse.byName({ moduleName, what: `the rendered prompt carries property '${leaked}', which is on RENDERING_NEVER_NAME_LIST or the bridge's blindingDeclaration`, where: 'an identifier never reaches the judge under a retrieved basis (§4 the bias audit); the allow-list should have made this unreachable — reaching it is a defect in the renderer, not in the declaration' });
 };
 
-const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perCandidateNoteByStableId, promptSegmentList, judgePromptVariant, renderingAllowList } = {}) => {
+const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perCandidateNoteByStableId, promptSegmentList, judgePromptVariant, renderingAllowList, blindingNameList } = {}) => {
 	if (JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant] === undefined) {
 		return { error: refuse.byName({ moduleName, what: `judgePromptVariant ${JSON.stringify(judgePromptVariant)} names no rendering variant`, where: `the framework passes the variant VARIANT_BY_BASIS_AND_PREDICATE_RULE names for the run; the registered variants are ${JUDGE_PROMPT_VARIANT_LIST.join(', ')} — there is no default renderer` }) };
 	}
@@ -477,6 +479,10 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	if (variantRow.requiresRenderingAllowList && !(isPlainObject(renderingAllowList) && Array.isArray(renderingAllowList.subject) && Array.isArray(renderingAllowList.candidate) && renderingAllowList.subject.length > 0 && renderingAllowList.candidate.length > 0)) {
 		return { error: refuse.byName({ moduleName, what: `variant '${judgePromptVariant}' requires a renderingAllowList { subject: [...], candidate: [...] } and got ${JSON.stringify(renderingAllowList)}`, where: 'a retrieved pool is rendered by ALLOW-LIST or not at all; there is no unblinded path' }) };
 	}
+	if (variantRow.requiresRenderingAllowList && !(Array.isArray(blindingNameList) && blindingNameList.every((oneName) => typeof oneName === 'string'))) {
+		return { error: refuse.byName({ moduleName, what: `variant '${judgePromptVariant}' requires blindingNameList (the bridge's blindingDeclaration) as a list of names and got ${JSON.stringify(blindingNameList)}`, where: 'what a bridge blinds it never renders; the hub\'s identifier names arrive only through it' }) };
+	}
+	const neverRenderedNameList = neverRenderedNameListFor(blindingNameList);
 	if (!isPlainObject(sourceElement) || typeof sourceElement.name !== 'string' || sourceElement.name.trim() === '') {
 		return { error: refuse.byName({ moduleName, what: 'the source element carries no name', where: 'the judge cannot be asked which candidate matches without being told WHAT it is matching (source-presence hardening)' }) };
 	}
@@ -545,7 +551,7 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		lineList.push(...variantRow.candidateLineList({ oneSeat, seatIndex, noteByStableId, renderingAllowList }));
 	});
 	lineList.push(`Answer with one of: ${renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).join(', ')}, or ${ABSTAIN_TOKEN}${variantRow.answerLineSuffix}`);
-	const blockRefusal = renderedBlockRefusal({ lineList, variantRow });
+	const blockRefusal = renderedBlockRefusal({ lineList, variantRow, neverRenderedNameList });
 	if (blockRefusal) {
 		return { error: blockRefusal };
 	}
@@ -582,9 +588,9 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 			.concat(Object.keys(choiceQuestion.criteriaByChoice).map((optionName) => choiceQuestion.criteriaByChoice[optionName]))
 			.filter((oneValue) => isPlainObject(oneValue))
 			.reduce((soFar, oneObject) => soFar.concat(Object.keys(oneObject)), [])
-			.find((oneName) => RENDERING_NEVER_NAME_LIST.indexOf(oneName) !== -1);
+			.find((oneName) => neverRenderedNameList.indexOf(oneName) !== -1);
 	if (choiceQuestionLeakedName !== undefined) {
-		return { error: refuse.byName({ moduleName, what: `the split question (choiceQuestion) carries property '${choiceQuestionLeakedName}', which is on RENDERING_NEVER_NAME_LIST`, where: 'an identifier never reaches the judge, by the prompt or by the split question' }) };
+		return { error: refuse.byName({ moduleName, what: `the split question (choiceQuestion) carries property '${choiceQuestionLeakedName}', which is on RENDERING_NEVER_NAME_LIST or the bridge's blindingDeclaration`, where: 'an identifier never reaches the judge, by the prompt or by the split question' }) };
 	}
 	const choiceEnum = renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).concat([ABSTAIN_TOKEN]);
 	return {
