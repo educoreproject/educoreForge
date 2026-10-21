@@ -574,6 +574,10 @@ const moduleFunction =
 
 				const backoffMs = [0, 500, 1200, 2500, 5000, 9000];
 				const retryReasons = [];
+				// ⟪spend ledger R1, 2026-10-21⟫ one entry per readable response, in the spend ledger's shape (spendRecord.js
+				// SPEND_CALL_FIELD_LIST): the server's own counts, prompt_eval_count in and eval_count out. A local model is priced
+				// at zero by a row in spendPricing.ini that says so; it is never left unpriced.
+				const spendCallList = [];
 
 				const tryAttempt = (attemptIndex) => {
 					postOnce({ payload }, (err, parsedEnvelope, status) => {
@@ -603,6 +607,11 @@ const moduleFunction =
 							callback(`${moduleName}.rerank: ${bodyRefusal}`);
 							return;
 						}
+						if (!Number.isInteger(parsedEnvelope.prompt_eval_count) || parsedEnvelope.prompt_eval_count < 0 || !Number.isInteger(parsedEnvelope.eval_count) || parsedEnvelope.eval_count < 0) {
+							callback(`${moduleName}.rerank: the response (attempt ${attemptIndex + 1}) carries prompt_eval_count ${JSON.stringify(parsedEnvelope.prompt_eval_count)} / eval_count ${JSON.stringify(parsedEnvelope.eval_count)}; both must be non-negative integers, or the call cannot be accounted for`);
+							return;
+						}
+						spendCallList.push({ provider: PROVIDER_NAME, model: cfg.wireModel, inputTokens: parsedEnvelope.prompt_eval_count, outputTokens: parsedEnvelope.eval_count });
 						const { choice, category, rationale, sourceElementIdeaList, candidateIdeaList, sortedCandidateList, ideaCoverage } = extractJudgment(parsedEnvelope);
 						// A choice that is absent or outside the per-call enum is REFUSED, never repaired. This
 						// mirrors llmClient's own "could not extract a choice" arm: without a choice there is no
@@ -657,6 +666,7 @@ const moduleFunction =
 							// fabricated: an envelope without it yields null.
 							doneReason: parsedEnvelope && parsedEnvelope.done_reason !== undefined ? parsedEnvelope.done_reason : null,
 							evalCount: parsedEnvelope && parsedEnvelope.eval_count !== undefined ? parsedEnvelope.eval_count : null,
+							spendCallList,
 							retryReasons,
 						});
 					});

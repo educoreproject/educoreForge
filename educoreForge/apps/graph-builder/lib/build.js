@@ -316,6 +316,52 @@ const defaultComponents = {
 // DEFAULT_RULE, and DEBUG_MARK for the loud status line) is re-exported by the registry, DERIVED from
 // debugJudge rather than restated, so adding a rule to that register still needs no edit here.
 const judgeProviderRegistryLib = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
+// ⟪spend ledger R1, 2026-10-21⟫ THE SPEND LEDGER: the pricing table, the latency meter (the clock lives here, outside BG-DET's trees),
+// and the per-build / lifetime ledger writer
+const spendPricingLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'spend-ledger', 'spendPricing'));
+const spendLedgerLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'spend-ledger', 'spendLedger'));
+const latencyMeterLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'spend-ledger', 'latencyMeter'));
+
+// SPEND_LEDGER_CONFIG_SECTION_NAME — graphBuilder.ini [spendLedger]: spendPricingFilePath (the pricing ini) and
+// lifetimeLedgerFilePath (the append-only JSONL every build adds its line to). Precedence, the buildLogsDirPath idiom:
+// deps.<name> (the test seam) > --<name> on the command line (a CLI suite points a build at scratch files) > the ini.
+const SPEND_LEDGER_CONFIG_SECTION_NAME = 'spendLedger';
+const spendLedgerSettingFor = ({ deps, configSection, settingName }) => {
+	if (deps[settingName] !== undefined) {
+		return deps[settingName];
+	}
+	const commandLineValueList = process.global && process.global.commandLineParameters && process.global.commandLineParameters.values ? process.global.commandLineParameters.values[settingName] : undefined;
+	return Array.isArray(commandLineValueList) && commandLineValueList.length ? commandLineValueList[0] : configSection[settingName];
+};
+// resolveSpendLedgerConfig — { spendPricer, lifetimeLedgerFilePath } | { error }. Both paths are required and have no
+// default: a build that cannot price what it spends is refused before it spends anything.
+const resolveSpendLedgerConfig = (deps) => {
+	const configSection = process.global && process.global.getConfig ? process.global.getConfig(SPEND_LEDGER_CONFIG_SECTION_NAME) || {} : {};
+	const spendPricingFilePath = spendLedgerSettingFor({ deps, configSection, settingName: 'spendPricingFilePath' });
+	const lifetimeLedgerFilePath = spendLedgerSettingFor({ deps, configSection, settingName: 'lifetimeLedgerFilePath' });
+	if (typeof lifetimeLedgerFilePath !== 'string' || lifetimeLedgerFilePath.trim() === '') {
+		return { error: `graphBuilder build: [${SPEND_LEDGER_CONFIG_SECTION_NAME}].lifetimeLedgerFilePath is ${JSON.stringify(lifetimeLedgerFilePath)} in graphBuilder.ini (no deps.lifetimeLedgerFilePath or --lifetimeLedgerFilePath given). Every build appends what it spent there; there is no default.` };
+	}
+	const loadedPricing = spendPricingLib.loadSpendPricing({ pricingFilePath: spendPricingFilePath });
+	if (loadedPricing.error) {
+		return { error: `graphBuilder build: the spend pricing table ([${SPEND_LEDGER_CONFIG_SECTION_NAME}].spendPricingFilePath) is unusable: ${loadedPricing.error}` };
+	}
+	return { spendPricer: loadedPricing.spendPricer, lifetimeLedgerFilePath };
+};
+
+// spendMeteredInferenceConfigFor — the resolved inferenceConfig with its judge METERED (latencyMeter, wall clock) and the
+// pricer beside it. The meter is a frozen copy of the provider with rerank wrapped; every identity member is the
+// provider's own, so no cache key moves. No judge (a plain build) leaves the config as it was, plus the pricer.
+const spendMeteredInferenceConfigFor = ({ inferenceConfig, spendPricer }) => {
+	if (!inferenceConfig || !inferenceConfig.llmClient) {
+		return { inferenceConfig: { ...(inferenceConfig || {}), spendPricer } };
+	}
+	const metered = latencyMeterLib.latencyMeteredJudgeClientFor({ judgeClient: inferenceConfig.llmClient, readClockMs: () => Date.now() });
+	if (metered.error) {
+		return { error: `graphBuilder build: ${metered.error}` };
+	}
+	return { inferenceConfig: { ...inferenceConfig, llmClient: metered.judgeClient, spendPricer } };
+};
 
 // parsePositiveInteger — the SAME reader lib/sourceWindow.js applies at slice time, required here so
 // a malformed --limit/--offset is refused identically whether it is caught eagerly (before forging)
@@ -1339,8 +1385,44 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const moduleFunction =
 	({ moduleName } = {}) =>
 	(unusedDeps = {}) => {
-const build = (recipe, deps, callback) => {
+const build = (recipe, deps, buildCallback) => {
 	const { xLog, standardsDatabase } = deps;
+	// ⟪spend ledger R1, 2026-10-21⟫ THE SPEND LEDGER rides the build's ONE exit. Once the run directory exists, every way out of
+	// this build (success or failure) first writes <runDir>/spendLedger.json and appends the lifetime line, because a failed
+	// build spent money too. Before the run directory exists nothing has been spent, and the exit is exactly what it was.
+	const spendLedgerState = { spendPricer: null, lifetimeLedgerFilePath: null, runDirPath: null, buildRunStamp: null, buildStartedAtIso: null, bridgeSpendList: [], embeddingSpendRecordList: [] };
+	const callback = (buildError, buildResult) => {
+		if (spendLedgerState.runDirPath === null) {
+			buildCallback(buildError, buildResult);
+			return;
+		}
+		const ledgered = spendLedgerLib.spendLedgerFor({ recipeName: recipe.recipeName, buildRunStamp: spendLedgerState.buildRunStamp, buildStartedAtIso: spendLedgerState.buildStartedAtIso, storeDirPath: path.dirname(standardsDatabase.databaseFilePath || ''), bridgeSpendList: spendLedgerState.bridgeSpendList, embeddingSpendRecordList: spendLedgerState.embeddingSpendRecordList, spendPricer: spendLedgerState.spendPricer });
+		const finishWith = (ledgerError) => {
+			if (ledgerError) {
+				buildCallback(buildError ? `${buildError} — and the spend ledger was not recorded: ${ledgerError}` : `graphBuilder build: the build finished but its spend ledger was not recorded: ${ledgerError}`, buildResult);
+				return;
+			}
+			buildCallback(buildError, buildResult);
+		};
+		if (ledgered.error) {
+			finishWith(ledgered.error);
+			return;
+		}
+		spendLedgerLib.writeBuildSpendLedger({ runDirPath: spendLedgerState.runDirPath, spendLedger: ledgered.spendLedger }, (writeError, written) => {
+			if (writeError) {
+				finishWith(writeError);
+				return;
+			}
+			spendLedgerLib.appendLifetimeSpendLedger({ lifetimeLedgerFilePath: spendLedgerState.lifetimeLedgerFilePath, spendLedger: ledgered.spendLedger }, (appendError) => {
+				if (appendError) {
+					finishWith(appendError);
+					return;
+				}
+				xLog.status(`${spendLedgerLib.spendLedgerSummaryLineFor(ledgered.spendLedger)} -> ${written.ledgerFilePath}`);
+				finishWith('');
+			});
+		});
+	};
 	const components = { ...defaultComponents, ...(deps.components || {}) };
 
 	// ---- the orchestrator's own inputs, checked before a single component is constructed ----
@@ -1372,6 +1454,16 @@ const build = (recipe, deps, callback) => {
 		);
 		return;
 	}
+
+	// ⟪spend ledger R1⟫ the pricing table and the lifetime ledger, resolved before anything can spend: an unpriceable build is
+	// refused here, not after its first judgment
+	const spendLedgerConfig = resolveSpendLedgerConfig(deps);
+	if (spendLedgerConfig.error) {
+		callback(spendLedgerConfig.error);
+		return;
+	}
+	spendLedgerState.spendPricer = spendLedgerConfig.spendPricer;
+	spendLedgerState.lifetimeLedgerFilePath = spendLedgerConfig.lifetimeLedgerFilePath;
 
 	// vectorize is resolved BEFORE a single component is constructed: it decides whether the real
 	// forger spends Voyage credit, and a caller who typed --vectorize=no must be refused here, not
@@ -1515,7 +1607,12 @@ const build = (recipe, deps, callback) => {
 				next(inferenceConfigError);
 				return;
 			}
-			next('', { ...args, inferenceConfig: resolvedInferenceConfig });
+			const metered = spendMeteredInferenceConfigFor({ inferenceConfig: resolvedInferenceConfig, spendPricer: spendLedgerState.spendPricer });
+			if (metered.error) {
+				next(metered.error);
+				return;
+			}
+			next('', { ...args, inferenceConfig: metered.inferenceConfig });
 		});
 	});
 	pipeRunner(judgeConstructionTaskList.getList(), {}, (judgeConstructionError, judgeConstructionResult) => {
@@ -1558,7 +1655,8 @@ const build = (recipe, deps, callback) => {
 		// first standard that has something to write. The hub prose-divergence and skip reports
 		// land here — the build orchestrator owns the build's log directory; the forger carries
 		// report DATA only and writes nothing.
-		const buildRunStamp = new Date()
+		const buildStartedAt = new Date();
+		const buildRunStamp = buildStartedAt
 			.toISOString()
 			.replace(/[-:]/g, '')
 			.replace(/\..+$/, '')
@@ -1572,6 +1670,10 @@ const build = (recipe, deps, callback) => {
 			buildLogsDirPathResolution.value,
 			`${recipe.recipeName}_${buildRunStamp}`,
 		);
+		// ⟪spend ledger R1⟫ from here every exit writes the spend ledger into this directory
+		spendLedgerState.runDirPath = buildReportsDirPath;
+		spendLedgerState.buildRunStamp = buildRunStamp;
+		spendLedgerState.buildStartedAtIso = buildStartedAt.toISOString();
 
 		// PHASE A -> PHASE C carry (P2, implementationPlan_bridge_072426 §7). A bridge's relationship block
 		// name is version-keyed on BOTH endpoints with the REAL resolved versions the forge READ (the a4a0da2
@@ -1789,6 +1891,19 @@ const build = (recipe, deps, callback) => {
 						layerKeyList: layerKeyListByToken[String(std.token).toLowerCase()] || [],
 					},
 					(err, forgeReport) => {
+						// ⟪spend ledger R1⟫ what this forge's embedder spent. A FAILED forge hands it up beside its error when it got far
+						// enough to embed (the forger's own contract); a SUCCESSFUL one must carry the list (COMPONENT_SHAPES forger
+						// resultKeys), and a report without it is refused by name rather than counted as having spent nothing.
+						if (err) {
+							if (forgeReport && Array.isArray(forgeReport.embeddingSpendRecordList)) {
+								spendLedgerState.embeddingSpendRecordList.push(...forgeReport.embeddingSpendRecordList);
+							}
+						} else if (!forgeReport || !Array.isArray(forgeReport.embeddingSpendRecordList)) {
+							next(`forge ${std.token}: the forge report carries no embeddingSpendRecordList (${JSON.stringify(forgeReport && forgeReport.embeddingSpendRecordList)}); every forge states what its embedder spent, [] when it embedded nothing`);
+							return;
+						} else {
+							spendLedgerState.embeddingSpendRecordList.push(...forgeReport.embeddingSpendRecordList);
+						}
 						if (!err) {
 							// The EXPLICIT resolved version replaces the recipe's floating 'current' in every
 							// persisted place: composed HERE from the forge's snapshot-provenance triple, then
@@ -2334,6 +2449,16 @@ const build = (recipe, deps, callback) => {
 						if (err) {
 							next(`bridge ${pairLabel}: ${err}`);
 							return;
+						}
+						// ⟪spend ledger R1⟫ a MAPPING bridge's spend, as its run report counted it: every mapping bridge runs through the
+						// bridge framework, whose report always carries counts.judgeSpend (asked 0 on a plain build). A STRUCTURAL pairing
+						// (no hub) judges nothing and reports none. A mapping report without it is refused, never counted as $0.
+						if (bridge.hub !== undefined) {
+							if (!runReport || !runReport.counts || !runReport.counts.judgeSpend) {
+								next(`bridge ${pairLabel}: the run report carries no counts.judgeSpend; a mapping bridge states what its judge spent (asked 0 when it judged nothing)`);
+								return;
+							}
+							spendLedgerState.bridgeSpendList.push({ bridgeName: bridge.bridge, pairKey: runReport.decisionBlock ? runReport.decisionBlock.pairKey : null, judgeSpend: runReport.counts.judgeSpend });
 						}
 						// MULTI-BLOCK HARVEST (contract change 2026-07-26). A bridge invocation may emit MORE THAN ONE
 						// pair-scoped block. NORMALIZE runReport into a `blocks` array so ONE code path serves both:
@@ -2923,6 +3048,8 @@ module.exports.rebridgeScopeIsActive = rebridgeScopeIsActive;
 // the real-vs-stub reranker SELECTION seam (P3b), exported so the factory choice is gated directly: a stub is
 // used when injected, a real client is minted (via the injected/default factory) for an active --rebridge.
 module.exports.resolveInferenceConfig = resolveInferenceConfig;
+module.exports.resolveSpendLedgerConfig = resolveSpendLedgerConfig;
+module.exports.spendMeteredInferenceConfigFor = spendMeteredInferenceConfigFor;
 // ⟪skipAI⟫ exported for its hermetic gate — the rule resolution is refuse-by-name logic worth
 // exercising directly rather than only through a full build.
 module.exports.resolveDebugJudge = resolveDebugJudge;

@@ -2073,6 +2073,38 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 	});
 };
 
+// ---------------------------------------------------------------------
+// -spendLedger  ⟪spend ledger R1, 2026-10-21⟫
+// ---------------------------------------------------------------------
+// Read the LIFETIME spend ledger (one JSONL line per build, appended by build.js) and print what was spent, by day, by
+// recipe and by provider:model. Read-only. The ledger is [spendLedger].lifetimeLedgerFilePath in graphBuilder.ini, or
+// --lifetimeLedgerFilePath; --since=YYYY-MM-DD and --recipe=<recipeName> narrow it. No ledger path is refused by name.
+const spendLedgerAction = (callback) => {
+	const { xLog, commandLineParameters, getConfig } = process.global;
+	const spendLedgerLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'spend-ledger', 'spendLedger'));
+	const lifetimeLedgerFilePath = firstValue(commandLineParameters, 'lifetimeLedgerFilePath') || (getConfig('spendLedger') || {}).lifetimeLedgerFilePath;
+	if (typeof lifetimeLedgerFilePath !== 'string' || lifetimeLedgerFilePath.trim() === '') {
+		callback('graphBuilder -spendLedger: no lifetime ledger is named. Set [spendLedger].lifetimeLedgerFilePath in graphBuilder.ini or pass --lifetimeLedgerFilePath=<path>; there is no default.');
+		return;
+	}
+	const sinceDayText = firstValue(commandLineParameters, 'since');
+	const recipeName = firstValue(commandLineParameters, 'recipe');
+	spendLedgerLib.querySpendLedger({ lifetimeLedgerFilePath, sinceDayText, recipeName }, (queryError, queried) => {
+		if (queryError) {
+			callback(`graphBuilder -spendLedger: ${queryError}`);
+			return;
+		}
+		const usdText = (usd) => `$${usd.toFixed(4)}`;
+		const groupLineList = (titleText, totalsByName) => [titleText].concat(Object.keys(totalsByName).sort().map((groupName) => `  ${groupName}: ${usdText(totalsByName[groupName].usd)} over ${totalsByName[groupName].buildCount} build(s) (judge ${usdText(totalsByName[groupName].judgeUsd)}, embedding ${usdText(totalsByName[groupName].embeddingUsd)}; saved ${usdText(totalsByName[groupName].savedUsd)}${totalsByName[groupName].savedUsdUnknownCount ? ` +${totalsByName[groupName].savedUsdUnknownCount} unknown` : ''})`));
+		const providerLineList = ['by provider:model'].concat(Object.keys(queried.byProviderModel).sort().map((providerModelName) => `  ${providerModelName}: ${usdText(queried.byProviderModel[providerModelName].usd)} over ${queried.byProviderModel[providerModelName].callCount} call(s) (${queried.byProviderModel[providerModelName].inputTokens} in / ${queried.byProviderModel[providerModelName].outputTokens} out)`));
+		const filterText = `${sinceDayText === undefined ? 'all days' : `since ${sinceDayText}`}, ${recipeName === undefined ? 'every recipe' : `recipe ${recipeName}`}`;
+		[`graphBuilder: -spendLedger ${lifetimeLedgerFilePath} (${filterText}): ${usdText(queried.totals.usd)} over ${queried.totals.buildCount} build(s)`]
+			.concat(groupLineList('by day', queried.byDay), groupLineList('by recipe', queried.byRecipe), providerLineList)
+			.forEach((lineText) => xLog.status(lineText));
+		callback('', { exitCode: 0, resultText: JSON.stringify({ lifetimeLedgerFilePath, sinceDayText: sinceDayText === undefined ? null : sinceDayText, recipeName: recipeName === undefined ? null : recipeName, totals: queried.totals, byDay: queried.byDay, byRecipe: queried.byRecipe, byProviderModel: queried.byProviderModel }, null, 2) });
+	});
+};
+
 return {
 	build,
 	validate,
@@ -2084,6 +2116,7 @@ return {
 	goldEvalCheck: goldEvalCheckAction,
 	truncateStore: truncateStoreAction,
 	stampPromotion: stampPromotionAction,
+	spendLedger: spendLedgerAction,
 	scanAvailableForges,
 	// exported for the hermetic gates: the no-default refusal is the phase's headline claim, and a
 	// claim provable only by launching a whole build is a claim nobody re-checks.

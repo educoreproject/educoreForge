@@ -124,6 +124,10 @@ const moduleFunction = (constructionOptions = {}) => {
 					rationale: `${anthropicVerdict.rationale} [jevOpus: escalated; Jev's confidence ${jevPickConfidence} is below the cut ${cfg.escalateBelowConfidence}. Jev's view: ${jevVerdict.rationale}]`,
 					model: formModel,
 					attempts: (jevVerdict.attempts || 0) + (anthropicVerdict.attempts || 0),
+					// ⟪spend ledger R1, 2026-10-21⟫ BOTH legs were paid: Jev's call(s) then Opus's. `usage` above (from the spread) is Opus's
+					// alone, which is what it always was; the ledger reads this list, so an escalation no longer loses the Jev leg. A leg that
+					// names no list leaves the whole list absent, which the framework refuses by name; a half list would under-count quietly.
+					spendCallList: Array.isArray(jevVerdict.spendCallList) && Array.isArray(anthropicVerdict.spendCallList) ? jevVerdict.spendCallList.concat(anthropicVerdict.spendCallList) : undefined,
 					answeredBy: anthropicProvider.name,
 					// the answer is Opus's, so the summary is Opus's (it reports no numbers: null); Jev's view rides beside it
 					judgeSummary: anthropicVerdict.judgeSummary === undefined ? null : anthropicVerdict.judgeSummary,

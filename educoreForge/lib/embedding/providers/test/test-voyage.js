@@ -76,9 +76,10 @@ const fakeTransport = ({ responseBody, statusCode = 200 }) => {
 	return { httpsRequest, captured };
 };
 
-// a Voyage-shaped success body: { data: [ { embedding: [...] }, ... ] }
-const voyageBody = (vectors) =>
-	JSON.stringify({ data: vectors.map((oneVector) => ({ embedding: oneVector })) });
+// a Voyage-shaped success body: { data: [ { embedding: [...] }, ... ], usage: { total_tokens } } (Voyage documents the
+// usage member on every embeddings response; the spend ledger reads it). omitUsage drops it, for the refusal.
+const voyageBody = (vectors, omitUsage) =>
+	JSON.stringify({ data: vectors.map((oneVector) => ({ embedding: oneVector })), ...(omitUsage === true ? {} : { usage: { total_tokens: 37 } }) });
 
 const RESOLVED_CONFIG = (dimension) => ({
 	apiKey: 'NOT-A-REAL-KEY',
@@ -126,19 +127,20 @@ harness.section('THE RESPONSE — a vector whose length is not the configured di
 // index. Operational fault (the provider answered badly) → it travels by CALLBACK, like every
 // other response fault in this module.
 
-const embedOutcome = ({ dimension, responseVectors, statusCode = 200 }) => {
+const embedOutcome = ({ dimension, responseVectors, statusCode = 200, usageMember }) => {
 	const { httpsRequest } = fakeTransport({
-		responseBody: voyageBody(responseVectors),
+		responseBody: voyageBody(responseVectors, usageMember === 'omit'),
 		statusCode,
 	});
 	const provider = voyageProvider({ httpsRequest });
 	const answered = [];
-	provider.embed(['a', 'b'].slice(0, responseVectors.length), RESOLVED_CONFIG(dimension), (err, embeddings) => {
-		answered.push({ err, embeddings });
+	provider.embed(['a', 'b'].slice(0, responseVectors.length), RESOLVED_CONFIG(dimension), (err, embeddings, providerUsage) => {
+		answered.push({ err, embeddings, providerUsage });
 	});
 	return {
 		errors: answered.filter((one) => one.err).map((one) => one.err),
 		embeddings: (answered.find((one) => !one.err) || {}).embeddings,
+		providerUsage: (answered.find((one) => !one.err) || {}).providerUsage,
 	};
 };
 
@@ -175,6 +177,13 @@ harness.ok(
 		clean.embeddings.length === 2 &&
 		clean.embeddings[0].length === 4,
 	JSON.stringify(clean.embeddings && clean.embeddings.map((one) => one.length)),
+);
+// ⟪spend ledger R1⟫ the billed token count comes back beside the vectors, and a response without it is refused by name
+harness.equal('  and Voyage\'s own usage.total_tokens comes back as providerUsage.totalTokens (spend ledger R1)', clean.providerUsage && clean.providerUsage.totalTokens, 37);
+harness.rejects(
+	'a response WITHOUT usage.total_tokens is refused by name, never counted as free (spend ledger R1)',
+	embedOutcome({ dimension: 4, responseVectors: [new Array(4).fill(0.1)], usageMember: 'omit' }).errors,
+	/usage\.total_tokens must be a non-negative integer/,
 );
 
 harness.report();

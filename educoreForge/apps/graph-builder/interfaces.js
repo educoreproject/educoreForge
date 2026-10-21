@@ -68,6 +68,9 @@
  * @property {Array} layerReportList  ⟪lane DES, cedsRichness-101226⟫ one entry per LAYER the spec's layerKeyList named, each
  *                                    produced over this standard's shaped base: { layerKey, layerVersion, layerLabel,
  *                                    nodeEdges, harvestEdgeTypeList, layerStats, layerReport, roundTripValidatorPath, snapshotDirPath }; [] when it named none
+ * @property {Array} embeddingSpendRecordList  ⟪spend ledger R1, 2026-10-21⟫ what this forge's embedder spent, one record per embedTexts
+ *                                    batch (embedding-client spendRecordList: { provider, model, texts, distinctMisses, servedFromCache,
+ *                                    tokens, latencyMs }); [] when nothing was embedded. A failed forge hands it up beside its error.
  */
 
 /**
@@ -615,6 +618,7 @@ const COMPONENT_SHAPES = {
 				'edgeCount',
 				'embedCallCount',
 				'layerReportList',
+				'embeddingSpendRecordList',
 			],
 		},
 	},

@@ -22,7 +22,9 @@ const moduleFunction =
 		// can be proven WITHOUT a socket or a Voyage bill. It is inert plumbing — it changes no
 		// behavior of a live call, which uses the default.
 		// -----
-		// embed — POST one batch of texts to Voyage; callback (err, embeddings:number[][]).
+		// embed — POST one batch of texts to Voyage; callback (err, embeddings:number[][], providerUsage:{ totalTokens }).
+		//   providerUsage (spend ledger R1, 2026-10-21) is Voyage's own usage.total_tokens, what the call is billed on; a response
+		//   without it is refused by name, because a call the ledger cannot price is not one it accepts.
 		//   resolvedConfig: { apiKey, model, dimension }. The apiKey appears ONLY in the
 		//   Authorization header — never logged, never returned, never placed in an error string.
 
@@ -101,7 +103,16 @@ const moduleFunction =
 						return;
 					}
 
-					callback('', embeddings);
+					const wireUsage = parsed.value.usage || {};
+					if (!Number.isInteger(wireUsage.total_tokens) || wireUsage.total_tokens < 0) {
+						callback(
+							`Voyage response carries usage ${JSON.stringify(parsed.value.usage)}; usage.total_tokens must be a ` +
+								`non-negative integer, or the call cannot be priced. Refused rather than counted as free.`,
+						);
+						return;
+					}
+
+					callback('', embeddings, { totalTokens: wireUsage.total_tokens });
 				});
 			});
 

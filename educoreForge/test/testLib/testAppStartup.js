@@ -42,7 +42,19 @@ const startTestApp = ({ moduleName, helpText }) => {
 	xLog.logToStdOut();
 
 	if (!process.global) {
-		const { getConfig, wholeConfig } = loadConfig();
+		const { getConfig: productionGetConfig, wholeConfig } = loadConfig();
+		// ⟪spend ledger R1, 2026-10-21⟫ THE ONE SECTION A SUITE MUST NOT SHARE WITH PRODUCTION: [spendLedger]. Every build appends a
+		// line to the lifetime spend ledger, and the hermetic suites run hundreds of builds; pointed at the real ledger they
+		// would bury real spend under fixture rows. So a suite reads the FIXTURE pricing table and a scratch lifetime ledger
+		// of its own. Every other section is the production one, unchanged (the "one loader" rule above still holds).
+		const os = require('os');
+		const fs = require('fs');
+		const path = require('path');
+		const hermeticSpendLedgerSection = Object.freeze({
+			spendPricingFilePath: path.join(__dirname, '..', '..', 'lib', 'spend-ledger', 'test', 'fixtures', 'spendPricing-fixture.ini'),
+			lifetimeLedgerFilePath: path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'edfHermeticSpendLedger-')), 'spendLedgerLifetime.jsonl'),
+		});
+		const getConfig = (sectionName) => (sectionName === 'spendLedger' ? hermeticSpendLedgerSection : productionGetConfig(sectionName));
 		process.global = {
 			xLog,
 			getConfig,

@@ -55,6 +55,8 @@ const classificationLib = require('./classification');
 const subjectGroupingLib = require('./subjectGrouping');
 const censusLib = require('./census');
 const judgeComponentLib = require('./judgeComponent');
+// ⟪spend ledger R1, 2026-10-21⟫ the spend ledger's record shapes and totals (pure; no clock — BG-DET)
+const spendRecordLib = require(path.join(__dirname, '..', 'spend-ledger', 'spendRecord'));
 const evidenceRendererLib = require('./evidenceRenderer');
 const representationPolicyLib = require('./representationPolicy');
 const confidenceBandTableLib = require('./confidenceBandTable');
@@ -414,7 +416,7 @@ const moduleFunction =
 			const baseGeneration = decisionBlockLib.generationFor({ bridgeName: bridgeDeclaration.bridgeName, pluginVersion: bridgeDeclaration.pluginVersion, declarationDigest, rendererVersion: runRendererVersion });
 			const generation = debugJudgeLib.generationWithDebugMark(sourceWindowLib.generationWithWindowMark(baseGeneration, windowMark), debugMark);
 			const runPrefix = `[bridge ${bridgeDeclaration.bridgeName} ${sourceToken}→${hubToken}]`;
-			const report = { refusalList: [], conflictCount: 0, conflictList: [], judgeSpend: { asked: 0, servedFromCache: 0, abstained: 0, rationaleReaskCount: 0, usd: null }, blindingDeclarationEcho: bridgeDeclaration.blindingDeclaration.slice(), consistencyReport: [], subjectNodeReport: null, labelTableDigest, discardedPredicateKeyCount: 0, owningConstructDefinitionCoverage: null, note: '' };
+			const report = { refusalList: [], conflictCount: 0, conflictList: [], judgeSpend: { asked: 0, servedFromCache: 0, abstained: 0, rationaleReaskCount: 0, ...spendRecordLib.JUDGE_SPEND_TOTAL_SEED }, blindingDeclarationEcho: bridgeDeclaration.blindingDeclaration.slice(), consistencyReport: [], subjectNodeReport: null, labelTableDigest, discardedPredicateKeyCount: 0, owningConstructDefinitionCoverage: null, note: '' };
 			const say = (text) => xLog.status(`${runPrefix} ${text}`);
 			say(`mode ${mode}; pairKey ${pairKey}; pair-scoped label ${pairScopedLabel}; blindingDeclaration [${bridgeDeclaration.blindingDeclaration.join(', ')}]`);
 
@@ -1749,7 +1751,7 @@ const moduleFunction =
 								return;
 							}
 							const reaskPromptRefusalFor = (reaskUserPrompt) => promptScanRefusalFor({ subjectStableId: oneTask.baseRecord.subjectStableId, surfaceTextByName: () => ({ reaskUserPrompt }) });
-							judgeComponentLib.judgeOne({ question, judgeClient, judgmentCache: spec.judgmentCache, matchForensics: spec.matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor, judgeConfigCacheDigest }, (judgeError, judged, judgeFault) => {
+							judgeComponentLib.judgeOne({ question, judgeClient, judgmentCache: spec.judgmentCache, matchForensics: spec.matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor, judgeConfigCacheDigest, spendPricer: spec.inferenceConfig.spendPricer }, (judgeError, judged, judgeFault) => {
 								if (judgeError) {
 									// ⟪RULING 14:55 (a) THE NET⟫ a rationale-FORM refusal after its one re-ask names the SUBJECT in
 									// refusalList and the run CARRIES ON. No edge, no default, and explicitly NOT recorded as an
@@ -1764,6 +1766,8 @@ const moduleFunction =
 									return;
 								}
 								report.discardedPredicateKeyCount += judged.discardedPredicateKeyCount;
+								// ⟪spend ledger R1, 2026-10-21⟫ the money beside the counts: each paid attempt's spend record (a re-asked unit has two)
+								report.judgeSpend = judged.spendRecordList.reduce((judgeSpend, spendRecord) => spendRecordLib.judgeSpendTotalsWith({ judgeSpend, spendRecord }), report.judgeSpend);
 								if (judged.cacheHit) {
 									report.judgeSpend.servedFromCache += 1;
 								} else {

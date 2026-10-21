@@ -220,7 +220,7 @@ const seedForger = () =>
 	Object.assign(
 		() => ({
 			forge: ({ standard, version }, cb) =>
-				cb('', { standard, version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [] }),
+				cb('', { standard, version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [], embeddingSpendRecordList: [] }),
 		}),
 		// the EXACT-NAME RULE static (see test-build.js's forgerRegistryDouble note)
 		{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
@@ -234,7 +234,7 @@ const seedForger = () =>
 // (phase B6) build.js also refuses, by name, a relationship block that states no harvest edge types, so the seed double
 // states one, as the framework's runReport does.
 const seedBridgeMaker = () => () => ({
-	run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: ['EXACT_MATCH'], edgesWritten: 0, decisionBlock: null }),
+	run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: ['EXACT_MATCH'], edgesWritten: 0, decisionBlock: null, counts: { judgeSpend: { asked: 0, servedFromCache: 0, abstained: 0, rationaleReaskCount: 0, ...require('../../../lib/spend-ledger/spendRecord').JUDGE_SPEND_TOTAL_SEED } } }),
 	describeBridge: ({ bridgeName, source }) => ({
 		description: Object.freeze({ bridgeName, source, producerKind: 'authored', subjectDiscriminator: undefined }),
 	}),
@@ -338,8 +338,11 @@ const databaseFilePath = path.join(scratchDir, `replayGate_${process.pid}.sqlite
 // line"). It is a PARAMETER because the JSON-on-stdin channel is the only one that can carry a literal
 // empty-string parameter value: qtools-parse-command-line turns a trailing `--flag=` into the boolean
 // true, which firstValue reads as absent, so argv cannot express "the operator named a blank".
+// ⟪spend ledger R1⟫ a spawned -build is pointed at the fixture pricing table and a scratch lifetime ledger (build.js's command-line
+// override), so no test build lands a line in the real record of spend
+const hermeticSpendLedgerArgList = [`--spendPricingFilePath=${path.join(treeRoot, 'lib', 'spend-ledger', 'test', 'fixtures', 'spendPricing-fixture.ini')}`, `--lifetimeLedgerFilePath=${path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'edfReplaySpendLedger-')), 'spendLedgerLifetime.jsonl')}`];
 const runCli = (args, stdinText = '') =>
-	spawnSync(process.execPath, [executable, ...args], {
+	spawnSync(process.execPath, [executable, ...args, ...(args.indexOf('-build') === -1 ? [] : hermeticSpendLedgerArgList)], {
 		input: stdinText,
 		encoding: 'utf8',
 		cwd: treeRoot,

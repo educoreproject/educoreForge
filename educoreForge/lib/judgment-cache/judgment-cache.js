@@ -50,6 +50,7 @@ const sqlString = require('sqlstring-sqlite');
 const TREE_LIB = path.join(__dirname, '..');
 const sqliteInstance = require(path.join(TREE_LIB, 'sqlite-instance', 'sqlite-instance'))({});
 const { judgeSummaryRefusal } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
+const { spendCallListViolation } = require(path.join(TREE_LIB, 'spend-ledger', 'spendRecord'));
 
 // The option shape sqlite-instance needs for hand-written SQL: runStatement REFUSES a statement with
 // no <!tableName!> substitution tag unless noTableNameOk says the caller means it. (Same as
@@ -145,7 +146,27 @@ const buildSchema = ({ runSql }, callback) => {
 				runSql(
 					`CREATE UNIQUE INDEX IF NOT EXISTS judgmentCacheKeyUnique
 					 ON judgmentCacheEntries(promptHash, model, rendererVersion);`,
-					(indexErr) => callback(indexErr || ''),
+					(indexErr) => {
+						if (indexErr) {
+							callback(indexErr);
+							return;
+						}
+						// ⟪spend ledger R1, 2026-10-21⟫ THE FILLING SPEND, BESIDE THE KEY. What the call(s) that filled a row cost, so a later
+						// hit can say what it saved. A SIDECAR table, deliberately: judgmentCacheEntries, its unique index and the
+						// judgmentJson text are untouched, so no key moves and W-B-7's same-answer comparison (which compares
+						// judgmentJson) cannot be disturbed by two writers whose token counts differ. Rows written before this
+						// table existed have no sidecar row; their hits report savedUsd null, named, never zero.
+						runSql(
+							`CREATE TABLE IF NOT EXISTS judgmentFillingSpend (
+								promptHash               TEXT NOT NULL,
+								model                    TEXT NOT NULL,
+								rendererVersion          TEXT NOT NULL,
+								fillingSpendCallListJson TEXT NOT NULL,
+								UNIQUE (promptHash, model, rendererVersion)
+							);`,
+							(sidecarErr) => callback(sidecarErr || ''),
+						);
+					},
 				);
 			},
 		);
@@ -183,9 +204,12 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 			return;
 		}
 		getRows(
-			`SELECT judgmentJson, generation, createdAt FROM judgmentCacheEntries
-			 WHERE promptHash=${esc(promptHash)} AND model=${esc(model)}
-			   AND rendererVersion=${esc(rendererVersion)} LIMIT 1;`,
+			`SELECT entry.judgmentJson, entry.generation, entry.createdAt, filling.fillingSpendCallListJson
+			 FROM judgmentCacheEntries AS entry
+			 LEFT JOIN judgmentFillingSpend AS filling
+			   ON filling.promptHash=entry.promptHash AND filling.model=entry.model AND filling.rendererVersion=entry.rendererVersion
+			 WHERE entry.promptHash=${esc(promptHash)} AND entry.model=${esc(model)}
+			   AND entry.rendererVersion=${esc(rendererVersion)} LIMIT 1;`,
 			(err, rows) => {
 				if (err) {
 					callback(err);
@@ -214,7 +238,9 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 					);
 					return;
 				}
-				callback('', { judgment, generation: row.generation, createdAt: row.createdAt });
+				// the filling spend was validated on its way in; null when the row predates the sidecar
+				const fillingSpendCallList = row.fillingSpendCallListJson === null || row.fillingSpendCallListJson === undefined ? null : JSON.parse(row.fillingSpendCallListJson);
+				callback('', { judgment, generation: row.generation, createdAt: row.createdAt, fillingSpendCallList });
 			},
 		);
 	};
@@ -229,7 +255,9 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 	// a judge answering under a rule with a predicate slot stores the relation it named (its abstain value
 	// on an abstain), and when present it is a non-empty string (phase B3b, 2026-09-28). generation is
 	// informational metadata (which pipeline generation bought this judgment), never part of the key.
-	const putJudgment = ({ promptHash, model, rendererVersion, generation, judgment } = {}, callback) => {
+	// fillingSpendCallList (spend ledger R1): the paid calls that produced this judgment, in spendRecord.js's shape. Optional at this
+	// seam — judgeComponent always passes it; a caller that has none writes no sidecar row and its hits report savedUsd null
+	const putJudgment = ({ promptHash, model, rendererVersion, generation, judgment, fillingSpendCallList } = {}, callback) => {
 		const keyErr = validateKey({ promptHash, model, rendererVersion }, 'putJudgment');
 		if (keyErr) {
 			callback(keyErr);
@@ -274,6 +302,11 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 			);
 			return;
 		}
+		const fillingFault = fillingSpendCallList === undefined ? '' : spendCallListViolation(fillingSpendCallList);
+		if (fillingFault) {
+			callback(`judgmentCache.putJudgment: the filling ${fillingFault}`);
+			return;
+		}
 		runSql(
 			`INSERT OR IGNORE INTO judgmentCacheEntries
 			 (promptHash, model, rendererVersion, judgmentJson, generation)
@@ -291,7 +324,23 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 						return;
 					}
 					const changeCount = Number(rows[0].changeCount);
-					callback('', { stored: changeCount === 1, alreadyPresent: changeCount === 0 });
+					const putResult = { stored: changeCount === 1, alreadyPresent: changeCount === 0 };
+					// the first writer's spend stays with the first writer's answer (INSERT OR IGNORE, like the row itself)
+					if (fillingSpendCallList === undefined) {
+						callback('', putResult);
+						return;
+					}
+					runSql(
+						`INSERT OR IGNORE INTO judgmentFillingSpend (promptHash, model, rendererVersion, fillingSpendCallListJson)
+						 VALUES (${esc(promptHash)}, ${esc(model)}, ${esc(rendererVersion)}, ${esc(JSON.stringify(fillingSpendCallList))});`,
+						(sidecarErr) => {
+							if (sidecarErr) {
+								callback(`judgmentCache.putJudgment: the judgment was stored but its filling spend was not: ${sidecarErr}`);
+								return;
+							}
+							callback('', putResult);
+						},
+					);
 				});
 			},
 		);

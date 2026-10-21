@@ -96,6 +96,9 @@ const run = spawnSync(
 		'--createStore=true', // W-C-11: this gate STARTS a cold isolated cache on purpose, and a new cache must be asked for
 		`--buildLogsDirPath=${scratchBuildLogsDirPath}`,
 		'--vectorize=true',
+		// ⟪spend ledger R1⟫ the fixture pricing table and a scratch lifetime ledger: a gate run is not a line in the real record of spend
+		`--spendPricingFilePath=${path.join(treeRoot, 'lib', 'spend-ledger', 'test', 'fixtures', 'spendPricing-fixture.ini')}`,
+		`--lifetimeLedgerFilePath=${path.join(scratchDir, 'spendLedgerLifetime.jsonl')}`,
 	],
 	{ encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
 );

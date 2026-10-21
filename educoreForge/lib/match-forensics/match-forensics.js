@@ -31,6 +31,9 @@
 
 const path = require('path');
 const fs = require('fs');
+// ⟪spend ledger R1, 2026-10-21⟫ spendRecord: what the attempt cost (lib/spend-ledger/spendRecord.js JUDGE_SPEND_RECORD_FIELD_LIST),
+// on every judgment and refused-attempt record; the shape is the spend module's, checked here so a malformed one never lands
+const { judgeSpendRecordViolation } = require(path.join(__dirname, '..', 'spend-ledger', 'spendRecord'));
 
 // THE RECORD CONTRACT (W-B-8, V1-C15 / V1-S83/S88/S89; campaign P3 2026-10-06). The writer owns the shape: three kinds
 // of record reach this trail, each with ONE declared key set, and appendRecord refuses any other by name, listing the
@@ -47,11 +50,11 @@ const MATCH_FORENSICS_RECORD_FIELD_LIST = Object.freeze([
 	'promptHash', 'rendererVersion', 'judgeModel', 'decisionAlgorithm', 'systemPrompt', 'userPrompt', 'reaskUserPrompt',
 	'renderedPoolStableIdList', 'choice', 'chosenCardStableId', 'category', 'reportedCategoryOnAbstain', 'sourceElementIdeaList',
 	'candidateIdeaList', 'sortedCandidateList', 'ideaCoverage', 'rationale', 'judgeSummary', 'confidence', 'cacheHit', 'attempts', 'usage',
-	'discardedPredicateKeyCount', 'reaskCount',
+	'discardedPredicateKeyCount', 'reaskCount', 'spendRecord',
 ]);
 const MATCH_FORENSICS_REFUSED_ATTEMPT_FIELD_LIST = Object.freeze([
 	'promptHash', 'rendererVersion', 'judgeModel', 'decisionAlgorithm', 'systemPrompt', 'userPrompt', 'renderedPoolStableIdList',
-	'choice', 'chosenCardStableId', 'category', 'rationale', 'confidence', 'cacheHit', 'attempts', 'usage', 'refusedAttempt', 'reaskFollows',
+	'choice', 'chosenCardStableId', 'category', 'rationale', 'confidence', 'cacheHit', 'attempts', 'usage', 'spendRecord', 'refusedAttempt', 'reaskFollows',
 ]);
 const MATCH_FORENSICS_MAPPING_REVIEW_FIELD_LIST = Object.freeze(['kind', 'conflictList']);
 const MATCH_FORENSICS_RECORD_SHAPE_BY_KIND = Object.freeze({
@@ -82,7 +85,11 @@ const recordShapeViolation = (record) => {
 		return `matchForensics.appendRecord: a '${recordKind}' record must carry exactly its declared fields (MATCH_FORENSICS_RECORD_SHAPE_BY_KIND); extra [${extraList.join(', ')}], missing [${missingList.join(', ')}]`;
 	}
 	const usageFault = recordKind === 'mappingReview' ? '' : usageViolation(record.usage);
-	return usageFault ? `matchForensics.appendRecord: ${usageFault} (JUDGE_USAGE_FIELD_LIST)` : '';
+	if (usageFault) {
+		return `matchForensics.appendRecord: ${usageFault} (JUDGE_USAGE_FIELD_LIST)`;
+	}
+	const spendFault = recordKind === 'mappingReview' ? '' : judgeSpendRecordViolation(record.spendRecord);
+	return spendFault ? `matchForensics.appendRecord: ${spendFault} (JUDGE_SPEND_RECORD_FIELD_LIST)` : '';
 };
 
 // START OF moduleFunction() ============================================================
