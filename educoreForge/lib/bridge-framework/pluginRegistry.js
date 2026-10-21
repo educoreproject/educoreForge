@@ -22,7 +22,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   lookupPlugin({ registry, bridgeName, standardKey })              → { entry } | { error }
 //   registerStructuralProducer({ producerModule, producerFilePath, bundleDirPath }) → { entry } | { error }
 //   lookupStructuralProducer({ registry, producerName, standardKey }) → { entry } | { error }
-//   standardBridgingFor({ forgesDirPath, standardKey })              → { bridgingFilePath, standardBridging } | { error }
+//   standardBridgingFor({ forgesDirPath, standardKey, bridgingOverlayDirPath? }) → { bridgingFilePath, standardBridging } | { error }
 //
 // ⟪ctdlHub P6, ruling R-3⟫ A SECOND MODULE SHAPE: a file under bridges/ exporting EXACTLY { structuralDeclaration } is a STRUCTURAL
 // producer (structuralProducerContract.js), registered into its OWN map, structuralEntryByName, never into entryByBridgeName: every
@@ -119,40 +119,53 @@ const registerStructuralProducer = ({ producerModule, producerFilePath, bundleDi
 // <bundle>/bridges/<file>.js; each file there REPLACES the tree's standard bridging file of the same path for this registry only
 // (a debug run of a pairing nobody has shipped). An overlay file with no tree counterpart, or whose counterpart is not a standard
 // bridging file, is refused by name; the overlay never adds or removes a file. Absent, the tree is read as it stands.
+// Returns { overlaidFilePathByTreePath } | { error }: the registry builder throws the refusal, standardBridgingFor (a recipe load)
+// returns it.
 const overlaidFilePathByTreePathFor = ({ forgesDirPath, bridgingOverlayDirPath }) => {
 	if (bridgingOverlayDirPath === undefined) {
-		return {};
+		return { overlaidFilePathByTreePath: {} };
 	}
 	if (typeof bridgingOverlayDirPath !== 'string' || !path.isAbsolute(bridgingOverlayDirPath) || !fs.existsSync(bridgingOverlayDirPath) || !fs.statSync(bridgingOverlayDirPath).isDirectory()) {
-		throw refuse.byName({ moduleName, what: `bridgingOverlayDirPath ${JSON.stringify(bridgingOverlayDirPath)} is not an absolute directory`, where: 'the overlay mirrors <bundle>/bridges/<file>.js' });
+		return { error: refuse.byName({ moduleName, what: `bridgingOverlayDirPath ${JSON.stringify(bridgingOverlayDirPath)} is not an absolute directory`, where: 'the overlay mirrors <bundle>/bridges/<file>.js' }) };
 	}
 	const overlaidFilePathByTreePath = {};
+	const refusalList = [];
 	fs.readdirSync(bridgingOverlayDirPath, { withFileTypes: true }).filter((oneEntry) => oneEntry.isDirectory()).map((oneEntry) => oneEntry.name).sort().forEach((oneBundleName) => {
 		const overlayBridgesDirPath = path.join(bridgingOverlayDirPath, oneBundleName, BRIDGES_DIR_NAME);
 		const overlayFileNameList = fs.existsSync(overlayBridgesDirPath) ? fs.readdirSync(overlayBridgesDirPath).filter((oneName) => /\.js$/.test(oneName)).sort() : [];
 		if (overlayFileNameList.length === 0) {
-			throw refuse.byName({ moduleName, what: `overlay bundle ${oneBundleName} holds no ${BRIDGES_DIR_NAME}/*.js`, where: 'the overlay mirrors <bundle>/bridges/<file>.js' });
+			refusalList.push(refuse.byName({ moduleName, what: `overlay bundle ${oneBundleName} holds no ${BRIDGES_DIR_NAME}/*.js`, where: 'the overlay mirrors <bundle>/bridges/<file>.js' }));
+			return;
 		}
 		overlayFileNameList.forEach((oneFileName) => {
 			const treeFilePath = path.join(forgesDirPath, oneBundleName, BRIDGES_DIR_NAME, oneFileName);
 			const overlayFilePath = path.join(overlayBridgesDirPath, oneFileName);
 			if (!fs.existsSync(treeFilePath)) {
-				throw refuse.byName({ moduleName, what: `overlay file ${overlayFilePath} has no tree counterpart ${treeFilePath}`, where: 'an overlay replaces a standard bridging file; it never adds one' });
+				refusalList.push(refuse.byName({ moduleName, what: `overlay file ${overlayFilePath} has no tree counterpart ${treeFilePath}`, where: 'an overlay replaces a standard bridging file; it never adds one' }));
+				return;
 			}
 			if (!Object.prototype.hasOwnProperty.call(require(treeFilePath), STANDARD_BRIDGING_EXPORT_NAME)) {
-				throw refuse.byName({ moduleName, what: `overlay file ${overlayFilePath} replaces ${treeFilePath}, which is not a standard bridging file`, where: 'only a standard bridging file may be overlaid' });
+				refusalList.push(refuse.byName({ moduleName, what: `overlay file ${overlayFilePath} replaces ${treeFilePath}, which is not a standard bridging file`, where: 'only a standard bridging file may be overlaid' }));
+				return;
 			}
 			overlaidFilePathByTreePath[treeFilePath] = overlayFilePath;
 		});
 	});
-	return overlaidFilePathByTreePath;
+	if (refusalList.length) {
+		return { error: refusalList[0] };
+	}
+	return { overlaidFilePathByTreePath };
 };
 
 const buildRegistryFromDirectory = ({ forgesDirPath, requireModule, pluginModuleTransform, bridgingOverlayDirPath } = {}) => {
 	if (typeof forgesDirPath !== 'string' || !fs.existsSync(forgesDirPath) || !fs.statSync(forgesDirPath).isDirectory()) {
 		throw refuse.byName({ moduleName, what: `forgesDirPath ${JSON.stringify(forgesDirPath)} is not a directory`, where: 'the seam face passes the tree\'s forges/ directory' });
 	}
-	const overlaidFilePathByTreePath = overlaidFilePathByTreePathFor({ forgesDirPath, bridgingOverlayDirPath });
+	const overlayResolution = overlaidFilePathByTreePathFor({ forgesDirPath, bridgingOverlayDirPath });
+	if (overlayResolution.error) {
+		throw overlayResolution.error;
+	}
+	const { overlaidFilePathByTreePath } = overlayResolution;
 	const loadModule = typeof requireModule === 'function' ? requireModule : (oneFilePath) => require(oneFilePath);
 	if (pluginModuleTransform !== undefined && typeof pluginModuleTransform !== 'function') {
 		throw refuse.byName({ moduleName, what: `pluginModuleTransform is a ${typeof pluginModuleTransform}, not a function`, where: 'the optional test seam that lays an edit over each plugin module before registration' });
@@ -297,7 +310,10 @@ const lookupStructuralProducer = ({ registry, producerName, standardKey } = {}) 
 // convention discovery uses (bridges/*.js, the forbidden-substrate scan BEFORE the file is loaded, told apart by its export), for
 // the recipe expansion: a new-form recipe entry names a source and its hubs, and the bridge names are derived from this file.
 // None, or more than one, is refused by name; the pairing itself is still confirmed at run by lookupPlugin.
-const standardBridgingFor = ({ forgesDirPath, standardKey } = {}) => {
+// bridgingOverlayDirPath (optional): the same P-c test seam buildRegistryFromDirectory takes, so a new-form recipe can name a
+// pairing only the overlay declares; the bridging file is still FOUND in the tree, then read from its overlay copy when one
+// exists (the overlay never adds a file). An overlay fault is returned as the refusal, never thrown.
+const standardBridgingFor = ({ forgesDirPath, standardKey, bridgingOverlayDirPath } = {}) => {
 	if (typeof forgesDirPath !== 'string' || !path.isAbsolute(forgesDirPath) || typeof standardKey !== 'string' || standardKey === '') {
 		return { error: refuse.byName({ moduleName, what: `forgesDirPath ${JSON.stringify(forgesDirPath)} / standardKey ${JSON.stringify(standardKey)}: an absolute forges directory and a standard token are both required`, where: 'the caller passes the tree\'s forges/ directory (each bridging file is required by its path)' }) };
 	}
@@ -328,7 +344,13 @@ const standardBridgingFor = ({ forgesDirPath, standardKey } = {}) => {
 	if (bridgingFilePathList.length !== 1) {
 		return { error: refuse.byName({ moduleName, what: `standard '${standardKey}' has ${bridgingFilePathList.length} standard bridging files under ${bridgesDirPath} [${bridgingFilePathList.map((oneFilePath) => path.basename(oneFilePath)).join(', ')}], not exactly one`, where: 'a recipe entry naming hubs[] derives its bridge names from the standard\'s ONE bridging file' }) };
 	}
-	return { bridgingFilePath: bridgingFilePathList[0], standardBridging: require(bridgingFilePathList[0])[STANDARD_BRIDGING_EXPORT_NAME] };
+	const overlayResolution = overlaidFilePathByTreePathFor({ forgesDirPath, bridgingOverlayDirPath });
+	if (overlayResolution.error) {
+		return { error: overlayResolution.error };
+	}
+	const treeBridgingFilePath = bridgingFilePathList[0];
+	const bridgingFilePath = overlayResolution.overlaidFilePathByTreePath[treeBridgingFilePath] === undefined ? treeBridgingFilePath : overlayResolution.overlaidFilePathByTreePath[treeBridgingFilePath];
+	return { bridgingFilePath, standardBridging: require(bridgingFilePath)[STANDARD_BRIDGING_EXPORT_NAME] };
 };
 
 module.exports = { registerPlugin, registerStructuralProducer, buildRegistryFromDirectory, standardBridgingFor, lookupPlugin, lookupStructuralProducer, registeredNameText, BRIDGES_DIR_NAME, moduleName };

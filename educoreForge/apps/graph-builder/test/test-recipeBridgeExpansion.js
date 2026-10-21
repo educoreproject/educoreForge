@@ -13,6 +13,8 @@
 //       params carried, old-form and structural entries untouched and in place
 //   (d) refusals by name: hubs mixed with hub/bridge; hubs empty or repeated; facet omitted for a many-facet standard; a facet
 //       or hub the standard does not declare; a new-form recipe loaded with no forgesDirPath or a relative one
+//   (e) the bridging overlay (pluginRegistry's P-c test seam) reaches the expansion: a pairing only the overlay declares expands
+//       through loadRecipe's bridgingOverlayDirPath, and an overlay fault comes back as a refusal, never a throw
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -126,6 +128,22 @@ harness.ok('loadRecipe of a new-form recipe with no forgesDirPath is refused by 
 harness.ok('loadRecipe with a relative forgesDirPath is refused by name', /an absolute forges directory and a standard token are both required/.test(recipeLib.loadRecipe(newFormRecipePath, { forgesDirPath: 'forges' }).error || ''));
 harness.equal('loadRecipe with the tree\'s forges directory expands it', JSON.stringify((recipeLib.loadRecipe(newFormRecipePath, { forgesDirPath: FORGES_DIR_PATH }).recipe || {}).bridges), JSON.stringify([{ source: 'edfi', hub: 'ceds', bridge: 'edfiCedsDerivedPlugin', dependencies: ['edfi', 'ceds'] }]));
 harness.ok('loadRecipe keeps the file\'s own text as recipeText (the recipeHash is of the text)', recipeLib.loadRecipe(newFormRecipePath, { forgesDirPath: FORGES_DIR_PATH }).recipeText === fs.readFileSync(newFormRecipePath, 'utf8'));
+
+harness.section('(e) the bridging overlay reaches the expansion (deCeds R3 P-c: a new-form recipe may name a pairing only the overlay declares)');
+const PC_OVERLAY_DIR_PATH = path.join(__dirname, 'fixtures', 'deCedsPcOverlay');
+const pcRecipePath = path.join(scratchDirectoryPath, 'pcEdfiCtdl.recipe.jsonc');
+fs.writeFileSync(pcRecipePath, JSON.stringify({ recipeName: 'pcEdfiCtdl', kind: 'dev', bridges: [{ source: 'edfi', hubs: ['ctdl'], dependencies: ['edfi', 'ctdl'] }] }));
+harness.ok('without the overlay, edfi→ctdl is refused at load (the shipped tree declares no such pair)', /does not pair with hub\(s\) \[ctdl\]/.test(recipeLib.loadRecipe(pcRecipePath, { forgesDirPath: FORGES_DIR_PATH }).error || ''));
+const overlaidLoad = recipeLib.loadRecipe(pcRecipePath, { forgesDirPath: FORGES_DIR_PATH, bridgingOverlayDirPath: PC_OVERLAY_DIR_PATH });
+harness.equal('with the overlay, it expands to the bridge the overlaid registry registers', JSON.stringify((overlaidLoad.recipe || {}).bridges || overlaidLoad.error), JSON.stringify([{ source: 'edfi', hub: 'ctdl', bridge: 'edfiCtdlDerivedPlugin', dependencies: ['edfi', 'ctdl'] }]));
+const overlaidFound = pluginRegistryLib.standardBridgingFor({ forgesDirPath: FORGES_DIR_PATH, standardKey: 'edfi', bridgingOverlayDirPath: PC_OVERLAY_DIR_PATH });
+harness.equal('standardBridgingFor names the OVERLAY file it read', overlaidFound.bridgingFilePath, path.join(PC_OVERLAY_DIR_PATH, 'edfi', 'bridges', 'edfiBridging.js'));
+harness.equal('a standard the overlay does not cover reads the tree file', (pluginRegistryLib.standardBridgingFor({ forgesDirPath: FORGES_DIR_PATH, standardKey: 'sif', bridgingOverlayDirPath: PC_OVERLAY_DIR_PATH }).bridgingFilePath || ''), path.join(FORGES_DIR_PATH, 'sif', 'bridges', 'sifBridging.js'));
+harness.ok('a relative overlay is RETURNED as a refusal by name (never thrown out of a recipe load)', /bridgingOverlayDirPath "fixtures\/deCedsPcOverlay" is not an absolute directory/.test(recipeLib.loadRecipe(pcRecipePath, { forgesDirPath: FORGES_DIR_PATH, bridgingOverlayDirPath: 'fixtures/deCedsPcOverlay' }).error || ''));
+const strayOverlayDirPath = path.join(scratchDirectoryPath, 'strayOverlay');
+fs.mkdirSync(path.join(strayOverlayDirPath, 'edfi', 'bridges'), { recursive: true });
+fs.writeFileSync(path.join(strayOverlayDirPath, 'edfi', 'bridges', 'notInTheTree.js'), "'use strict';\nmodule.exports = {};\n");
+harness.ok('an overlay file with no tree counterpart is RETURNED as a refusal by name', /has no tree counterpart/.test(recipeLib.loadRecipe(pcRecipePath, { forgesDirPath: FORGES_DIR_PATH, bridgingOverlayDirPath: strayOverlayDirPath }).error || ''));
 fs.rmSync(scratchDirectoryPath, { recursive: true, force: true });
 
 harness.report();

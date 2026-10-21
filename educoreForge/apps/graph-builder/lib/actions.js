@@ -395,9 +395,19 @@ const readAndValidate = (actionName) => {
 		};
 	}
 
-	const loaded = recipeLib.loadRecipe(recipePath, { forgesDirPath: FORGES_DIR });
+	// ⟪deCeds R3 P-c⟫ the bridging overlay is a test/scratch seam: it must reach the recipe LOAD (a new-form entry may name a
+	// pairing only the overlay declares, and the expansion reads the bridging file), so it is checked before the load, and
+	// refused for any recipe whose kind is not dev right after it (no recipe of record runs an unshipped bridge)
+	const bridgingOverlayDirPath = firstValue(commandLineParameters, 'bridgingOverlayDirPath');
+	if (bridgingOverlayDirPath !== undefined && !(path.isAbsolute(bridgingOverlayDirPath) && fs.existsSync(bridgingOverlayDirPath))) {
+		return { recipePath, error: `graphBuilder ${actionName}: --bridgingOverlayDirPath ${JSON.stringify(bridgingOverlayDirPath)} is not an absolute, existing directory` };
+	}
+	const loaded = recipeLib.loadRecipe(recipePath, { forgesDirPath: FORGES_DIR, ...(bridgingOverlayDirPath === undefined ? {} : { bridgingOverlayDirPath }) });
 	if (loaded.error) {
 		return { recipePath, loadError: loaded.error };
+	}
+	if (bridgingOverlayDirPath !== undefined && loaded.recipe.kind !== 'dev') {
+		return { recipePath, error: `graphBuilder ${actionName}: --bridgingOverlayDirPath is a test/scratch seam and recipe '${loaded.recipe.recipeName}' is kind ${JSON.stringify(loaded.recipe.kind)}; it is refused for every kind but dev, so no recipe of record runs an unshipped bridge` };
 	}
 
 	xLog.status(recipeLib.summarizeRecipe(loaded.recipe));
@@ -441,21 +451,12 @@ const build = (callback) => {
 	}
 
 	const { verdict, recipe } = read;
-	// ⟪deCeds R3 P-c⟫ the two zero-spend/scratch flags are checked BEFORE anything is opened: --embeddingCacheOnly is read by the
-	// embedding client itself, so a malformed value is refused here by name rather than thrown from inside the forge; the bridging
-	// overlay is a test/scratch seam, refused for any recipe whose kind is not dev (no recipe of record runs an unshipped bridge)
+	// ⟪deCeds R3 P-c⟫ --embeddingCacheOnly is checked BEFORE anything is opened: the embedding client reads it itself, so a
+	// malformed value is refused here by name rather than thrown from inside the forge (the bridging overlay is checked in
+	// readAndValidate, because it must reach the recipe load)
 	const embeddingCacheOnlyRead = readOptionalBooleanValue({ name: 'embeddingCacheOnly', commandLineParameters: process.global.commandLineParameters, moduleName: 'graphBuilder -build', whatItControls: 'whether a vector-cache miss is a stop instead of a Voyage call', defaultValue: false });
 	if (embeddingCacheOnlyRead.error) {
 		callback(embeddingCacheOnlyRead.error);
-		return;
-	}
-	const bridgingOverlayDirPath = firstValue(process.global.commandLineParameters, 'bridgingOverlayDirPath');
-	if (bridgingOverlayDirPath !== undefined && recipe.kind !== 'dev') {
-		callback(`graphBuilder -build: --bridgingOverlayDirPath is a test/scratch seam and recipe '${recipe.recipeName}' is kind ${JSON.stringify(recipe.kind)}; it is refused for every kind but dev, so no recipe of record runs an unshipped bridge`);
-		return;
-	}
-	if (bridgingOverlayDirPath !== undefined && !(path.isAbsolute(bridgingOverlayDirPath) && fs.existsSync(bridgingOverlayDirPath))) {
-		callback(`graphBuilder -build: --bridgingOverlayDirPath ${JSON.stringify(bridgingOverlayDirPath)} is not an absolute, existing directory`);
 		return;
 	}
 	const passFail = (layer) => (layer.ran ? (layer.ok ? 'PASS' : 'FAIL') : 'skipped');

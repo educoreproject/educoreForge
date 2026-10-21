@@ -646,6 +646,19 @@ harness.match('  refused by name: a test/scratch seam, for no kind but dev', ove
 harness.ok('  refused BEFORE phase A', !/phase A \(forge\) failed/.test(overlayGolden.stderr), overlayGolden.stderr);
 const overlayRelative = runCli(buildVecArgs('--bridgingOverlayDirPath=some/relative/dir'));
 harness.match('a relative overlay directory is refused by name', overlayRelative.stderr, /--bridgingOverlayDirPath "some\/relative\/dir" is not an absolute, existing directory/);
+// the overlay must reach the recipe LOAD: a new-form entry naming a pairing only the overlay declares (edfi→ctdl, the P-c fixture)
+// validates with it and is refused at load without it; -validate shares the check with -build (readAndValidate)
+const pcOverlayDirPath = path.join(__dirname, 'fixtures', 'deCedsPcOverlay');
+const pcRecipePath = path.join(scratchDir, `pcEdfiCtdl_${process.pid}.recipe.jsonc`);
+fs.writeFileSync(pcRecipePath, JSON.stringify({ schemaVersion: '1.0.0', recipeName: 'pcEdfiCtdl', kind: 'dev', description: 'P-c fixture recipe', standards: [{ token: 'ceds', version: 'current' }, { token: 'edfi', version: 'current' }, { token: 'ctdl', version: 'current' }], hubs: [{ standard: 'ceds' }, { standard: 'ctdl' }], bridges: [{ source: 'edfi', hubs: ['ctdl'], dependencies: ['edfi', 'ctdl'] }] }));
+const pcValidateWithOverlay = runCli(['-validate', '--recipePath=' + pcRecipePath, '--bridgingOverlayDirPath=' + pcOverlayDirPath]);
+harness.equal('-validate of a new-form edfi→ctdl dev recipe WITH the overlay exits 0', pcValidateWithOverlay.status, 0);
+harness.ok('  and its verdict is valid, its one bridge edfi->ctdl', (parsedStdout(pcValidateWithOverlay) || {}).valid === true && /bridges:\s+1\s+\[edfi->ctdl\]/.test(pcValidateWithOverlay.stdout + pcValidateWithOverlay.stderr), pcValidateWithOverlay.stdout + pcValidateWithOverlay.stderr);
+const pcValidateWithoutOverlay = runCli(['-validate', '--recipePath=' + pcRecipePath]);
+harness.equal('-validate of the same recipe WITHOUT the overlay exits 1', pcValidateWithoutOverlay.status, 1);
+harness.match('  refused at load: the shipped tree declares no edfi→ctdl pair', pcValidateWithoutOverlay.stdout + pcValidateWithoutOverlay.stderr, /does not pair with hub\(s\) \[ctdl\]/);
+const pcValidateGoldenOverlay = runCli(['-validate', '--recipePath=' + goldenFixturePath, '--bridgingOverlayDirPath=' + pcOverlayDirPath]);
+harness.match('-validate refuses the overlay for a golden recipe too', pcValidateGoldenOverlay.stderr, /graphBuilder -validate: --bridgingOverlayDirPath is a test\/scratch seam and recipe .* is kind "golden"/);
 harness.match('-help documents --embeddingCacheOnly', helpRun.stdout, /--embeddingCacheOnly=true\|false/);
 harness.match('-help documents --bridgingOverlayDirPath', helpRun.stdout, /--bridgingOverlayDirPath=<absolute dir>/);
 

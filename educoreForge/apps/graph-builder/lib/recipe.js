@@ -199,7 +199,9 @@ const validateStructural = ajv.compile(RECIPE_SCHEMA);
 // { source, hubs:[...], dependencies, facet?, params? } is EXPANDED here to one old-form entry per hub (recipe-bridge-
 // expansion.js), so the schema and everything after it read the entries they always read. forgesDirPath (absolute) is needed
 // only for such a recipe, and its absence then is refused by name. recipeText stays the file's own text (the recipeHash).
-const loadRecipe = (recipePath, { forgesDirPath } = {}) => {
+// bridgingOverlayDirPath (optional, the P-c test seam, ⟪deCeds R3⟫): passed to pluginRegistry.standardBridgingFor so the
+// expansion reads the same overlaid bridging file the build's registry will; the caller decides who may use it (actions.js).
+const loadRecipe = (recipePath, { forgesDirPath, bridgingOverlayDirPath } = {}) => {
 	if (!recipePath) {
 		return { error: 'no recipe path given' };
 	}
@@ -223,7 +225,7 @@ const loadRecipe = (recipePath, { forgesDirPath } = {}) => {
 	}
 	const expanded = recipeBridgeExpansionLib.expandRecipeBridges({
 		recipe,
-		standardBridgingFor: forgesDirPath === undefined ? undefined : (sourceToken) => pluginRegistryLib.standardBridgingFor({ forgesDirPath, standardKey: sourceToken }),
+		standardBridgingFor: forgesDirPath === undefined ? undefined : (sourceToken) => pluginRegistryLib.standardBridgingFor({ forgesDirPath, standardKey: sourceToken, bridgingOverlayDirPath }),
 	});
 	if (expanded.error) {
 		return { error: `recipe bridges[] do not expand: ${expanded.error.message}` };
