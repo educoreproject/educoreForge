@@ -93,7 +93,8 @@ regConjunctList.push(
 		shape: (scenario) => withScratchForges(scenario, (scratchForgesDir) => { fs.copyFileSync(path.join(scratchForgesDir, 'toy', 'bridges', 'toyCrosswalkPlugin.js'), path.join(scratchForgesDir, 'toy', 'bridges', 'zzDuplicate.js')); }),
 		regex: /bridgeName 'toyCrosswalkPlugin' is declared by TWO plugin files: .*toyCrosswalkPlugin\.js and .*zzDuplicate\.js/,
 		twinName: 'disableDuplicateNameCheck', fileName: REGISTRY_FILE,
-		find: '\t\t\tif (existing !== undefined) {\n\t\t\t\tthrow refuse.byName({ moduleName, what: `bridgeName', replace: '\t\t\tif (false && existing !== undefined) {\n\t\t\t\tthrow refuse.byName({ moduleName, what: `bridgeName',
+		// ⟪hub-neutral bridge lane R3⟫ re-anchored: the registration now runs once per (composed or file) plugin module, one level deeper
+		find: '\t\t\t\tif (existing !== undefined) {\n\t\t\t\t\tthrow refuse.byName({ moduleName, what: `bridgeName', replace: '\t\t\t\tif (false && existing !== undefined) {\n\t\t\t\t\tthrow refuse.byName({ moduleName, what: `bridgeName',
 	}),
 );
 regConjunctList.push(
@@ -103,8 +104,9 @@ regConjunctList.push(
 	shape: (scenario) => withScratchForges(scenario, (scratchForgesDir) => { fs.writeFileSync(path.join(scratchForgesDir, 'toy', 'bridges', 'notes.js'), "'use strict';\nmodule.exports = {};\n"); }),
 	regex: /plugin file .*notes\.js does not export \{ bridgeDeclaration, bridgeHooks, bridgeTarget \}/,
 	twinName: 'ignoreStrayFile', fileName: REGISTRY_FILE,
-	find: '\t\t\tconst registered = registerPlugin({ pluginModule: loadModule(pluginFilePath), pluginFilePath, bundleDirPath });\n\t\t\tif (registered.error) {\n\t\t\t\tthrow registered.error;\n\t\t\t}',
-	replace: '\t\t\tconst registered = registerPlugin({ pluginModule: loadModule(pluginFilePath), pluginFilePath, bundleDirPath });\n\t\t\tif (registered.error) {\n\t\t\t\treturn;\n\t\t\t}',
+	// ⟪hub-neutral bridge lane R3⟫ re-anchored: the registration now runs once per (composed or file) plugin module, one level deeper
+	find: '\t\t\t\tconst registered = registerPlugin({ pluginModule: onePluginModule, pluginFilePath, bundleDirPath });\n\t\t\t\tif (registered.error) {\n\t\t\t\t\tthrow registered.error;\n\t\t\t\t}',
+	replace: '\t\t\t\tconst registered = registerPlugin({ pluginModule: onePluginModule, pluginFilePath, bundleDirPath });\n\t\t\t\tif (registered.error) {\n\t\t\t\t\treturn;\n\t\t\t\t}',
 	}),
 
 	refusalCase({
