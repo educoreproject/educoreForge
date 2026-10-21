@@ -37,6 +37,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // A DEBUG client (debugMark set) reads NO cache and writes NO row (the hazard debugJudge.js names: "no debug values in the cache"). Forensics: matchForensics.appendRecord with the prompt inline,
 // renderedPoolStableIdList beside the ordinal, usage, latency-free (no clock in the framework — BG-DET).
 // Budget: a DECLARED per-run maxJudgmentCount HALTS by name; the counter lives in the caller's run scope.
+// ⟪spend ledger R1, 2026-10-21⟫ Spend: every forensic record carries a spendRecord (lib/spend-ledger/spendRecord.js) for ITS
+// attempt, priced by the caller's spendPricer, and the result carries spendRecordList (a refused-then-re-asked unit has
+// two) for the bridge's judgeSpend. latencyMs is the number build.js's metering wrapper stamped on the client's return:
+// this file still reads no clock. The calls that filled a cache row ride BESIDE its key (judgment-cache's sidecar), so
+// the key is what it was; a hit prices what it saved from them.
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
@@ -44,6 +49,7 @@ const { ABSTAIN_TOKEN } = require('./evidenceRenderer');
 const { confidenceForCategory, ABSTAIN_CATEGORY, PICK_CATEGORY_LIST } = require('./confidenceBandTable');
 const { PREDICATE_FIELD_BY_PREDICATE_RULE } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'selectCandidateSchema'));
 const { judgeSummaryRefusal } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const spendRecordLib = require(path.join(__dirname, '..', 'spend-ledger', 'spendRecord'));
 
 // judgeSummaryOf — ⟪campaign P3, W-B-3 (V1-C08)⟫ the provider's own numbers, carried VERBATIM from its return to the cache
 // row, the forensic record and the frozen record. An ABSENT member is null (a provider that reports none); a present one
@@ -294,7 +300,7 @@ const REASK_INSTRUCTION_BY_FAULT = Object.freeze({
 const REASKABLE_FAULT_NAME_LIST = Object.freeze(Object.keys(REASK_INSTRUCTION_BY_FAULT));
 const reaskableFaultNameOf = (judged) => REASKABLE_FAULT_NAME_LIST.find((oneFaultName) => judged[oneFaultName] === true);
 
-const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor, judgeConfigCacheDigest } = {}, callback) => {
+const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor, judgeConfigCacheDigest, spendPricer } = {}, callback) => {
 	if (!isPlainObject(question) || !Array.isArray(question.renderedPoolStableIdList) || !Array.isArray(question.choiceEnum) || typeof question.promptHash !== 'string') {
 		callback(refuse.byName({ moduleName, what: 'question is not a renderQuestion result', where: 'judgeOne takes { question, judgeClient, judgmentCache, matchForensics, budget, pairKey, generation, debugMark, reaskPromptRefusalFor, judgeConfigCacheDigest }' }).message);
 		return;
@@ -340,6 +346,19 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 	const questionPredicateField = PREDICATE_FIELD_BY_PREDICATE_RULE[question.judgePredicateRule];
 	const predicateByFieldNameOf = (judgmentLike) => (questionPredicateField === null || judgmentLike[questionPredicateField.fieldName] === undefined ? {} : { [questionPredicateField.fieldName]: judgmentLike[questionPredicateField.fieldName] });
 	const cacheKey = { promptHash: question.promptHash, model: cacheModelFor({ model: judgeClient.model, judgeConfigCacheDigest }), rendererVersion: question.rendererVersion };
+	if (!isDebugClient && (!spendPricer || typeof spendPricer.usdFor !== 'function')) {
+		callback(refuse.byName({ moduleName, what: 'spendPricer is absent', where: 'a real-judge run prices every call it makes (build.js loads it from [spendLedger].spendPricingFilePath); there is no default' }).message);
+		return;
+	}
+
+	// ⟪spend ledger R1⟫ the unit's paid attempts, in order: { spendCallList, latencyMs } as the client returned them. The FIRST
+	// may be a refused attempt that was re-asked; the LAST is the answer delivered. A hit makes none.
+	const attemptSpendList = [];
+	let hitFillingSpendCallList = null;
+	const attemptSpendRecordFor = (attemptSpend) => spendRecordLib.judgeSpendRecordFor({ judgeName: judgeClient.name, judgeModel: judgeClient.model, spendCallList: attemptSpend.spendCallList, latencyMs: attemptSpend.latencyMs, cacheHit: false, isDebugClient, spendPricer });
+	const deliveredSpendRecordFor = ({ cacheHit }) => (cacheHit ? spendRecordLib.judgeSpendRecordFor({ judgeName: judgeClient.name, judgeModel: judgeClient.model, cacheHit: true, fillingSpendCallList: hitFillingSpendCallList, isDebugClient, spendPricer }) : attemptSpendRecordFor(attemptSpendList[attemptSpendList.length - 1]));
+	// every paid call of the unit, refused attempt included: what it cost to fill the cache row
+	const unitSpendCallList = () => attemptSpendList.reduce((soFar, attemptSpend) => soFar.concat(attemptSpend.spendCallList), []);
 
 	// ⟪RULING 14:10, from my own forensic-fidelity note⟫ reaskUserPrompt — the ACCEPTED record logged
 	// question.userPrompt, the ORIGINAL, even when the answer it carries was given to the RE-ASK prompt. The
@@ -348,6 +367,13 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 	// and the cache key's basis); the re-ask text rides beside it, null when there was no re-ask, so a reader
 	// can always see the text that was actually answered.
 	const deliver = ({ judgment, cacheHit, attempts, usage, reaskUserPrompt }) => {
+		const delivered = deliveredSpendRecordFor({ cacheHit });
+		if (delivered.error) {
+			callback(delivered.error);
+			return;
+		}
+		// the refused attempt's record (if any) came first; the bridge's judgeSpend adds each
+		const spendRecordList = attemptSpendList.length > 1 ? [attemptSpendRecordFor(attemptSpendList[0]).spendRecord, delivered.spendRecord] : [delivered.spendRecord];
 		matchForensics.appendRecord(
 			{
 				pairKey,
@@ -382,6 +408,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					cacheHit,
 					attempts,
 					usage: usage === undefined ? null : usage,
+					spendRecord: delivered.spendRecord,
 					// ⟪B3b, 2026-09-28⟫ the verified predicate, only under a rule with a predicate slot
 					...predicateByFieldNameOf(judgment),
 					discardedPredicateKeyCount: judgment.discardedPredicateKeyCount,
@@ -393,7 +420,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					callback(`${moduleName}: forensic record failed for promptHash ${question.promptHash}: ${forensicsError}`);
 					return;
 				}
-				callback('', { ...judgment, promptHash: question.promptHash, cacheHit, judgeModel: judgeClient.model, attempts, usage: usage === undefined ? null : usage });
+				callback('', { ...judgment, promptHash: question.promptHash, cacheHit, judgeModel: judgeClient.model, attempts, usage: usage === undefined ? null : usage, spendRecordList });
 			},
 		);
 	};
@@ -423,6 +450,12 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 					askCallback(`${moduleName}: the judge refused promptHash ${question.promptHash}: ${rerankError}`);
 					return;
 				}
+				attemptSpendList.push({ spendCallList: clientReturn ? clientReturn.spendCallList : undefined, latencyMs: clientReturn ? clientReturn.latencyMs : undefined });
+				const attemptSpend = attemptSpendRecordFor(attemptSpendList[attemptSpendList.length - 1]);
+				if (attemptSpend.error) {
+					askCallback(attemptSpend.error);
+					return;
+				}
 				const judged = judgmentFromReturn({ clientReturn, question, isDebugClient });
 				const reaskableFaultName = judged.error ? reaskableFaultNameOf(judged) : undefined;
 				if (judged.error && reaskableFaultName !== undefined && reaskCount === 0) {
@@ -431,7 +464,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 						{
 							pairKey,
 							generation,
-							record: { promptHash: question.promptHash, rendererVersion: question.rendererVersion, judgeModel: judgeClient.model, decisionAlgorithm: judgeClient.decisionAlgorithm === undefined ? null : judgeClient.decisionAlgorithm, systemPrompt: question.systemPrompt, userPrompt, renderedPoolStableIdList: question.renderedPoolStableIdList, choice: clientReturn.choice, chosenCardStableId: null, category: clientReturn.category, rationale: clientReturn.rationale, confidence: null, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage === undefined ? null : clientReturn.usage, refusedAttempt: judged.error.message, reaskFollows: true },
+							record: { promptHash: question.promptHash, rendererVersion: question.rendererVersion, judgeModel: judgeClient.model, decisionAlgorithm: judgeClient.decisionAlgorithm === undefined ? null : judgeClient.decisionAlgorithm, systemPrompt: question.systemPrompt, userPrompt, renderedPoolStableIdList: question.renderedPoolStableIdList, choice: clientReturn.choice, chosenCardStableId: null, category: clientReturn.category, rationale: clientReturn.rationale, confidence: null, cacheHit: false, attempts: clientReturn.attempts, usage: clientReturn.usage === undefined ? null : clientReturn.usage, spendRecord: attemptSpend.spendRecord, refusedAttempt: judged.error.message, reaskFollows: true },
 						},
 						(forensicsError) => {
 							if (forensicsError) {
@@ -472,7 +505,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 			// W-B-3: judgeSummary rides in the cache row so a HIT freezes the same record text as the fresh judgment did
 			const putPayload = { choice: judged.choice, category: judged.reportedCategoryOnAbstain === undefined || judged.reportedCategoryOnAbstain === null ? judged.category : judged.reportedCategoryOnAbstain, rationale: judged.rationale, chosenStableId: judged.chosenCardStableId, judgeSummary: judged.judgeSummary, ...predicateByFieldNameOf(judged) };
 			judgmentCache.putJudgment(
-				{ ...cacheKey, generation, judgment: putPayload },
+				{ ...cacheKey, generation, judgment: putPayload, fillingSpendCallList: unitSpendCallList() },
 				(putError, putReport) => {
 					if (putError) {
 						callback(`${moduleName}: putJudgment FAILED for promptHash ${question.promptHash} (FATAL, never a warning): ${putError}`);
@@ -527,6 +560,7 @@ const judgeOne = ({ question, judgeClient, judgmentCache, matchForensics, budget
 			callback(judged.error.message);
 			return;
 		}
+		hitFillingSpendCallList = cached.fillingSpendCallList === undefined ? null : cached.fillingSpendCallList;
 		deliver({ judgment: judged, cacheHit: true, attempts: 0, usage: null });
 	});
 };

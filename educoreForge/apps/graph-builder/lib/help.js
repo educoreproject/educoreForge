@@ -37,6 +37,7 @@ SYNOPSIS
      graphBuilder   -stampPromotion --containerName=<the PROMOTED name> --goldEvalCheckLogPath=<its saved output>
                                    --replayLogPath=<the -replay run log>  | --replayBuildLogPath=<a replay build log>
                                    --reforgeEvidencePath=<reforgeCompare -summarize output>
+     graphBuilder   -spendLedger [--since=YYYY-MM-DD] [--recipe=<recipeName>] [--lifetimeLedgerFilePath=<path>]
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -413,6 +414,25 @@ OPTIONS
                   Naming both is refused.
                   The bolt port and credential are read from the container ('docker inspect').
 
+     -spendLedger
+                  WHAT THE BUILDS SPENT (spend ledger lane R1, 2026-10-21). READ-ONLY and FREE.
+                  Every -build writes <its run directory>/spendLedger.json — per bridge: units asked,
+                  served from cache, abstained, tokens, usd, and what the cache hits saved; per
+                  embedding model: batches, texts, misses sent, tokens, usd; and the totals, with the
+                  prices it used and their sources — then appends one line to the LIFETIME ledger,
+                  [spendLedger].lifetimeLedgerFilePath in graphBuilder.ini. This action reads that
+                  lifetime ledger and prints the spend by day, by recipe and by provider:model.
+                  --since=YYYY-MM-DD   only builds started on or after that day
+                  --recipe=<name>      only that recipe's builds
+                  --lifetimeLedgerFilePath=<path>  read this ledger instead of the configured one
+                  Prices come from [spendLedger].spendPricingFilePath (spendPricing.ini: one
+                  [spendPrice_<label>] section per provider/model, each with priceSource and
+                  priceAsOf). A judge or embedding call whose model has no price there is REFUSED
+                  by name; a debug-judge unit is $0 with pricedBy 'debug'; a cache hit on a row
+                  written before the ledger existed reports its saving as unknown and is counted.
+                  -build also takes --spendPricingFilePath / --lifetimeLedgerFilePath to point a
+                  build at other files (the hermetic suites point theirs at scratch).
+
      -goldEvalCheck
                   THE GOLD_EVAL CERTIFICATION GATE (doctrine RT-13.4), made runnable. Reads
                   the named build run directory's round-trip stage summary and answers PASS
@@ -524,6 +544,9 @@ OUTPUT
      -validate: JSON validation verdict on stdout.
      -replay:   JSON { manifestId, boltUrl, memberCount } on stdout (progress on stderr).
      -deps:     JSON discovery listing on stdout.
+     -spendLedger:
+                JSON { lifetimeLedgerFilePath, totals, byDay, byRecipe, byProviderModel } on stdout;
+                the same spend as readable lines on stderr.
      -cedsRoundTrip:
                 The readable fidelity report on stdout AND on disk at --reportPath, its JSON
                 sidecar beside it, and the compiled RDF/XML at --outPath (all three paths

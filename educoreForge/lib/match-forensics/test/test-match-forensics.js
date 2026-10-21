@@ -48,9 +48,11 @@ const matchForensicsLib = require('../match-forensics');
 const matchForensicsModule = matchForensicsLib();
 const moduleDouble = require(path.join(__dirname, '..', '..', 'forge-framework', 'test', 'testSupport', 'moduleDouble'));
 
+// ⟪spend ledger R1⟫ a well-formed spend record (a debug unit's: no pricer needed)
+const SPEND_RECORD_PLACEHOLDER = { provider: 'debug', model: 'debug:first', inputTokens: 0, outputTokens: 0, latencyMs: null, cacheHit: false, usd: 0, savedUsd: null, pricedBy: 'debug', callList: [] };
 // a record of one declared kind, every declared field present (values are placeholders of a plausible type)
 const recordOfKind = (fieldList, overrideByName = {}) => {
-	const record = fieldList.reduce((accumulator, oneName) => ({ ...accumulator, [oneName]: oneName === 'usage' ? { inputTokens: 1, outputTokens: 2 } : oneName === 'attempts' ? 1 : `${oneName}-value` }), {});
+	const record = fieldList.reduce((accumulator, oneName) => ({ ...accumulator, [oneName]: oneName === 'usage' ? { inputTokens: 1, outputTokens: 2 } : oneName === 'spendRecord' ? SPEND_RECORD_PLACEHOLDER : oneName === 'attempts' ? 1 : `${oneName}-value` }), {});
 	return { ...record, ...overrideByName };
 };
 const judgmentRecord = (overrideByName) => recordOfKind(matchForensicsLib.MATCH_FORENSICS_RECORD_FIELD_LIST, overrideByName);
@@ -151,6 +153,8 @@ matchForensicsModule.open({ baseDirPath }, (openErr, forensics) => {
 		const caseList = [
 			{ label: 'a judgment WITHOUT ideaCoverage is refused, naming it', record: withoutIdeaCoverage, expect: /'judgment' record must carry exactly its declared fields.*missing \[ideaCoverage\]/ },
 			{ label: 'a judgment with an undeclared key is refused, naming it', record: judgmentRecord({ timestamp: 't1' }), expect: /extra \[timestamp\]/ },
+			{ label: '⟪spend ledger R1⟫ a judgment without spendRecord is refused', record: (() => { const withoutSpend = judgmentRecord(); delete withoutSpend.spendRecord; return withoutSpend; })(), expect: /missing \[spendRecord\]/ },
+			{ label: '⟪spend ledger R1⟫ a spendRecord with a pricedBy outside the declared set is refused', record: judgmentRecord({ spendRecord: { ...SPEND_RECORD_PLACEHOLDER, pricedBy: 'guessed' } }), expect: /pricedBy "guessed" is not one of/ },
 			{ label: 'usage in snake_case is refused, naming the declared list', record: judgmentRecord({ usage: { input_tokens: 1, output_tokens: 2 } }), expect: /usage .* is neither null nor exactly \{ inputTokens, outputTokens \}/ },
 			{ label: 'a judgment under a predicate rule (with predicate) is accepted', record: judgmentRecord({ predicate: 'exactMatch' }), expect: null },
 			{ label: 'a refused attempt of its declared shape is accepted', record: refusedAttempt, expect: null },

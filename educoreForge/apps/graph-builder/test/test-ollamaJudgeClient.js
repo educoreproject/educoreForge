@@ -187,6 +187,9 @@ const cannedChatResponse = (contentText, envelopeOverrides = {}) =>
 			message: { role: 'assistant', content: contentText },
 			done: true,
 			done_reason: 'stop',
+			// ⟪spend ledger R1⟫ the server's own counts, as the live probe recorded them (JOB3-gF3-liveOllamaProbe.txt: 168 / 83)
+			prompt_eval_count: 168,
+			eval_count: 83,
 		},
 		envelopeOverrides,
 	);

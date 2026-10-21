@@ -368,7 +368,7 @@ const workingForger = (overrides) =>
 							nodeEdges: { nodes: [], edges: [], embeddingDims: null },
 							nodeCount: 0,
 							edgeCount: 0,
-							layerReportList: [],
+							layerReportList: [], embeddingSpendRecordList: [],
 							embedCallCount: 0,
 						}),
 				},
@@ -397,11 +397,14 @@ const withDescribeBridge = (oneDoubleFactory) => (...factoryArgumentList) => ({
 // (phase B6) build.js refuses a relationship block that states no harvest edge types, so every bridgeMaker double states
 // one, as the framework's runReport does (the writer's closed set; one type is enough for a double)
 const DOUBLE_HARVEST_EDGE_TYPE_LIST = Object.freeze(['EXACT_MATCH']);
+// ⟪spend ledger R1⟫ build.js refuses a MAPPING bridge's run report without counts.judgeSpend (the framework's report always carries
+// one), so every mapping double states the judge spend of a run that judged nothing
+const DOUBLE_JUDGE_SPEND = Object.freeze({ asked: 0, servedFromCache: 0, abstained: 0, rationaleReaskCount: 0, ...require(path.join(__dirname, '..', '..', '..', 'lib', 'spend-ledger', 'spendRecord')).JUDGE_SPEND_TOTAL_SEED });
 
 const workingBridgeMaker = (overrides) => () =>
 	Object.assign(
 		{
-			run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0 }),
+			run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, counts: { judgeSpend: DOUBLE_JUDGE_SPEND } }),
 			// describeBridge JOINED THE DECLARED COMPONENT INTERFACE in Phase 7 (apps/graph-builder/interfaces.js
 			// COMPONENT_SHAPES.bridgeMaker.describeBridge), so a double that omits it is NON-CONFORMING and
 			// build.js's pre-spend check refuses it by name. Added here because a double's job is to conform to
@@ -543,12 +546,12 @@ const preSpendCollisionRefusal = (whenDone) => {
 	let forgeInvoked = false;
 	let bridgeRunInvoked = false;
 	const flaggingForger = Object.assign(
-		() => ({ forge: (spec, cb) => { forgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [] }); } }),
+		() => ({ forge: (spec, cb) => { forgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [], embeddingSpendRecordList: [] }); } }),
 		{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
 	);
 	// BOTH bridges describe to the SAME tuple — the pescCedsDerived / pescOptionSetCedsDerived shape.
 	const collidingBridgeMaker = () => ({
-		run: (spec, cb) => { bridgeRunInvoked = true; cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: {} }); },
+		run: (spec, cb) => { bridgeRunInvoked = true; cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: { judgeSpend: DOUBLE_JUDGE_SPEND } }); },
 		describeBridge: ({ bridgeName, source }) => ({
 			description: Object.freeze({ bridgeName, source, producerKind: 'inferred', subjectDiscriminator: undefined }),
 		}),
@@ -574,11 +577,11 @@ const preSpendCollisionRefusal = (whenDone) => {
 		// every two-bridge recipe, which is a different (and wrong) rule.
 		let clearedForgeInvoked = false;
 		const clearedForger = Object.assign(
-			() => ({ forge: (spec, cb) => { clearedForgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [] }); } }),
+			() => ({ forge: (spec, cb) => { clearedForgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [], embeddingSpendRecordList: [] }); } }),
 			{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
 		);
 		const discriminatedBridgeMaker = () => ({
-			run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: {} }),
+			run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: { judgeSpend: DOUBLE_JUDGE_SPEND } }),
 			describeBridge: ({ bridgeName, source }) => ({
 				description: Object.freeze({ bridgeName, source, producerKind: 'inferred', subjectDiscriminator: bridgeName === 'ctdlOptionSetDerivedBridge' ? 'optionSet' : undefined }),
 			}),
@@ -594,11 +597,11 @@ const preSpendCollisionRefusal = (whenDone) => {
 			// left as a paragraph: the flag is what proves the refusal moved, exactly as in the collision case.
 			let unregisteredForgeInvoked = false;
 			const unregisteredFlaggingForger = Object.assign(
-				() => ({ forge: (spec, cb) => { unregisteredForgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [] }); } }),
+				() => ({ forge: (spec, cb) => { unregisteredForgeInvoked = true; cb('', { standard: spec.standard, version: spec.version, nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, embedCallCount: 0, layerReportList: [], embeddingSpendRecordList: [] }); } }),
 				{ resolveBundle: ({ standard }) => ({ standardName: String(standard).toUpperCase() }) },
 			);
 			const refusingBridgeMaker = () => ({
-				run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: {} }),
+				run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: { judgeSpend: DOUBLE_JUDGE_SPEND } }),
 				// the registry's own refusal shape, carried through describeBridge
 				describeBridge: ({ bridgeName, source }) => ({ error: `pluginRegistry REFUSED: bridge '${bridgeName}' is REFUSED — no registered plugin declares it; registered names: (none registered) — a recipe names a plugin under forges/<standardKey>/bridges/ by its bridgeName (BR-003); nothing is substituted [source ${source}]` }),
 			});
@@ -922,6 +925,87 @@ const stageCedsLif = () => {
 // scoped, version-keyed on BOTH endpoints with the REAL resolved versions (the a4a0da2 rule), and
 // producer-suffixed (authored -> _exact from decisionBlock null; inferred -> _close from a frozen
 // decision block). Proven both ways through bridgeMaker doubles, plus the dependency-restore refusal.
+// ⟪spend ledger R1, 2026-10-21⟫ THE SPEND LEDGER through the real build(): every exit past the run directory writes
+// <runDir>/spendLedger.json and appends one lifetime line; -spendLedger (the real CLI, spawned) reads it back; a build
+// whose pricing table is absent is refused before any forge runs; a FAILED build still records what it spent.
+const stageSpendLedger = (whenDone) => {
+	harness.section('SPEND LEDGER (spend ledger R1) — the per-build ledger, the lifetime line, the query, the refusals');
+	const spendRecordLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'spend-ledger', 'spendRecord'));
+	const fixturePricingFilePath = path.join(__dirname, '..', '..', '..', 'lib', 'spend-ledger', 'test', 'fixtures', 'spendPricing-fixture.ini');
+	const scratchDir = fs.mkdtempSync(path.join(os.tmpdir(), 'edfBuildSpendLedger-'));
+	const lifetimeLedgerFilePath = path.join(scratchDir, 'spendLedgerLifetime.jsonl');
+	// a debug-judged bridge of three units (one abstained) and a forge whose embedder sent 4 misses at 2,000,000 tokens
+	const debugUnit = spendRecordLib.judgeSpendRecordFor({ judgeName: 'debug', judgeModel: 'debug:first', isDebugClient: true, cacheHit: false }).spendRecord;
+	const debugJudgeSpend = [debugUnit, debugUnit, debugUnit].reduce((judgeSpend, spendRecord) => spendRecordLib.judgeSpendTotalsWith({ judgeSpend, spendRecord }), { asked: 3, servedFromCache: 0, abstained: 1, rationaleReaskCount: 0, ...spendRecordLib.JUDGE_SPEND_TOTAL_SEED });
+	const embeddingRecord = { provider: 'voyage', model: 'voyage-4-large', texts: 10, distinctMisses: 4, servedFromCache: 6, tokens: 2000000, latencyMs: 50 };
+	const spendingForger = () => workingForger({
+		forge: ({ standard, version }, cb) => cb('', { standard, version, snapshotKey: '01', publishedVersion: version, versionSource: 'spec', nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, layerReportList: [], embedCallCount: 1, embeddingSpendRecordList: standard === 'probesource' ? [embeddingRecord] : [] }),
+	});
+	const judgingBridgeMaker = (bridgeError) => withDescribeBridge(() => ({ run: (spec, cb) => (bridgeError ? cb(bridgeError) : cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: { judgeSpend: debugJudgeSpend } })) }));
+	// a hub-and-source recipe naming no real standard: the spend path is the same for every hub, and this suite adds no hub
+	// name to the tree (the de-hub literal census counts them)
+	const spendProbeRecipe = { recipeName: 'spendLedgerProbe', description: 'one judged bridge into a hub, for the spend ledger stage', standards: [{ token: 'probehub', version: 'current' }, { token: 'probesource', version: 'current' }], hubs: [{ standard: 'probehub' }], bridges: [{ source: 'probesource', hub: 'probehub', bridge: 'probeBridge' }] };
+	const spendBuild = ({ buildLogsDirPath, spendPricingFilePath, components }, cb) =>
+		buildLib.build(
+			spendProbeRecipe,
+			{ xLog: capturingXLog(), standardsDatabase: standardsDatabaseDouble(), components: { forger: spendingForger(), replayManager: workingReplayManager(), bridgeMaker: judgingBridgeMaker(), manifestEditor: workingManifestEditor(), ...components }, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub, buildLogsDirPath, spendPricingFilePath, lifetimeLedgerFilePath },
+			(err, result) => cb({ err, result }),
+		);
+	const ledgerIn = (buildLogsDirPath) => {
+		const runDirNameList = fs.existsSync(buildLogsDirPath) ? fs.readdirSync(buildLogsDirPath) : [];
+		const ledgerFilePath = runDirNameList.length === 1 ? path.join(buildLogsDirPath, runDirNameList[0], 'spendLedger.json') : null;
+		return ledgerFilePath !== null && fs.existsSync(ledgerFilePath) ? JSON.parse(fs.readFileSync(ledgerFilePath, 'utf8')) : null;
+	};
+	const near = (actual, expected) => typeof actual === 'number' && Math.abs(actual - expected) < 1e-12;
+	const goodLogsDirPath = path.join(scratchDir, 'goodBuildLogs');
+	spendBuild({ buildLogsDirPath: goodLogsDirPath, spendPricingFilePath: fixturePricingFilePath, components: {} }, ({ err: goodErr }) => {
+		harness.accepts('a build with a judged bridge and an embedding forge completes', goodErr ? [goodErr] : []);
+		const goodLedger = ledgerIn(goodLogsDirPath);
+		harness.ok('spendLedger.json is written into the build\'s run directory', goodLedger !== null);
+		harness.ok('  per bridge: asked 3, 3 debug units at $0 (pricedBy debug, never a blank)', goodLedger && goodLedger.bridgeList.length === 1 && goodLedger.bridgeList[0].asked === 3 && goodLedger.bridgeList[0].debugUnitCount === 3 && goodLedger.bridgeList[0].usd === 0, JSON.stringify(goodLedger && goodLedger.bridgeList));
+		harness.ok('  per embedding model: 4 misses, 2,000,000 tokens, priced from the table at $0.20', goodLedger && goodLedger.embeddingList.length === 1 && goodLedger.embeddingList[0].distinctMisses === 4 && near(goodLedger.embeddingList[0].usd, 0.2), JSON.stringify(goodLedger && goodLedger.embeddingList));
+		harness.ok('  totals: $0.20, and the prices used ride in the ledger with their sources', goodLedger && near(goodLedger.totals.usd, 0.2) && goodLedger.priceRowList.every((onePriceRow) => typeof onePriceRow.priceSource === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(onePriceRow.priceAsOf)), JSON.stringify(goodLedger && goodLedger.totals));
+		const lifetimeLineList = fs.existsSync(lifetimeLedgerFilePath) ? fs.readFileSync(lifetimeLedgerFilePath, 'utf8').split('\n').filter((lineText) => lineText !== '') : [];
+		harness.equal('one line is appended to the lifetime ledger', lifetimeLineList.length, 1);
+		const failedLogsDirPath = path.join(scratchDir, 'failedBuildLogs');
+		spendBuild({ buildLogsDirPath: failedLogsDirPath, spendPricingFilePath: fixturePricingFilePath, components: { bridgeMaker: judgingBridgeMaker('the bridge double failed on purpose') } }, ({ err: failedErr }) => {
+			harness.match('a build whose bridge FAILS still fails, naming the bridge fault', failedErr || '', /the bridge double failed on purpose/);
+			const failedLedger = ledgerIn(failedLogsDirPath);
+			harness.ok('  and its ledger is STILL written: the embedding it paid for before failing is recorded ($0.20)', failedLedger !== null && near(failedLedger.totals.embeddingUsd, 0.2), JSON.stringify(failedLedger && failedLedger.totals));
+			const queryRun = require('child_process').spawnSync(process.execPath, [path.join(__dirname, '..', 'graphBuilder.js'), '-spendLedger', `--lifetimeLedgerFilePath=${lifetimeLedgerFilePath}`], { encoding: 'utf8' });
+			const queried = (() => { const parsed = { value: null }; try { parsed.value = JSON.parse(queryRun.stdout); } catch (parseError) { parsed.value = null; } return parsed.value; })();
+			harness.ok('the real CLI\'s -spendLedger reads the lifetime ledger back: 2 builds, $0.40, both by day and by recipe', queryRun.status === 0 && queried !== null && queried.totals.buildCount === 2 && near(queried.totals.usd, 0.4) && queried.byRecipe.spendLedgerProbe.buildCount === 2 && Object.keys(queried.byDay).length === 1, `${queryRun.status} ${queryRun.stdout.slice(0, 300)} ${queryRun.stderr.slice(0, 300)}`);
+			harness.ok('  and by provider:model: voyage:voyage-4-large $0.40', queried !== null && near(queried.byProviderModel['voyage:voyage-4-large'].usd, 0.4), JSON.stringify(queried && queried.byProviderModel));
+			const sinceRun = require('child_process').spawnSync(process.execPath, [path.join(__dirname, '..', 'graphBuilder.js'), '-spendLedger', `--lifetimeLedgerFilePath=${lifetimeLedgerFilePath}`, '--since=2999-01-01'], { encoding: 'utf8' });
+			harness.ok('  --since narrows it (a future day: 0 builds)', sinceRun.status === 0 && /"buildCount": 0/.test(sinceRun.stdout), sinceRun.stdout.slice(0, 200));
+			let unpricedForgeInvoked = false;
+			const unpricedLogsDirPath = path.join(scratchDir, 'unpricedBuildLogs');
+			spendBuild({ buildLogsDirPath: unpricedLogsDirPath, spendPricingFilePath: path.join(scratchDir, 'noSuchPricing.ini'), components: { forger: workingForger({ forge: (spec, cb) => { unpricedForgeInvoked = true; cb('forge should not run'); } }) } }, ({ err: unpricedErr }) => {
+				harness.match('a build with NO pricing table is REFUSED by name', unpricedErr || '', /spend pricing table .* is unusable: .*no spend pricing file/);
+				harness.equal('  before any forge ran (nothing could have been spent)', unpricedForgeInvoked, false);
+				const silentForger = () => workingForger({ forge: ({ standard, version }, cb) => cb('', { standard, version, snapshotKey: '01', publishedVersion: version, versionSource: 'spec', nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, layerReportList: [], embedCallCount: 0 }) });
+				spendBuild({ buildLogsDirPath: path.join(scratchDir, 'silentForgeLogs'), spendPricingFilePath: fixturePricingFilePath, components: { forger: silentForger() } }, ({ err: silentForgeErr }) => {
+					harness.match('a forge report WITHOUT embeddingSpendRecordList is REFUSED by name (never counted as $0)', silentForgeErr || '', /the forge report carries no embeddingSpendRecordList/);
+					const silentBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: {} }) }));
+					spendBuild({ buildLogsDirPath: path.join(scratchDir, 'silentBridgeLogs'), spendPricingFilePath: fixturePricingFilePath, components: { bridgeMaker: silentBridgeMaker } }, ({ err: silentBridgeErr }) => {
+						harness.match('a MAPPING bridge report WITHOUT counts.judgeSpend is REFUSED by name (never counted as $0)', silentBridgeErr || '', /the run report carries no counts\.judgeSpend/);
+						// the framework's own no-frozen-block report (bridge-framework.js: counts null, decisionBlock null, "nothing judged")
+						const nothingRanBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: null, note: 'no frozen decision block; zero edges; nothing judged' }) }));
+						const nothingRanLogsDirPath = path.join(scratchDir, 'nothingRanLogs');
+						spendBuild({ buildLogsDirPath: nothingRanLogsDirPath, spendPricingFilePath: fixturePricingFilePath, components: { bridgeMaker: nothingRanBridgeMaker } }, ({ err: nothingRanErr }) => {
+							harness.accepts('the framework\'s no-frozen-block report (counts null, nothing judged) builds as before', nothingRanErr ? [nothingRanErr] : []);
+							const nothingRanLedger = ledgerIn(nothingRanLogsDirPath);
+							harness.ok('  and records no judge spend for that bridge (it judged nothing)', nothingRanLedger !== null && nothingRanLedger.bridgeList.length === 0, JSON.stringify(nothingRanLedger && nothingRanLedger.bridgeList));
+							fs.rmSync(scratchDir, { recursive: true, force: true });
+							whenDone();
+						});
+					});
+				});
+			});
+		});
+	});
+};
+
 const cedsCtdlRecipe = {
 	recipeName: 'cedsCtdl',
 	description: 'CTDL bridged into the CEDS hub — the authored EXACT_MATCH pairing',
@@ -934,7 +1018,7 @@ const stageRelationshipBlockNaming = () => {
 	harness.section('RELATIONSHIP BLOCK NAMING — version-keyed, producer-suffixed (authored _exact / inferred _close)');
 
 	// authored: the bridgeMaker double returns decisionBlock null -> _exact.
-	const authoredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 26, decisionBlock: null, counts: { authored: 26 } }) }));
+	const authoredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 26, decisionBlock: null, counts: { authored: 26, judgeSpend: DOUBLE_JUDGE_SPEND } }) }));
 	runBuildWith(cedsCtdlRecipe, { bridgeMaker: authoredBridgeMaker }, ({ err, result, xLog }) => {
 		harness.equal('the authored CTDL pairing builds', err, '');
 		harness.equal('  3 members (ceds base w/ folded hub + ctdl base + 1 relationship)', result.memberCount, 3);
@@ -946,7 +1030,7 @@ const stageRelationshipBlockNaming = () => {
 		harness.match('  the bridge threads hub=ceds and ran the authored bridge', xLog.text(), /\[C\] bridge ctdl::ceds \(bridge=ctdlAuthoredBridge\)/);
 
 		// inferred: a frozen decisionBlock -> _close (the SAME pair, a DIFFERENT producer block).
-		const inferredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 5, decisionBlock: { hash: 'frozen' }, counts: { inferred: 5 } }) }));
+		const inferredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 5, decisionBlock: { hash: 'frozen' }, counts: { inferred: 5, judgeSpend: DOUBLE_JUDGE_SPEND } }) }));
 		runBuildWith(cedsCtdlRecipe, { bridgeMaker: inferredBridgeMaker }, ({ err: inferErr, xLog: inferLog }) => {
 			harness.equal('the inferred producer variant also builds', inferErr, '');
 			harness.match(
@@ -1037,9 +1121,9 @@ const stageMultiBlockFamily = () => {
 				producer: 'structural',
 				counts: { structural: 4 },
 				blocks: [
-					{ applyLabel: 'BridgedRelation_CTDL_CTDLASN', harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, firstStandard: 'ctdl', secondStandard: 'ctdlasn', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 2, counts: {} },
-					{ applyLabel: 'BridgedRelation_CTDL_CTDLQDATA', harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, firstStandard: 'ctdl', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
-					{ applyLabel: 'BridgedRelation_CTDLASN_CTDLQDATA', harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, firstStandard: 'ctdlasn', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: {} },
+					{ applyLabel: 'BridgedRelation_CTDL_CTDLASN', harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, firstStandard: 'ctdl', secondStandard: 'ctdlasn', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 2, counts: { judgeSpend: DOUBLE_JUDGE_SPEND } },
+					{ applyLabel: 'BridgedRelation_CTDL_CTDLQDATA', harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, firstStandard: 'ctdl', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: { judgeSpend: DOUBLE_JUDGE_SPEND } },
+					{ applyLabel: 'BridgedRelation_CTDLASN_CTDLQDATA', harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, firstStandard: 'ctdlasn', secondStandard: 'ctdlqdata', producer: 'structural', decisionBlock: null, emptyPairing: false, edgesWritten: 1, counts: { judgeSpend: DOUBLE_JUDGE_SPEND } },
 				],
 			}),
 	}));
@@ -1131,7 +1215,7 @@ const stageRebridgeWiring = () => {
 	// returns producer:'inferred', so build.js names the empty block _close — NOT _exact, which would collide
 	// with the authored pair's _exact for the SAME pair (the two-producers-per-pair design). Proven via a
 	// double so no docker/graph is needed.
-	const emptyInferredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, producer: 'inferred', counts: { inferred: 0 } }) }));
+	const emptyInferredBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, producer: 'inferred', counts: { inferred: 0, judgeSpend: DOUBLE_JUDGE_SPEND } }) }));
 	runBuildWith(cedsCtdlRecipe, { bridgeMaker: emptyInferredBridgeMaker }, ({ err: emptyErr, xLog: emptyLog }) => {
 		harness.equal('an empty inferred block (no frozen decisions yet) still builds', emptyErr, '');
 		harness.match('  build.js names it _close from producer=inferred (NOT _exact from the null decisionBlock)', emptyLog.text(), /-> relationship ceds@current_rel_ctdl@current_close /);
@@ -1142,7 +1226,7 @@ const stageRebridgeWiring = () => {
 
 	const continueRebridgeWiring = () => {
 	const capturedSpecs = [];
-	const captureBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => { capturedSpecs.push(spec); cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: {} }); } }));
+	const captureBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => { capturedSpecs.push(spec); cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: { judgeSpend: DOUBLE_JUDGE_SPEND } }); } }));
 	const fakeDecisionStore = { getDecisionBlock: (a, cb) => cb('', { frozenText: null }), saveDecisionBlock: (a, cb) => cb('') };
 	// a deterministic STUB reranker — the hermetic suite's llmClient. Injected on inferenceConfig, it is the
 	// real-vs-stub seam's STUB arm: with it present, resolveInferenceConfig NEVER mints the real Anthropic
@@ -1164,7 +1248,15 @@ const stageRebridgeWiring = () => {
 		harness.equal('  and config.hubVersion=current (resolved, not the recipe token)', spec && spec.config && spec.config.hubVersion, 'current');
 		harness.ok('  and threaded the injected decisionStore through', spec && spec.decisionStore === fakeDecisionStore);
 		// FACTORY SELECTION — STUB arm: the injected stub is what reaches bridgeMaker.run, never the real client.
-		harness.ok('  the INJECTED STUB llmClient is threaded to bridgeMaker.run (never the real client under test)', spec && spec.inferenceConfig && spec.inferenceConfig.llmClient === stubReranker);
+		// ⟪spend ledger R1⟫ the stub arrives METERED (latencyMeter: a frozen copy with rerank wrapped), so identity is checked by
+		// what makes it the stub — its model, and a rerank that answers by delegating to the stub — not by reference
+		const threadedClient = spec && spec.inferenceConfig && spec.inferenceConfig.llmClient;
+		const threadedAnswerList = [];
+		if (threadedClient && typeof threadedClient.rerank === 'function') {
+			threadedClient.rerank({}, (rerankError, clientReturn) => threadedAnswerList.push(clientReturn));
+		}
+		harness.ok('  the INJECTED STUB llmClient is threaded to bridgeMaker.run (never the real client under test)', Boolean(threadedClient) && threadedClient.model === stubReranker.model && threadedAnswerList.length === 1 && threadedAnswerList[0].choice === 'NONE');
+		harness.ok('  ⟪spend ledger R1⟫ …metered: its answer carries latencyMs, and the pricer rides beside it on inferenceConfig', threadedAnswerList.length === 1 && Number.isInteger(threadedAnswerList[0].latencyMs) && Boolean(spec.inferenceConfig.spendPricer) && typeof spec.inferenceConfig.spendPricer.usdFor === 'function');
 
 		runRebridge({ decisionStore: fakeDecisionStore }, ({ err: plainErr }) => {
 			harness.equal('a plain build (no --rebridge) succeeds', plainErr, '');
@@ -1548,7 +1640,7 @@ const hubFoldingForger = (baseNodeEdges) => Object.assign(() => ({
 				nodeEdges,
 				nodeCount: nodeEdges.nodes.length,
 				edgeCount: nodeEdges.edges.length,
-				embedCallCount: 0, layerReportList: [],
+				embedCallCount: 0, layerReportList: [], embeddingSpendRecordList: [],
 				// deliberately NO hubDivergenceReport/hubSkipReport on this double's report: build.js
 				// writes those to the real dataStores/buildLogs when present, and this suite is
 				// hermetic — the report-write path is not this stage's subject.
@@ -2044,7 +2136,7 @@ const buildCapturingVectorize = (vectorizeDep, done) => {
 					nodeEdges: { nodes: [], edges: [], embeddingDims: null },
 					nodeCount: 0,
 					edgeCount: 0,
-					embedCallCount: 0, layerReportList: [],
+					embedCallCount: 0, layerReportList: [], embeddingSpendRecordList: [],
 				});
 			},
 		}),
@@ -2303,7 +2395,7 @@ const stageManifestPersistedToStore = () => {
 										memberCount,
 									);
 									fs.rmSync(scratchDir, { recursive: true, force: true });
-									stageDeclaredMissingUnconditional(() => preSpendCollisionRefusal(() => stageHarvestEdgeTypeList(() => harness.report())));
+									stageDeclaredMissingUnconditional(() => preSpendCollisionRefusal(() => stageHarvestEdgeTypeList(() => stageSpendLedger(() => harness.report()))));
 								},
 							);
 						});
@@ -2324,14 +2416,14 @@ const stageHarvestEdgeTypeList = (next) => {
 		const working = workingReplayManager()();
 		return Object.assign({}, working, { harvest: (spec, cb) => { harvestSpecList.push(spec); working.harvest(spec, cb); } });
 	};
-	const statingBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: ['CLOSE_MATCH', 'EXACT_MATCH'], edgesWritten: 1, decisionBlock: null, counts: {} }) }));
+	const statingBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: ['CLOSE_MATCH', 'EXACT_MATCH'], edgesWritten: 1, decisionBlock: null, counts: { judgeSpend: DOUBLE_JUDGE_SPEND } }) }));
 	runBuildWith(cedsCtdlRecipe, { bridgeMaker: statingBridgeMaker, replayManager: capturingReplayManager }, ({ err }) => {
 		harness.equal('a build whose bridge states its harvest edge types succeeds', err, '');
 		const relationshipSpecList = harvestSpecList.filter((oneSpec) => oneSpec.header && oneSpec.header.blockType === 'relationship');
 		const baseSpecList = harvestSpecList.filter((oneSpec) => !oneSpec.header || oneSpec.header.blockType !== 'relationship');
 		harness.ok('  the relationship harvest is handed exactly the stated edgeTypeList', relationshipSpecList.length === 1 && JSON.stringify(relationshipSpecList[0].edgeTypeList) === JSON.stringify(['CLOSE_MATCH', 'EXACT_MATCH']), JSON.stringify(relationshipSpecList.map((oneSpec) => oneSpec.edgeTypeList)));
 		harness.ok('  every base harvest is untyped (no edgeTypeList: a base block carries every intra-base edge)', baseSpecList.length > 0 && baseSpecList.every((oneSpec) => oneSpec.edgeTypeList === undefined), `${baseSpecList.length} base harvest(s)`);
-		const silentBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 1, decisionBlock: null, counts: {} }) }));
+		const silentBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, edgesWritten: 1, decisionBlock: null, counts: { judgeSpend: DOUBLE_JUDGE_SPEND } }) }));
 		runBuildWith(cedsCtdlRecipe, { bridgeMaker: silentBridgeMaker }, ({ err: silentErr }) => {
 			harness.match('a bridge that states no harvest edge types is refused by name, never harvested untyped', silentErr, /carries no harvestEdgeTypeList/);
 			next();
@@ -2393,7 +2485,7 @@ const stageP2ReviewGuards = () => {
 						nodeEdges: { nodes: [], edges: [], embeddingDims: null },
 						nodeCount: 0,
 						edgeCount: 0,
-						embedCallCount: 0, layerReportList: [],
+						embedCallCount: 0, layerReportList: [], embeddingSpendRecordList: [],
 						hubDivergenceReport: [], // present WITHOUT its pair — malformed by contract
 					}),
 			}),

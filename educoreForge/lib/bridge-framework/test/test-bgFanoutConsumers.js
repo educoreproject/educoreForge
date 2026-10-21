@@ -382,7 +382,10 @@ const capturedGenerationDeltaLib = require('./testSupport/capturedGenerationDelt
 const toyPluginDeclarationFor = (bridgeName) => require(path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', `${bridgeName}.js`)).bridgeDeclaration;
 const branchCutSssomText = capturedGenerationDeltaLib.sssomWithMappingToolDigest({ capturedSssomText: fs.readFileSync(BRANCH_CUT_SSSOM_PATH, 'utf8'), bridgeDeclaration: toyPluginDeclarationFor('toyDerivedPlugin') });
 // W-B-9 (campaign P3): the capture takes the scope-census delta (the conflict pair's toyStandardPlugin run declares no scope)
-const branchCutConflictCounts = require('./testSupport/capturedCensusScopeDelta').capturedCountsWithScopeCensusDelta({ capturedCounts: JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_COUNTS_PATH, 'utf8')), capturedRunWasUnscoped: true });
+// ⟪spend ledger R1⟫ the spend ledger's delta on top: the conflict run judges with the DEBUG judge, so each unit is the debug
+// record judgeComponent builds (usd 0, pricedBy debug; no metering wrapper outside build.js, so latencyMs null)
+const debugUnitSpendRecord = require('../../spend-ledger/spendRecord').judgeSpendRecordFor({ judgeName: 'debug', judgeModel: 'debug:first', latencyMs: undefined, cacheHit: false, isDebugClient: true }).spendRecord;
+const branchCutConflictCounts = require('./testSupport/capturedSpendLedgerDelta').capturedCountsWithSpendLedgerDelta({ capturedCounts: require('./testSupport/capturedCensusScopeDelta').capturedCountsWithScopeCensusDelta({ capturedCounts: JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_COUNTS_PATH, 'utf8')), capturedRunWasUnscoped: true }), perUnitSpendRecord: debugUnitSpendRecord });
 const branchCutConflictEdgeList = capturedEdgeListWithProvenanceDelta({ capturedEdgeList: JSON.parse(fs.readFileSync(BRANCH_CUT_CONFLICT_EDGE_LIST_PATH, 'utf8')), specifiedBridgeName: 'toyStandardPlugin' });
 const branchCutConflictSssomText = fs.readFileSync(BRANCH_CUT_CONFLICT_SSSOM_PATH, 'utf8');
 const branchCutConflictReview = (() => {

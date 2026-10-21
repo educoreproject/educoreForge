@@ -592,7 +592,7 @@ const providerConjunctList = [
 							fetchModelTagList: (tagCallback) => tagCallback('', OLLAMA_TAG_LIST),
 							postOnce: ({ payload }, postCallback) => {
 								capturePayload(payload);
-								postCallback('', { model: 'qwen2.5:32b', message: { role: 'assistant', content: JSON.stringify(MODEL_ANSWER) }, done: true, done_reason: 'stop' }, 200);
+								postCallback('', { model: 'qwen2.5:32b', message: { role: 'assistant', content: JSON.stringify(MODEL_ANSWER) }, done: true, done_reason: 'stop', prompt_eval_count: 168, eval_count: 83 }, 200);
 							},
 						},
 					},
@@ -614,7 +614,7 @@ const providerConjunctList = [
 			const llmClientFactory = libAt(scenario, LLM_CLIENT_FILE_PATH);
 			const llmProvider = llmClientFactory({ configFilePath: anthropicIniPath(), componentOverrides: { postOnce: (unusedArgs, postCallback) => postCallback('', { content: [{ type: 'tool_use', name: llmClientFactory.TOOL_NAME, input: { ...MODEL_ANSWER } }], stop_reason: 'end_turn' }, 200) } });
 			let ollamaProvider = null;
-			libAt(scenario, OLLAMA_FILE_PATH)({ configFilePath: ollamaIniPath(), componentOverrides: { fetchModelTagList: (tagCallback) => tagCallback('', OLLAMA_TAG_LIST), postOnce: (unusedArgs, postCallback) => postCallback('', { message: { content: JSON.stringify(MODEL_ANSWER) }, done: true }, 200) } }, (constructionError, constructed) => {
+			libAt(scenario, OLLAMA_FILE_PATH)({ configFilePath: ollamaIniPath(), componentOverrides: { fetchModelTagList: (tagCallback) => tagCallback('', OLLAMA_TAG_LIST), postOnce: (unusedArgs, postCallback) => postCallback('', { message: { content: JSON.stringify(MODEL_ANSWER) }, done: true, prompt_eval_count: 168, eval_count: 83 }, 200) } }, (constructionError, constructed) => {
 				ollamaProvider = constructed;
 			});
 			const debugProvider = libAt(scenario, DEBUG_JUDGE_FILE_PATH)({ ruleName: 'digest' });

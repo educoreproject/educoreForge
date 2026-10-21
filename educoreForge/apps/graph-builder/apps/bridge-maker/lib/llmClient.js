@@ -646,6 +646,10 @@ const moduleFunction =
 			// judgment took N attempts (⟪TQ RULING⟫ "support forensic examination to improve quality
 			// later"). Additive surplus: every existing caller destructures only the keys it reads.
 			const retryReasons = [];
+			// ⟪spend ledger R1, 2026-10-21⟫ spendCallList — one entry per PAID response (every 200), in the spend ledger's shape
+			// (lib/spend-ledger/spendRecord.js SPEND_CALL_FIELD_LIST). A judgmentIncomplete retry is a 200 that was billed; `usage`
+			// below reports only the accepted attempt, so before this list the earlier attempts' tokens were lost.
+			const spendCallList = [];
 			// ⟪R-a SECOND REAL-RUN FINDING, 2026-07-30⟫ a strict schema `required` alone did not reach
 			// 100%: a live run failed on a DIFFERENT source than the first finding, with the
 			// identical refusal — real Opus INTERMITTENTLY omits a schema-required field (roughly 1 call in
@@ -676,6 +680,13 @@ const moduleFunction =
 						callback(`${moduleName}.rerank API error (${status}): ${apiMsg}`);
 						return;
 					}
+					// a 200 without its accounting is refused by name: a response we cannot price is not one we accept
+					const wireUsage = parsed && parsed.usage ? parsed.usage : {};
+					if (!Number.isInteger(wireUsage.input_tokens) || wireUsage.input_tokens < 0 || !Number.isInteger(wireUsage.output_tokens) || wireUsage.output_tokens < 0) {
+						callback(`${moduleName}.rerank: the response (attempt ${attemptIndex + 1}) carries usage ${JSON.stringify(parsed && parsed.usage)}; input_tokens and output_tokens must be non-negative integers, or the call cannot be priced`);
+						return;
+					}
+					spendCallList.push({ provider: PROVIDER_NAME, model: cfg.wireModel, inputTokens: wireUsage.input_tokens, outputTokens: wireUsage.output_tokens });
 					const choice = extractChoice(parsed, choiceEnum);
 					if (choice === null) {
 						callback(`${moduleName}.rerank: could not extract a choice from the response`);
@@ -733,6 +744,7 @@ const moduleFunction =
 						// ⟪campaign P3, W-B-3⟫ a text model reports a category word, not numbers: no judge summary
 						judgeSummary: null,
 						usage,
+						spendCallList,
 						stopReason: parsed && parsed.stop_reason !== undefined ? parsed.stop_reason : null,
 						retryReasons,
 					});

@@ -40,14 +40,16 @@ const commandLineWith = (valueByName) => ({ values: Object.keys(valueByName).red
 // a spy judge: counts every live ask, so "never called" is measured, not assumed
 const makeSpyClient = () => {
 	const spy = { liveCallCount: 0 };
-	spy.client = Object.freeze({ model: 'spy:judge-1', decisionAlgorithm: null, rerank: (rerankRequest, rerankCallback) => { spy.liveCallCount += 1; rerankCallback('', { choice: 'NONE', category: undefined, rationale: 'the spy abstains', attempts: 1, model: 'spy:judge-1' }); } });
+	spy.client = Object.freeze({ name: 'spy', model: 'spy:judge-1', decisionAlgorithm: null, rerank: (rerankRequest, rerankCallback) => { spy.liveCallCount += 1; rerankCallback('', { choice: 'NONE', category: undefined, rationale: 'the spy abstains', attempts: 1, model: 'spy:judge-1' }); } });
 	return spy;
 };
 const QUESTION = Object.freeze({ renderedPoolStableIdList: ['card:A', 'card:B'], choiceEnum: ['1', '2', 'NONE'], promptHash: 'a'.repeat(64), rendererVersion: 'toyRenderer-v1', judgePredicateRule: 'categoryTable-v1', systemPrompt: 'system', userPrompt: 'which card?' });
 const cacheWith = (storedJudgment) => ({ getJudgment: (cacheRefId, getCallback) => getCallback('', storedJudgment === null ? null : { judgment: storedJudgment }), putJudgment: (putArgs, putCallback) => putCallback('', { alreadyPresent: false }) });
+// ⟪spend ledger R1⟫ every real-judge judgeOne is priced; a hit on a row with no filling spend records savedUsd null, named
+const FIXTURE_SPEND_PRICER = require('../../../lib/spend-ledger/spendPricing').loadSpendPricing({ pricingFilePath: require('path').join(__dirname, '..', '..', '..', 'lib', 'spend-ledger', 'test', 'fixtures', 'spendPricing-fixture.ini') }).spendPricer;
 const FORENSICS = { appendRecord: (recordArgs, appendCallback) => appendCallback('') };
 const judgeOneWith = ({ judgeClient, judgmentCache }, callback) =>
-	judgeComponentLib.judgeOne({ question: QUESTION, judgeClient, judgmentCache, matchForensics: FORENSICS, budget: { maxJudgmentCount: 10, judgmentCountSoFar: 0 }, pairKey: 'toy::pair', generation: 'g1', debugMark: null, reaskPromptRefusalFor: () => '', judgeConfigCacheDigest: null }, callback);
+	judgeComponentLib.judgeOne({ question: QUESTION, judgeClient, judgmentCache, matchForensics: FORENSICS, budget: { maxJudgmentCount: 10, judgmentCountSoFar: 0 }, pairKey: 'toy::pair', generation: 'g1', debugMark: null, reaskPromptRefusalFor: () => '', judgeConfigCacheDigest: null, spendPricer: FIXTURE_SPEND_PRICER }, callback);
 const wrappedClientFor = (build, spy, callback) => build.resolveInferenceConfig({ inferenceConfig: { llmClient: spy.client }, judgeCacheOnly: true }, 'all', null, (resolveError, inferenceConfig) => callback(resolveError, inferenceConfig && inferenceConfig.llmClient));
 
 const conjunctJudgeByRefId = {

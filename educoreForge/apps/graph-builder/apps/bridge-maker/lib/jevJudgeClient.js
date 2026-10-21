@@ -459,6 +459,8 @@ const moduleFunction = (constructionOptions = {}) => {
 				model: formModel,
 				attempts: pickResult.attempts,
 				usage: pickResult.usage,
+				// ⟪spend ledger R1, 2026-10-21⟫ each Jev call in the spend ledger's shape (spendRecord.js SPEND_CALL_FIELD_LIST), the WIRE model billed
+				spendCallList: [{ provider: PROVIDER_NAME, model: cfg.wireModel, ...pickResult.usage }],
 				// ⟪campaign P3, W-B-3 (V1-C08, G7)⟫ Jev's OWN numbers in the declared shape (vocabulary JUDGE_SUMMARY_FIELD_LIST),
 				// carried verbatim by judgeComponent to the cache, the forensic record, the frozen record and the edge. The jevOpus
 				// cascade reads judgePickConfidence to decide whether to escalate. (Before P3 these were jevConfidence /
@@ -485,6 +487,7 @@ const moduleFunction = (constructionOptions = {}) => {
 					rationale: `${pickVerdict.rationale}${relationRationaleFor({ relationAnswer: relationResult.answer })}`,
 					attempts: pickResult.attempts + relationResult.attempts,
 					usage: usageSumOf(pickResult.usage, relationResult.usage),
+					spendCallList: pickVerdict.spendCallList.concat([{ provider: PROVIDER_NAME, model: cfg.wireModel, ...relationResult.usage }]),
 					judgeSummary: { ...pickVerdict.judgeSummary, judgeRelationConfidence: relationResult.answer.confidence, judgeRelationProbabilityByPredicate: { ...relationResult.answer.probabilities } },
 				});
 			});

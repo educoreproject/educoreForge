@@ -86,6 +86,10 @@ const moduleFunction =
 		configFilePath = defaultConfigFilePath,
 		providerName = DEFAULT_PROVIDER_NAME,
 		cacheFilePath = defaultCacheFilePath,
+		// componentOverrides.provider (spend ledger R1, 2026-10-21) — a TEST SEAM, the componentOverrides idiom llmClient and the
+		// judge registry use: an object answering embed(texts, resolvedConfig, cb) stands in for the discovered provider so a
+		// suite can prove the spend record without a socket or a bill. Production passes nothing and takes providerName's.
+		componentOverrides = {},
 	} = {}) => {
 		// THE PROVIDER IS CHECKED WHEN THE CLIENT IS BUILT. An unknown name used to construct
 		// cleanly, answer resolveEmbeddingIdentity() as though all were well, and be refused only
@@ -203,7 +207,7 @@ const moduleFunction =
 		};
 
 		// guaranteed present: an unknown providerName was refused at construction, above.
-		const provider = providers[providerName];
+		const provider = componentOverrides.provider !== undefined ? componentOverrides.provider : providers[providerName];
 
 		// -----
 		// THE TRANSPARENT VECTOR CACHE. Caching is ON by default (cacheFilePath defaults to the
@@ -248,8 +252,19 @@ const moduleFunction =
 
 		// vectorsFromProvider — the raw provider call + the validation both embed doors used to
 		// carry inline, now in one place: texts -> Float32Array[] aligned 1:1 with input order.
+		// ⟪spend ledger R1, 2026-10-21⟫ THE SPEND OF THIS EMBEDDER: one record per embedText(s) batch, in spendRecord.js's
+		// EMBEDDING_SPEND_RECORD_FIELD_LIST shape — texts asked, distinct misses sent to the provider, texts served from the
+		// vector cache, the provider's own billed tokens, and the milliseconds of the provider call. A batch served wholly
+		// from the cache made no call: tokens 0 and latencyMs null (nothing was measured, so nothing is claimed). This module
+		// is outside BG-DET's clock-free trees and feeds no content address; the forger hands the list up on its report.
+		const spendRecordList = [];
+		const recordSpend = ({ texts, distinctMisses, tokens, latencyMs, model }) => {
+			spendRecordList.push({ provider: providerName, model, texts, distinctMisses, servedFromCache: texts - distinctMisses, tokens, latencyMs });
+		};
+
 		const vectorsFromProvider = (stringified, resolvedConfig, provCallback) => {
-			provider.embed(stringified, resolvedConfig, (err, embeddings) => {
+			const startedAtMs = Date.now();
+			provider.embed(stringified, resolvedConfig, (err, embeddings, providerUsage) => {
 				if (err) {
 					provCallback(err);
 					return;
@@ -269,7 +284,11 @@ const moduleFunction =
 					provCallback(`embedding-client: provider returned an empty embedding at index ${badIndex}`);
 					return;
 				}
-				provCallback('', embeddings.map((oneEmbedding) => Float32Array.from(oneEmbedding)));
+				if (!providerUsage || !Number.isInteger(providerUsage.totalTokens) || providerUsage.totalTokens < 0) {
+					provCallback(`embedding-client: provider '${providerName}' returned no billed token count (${JSON.stringify(providerUsage)}); every embedding call is priced, so one that cannot be is refused`);
+					return;
+				}
+				provCallback('', embeddings.map((oneEmbedding) => Float32Array.from(oneEmbedding)), { totalTokens: providerUsage.totalTokens, latencyMs: Date.now() - startedAtMs });
 			});
 		};
 
@@ -291,11 +310,12 @@ const moduleFunction =
 
 				if (!cacheApi) {
 					// caching disabled — the original behavior, unchanged.
-					vectorsFromProvider(stringified, loaded.resolvedConfig, (err, vectors) => {
+					vectorsFromProvider(stringified, loaded.resolvedConfig, (err, vectors, callSpend) => {
 						if (err) {
 							embedCallback(err);
 							return;
 						}
+						recordSpend({ texts: stringified.length, distinctMisses: stringified.length, tokens: callSpend.totalTokens, latencyMs: callSpend.latencyMs, model });
 						embedCallback('', { vectors, embeddingModelVersion: model });
 					});
 					return;
@@ -357,15 +377,17 @@ const moduleFunction =
 							// RangeError, test-cedsHubBuildGates forge run 2 — unreachable before the cache was
 							// ever warm enough). setImmediate unwinds the stack between batches; the contract
 							// and result are byte-identical, only the completion tick moves.
+							recordSpend({ texts: stringified.length, distinctMisses: 0, tokens: 0, latencyMs: null, model });
 							setImmediate(assemble);
 							return;
 						}
 
-						vectorsFromProvider(missTexts, loaded.resolvedConfig, (err, missVectors) => {
+						vectorsFromProvider(missTexts, loaded.resolvedConfig, (err, missVectors, callSpend) => {
 							if (err) {
 								embedCallback(err);
 								return;
 							}
+							recordSpend({ texts: stringified.length, distinctMisses: missTexts.length, tokens: callSpend.totalTokens, latencyMs: callSpend.latencyMs, model });
 							const entries = missTexts.map((oneText, index) => {
 								const vectorBase64 = encodeVector(missVectors[index]);
 								byHash[missHashes[index]] = vectorBase64; // fill for assembly
@@ -493,6 +515,8 @@ const moduleFunction =
 			resolveEmbeddingIdentity,
 			// so a caller can SEE which provider is in force rather than assume the default took
 			providerName: () => providerName,
+			// a COPY: the caller reads the ledger, it never edits it
+			spendRecordList: () => spendRecordList.map((oneRecord) => ({ ...oneRecord })),
 		};
 	};
 

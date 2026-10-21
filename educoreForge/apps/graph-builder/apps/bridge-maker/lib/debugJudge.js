@@ -383,6 +383,9 @@ const moduleFunction =
 				// usage is null, NOT zero: no tokens were consumed because no request was made, and a
 				// literal 0 would read in the forensics as "a call that happened to cost nothing".
 				usage: null,
+				// ⟪spend ledger R1, 2026-10-21⟫ the paid calls this answer cost: none, because no request was made. An EMPTY list
+				// is the truth here (JUDGE_PROVIDER_SHAPE.rerank.resultKeys); the framework records the unit as pricedBy 'debug'.
+				spendCallList: [],
 				// ⟪campaign P3, W-B-3⟫ the debug judge reports no numbers: no judge summary (its block text is unchanged)
 				judgeSummary: null,
 				stopReason: null,

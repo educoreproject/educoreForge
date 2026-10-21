@@ -84,8 +84,12 @@ const goodRecipe = (name) => path.join(treeRoot, 'recipes', `${name}.recipe.json
 
 // run the real executable. stdinText '' means a non-TTY EMPTY stdin, which the tool must treat
 // as "no piped input" and fall back to the command line.
+// ⟪spend ledger R1, 2026-10-21⟫ a spawned -build reads the REAL graphBuilder.ini, whose [spendLedger] names the real lifetime ledger;
+// every -build this suite spawns is pointed at the fixture pricing table and a scratch ledger instead (the command-line
+// override build.js honours), so no test build ever lands a line in the real record of spend
+const hermeticSpendLedgerArgList = [`--spendPricingFilePath=${path.join(treeRoot, 'lib', 'spend-ledger', 'test', 'fixtures', 'spendPricing-fixture.ini')}`, `--lifetimeLedgerFilePath=${path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'edfCliSpendLedger-')), 'spendLedgerLifetime.jsonl')}`];
 const runCli = (args, stdinText) =>
-	spawnSync(process.execPath, [executable, ...args], {
+	spawnSync(process.execPath, [executable, ...args, ...(args.indexOf('-build') === -1 ? [] : hermeticSpendLedgerArgList)], {
 		input: stdinText === undefined ? '' : stdinText,
 		encoding: 'utf8',
 		cwd: treeRoot,

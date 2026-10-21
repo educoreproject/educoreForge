@@ -68,6 +68,9 @@
  * @property {Array} layerReportList  ⟪lane DES, cedsRichness-101226⟫ one entry per LAYER the spec's layerKeyList named, each
  *                                    produced over this standard's shaped base: { layerKey, layerVersion, layerLabel,
  *                                    nodeEdges, harvestEdgeTypeList, layerStats, layerReport, roundTripValidatorPath, snapshotDirPath }; [] when it named none
+ * @property {Array} embeddingSpendRecordList  ⟪spend ledger R1, 2026-10-21⟫ what this forge's embedder spent, one record per embedTexts
+ *                                    batch (embedding-client spendRecordList: { provider, model, texts, distinctMisses, servedFromCache,
+ *                                    tokens, latencyMs }); [] when nothing was embedded. A failed forge hands it up beside its error.
  */
 
 /**
@@ -491,7 +494,11 @@ const JUDGE_PROVIDER_SHAPE = Object.freeze({
 		// to produce a ranking; requiring every PROVIDER to carry one would outlaw the debug double, which has no
 		// ranking to give and is lawful without it. A verdict is choice + category + rationale; the ranking is how
 		// it got there.
-		resultKeys: Object.freeze(['choice', 'category', 'rationale', 'model', 'attempts']),
+		// ⟪spend ledger R1, 2026-10-21⟫ spendCallList IS a contract member: [{ provider, model (the WIRE model billed), inputTokens,
+		// outputTokens }], one entry per paid response (lib/spend-ledger/spendRecord.js SPEND_CALL_FIELD_LIST); [] from the debug
+		// judge, which makes none. judgeComponent prices it and refuses a live answer without it, so a provider that omitted it
+		// would be refused at its first judgment rather than here.
+		resultKeys: Object.freeze(['choice', 'category', 'rationale', 'model', 'attempts', 'spendCallList']),
 	}),
 	describe: Object.freeze({
 		arity: 0,
@@ -615,6 +622,7 @@ const COMPONENT_SHAPES = {
 				'edgeCount',
 				'embedCallCount',
 				'layerReportList',
+				'embeddingSpendRecordList',
 			],
 		},
 	},

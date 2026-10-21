@@ -80,6 +80,8 @@ const run = () => {
 			? actions.truncateStore
 			: switches.stampPromotion
 			? actions.stampPromotion
+			: switches.spendLedger
+			? actions.spendLedger
 			: null;
 
 		// help is the default: an invocation that names no action is a question, not an error

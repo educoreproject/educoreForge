@@ -116,7 +116,9 @@ const iniFilePathFor = (maxTokens) => {
 const useRealClient = (scenario, maxTokens) => {
 	scenario.issuedRationaleList = [];
 	scenario.sentMaxTokensList = [];
-	scenario.judgeClientOverride = llmClientLib({
+	// ⟪spend ledger R1⟫ metered as build.js meters every real provider (latencyMeter.js), on a scripted clock: 10 ms per reading
+	let scriptedClockMs = 0;
+	scenario.judgeClientOverride = require('../../spend-ledger/latencyMeter').latencyMeteredJudgeClientFor({ readClockMs: () => (scriptedClockMs += 10), judgeClient: llmClientLib({
 		configFilePath: iniFilePathFor(maxTokens),
 		componentOverrides: {
 			postOnce: ({ payload }, postCallback) => {
@@ -126,7 +128,7 @@ const useRealClient = (scenario, maxTokens) => {
 				postCallback('', { content: [{ type: 'tool_use', name: llmClientLib.TOOL_NAME, input: { choice: '1', category: 'strong', rationale } }], stop_reason: 'end_turn', usage: { input_tokens: 10, output_tokens: 5 } }, 200);
 			},
 		},
-	});
+	}) }).judgeClient;
 };
 const judgedRecordListOf = (block) => block.decisionRecordList.filter((oneRecord) => oneRecord.judge !== undefined);
 const headerFaultList = (block, expectedByName) =>

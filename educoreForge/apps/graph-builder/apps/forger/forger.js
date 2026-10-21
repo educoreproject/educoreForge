@@ -1068,7 +1068,8 @@ const moduleFunction =
 
 		pipeRunner(taskList.getList(), {}, (err, args) => {
 			if (err) {
-				callback(err);
+				// ⟪spend ledger R1⟫ a forge that embedded and then failed still spent: the spend rides out beside the error
+				callback(err, { embeddingSpendRecordList: embedder === null ? [] : embedder.spendRecordList() });
 				return;
 			}
 			// THE TWO VERSION CLAIMS ARE REPORTED SEPARATELY. `metadata.version || version` used to
@@ -1098,6 +1099,9 @@ const moduleFunction =
 				nodeCount: args.shaped.nodes.length,
 				edgeCount: args.shaped.edges.length,
 				embedCallCount: args.forged.embedCallCount,
+				// ⟪spend ledger R1, 2026-10-21⟫ what this forge's embedder spent, one record per embedTexts batch (embedding-client
+				// spendRecordList); build.js prices it into the build's spend ledger. No embedder (--vectorize=false): no batches.
+				embeddingSpendRecordList: embedder === null ? [] : embedder.spendRecordList(),
 				// ⟪campaign P2, W-C-21⟫ the kit's own counts (nodeCountByRole, edgeCountByType), carried for build.js's forgeCensus
 				// attestation instead of being discarded here (undefined from a bundle that reports none: the row then says so)
 				forgeStats: args.forged.stats,

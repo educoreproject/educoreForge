@@ -65,6 +65,38 @@ const GOOD_JUDGMENT = {
 	rationale: "the candidate's tuple aligns on domain, range, and definition",
 };
 
+// ⟪spend ledger R1, 2026-10-21⟫ SECTION 6 — the filling spend rides BESIDE the key; the key, its table and its index do not move
+const FILLING_SPEND_CALL_LIST = [{ provider: 'jev', model: 'jev-1.13.0', inputTokens: 4000, outputTokens: 200 }, { provider: 'jev', model: 'jev-1.13.0', inputTokens: 900, outputTokens: 30 }];
+const fillingSpendSection = (cache, sectionDone) => {
+	harness.section('SECTION 6 — the filling spend sidecar (spend ledger R1): beside the key, never in it');
+	const Database = require('better-sqlite3');
+	const rawDb = new Database(databaseFilePath, { readonly: true });
+	const columnNameList = rawDb.prepare('PRAGMA table_info(judgmentCacheEntries)').all().map((oneColumn) => oneColumn.name);
+	const keyIndexColumnList = rawDb.prepare("PRAGMA index_info('judgmentCacheKeyUnique')").all().map((oneColumn) => oneColumn.name);
+	const keyIndexIsUnique = rawDb.prepare('PRAGMA index_list(judgmentCacheEntries)').all().some((oneIndex) => oneIndex.name === 'judgmentCacheKeyUnique' && oneIndex.unique === 1);
+	rawDb.close();
+	harness.equal('judgmentCacheEntries keeps exactly its columns (the sidecar added none to it)', columnNameList.join(','), 'seq,promptHash,model,rendererVersion,judgmentJson,generation,createdAt');
+	harness.ok('the cache key is still the UNIQUE (promptHash, model, rendererVersion)', keyIndexIsUnique && keyIndexColumnList.join(',') === 'promptHash,model,rendererVersion', keyIndexColumnList.join(','));
+	cache.getJudgment(GOOD_KEY, (oldGetErr, oldRow) => {
+		harness.ok('a row written WITHOUT a filling spend reads back with fillingSpendCallList null (its hits say "predates", never zero)', !oldGetErr && oldRow.fillingSpendCallList === null, JSON.stringify(oldRow));
+		const spendKey = { ...GOOD_KEY, promptHash: 'c'.repeat(64) };
+		cache.putJudgment({ ...spendKey, generation: 'g', judgment: GOOD_JUDGMENT, fillingSpendCallList: [{ provider: 'jev', model: 'jev-1.13.0', inputTokens: -1, outputTokens: 0 }] }, (badPutErr) => {
+			harness.match('a malformed filling spend is REFUSED by name (and nothing is stored)', badPutErr, /the filling spendCallList \[0\]/);
+			cache.putJudgment({ ...spendKey, generation: 'g', judgment: GOOD_JUDGMENT, fillingSpendCallList: FILLING_SPEND_CALL_LIST }, (putErr, putReport) => {
+				harness.ok('a put WITH its filling spend stores the row', !putErr && putReport.stored === true, putErr);
+				cache.putJudgment({ ...spendKey, generation: 'g', judgment: GOOD_JUDGMENT, fillingSpendCallList: [{ provider: 'jev', model: 'jev-1.13.0', inputTokens: 1, outputTokens: 1 }] }, (againErr, againReport) => {
+					harness.ok('a second writer of the same key is alreadyPresent', !againErr && againReport.alreadyPresent === true, againErr);
+					cache.getJudgment(spendKey, (getErr, stored) => {
+						harness.equal('the filling spend reads back exactly, and it is the FIRST writer\'s', JSON.stringify(stored.fillingSpendCallList), JSON.stringify(FILLING_SPEND_CALL_LIST));
+						harness.equal('the judgment text beside it is exactly what a put without spend stores (W-B-7 compares this text)', JSON.stringify(stored.judgment), JSON.stringify(GOOD_JUDGMENT));
+						sectionDone();
+					});
+				});
+			});
+		});
+	});
+};
+
 // =====================================================================
 harness.section('SECTION 1 — open refusals');
 // =====================================================================
@@ -208,7 +240,7 @@ judgmentCacheModule.open({ databaseFilePath }, (openErr, cache) => {
 									const journalMode = rawDb.pragma('journal_mode', { simple: true });
 									rawDb.close();
 									harness.equal('the database is in WAL journal mode', `${journalMode}`.toLowerCase(), 'wal');
-									harness.report();
+									fillingSpendSection(freshCache, () => harness.report());
 								});
 							});
 						});

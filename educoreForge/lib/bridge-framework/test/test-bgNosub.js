@@ -462,7 +462,10 @@ const POST_D1_BASE_TAG = 'postHubNeutralR0VocabularyIi-102126'; // re-anchored b
 // postCtdlP1ForgeFrameworkIii-102026 -> postCtdlP5ForgeFrameworkIii-102026, tag cut ON this commit. CENSUS (lib/forge-framework/):
 // test/test-gSeamUntouched.js ONLY, 10/1 (its P5 re-anchor 79e7c6fa); no forge-framework source moved. BG-COMPOSE-PESC (a) moves with
 // it (this file is inside its diffed path list); both tags are cut ON this commit, so this re-anchor moves no other gate.
-const PHASE0_ANCHOR_TAG = 'postHubNeutralR0ForgeFrameworkIii-102126'; // re-anchored by SCARLET_STREAM (de-hub lane A R0; census REANCHOR-CENSUS-R0-102126.md; GO SCARLET_ARROW 1174c14f); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (VELVET_CHORUS; spend ledger lane R1, after R0; GO SCARLET_ARROW) ═══ (iii) postHubNeutralR0ForgeFrameworkIii-102126
+// -> postSpendLedgerR1OnMainForgeFrameworkIii-102126, tag cut ON this commit. CENSUS (lib/forge-framework/): test/test-gSeamUntouched.js ONLY —
+// its G-SEAM-UNTOUCHED re-anchor in this same commit (the coupling G-SEAM -> (iii)). No forge-framework source.
+const PHASE0_ANCHOR_TAG = 'postSpendLedgerR1OnMainForgeFrameworkIii-102126'; // re-anchored by VELVET_CHORUS (spend ledger lane R1, after R0; census REANCHOR-CENSUS-R1-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -959,7 +962,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // three paths): apps/graph-builder/lib/build.js 8/0 (hubStandardName composed from the hub bundle's standardName, c0a4200d);
 // replay-manager/lib/finishing/lib/standard-definition-finisher.js 25/0 (per-hub mappedPropertyCountByHub only when >1 HubDefinition,
 // c0a4200d + 7a05e200) and its test test-standardDefinitionDisposition.js 34/1. No forger, replay, forge-framework or forge file change.
-const PHASE3_ANCHOR_TAG = 'postHubNeutralR0SeamDiffEmpty-102126'; // re-anchored by SCARLET_STREAM (de-hub lane A R0; census REANCHOR-CENSUS-R0-102126.md; GO SCARLET_ARROW 1174c14f); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (VELVET_CHORUS; spend ledger lane R1, after R0; GO SCARLET_ARROW) ═══ BG-SEAM-UNTOUCHED seamDiffEmpty and (i-live)
+// postHubNeutralR0SeamDiffEmpty-102126 -> postSpendLedgerR1OnMainSeamDiffEmpty-102126, tag cut ON this commit. CENSUS from R0's tag over this
+// gate's path list: forger.js 5/1 and build.js 133/3 (R1's spend ledger). (i-live): COMPONENT_SHAPES.forger.forge.resultKeys gains
+// embeddingSpendRecordList (interfaces.js); build.js refuses a successful forge report without it, by name. Nothing excluded.
+const PHASE3_ANCHOR_TAG = 'postSpendLedgerR1OnMainSeamDiffEmpty-102126'; // re-anchored by VELVET_CHORUS (spend ledger lane R1, after R0; census REANCHOR-CENSUS-R1-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

@@ -103,9 +103,10 @@ const makeJudgmentCacheDouble = () => {
 				return;
 			}
 			const row = rowByRefId[refIdFor({ promptHash, model, rendererVersion })];
-			callback('', row === undefined ? { judgment: null } : { judgment: cloneJson(row.judgment), generation: row.generation, createdAt: null });
+			// ⟪spend ledger R1⟫ the filling spend rides beside the row, null when the put carried none (the real cache's sidecar)
+			callback('', row === undefined ? { judgment: null } : { judgment: cloneJson(row.judgment), generation: row.generation, createdAt: null, fillingSpendCallList: row.fillingSpendCallList === undefined ? null : cloneJson(row.fillingSpendCallList) });
 		},
-		putJudgment: ({ promptHash, model, rendererVersion, generation, judgment } = {}, callback) => {
+		putJudgment: ({ promptHash, model, rendererVersion, generation, judgment, fillingSpendCallList } = {}, callback) => {
 			cache.putCallCount += 1;
 			if (typeof promptHash !== 'string' || typeof model !== 'string' || typeof rendererVersion !== 'string') {
 				callback('judgmentCache.putJudgment: promptHash, model, rendererVersion are required strings');
@@ -118,7 +119,7 @@ const makeJudgmentCacheDouble = () => {
 			const refId = refIdFor({ promptHash, model, rendererVersion });
 			const addressWasFree = rowByRefId[refId] === undefined;
 			if (addressWasFree) {
-				rowByRefId[refId] = { promptHash, model, rendererVersion, generation: generation == null ? null : generation, judgment: cloneJson(judgment) };
+				rowByRefId[refId] = { promptHash, model, rendererVersion, generation: generation == null ? null : generation, judgment: cloneJson(judgment), ...(fillingSpendCallList === undefined ? {} : { fillingSpendCallList: cloneJson(fillingSpendCallList) }) };
 			}
 			// the real cache's report (W-B-7): stored only when THIS put wrote the row; alreadyPresent when first-write-wins kept the old one
 			callback('', { stored: addressWasFree, alreadyPresent: !addressWasFree });
@@ -298,7 +299,7 @@ const runScenario = (scenario, callback) => {
 	}
 	const spec = { ...scenario.spec, decisionStore: scenario.stores.decisionStore, judgmentCache: scenario.stores.judgmentCache, matchForensics: scenario.stores.matchForensics };
 	if (scenario.spec.rebridge) {
-		spec.inferenceConfig = { llmClient: makeJudgeClient(scenario) };
+		spec.inferenceConfig = { llmClient: makeJudgeClient(scenario), spendPricer: FIXTURE_SPEND_PRICER };
 	}
 	if (scenario.specInferenceConfigOverride !== undefined) {
 		spec.inferenceConfig = scenario.specInferenceConfigOverride;
@@ -415,6 +416,16 @@ module.exports = {
 // 'fakeAnthropic'. Every judged edge now names its judge as mappingSource 'bridge-<provider>', and the materialiser and the
 // write seam accept only a name the judge provider registry holds, so an unregistered judge cannot put edges in a graph. A
 // double of the anthropic client is that provider's double; its wireModel ('fake-anthropic-judge-v1') still says it is fake.
+// ⟪spend ledger R1, 2026-10-21⟫ the spend ledger's FIXTURE pricing table (not real prices): a real-client double is priced like a real
+// client, so every judged unit of a toy run carries a priced spendRecord. Its anthropic row prices this double's wire model.
+const FIXTURE_SPEND_PRICER = (() => {
+	const loadedPricing = require(path.join(__dirname, '..', '..', '..', 'spend-ledger', 'spendPricing')).loadSpendPricing({ pricingFilePath: path.join(__dirname, '..', '..', '..', 'spend-ledger', 'test', 'fixtures', 'spendPricing-fixture.ini') });
+	if (loadedPricing.error) {
+		throw new Error(`${moduleName} REFUSED: the fixture pricing table did not load: ${loadedPricing.error}`);
+	}
+	return loadedPricing.spendPricer;
+})();
+module.exports.FIXTURE_SPEND_PRICER = FIXTURE_SPEND_PRICER;
 const FAKE_PROVIDER_NAME = require(path.join(__dirname, '..', '..', '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'llmClient')).PROVIDER_NAME;
 const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCategory = 'none', omitCategoryOnAbstain = false, abstainRationaleMode = 'stated', rationaleMode = 'keyAndName', extraReturnKeys = {}, throwOnCall = false, wireModel = 'fake-anthropic-judge-v1' } = {}) => {
 	const model = `${FAKE_PROVIDER_NAME}:${wireModel}`;
@@ -471,7 +482,7 @@ const makeFakeRealClient = ({ pickOrdinal = '1', category = 'strong', abstainCat
 			}
 			rationale = abstainRationaleByMode[abstainRationaleMode];
 		}
-		const clientReturn = { choice, model, attempts: 1, category: choice === 'NONE' ? abstainCategory : category, rationale, usage: { inputTokens: 10, outputTokens: 5 }, stopReason: 'end_turn', retryReasons: [], ...extraReturnKeys };
+		const clientReturn = { choice, model, attempts: 1, category: choice === 'NONE' ? abstainCategory : category, rationale, usage: { inputTokens: 10, outputTokens: 5 }, spendCallList: [{ provider: FAKE_PROVIDER_NAME, model: wireModel, inputTokens: 10, outputTokens: 5 }], latencyMs: 7, stopReason: 'end_turn', retryReasons: [], ...extraReturnKeys };
 		// a schema-permitted OMISSION is the KEY ABSENT, not the key present holding undefined — the framework
 		// reads it with hasOwnProperty-free checks either way, but the double must model the wire shape honestly
 		if (choice === 'NONE' && omitCategoryOnAbstain) {
