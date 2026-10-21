@@ -80,7 +80,7 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 	if (!isPlainObject(metadata)) {
 		throw refuse.byName({ moduleName, what: 'metadata is not an object', where: 'the framework creates the kit after forge() step 4' });
 	}
-	const { standardSource, stableUriPropertyName, stableIdPattern, nonEmbeddableRoleList, cedsAnchorAbsentSentinelList } = forgeDeclaration;
+	const { standardSource, stableUriPropertyName, stableIdPattern, nonEmbeddableRoleList, hubAnchorAbsentSentinelList } = forgeDeclaration;
 	const stableIdRegex = new RegExp(stableIdPattern.pattern);
 	const universalMintPropertyNameList = universalMintPropertyNameListFor({ stableUriPropertyName });
 	// the bundle's list plus the framework-owned roles (R-ET-3): no searchText is built for either
@@ -421,7 +421,7 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 			throw refuse.byName({ moduleName, what: `cedsAnchorValue: unknown kind '${kind}'`, where: `kind is one of ${Object.keys(CEDS_ANCHOR_PREFIX_BY_KIND).join(', ')}` });
 		}
 		const trimmedValue = rawValue === undefined || rawValue === null ? '' : `${rawValue}`.trim();
-		if (trimmedValue === '' || cedsAnchorAbsentSentinelList.indexOf(trimmedValue) !== -1) {
+		if (trimmedValue === '' || hubAnchorAbsentSentinelList.indexOf(trimmedValue) !== -1) {
 			return { absent: true };
 		}
 		const digitMatch = trimmedValue.match(CEDS_ANCHOR_DIGIT_RE);

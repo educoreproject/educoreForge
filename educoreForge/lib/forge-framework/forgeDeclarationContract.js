@@ -83,7 +83,7 @@ const FORGE_DECLARATION_CONTRACT = Object.freeze({
 	// null, or { embedTextLabel, textPropertyListByRole } — REQUIRED on every bundle (R-ET-19): a bundle
 	// that embeds no text says so with null
 	embedTextDeclaration: Object.freeze({ required: true, kind: 'embedTextDeclaration' }),
-	cedsAnchorAbsentSentinelList: Object.freeze({ required: true, kind: 'stringList' }),
+	hubAnchorAbsentSentinelList: Object.freeze({ required: true, kind: 'stringList' }),
 	additionalSourceInputList: Object.freeze({ required: true, kind: 'additionalSourceInputList' }),
 	compatibilityDeclarationList: Object.freeze({ required: true, kind: 'compatibilityDeclarationList' }),
 });

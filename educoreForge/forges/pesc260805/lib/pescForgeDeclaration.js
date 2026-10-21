@@ -125,7 +125,7 @@ const pescForgeDeclaration = Object.freeze({
 	}),
 	// PESC has no CEDS anchor at all in this tier, so it has no "no mapping" sentinel to declare.
 	// Empty is the honest declaration, not a placeholder.
-	cedsAnchorAbsentSentinelList: Object.freeze([]),
+	hubAnchorAbsentSentinelList: Object.freeze([]),
 	// the parser is DIRECTORY-bound (parserDescriptor.ini declares no sourceFile): it demands the
 	// snapshot DIRECTORY — the 64-file XSD aggregate. There is no SECOND path for the framework to
 	// hand in. ⚠ THE PARSER DOES NOT VERIFY CHECKSUMS: an earlier draft of this line said it
