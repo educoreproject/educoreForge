@@ -989,8 +989,16 @@ const stageSpendLedger = (whenDone) => {
 					const silentBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: {} }) }));
 					spendBuild({ buildLogsDirPath: path.join(scratchDir, 'silentBridgeLogs'), spendPricingFilePath: fixturePricingFilePath, components: { bridgeMaker: silentBridgeMaker } }, ({ err: silentBridgeErr }) => {
 						harness.match('a MAPPING bridge report WITHOUT counts.judgeSpend is REFUSED by name (never counted as $0)', silentBridgeErr || '', /the run report carries no counts\.judgeSpend/);
-						fs.rmSync(scratchDir, { recursive: true, force: true });
-						whenDone();
+						// the framework's own no-frozen-block report (bridge-framework.js: counts null, decisionBlock null, "nothing judged")
+						const nothingRanBridgeMaker = withDescribeBridge(() => ({ run: (spec, cb) => cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: null, note: 'no frozen decision block; zero edges; nothing judged' }) }));
+						const nothingRanLogsDirPath = path.join(scratchDir, 'nothingRanLogs');
+						spendBuild({ buildLogsDirPath: nothingRanLogsDirPath, spendPricingFilePath: fixturePricingFilePath, components: { bridgeMaker: nothingRanBridgeMaker } }, ({ err: nothingRanErr }) => {
+							harness.accepts('the framework\'s no-frozen-block report (counts null, nothing judged) builds as before', nothingRanErr ? [nothingRanErr] : []);
+							const nothingRanLedger = ledgerIn(nothingRanLogsDirPath);
+							harness.ok('  and records no judge spend for that bridge (it judged nothing)', nothingRanLedger !== null && nothingRanLedger.bridgeList.length === 0, JSON.stringify(nothingRanLedger && nothingRanLedger.bridgeList));
+							fs.rmSync(scratchDir, { recursive: true, force: true });
+							whenDone();
+						});
 					});
 				});
 			});

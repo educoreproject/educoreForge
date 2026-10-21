@@ -2450,10 +2450,13 @@ const build = (recipe, deps, buildCallback) => {
 							next(`bridge ${pairLabel}: ${err}`);
 							return;
 						}
-						// ⟪spend ledger R1⟫ a MAPPING bridge's spend, as its run report counted it: every mapping bridge runs through the
-						// bridge framework, whose report always carries counts.judgeSpend (asked 0 on a plain build). A STRUCTURAL pairing
-						// (no hub) judges nothing and reports none. A mapping report without it is refused, never counted as $0.
-						if (bridge.hub !== undefined) {
+						// ⟪spend ledger R1⟫ a MAPPING bridge's spend, as its run report counted it: the bridge framework's report carries
+						// counts.judgeSpend (asked 0 on a plain build) EXCEPT on its no-frozen-block branch, which states that nothing ran:
+						// counts null beside decisionBlock null ("zero edges; nothing judged"). That one shape records no spend; a
+						// STRUCTURAL pairing (no hub) judges nothing and reports none; any other mapping report without judgeSpend is
+						// refused, never counted as $0.
+						const nothingRanReport = Boolean(runReport) && runReport.counts === null && runReport.decisionBlock === null;
+						if (bridge.hub !== undefined && !nothingRanReport) {
 							if (!runReport || !runReport.counts || !runReport.counts.judgeSpend) {
 								next(`bridge ${pairLabel}: the run report carries no counts.judgeSpend; a mapping bridge states what its judge spent (asked 0 when it judged nothing)`);
 								return;
