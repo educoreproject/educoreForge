@@ -61,7 +61,11 @@ const moduleFunction =
 		}
 
 		// the discovery registry — validated at construction, before any forge is spent (SPEC §9)
-		const pluginRegistry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: FORGES_DIR_PATH });
+		// ⟪deCeds R3 P-c, SCARLET_ARROW ruling⟫ the one operator input the seam face reads: graphBuilder -build
+		// --bridgingOverlayDirPath (a test/scratch seam; actions.js refuses it for any recipe kind but dev). Read from the
+		// command line, never injected, so D-S1 (no construction arguments) stands. Absent, the tree is read as it stands.
+		const bridgingOverlayDirPath = ((((process.global || {}).commandLineParameters || {}).values || {}).bridgingOverlayDirPath || [])[0];
+		const pluginRegistry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: FORGES_DIR_PATH, ...(bridgingOverlayDirPath === undefined ? {} : { bridgingOverlayDirPath }) });
 
 		const bridgeFramework = bridgeFrameworkLib({
 			graphReaderFactory,

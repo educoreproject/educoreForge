@@ -25,6 +25,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     ACTUALLY made it — the same [voyageEmbedding].model value that was sent to the API.
 //   embedder.embedTexts({ texts }, (err, { vectors, embeddingModelVersion }) => {...});
 //   embedder.resolveEmbeddingIdentity() -> { model, embeddingDims }  (never the key)
+//
+// CACHE-ONLY (hub-neutral bridge lane R3, P-c; SCARLET_ARROW ruling 2026-10-21): cacheOnly true makes a vector-cache miss a
+// STOP — the batch is refused BY NAME, naming its distinct miss count, BEFORE any provider call, and nothing is recorded as
+// spent. Default OFF: absent, the client behaves exactly as before. The construction option wins; absent, the operator's
+// graphBuilder --embeddingCacheOnly=true|false is read from process.global.commandLineParameters (the forger builds this client
+// with no such option, and its file is a seam file this lane does not edit). A malformed value THROWS (a configuration fault).
+// cacheOnly with caching disabled is refused at construction: every text would be a miss. The R7 zero-spend certificate (P-z)
+// rests on this flag.
 //   embedder.encodeVector(float32) -> base64 (little-endian float32). Takes a Float32Array or
 //     an array of finite numbers; anything else is REFUSED rather than coerced. An EMPTY vector
 //     is a legitimate value and encodes to the empty string.
@@ -80,6 +88,28 @@ fs.readdirSync(providersDir).forEach((file) => {
 
 // START OF moduleFunction() ============================================================
 
+// cacheOnlyFor — the construction option when given (a boolean, else THROWS), else the operator's --embeddingCacheOnly
+// ('true' | 'false', else THROWS), else off (the documented default: a client nobody asked behaves as it always has)
+const CACHE_ONLY_COMMAND_LINE_NAME = 'embeddingCacheOnly';
+const cacheOnlyFor = ({ cacheOnly }) => {
+	if (cacheOnly !== undefined) {
+		if (typeof cacheOnly !== 'boolean') {
+			throw new Error(`embedding-client: cacheOnly is ${JSON.stringify(cacheOnly)}; it is true or false (or omitted, to read --${CACHE_ONLY_COMMAND_LINE_NAME}).`);
+		}
+		return cacheOnly;
+	}
+	const commandLineParameters = (process.global || {}).commandLineParameters || {};
+	const valueList = (commandLineParameters.values || {})[CACHE_ONLY_COMMAND_LINE_NAME];
+	if (valueList === undefined) {
+		return false;
+	}
+	const valueText = Array.isArray(valueList) && valueList.length === 1 ? valueList[0] : valueList;
+	if (valueText !== 'true' && valueText !== 'false') {
+		throw new Error(`embedding-client: --${CACHE_ONLY_COMMAND_LINE_NAME} is ${JSON.stringify(valueText)}; it is 'true' or 'false', and nothing else.`);
+	}
+	return valueText === 'true';
+};
+
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({
@@ -90,6 +120,7 @@ const moduleFunction =
 		// judge registry use: an object answering embed(texts, resolvedConfig, cb) stands in for the discovered provider so a
 		// suite can prove the spend record without a socket or a bill. Production passes nothing and takes providerName's.
 		componentOverrides = {},
+		cacheOnly,
 	} = {}) => {
 		// THE PROVIDER IS CHECKED WHEN THE CLIENT IS BUILT. An unknown name used to construct
 		// cleanly, answer resolveEmbeddingIdentity() as though all were well, and be refused only
@@ -217,6 +248,10 @@ const moduleFunction =
 		// process.global; a top-level require would kill -help (the same trap decision-store
 		// carries). cacheOpenState memoizes the opened cache so the file opens once per client.
 		const cachingEnabled = !(cacheFilePath === false || cacheFilePath == null);
+		const cacheOnlyInForce = cacheOnlyFor({ cacheOnly });
+		if (cacheOnlyInForce && !cachingEnabled) {
+			throw new Error(`embedding-client: cacheOnly is true but caching is disabled (cacheFilePath ${JSON.stringify(cacheFilePath)}): every text would be a miss. Name a vector cache, or drop cache-only.`);
+		}
 		let vectorCacheModule = null;
 		let cacheOpenState = null; // null=unopened; { api } once opened
 
@@ -382,6 +417,14 @@ const moduleFunction =
 							return;
 						}
 
+						if (cacheOnlyInForce) {
+							embedCallback(
+								`embedding-client: REFUSED under cache-only (--embeddingCacheOnly=true): ${missTexts.length} distinct text(s) are not in the vector cache ` +
+									`${cacheFilePath} for model ${model} (this batch: ${stringified.length} text(s), ${stringified.length - missTexts.length} served). ` +
+									'Nothing was sent to the provider and nothing was spent; warm the cache, or run without cache-only to pay for them.',
+							);
+							return;
+						}
 						vectorsFromProvider(missTexts, loaded.resolvedConfig, (err, missVectors, callSpend) => {
 							if (err) {
 								embedCallback(err);

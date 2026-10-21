@@ -628,6 +628,28 @@ harness.match('-help documents --vectorize', helpRun.stdout, /--vectorize=true\|
 harness.match('  and states the default is true', helpRun.stdout, /DEFAULTS TO true/);
 
 // =====================================================================
+harness.section('--embeddingCacheOnly and --bridgingOverlayDirPath — checked before phase A (deCeds R3 P-c)');
+// =====================================================================
+// Spend nothing, as the --vectorize cases above: the un-forged-standard recipe's real forger refuses 'zorg' by name before any
+// docker/Voyage. A golden copy of it (scratch) proves the overlay is refused for a recipe of record BEFORE the forge.
+const cacheOnlyInvalid = runCli(buildVecArgs('--embeddingCacheOnly=yes'));
+harness.equal('--embeddingCacheOnly=yes exits 1', cacheOnlyInvalid.status, 1);
+harness.match("  naming 'yes'", cacheOnlyInvalid.stderr, /--embeddingCacheOnly='yes'/);
+harness.ok('  refused BEFORE phase A', !/phase A \(forge\) failed/.test(cacheOnlyInvalid.stderr), cacheOnlyInvalid.stderr);
+const cacheOnlyTrue = runCli(buildVecArgs('--embeddingCacheOnly=true'));
+harness.match('--embeddingCacheOnly=true is accepted and the run walks on to the forge', cacheOnlyTrue.stderr, /phase A \(forge\) failed: forge zorg/);
+const goldenFixturePath = path.join(scratchDir, `goldenUnforged_${process.pid}.recipe.jsonc`);
+fs.writeFileSync(goldenFixturePath, fs.readFileSync(fixture('bad-unforgedStandard'), 'utf8').replace(/"kind": "dev"/, '"kind": "golden"'));
+const overlayGolden = runCli(['-build', '--recipePath=' + goldenFixturePath, '--standardsDatabaseFilePath=' + vectorizeStore, ...p9ScratchArgs, '--bridgingOverlayDirPath=' + scratchDir]);
+harness.equal('--bridgingOverlayDirPath on a golden recipe exits 1', overlayGolden.status, 1);
+harness.match('  refused by name: a test/scratch seam, for no kind but dev', overlayGolden.stderr, /--bridgingOverlayDirPath is a test\/scratch seam and recipe .* is kind "golden"/);
+harness.ok('  refused BEFORE phase A', !/phase A \(forge\) failed/.test(overlayGolden.stderr), overlayGolden.stderr);
+const overlayRelative = runCli(buildVecArgs('--bridgingOverlayDirPath=some/relative/dir'));
+harness.match('a relative overlay directory is refused by name', overlayRelative.stderr, /--bridgingOverlayDirPath "some\/relative\/dir" is not an absolute, existing directory/);
+harness.match('-help documents --embeddingCacheOnly', helpRun.stdout, /--embeddingCacheOnly=true\|false/);
+harness.match('-help documents --bridgingOverlayDirPath', helpRun.stdout, /--bridgingOverlayDirPath=<absolute dir>/);
+
+// =====================================================================
 harness.section('INPUT CHANNELS — JSON on stdin REPLACES the command line');
 // =====================================================================
 

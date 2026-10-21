@@ -281,6 +281,19 @@ OPTIONS
                            IT DOES NOT AFFECT VECTORIZATION. Embedding still happens per --vectorize
                            (default true), so a debug run over never-embedded text still spends Voyage
                            credit; over already-embedded text the shared cache makes it free.
+     --embeddingCacheOnly=true|false
+                           Embedding answered ONLY FROM THE VECTOR CACHE. OPTIONAL, DEFAULTS TO false.
+                           With true, a batch carrying any text not in the cache is REFUSED BY NAME,
+                           naming its distinct miss count, before any provider call: nothing is sent
+                           to Voyage and nothing is spent (a stop, not a bill). The embedding twin of
+                           --judgeCacheOnly; with --useDebugJudge it makes a run zero-spend by
+                           construction. Read by the embedding client itself (lib/embedding).
+     --bridgingOverlayDirPath=<absolute dir>
+                           A TEST/SCRATCH SEAM, refused unless the recipe kind is dev. The directory
+                           mirrors forges/<bundle>/bridges/<file>.js; each file there REPLACES the
+                           tree's standard bridging file of the same path for this run's bridge
+                           registry (it never adds one). For a debug run of a pairing nobody has
+                           shipped (deCeds R3 P-c). Absent, the tree is read as it stands.
      --judgeCacheOnly=true|false
                            A rebridge that may answer judgments ONLY FROM THE JUDGMENT CACHE. OPTIONAL,
                            DEFAULTS TO false. With true, a cache MISS is REFUSED BY NAME ("JUDGE CACHE

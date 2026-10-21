@@ -21,6 +21,7 @@ const fs = require('fs');
 const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus'))();
 
 const recipeLib = require('./recipe')();
+const { readOptionalBooleanValue } = require('./optional-boolean-value');
 const buildLib = require('./build')();
 
 // timestampForFileName — a sortable, filesystem-safe stamp for a backup copy's name (YYYYMMDD-HHMMSS,
@@ -440,6 +441,23 @@ const build = (callback) => {
 	}
 
 	const { verdict, recipe } = read;
+	// ⟪deCeds R3 P-c⟫ the two zero-spend/scratch flags are checked BEFORE anything is opened: --embeddingCacheOnly is read by the
+	// embedding client itself, so a malformed value is refused here by name rather than thrown from inside the forge; the bridging
+	// overlay is a test/scratch seam, refused for any recipe whose kind is not dev (no recipe of record runs an unshipped bridge)
+	const embeddingCacheOnlyRead = readOptionalBooleanValue({ name: 'embeddingCacheOnly', commandLineParameters: process.global.commandLineParameters, moduleName: 'graphBuilder -build', whatItControls: 'whether a vector-cache miss is a stop instead of a Voyage call', defaultValue: false });
+	if (embeddingCacheOnlyRead.error) {
+		callback(embeddingCacheOnlyRead.error);
+		return;
+	}
+	const bridgingOverlayDirPath = firstValue(process.global.commandLineParameters, 'bridgingOverlayDirPath');
+	if (bridgingOverlayDirPath !== undefined && recipe.kind !== 'dev') {
+		callback(`graphBuilder -build: --bridgingOverlayDirPath is a test/scratch seam and recipe '${recipe.recipeName}' is kind ${JSON.stringify(recipe.kind)}; it is refused for every kind but dev, so no recipe of record runs an unshipped bridge`);
+		return;
+	}
+	if (bridgingOverlayDirPath !== undefined && !(path.isAbsolute(bridgingOverlayDirPath) && fs.existsSync(bridgingOverlayDirPath))) {
+		callback(`graphBuilder -build: --bridgingOverlayDirPath ${JSON.stringify(bridgingOverlayDirPath)} is not an absolute, existing directory`);
+		return;
+	}
 	const passFail = (layer) => (layer.ran ? (layer.ok ? 'PASS' : 'FAIL') : 'skipped');
 	xLog.status(
 		`graphBuilder: validation -- structural ${passFail(verdict.layers.structural)}; ` +
