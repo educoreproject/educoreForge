@@ -21,6 +21,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // Stores are opened { readonly: true, fileMustExist: true }: a compare never creates, migrates or writes a store.
 //
 //   latestDecisionBlockByPairKey({ decisionStoreFilePath })            → { blockByPairKey } | { error }
+//   latestFrozenHeaderByPairKey({ decisionStoreFilePath })             → { headerByPairKey } | { error }   (header only, from a prefix)
 //   compareDecisionBlockStores({ baselineDecisionStoreFilePath, candidateDecisionStoreFilePath })
 //                                                                     → { rowList, passed } | { error }
 //   manifestMemberListFor({ standardsDatabaseFilePath, manifestRefId }) → { memberList } | { error }
@@ -61,6 +62,57 @@ const latestDecisionBlockByPairKey = ({ decisionStoreFilePath } = {}) => {
 };
 
 const headerOf = (frozenText) => JSON.parse(frozenText).header;
+
+// the frozen text opens with {"header":{…}, and the header is a few KB of a block that can be hundreds of MB: read a prefix and
+// cut the header object out of it by brace depth (quotes and escapes respected), never parsing the decision records
+const HEADER_PREFIX_BYTE_COUNT = 65536;
+const HEADER_OPENING_TEXT = '{"header":';
+const headerFromPrefix = (prefixText) => {
+	if (!prefixText.startsWith(HEADER_OPENING_TEXT)) {
+		return { error: `${moduleName}: a frozen text does not open with ${HEADER_OPENING_TEXT}` };
+	}
+	let depth = 0;
+	let inString = false;
+	for (let characterIndex = HEADER_OPENING_TEXT.length; characterIndex < prefixText.length; characterIndex++) {
+		const character = prefixText[characterIndex];
+		if (inString) {
+			if (character === '\\') {
+				characterIndex += 1;
+			} else if (character === '"') {
+				inString = false;
+			}
+		} else if (character === '"') {
+			inString = true;
+		} else if (character === '{') {
+			depth += 1;
+		} else if (character === '}') {
+			depth -= 1;
+			if (depth === 0) {
+				return { header: JSON.parse(prefixText.slice(HEADER_OPENING_TEXT.length, characterIndex + 1)) };
+			}
+		}
+	}
+	return { error: `${moduleName}: a frozen header does not close within its first ${HEADER_PREFIX_BYTE_COUNT} bytes` };
+};
+
+// latestFrozenHeaderByPairKey — the header of the latest frozen block per pairKey, read without loading the decision records
+const latestFrozenHeaderByPairKey = ({ decisionStoreFilePath } = {}) => {
+	const opened = openReadonly(decisionStoreFilePath, 'decision store');
+	if (opened.error) {
+		return { error: opened.error };
+	}
+	const rowList = opened.database.prepare(`select seq, pairKey, decisionBlockHash, substr(frozenText, 1, ${HEADER_PREFIX_BYTE_COUNT}) as frozenPrefix from decisionBlocks order by seq`).all();
+	opened.database.close();
+	const headerByPairKey = {};
+	for (let rowIndex = 0; rowIndex < rowList.length; rowIndex++) {
+		const parsed = headerFromPrefix(textOf(rowList[rowIndex].frozenPrefix));
+		if (parsed.error) {
+			return { error: `${parsed.error} (pairKey ${rowList[rowIndex].pairKey} in ${decisionStoreFilePath})` };
+		}
+		headerByPairKey[rowList[rowIndex].pairKey] = { decisionBlockHash: rowList[rowIndex].decisionBlockHash, header: parsed.header };
+	}
+	return { headerByPairKey };
+};
 
 const compareOnePairKey = ({ pairKey, baselineBlock, candidateBlock }) => {
 	if (baselineBlock === undefined) {
@@ -157,6 +209,7 @@ const compareManifests = ({ baselineStandardsDatabaseFilePath, baselineManifestR
 
 module.exports = {
 	latestDecisionBlockByPairKey,
+	latestFrozenHeaderByPairKey,
 	compareDecisionBlockStores,
 	manifestMemberListFor,
 	compareMemberLists,

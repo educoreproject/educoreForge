@@ -2925,6 +2925,9 @@ module.exports = moduleFunction({ moduleName });
 // pure helpers exported as statics so the rebridge-scope resolution + per-pair scope match can be gated
 // directly (§6 no-silent-default), without standing up the whole build pipeline.
 module.exports.refuseHublessReuseUnderDeriveHub = refuseHublessReuseUnderDeriveHub;
+// ⟪R0 proof kit, 2026-10-21⟫ the version a standard resolves to, read by the no-rebuild digest gate so it composes pairKeys from
+// the SAME arithmetic phase A uses (forger.getVersionStamp → explicitVersionFrom), not a copy of it
+module.exports.explicitVersionFrom = explicitVersionFrom;
 // ⟪lane R, 2026-10-05⟫ the fidelity row's producer and its wiring, exported as statics so the three states (skipped,
 // pass, passWithAllowedLoss) are gated through the real materialize tail with hermetic doubles (test-fidelityAttestation)
 module.exports.runCedsFidelityGate = runCedsFidelityGate;
