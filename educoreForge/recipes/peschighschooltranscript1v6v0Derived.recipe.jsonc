@@ -23,7 +23,7 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "peschighschooltranscript1v6v0", "hub": "ceds", "bridge": "pescHighSchoolTranscript1v6v0CedsDerivedPlugin", "dependencies": ["peschighschooltranscript1v6v0", "ceds"] }
+    { "source": "peschighschooltranscript1v6v0", "hubs": ["ceds"], "dependencies": ["peschighschooltranscript1v6v0", "ceds"] }
   ],
   "roundTripStage": true
 }

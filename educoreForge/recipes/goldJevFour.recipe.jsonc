@@ -29,9 +29,9 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] },
-    { "source": "sif260928", "hub": "ceds", "bridge": "sif260928CedsDerivedPlugin", "dependencies": ["sif260928", "ceds"] },
-    { "source": "pesccollegetranscript1v8v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v8v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v8v0", "ceds"] }
+    { "source": "edfi", "hubs": ["ceds"], "dependencies": ["edfi", "ceds"] },
+    { "source": "sif260928", "hubs": ["ceds"], "dependencies": ["sif260928", "ceds"] },
+    { "source": "pesccollegetranscript1v8v0", "hubs": ["ceds"], "dependencies": ["pesccollegetranscript1v8v0", "ceds"] }
   ],
   "roundTripStage": true
 }

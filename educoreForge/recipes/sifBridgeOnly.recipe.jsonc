@@ -17,6 +17,6 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "sif", "hub": "ceds", "bridge": "sifCedsStandardPlugin", "dependencies": ["sif", "ceds"] }
+    { "source": "sif", "hubs": ["ceds"], "dependencies": ["sif", "ceds"] }
   ]
 }

@@ -41,7 +41,7 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "sif", "hub": "ceds", "bridge": "sifCedsStandardPlugin", "dependencies": ["sif", "ceds"] }
+    { "source": "sif", "hubs": ["ceds"], "dependencies": ["sif", "ceds"] }
   ],
   // the round-trip stage runs every declared roundTripValidator against the materialised graph — -goldEvalCheck REFUSES a
   // run whose stage did not run (doctrine §7.4); an ACCEPTANCE recipe declares it (fourWithHub-baseline precedent)

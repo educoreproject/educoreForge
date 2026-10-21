@@ -23,7 +23,7 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "pesclearningrecord1v0v0", "hub": "ceds", "bridge": "pescLearningRecord1v0v0CedsDerivedPlugin", "dependencies": ["pesclearningrecord1v0v0", "ceds"] }
+    { "source": "pesclearningrecord1v0v0", "hubs": ["ceds"], "dependencies": ["pesclearningrecord1v0v0", "ceds"] }
   ],
   "roundTripStage": true
 }

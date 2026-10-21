@@ -23,7 +23,7 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "sif260928", "hub": "ceds", "bridge": "sif260928CedsDerivedPlugin", "dependencies": ["sif260928", "ceds"] }
+    { "source": "sif260928", "hubs": ["ceds"], "dependencies": ["sif260928", "ceds"] }
   ],
   "roundTripStage": true
 }

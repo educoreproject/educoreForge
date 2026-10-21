@@ -23,7 +23,7 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "pescacademiceportfolio1v0v0", "hub": "ceds", "bridge": "pescAcademicEportfolio1v0v0CedsDerivedPlugin", "dependencies": ["pescacademiceportfolio1v0v0", "ceds"] }
+    { "source": "pescacademiceportfolio1v0v0", "hubs": ["ceds"], "dependencies": ["pescacademiceportfolio1v0v0", "ceds"] }
   ],
   "roundTripStage": true
 }

@@ -53,7 +53,7 @@
 		{ "standard": "ceds" }
 	],
 	"bridges": [
-		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescOptionSetCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
+		{ "source": "pesc260805", "hubs": ["ceds"], "facet": "OptionSet", "dependencies": ["pesc260805", "ceds"] }
 	],
 	"roundTripStage": true
 }

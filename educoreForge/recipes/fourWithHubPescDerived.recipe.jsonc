@@ -70,7 +70,7 @@
 	// exists. The option-set bridge itself is shipped, validated, and censused (223/223 judged, zero
 	// orphans, zero collisions, block c8dbb1f9) — nothing about it is unfinished.
 	"bridges": [
-		{ "source": "pesc260805", "hub": "ceds", "bridge": "pescCedsDerivedPlugin", "dependencies": ["pesc260805", "ceds"] }
+		{ "source": "pesc260805", "hubs": ["ceds"], "facet": "", "dependencies": ["pesc260805", "ceds"] }
 	],
 	"roundTripStage": true
 }

@@ -17,7 +17,7 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "pesccollegetranscript1v7v0", "hub": "ceds", "bridge": "pescCollegeTranscript1v7v0CedsDerivedPlugin", "dependencies": ["pesccollegetranscript1v7v0", "ceds"] }
+    { "source": "pesccollegetranscript1v7v0", "hubs": ["ceds"], "dependencies": ["pesccollegetranscript1v7v0", "ceds"] }
   ],
   "roundTripStage": true
 }

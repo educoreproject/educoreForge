@@ -25,7 +25,7 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "edfi", "hub": "ceds", "bridge": "edfiCedsDerivedPlugin", "dependencies": ["edfi", "ceds"] }
+    { "source": "edfi", "hubs": ["ceds"], "dependencies": ["edfi", "ceds"] }
   ],
   "roundTripStage": true
 }

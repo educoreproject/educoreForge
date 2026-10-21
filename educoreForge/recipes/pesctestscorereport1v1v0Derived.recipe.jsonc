@@ -23,7 +23,7 @@
     { "standard": "ceds" }
   ],
   "bridges": [
-    { "source": "pesctestscorereport1v1v0", "hub": "ceds", "bridge": "pescTestScoreReport1v1v0CedsDerivedPlugin", "dependencies": ["pesctestscorereport1v1v0", "ceds"] }
+    { "source": "pesctestscorereport1v1v0", "hubs": ["ceds"], "dependencies": ["pesctestscorereport1v1v0", "ceds"] }
   ],
   "roundTripStage": true
 }
