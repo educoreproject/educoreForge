@@ -84,7 +84,7 @@ const declaredTargetRuleListRefusal = (ruleList) => {
 			return `rule ${ruleIndex} pattern must be a non-empty regular expression anchored with ^ and $`;
 		}
 		// RegExp throws on a pattern that does not compile; the throw is translated ONCE, here, into a refusal by name (the same
-		// single-site boundary dispensation sifCedsStandardPlugin's crossRefsFrom takes for JSON.parse), never control flow
+		// single-site boundary dispensation the plugin files take for JSON.parse), never control flow
 		let compileFault = '';
 		try {
 			compiledPatternOf(oneRule.pattern);
