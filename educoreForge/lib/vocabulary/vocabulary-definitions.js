@@ -72,6 +72,8 @@ const TERM_DEFINITIONS = {
 			'Property to the property the source declares its inverse: owl:inverseOf, one edge per stated statement in the direction stated (the CTDL-family sources state every inverse in both directions, so each pair appears as two edges). Introduced for the CTDL-family forges.',
 		RELATED_CONCEPT:
 			'Concept to a concept of the same standard the source declares related: skos:relatedMatch between two of the standard\'s own concepts, one edge per stated statement (CTDL-QData states each of its five pairs both ways). Intra-standard structure, never a mapping: it is deliberately not RELATED_MATCH, which is a judged cross-standard relation (ruling R6). Introduced for the CTDL-QData forge.',
+		DECLARED_CORRESPONDENCE:
+			'A term of one standard to a term of ANOTHER standard, carrying an assertion the source standard itself published about them: owl:equivalentClass, owl:equivalentProperty, rdfs:subClassOf, rdfs:subPropertyOf, a skos:*Match or owl:sameAs, kept VERBATIM in sourcePredicate, with declaredBy naming the asserting standard and provenanceTier spec-authoritative. It is never a match edge: no declared predicate is translated into EXACT_MATCH, CLOSE_MATCH, BROAD_MATCH or NARROW_MATCH, and the edge reaches a base node of the target standard, not a hub card. Introduced for the CTDL-family declared bridges (ctdlHub-101926 P6: CTDL to CEDS, CTDL-ASN to CTDL).',
 		HAS_SUPPORT: 'Node to producer-specific supporting material (documentation fragments, examples).',
 		REFERENCES_TYPE: 'Property/field to the type it references within its own standard: a named type, or (PESC, since forgeClean lane CLEAN G19) the anonymous complex or simple type written inside the declaration, which it owns.',
 		HAS_DEFINITION:

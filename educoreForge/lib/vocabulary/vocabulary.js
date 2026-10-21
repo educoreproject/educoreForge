@@ -153,6 +153,11 @@ const EDGE_TYPES = {
 	SUBPROPERTY_OF: 'SUBPROPERTY_OF',
 	INVERSE_OF: 'INVERSE_OF',
 	RELATED_CONCEPT: 'RELATED_CONCEPT',
+	// ⟪ctdlHub-101926 P6, 2026-10-21; WORKORDER-P6 step 1, R6 as refined by SCARLET_ARROW⟫ a source standard's PUBLISHED assertion
+	// relating one of its own terms to a term of ANOTHER standard (owl:equivalentClass/Property, rdfs:subClassOf/subPropertyOf,
+	// skos:*Match, owl:sameAs), carried with its predicate VERBATIM in sourcePredicate. NEVER a match edge: no declared predicate is
+	// coerced into EXACT/CLOSE/BROAD/NARROW (TQ question Q-T1). Written by a 'declared' bridge to a BASE node of the target standard.
+	DECLARED_CORRESPONDENCE: 'DECLARED_CORRESPONDENCE',
 };
 
 // ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE ⟪campaign P3, W-C-1 (V1-C28, G5)⟫ — the table a forge reads a root-parented node's ownership
@@ -838,16 +843,19 @@ const MAPPING_KIND_BY_RESOLUTION = Object.freeze({ judged: MAPPING_KIND.INFERRED
 // family belongs to exactly one kind, so the writer can hold the two fields to each other. The NAME is the ACTUAL
 // judge's, read from its identity (TQ, 2026-10-04): 'bridge-jev', 'bridge-jevOpus', 'bridge-debug'.
 const MAPPING_SOURCE_SEPARATOR = '-';
-const MAPPING_SOURCE_FAMILY = Object.freeze({ BRIDGE: 'bridge', CROSSWALK: 'crosswalk', STANDARD: 'standard' });
+// ⟪ctdlHub P6⟫ DECLARED: the family of an edge a source standard declared about another standard's term (declared identity, the
+// same IRI; declared correspondence, a different IRI by a published predicate). Authored: the source named the target.
+const MAPPING_SOURCE_FAMILY = Object.freeze({ BRIDGE: 'bridge', CROSSWALK: 'crosswalk', STANDARD: 'standard', DECLARED: 'declared' });
 const MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY = Object.freeze({
 	[MAPPING_SOURCE_FAMILY.BRIDGE]: MAPPING_KIND.INFERRED,
 	[MAPPING_SOURCE_FAMILY.CROSSWALK]: MAPPING_KIND.AUTHORED,
 	[MAPPING_SOURCE_FAMILY.STANDARD]: MAPPING_KIND.AUTHORED,
+	[MAPPING_SOURCE_FAMILY.DECLARED]: MAPPING_KIND.AUTHORED,
 });
 const MAPPING_SOURCE_FAMILY_LIST = Object.freeze(Object.keys(MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY));
 // the authored family a SPECIFIED record's matchBasis names; 'derived' has none, so a specified record in a derived block
 // is refused by name rather than given a family it does not have
-const MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS = Object.freeze({ crosswalk: MAPPING_SOURCE_FAMILY.CROSSWALK, standard: MAPPING_SOURCE_FAMILY.STANDARD });
+const MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS = Object.freeze({ crosswalk: MAPPING_SOURCE_FAMILY.CROSSWALK, standard: MAPPING_SOURCE_FAMILY.STANDARD, declaredIdentity: MAPPING_SOURCE_FAMILY.DECLARED, declared: MAPPING_SOURCE_FAMILY.DECLARED });
 // the NAME half: a provider or plugin name as the registries spell them (lower-case initial, then alphanumerics). It
 // excludes the separator, so '<family>-<name>' parses one way only.
 const MAPPING_SOURCE_NAME_PATTERN = /^[a-z][A-Za-z0-9]*$/;
