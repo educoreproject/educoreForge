@@ -50,6 +50,9 @@
 //      'whitespaceToUnderscore' as one '_' per whitespace run in the IRI path segment only — the hubVersion field stays raw
 //      and the addressSignature still hashes the raw hubVersion; a character outside the IRI-unreserved set that the rule
 //      does not rewrite is refused under both
+//   l  ⟪ctdlHub P6, ruling R-6⟫ a REFERENCES edge's locator is honoured: one carrying locator 'meta:targetScheme' (CTDL's
+//      E5 edge: a concept-scheme target, NOT a range) adds no range class, no RANGE edge and no card; the hub derives
+//      byte-identical to the shipped fixture. A REFERENCES locator the hub has no reading for is REFUSED BY NAME.
 //
 // RED TWINS (each a changed COPY of the derived result, nothing re-derived): a conjunct whose twin is not observed red
 // in this suite's output fails the suite.
@@ -299,6 +302,20 @@ const slashSlug = deriveAt({ hubVersion: 'v1/2', hubVersionSegment: 'whitespaceT
 harness.match('k: a character outside the unreserved set the rule does not rewrite is REFUSED (whitespaceToUnderscore)', slashSlug.hubError, /hubVersion 'v1\/2'.*whitespaceToUnderscore/);
 harness.match('k: and REFUSED under verbatim', deriveAt({ hubVersion: 'v1/2', hubVersionSegment: 'verbatim' }).hubError, /hubVersion 'v1\/2'.*verbatim/);
 harness.equal('k: CONTROL — a clean version mints identically under both rules', JSON.stringify(deriveAt({ hubVersion: HUB_VERSION, hubVersionSegment: 'verbatim' }).hub.nodes), JSON.stringify(shipped.hub.nodes));
+
+harness.section('l — a REFERENCES edge carrying locator meta:targetScheme is not a range (ctdlHub P6 R-6)');
+const withTargetSchemeReference = (locatorText) => {
+	const changedBase = JSON.parse(JSON.stringify(FIXTURE_BASE));
+	changedBase.edges.push({ type: 'REFERENCES', fromRef: { source: 'FIXTURE', id: 'ex:holder' }, toRef: { source: 'FIXTURE', id: 'ex:Credential' }, properties: { locator: locatorText } });
+	return deriveHub({ hubDeclaration: FIXTURE_DECLARATION, baseNodeEdges: changedBase });
+};
+const underTargetScheme = withTargetSchemeReference('meta:targetScheme');
+harness.equal('l: derives', String(underTargetScheme.hubError || ''), '');
+const holderCardOf = (hub) => hub && cardsOfTier(hub, 'property').find((oneCard) => oneCard.properties.propertyKey === 'ex:holder');
+harness.equal('l: ex:holder keeps exactly its two real range classes', JSON.stringify(holderCardOf(underTargetScheme.hub) && holderCardOf(underTargetScheme.hub).properties.rangeClassIdList), JSON.stringify(['ex:Organization', 'ex:Person']));
+harness.equal('l: no RANGE edge reaches the targetScheme class from ex:holder\'s card', underTargetScheme.hub ? underTargetScheme.hub.edges.filter((oneEdge) => oneEdge.type === hubEdgeType('FIXTURE', 'RANGE') && oneEdge.fromRef.id === holderCardOf(underTargetScheme.hub).stableId && oneEdge.toRef.id === 'ex:Credential').length : -1, 0);
+harness.equal('l: the derived hub is byte-identical to the shipped fixture hub (nodes and edges)', underTargetScheme.hub ? JSON.stringify({ nodes: underTargetScheme.hub.nodes, edges: underTargetScheme.hub.edges }) : '', JSON.stringify({ nodes: shipped.hub.nodes, edges: shipped.hub.edges }));
+harness.match('l: a REFERENCES locator with no declared reading is REFUSED BY NAME', String(withTargetSchemeReference('ex:unheardOfLocator').hubError || ''), /REFERENCES.*locator 'ex:unheardOfLocator'/);
 
 harness.section('j — CONTROL: the same base under domainAddressing \'domainFields\' (the CEDS read)');
 const underDomainFields = deriveHub({ hubDeclaration: { ...FIXTURE_DECLARATION, domainAddressing: 'domainFields' }, baseNodeEdges: FIXTURE_BASE });

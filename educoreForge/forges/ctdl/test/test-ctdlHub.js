@@ -26,6 +26,9 @@
 //   e  spot cards: term cards for ceterms:Credential, ceterms:name and accommodation:AccessibleHousing; the property card
 //      (ceterms:Credential, ceterms:name) carries rangeDatatypeList ['rdf:langString'] and its HAS_TERM_REFERENCE lands on
 //      the ceterms:name term card; exactly one HubDefinition, hubName 'CTDL'
+//   g  ⟪ctdlHub P6, ruling R-6⟫ every property card's rangeClassIdList is EXACTLY the classes its property REFERENCES with no
+//      locator (the range reading), derived from the base: the 3 E5 REFERENCES edges (locator meta:targetScheme, a scheme
+//      target, not a range) put no class on any card. Before the fix 177 cards carried the E5 class (measured, DEV_p5TwoHubs).
 // RED TWINS (each a changed COPY of the derived hub): a conjunct whose twin is not observed red fails the suite.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -141,6 +144,20 @@ const judgeByConjunct = {
 		];
 		return { pass: faultList.length === 0, detail: faultList.join('; ') || 'all spot cards present and as declared' };
 	},
+	g_rangeClassesFromRangeReferencesOnly: ({ hub, rangeClassIdListByProperty }) => {
+		const faultList = cardsOfTier(hub, 'property')
+			.filter((oneCard) => JSON.stringify(oneCard.properties.rangeClassIdList || []) !== JSON.stringify(rangeClassIdListByProperty[oneCard.properties.propertyKey] || []))
+			.map((oneCard) => `${oneCard.properties.propertyKey}@${oneCard.properties.domainId} carries ${JSON.stringify(oneCard.properties.rangeClassIdList || [])}, the base's ranges are ${JSON.stringify(rangeClassIdListByProperty[oneCard.properties.propertyKey] || [])}`);
+		return { pass: faultList.length === 0, detail: `${faultList.length} card(s) whose range classes are not the base's unlocated REFERENCES${faultList.length ? `: ${faultList.slice(0, 3).join(' | ')}` : ''}` };
+	},
+};
+
+// ⟪ctdlHub P6, R-6⟫ the range classes the base implies per property: REFERENCES to a DmeClass with NO locator, id-sorted
+const rangeClassIdListByPropertyOf = (base) => {
+	const roleById = base.nodes.reduce((byId, oneNode) => Object.assign(byId, { [oneNode.stableId]: oneNode.role }), {});
+	return base.edges
+		.filter((oneEdge) => oneEdge.type === 'REFERENCES' && roleById[oneEdge.toRef.id] === 'DmeClass' && (oneEdge.properties || {}).locator === undefined)
+		.reduce((byProperty, oneEdge) => Object.assign(byProperty, { [oneEdge.fromRef.id]: Array.from(new Set([...(byProperty[oneEdge.fromRef.id] || []), oneEdge.toRef.id])).sort() }), {});
 };
 
 const deriveHub = (base, callback) => {
@@ -162,7 +179,8 @@ forgeCtdl.forge({ sourcePath: SOURCE_FILE_PATH, skipEmbedding: true }, (forgeErr
 		}
 		const expected = expectedCountsOf(base);
 		harness.note(`DERIVED FROM THE BASE: ${JSON.stringify(expected)}; HUB COUNTS ${JSON.stringify(hub.counts)}`);
-		const shippedSubject = () => ({ hub, expected });
+		const rangeClassIdListByProperty = rangeClassIdListByPropertyOf(base);
+		const shippedSubject = () => ({ hub, expected, rangeClassIdListByProperty });
 
 		harness.section('BASELINE — every conjunct');
 		Object.keys(judgeByConjunct).forEach((conjunctRefId) => {
@@ -175,6 +193,11 @@ forgeCtdl.forge({ sourcePath: SOURCE_FILE_PATH, skipEmbedding: true }, (forgeErr
 			{ conjunctRefId: 'c_countsDerivedFromTheBase', twinName: 'oneValueCardDropped', subject: withHub((changed) => ({ ...changed, nodes: changed.nodes.filter((oneNode, nodeIndex) => nodeIndex !== changed.nodes.findIndex((candidate) => candidate.properties.referenceTier === 'value')) })) },
 			{ conjunctRefId: 'd_everyCardPassesTheFieldTable', twinName: 'strayDomainOnATermCard', subject: withHub((changed) => {
 				changed.nodes.find((oneNode) => oneNode.properties.referenceTier === 'term').properties.domainId = 'ceterms:Credential';
+				return changed;
+			}) },
+			{ conjunctRefId: 'g_rangeClassesFromRangeReferencesOnly', twinName: 'targetSchemeClassReadAsRange', subject: withHub((changed) => {
+				const industryCard = changed.nodes.find((oneNode) => oneNode.properties.propertyKey === 'ceterms:industryType');
+				industryCard.properties.rangeClassIdList = industryCard.properties.rangeClassIdList.concat(['ceterms:IndustryClassification']).sort();
 				return changed;
 			}) },
 			{ conjunctRefId: 'e_spotCards', twinName: 'nameDatatypeDropped', subject: withHub((changed) => {

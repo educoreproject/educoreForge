@@ -137,6 +137,15 @@ const HUB_DECOMPOSITION_SLOTS_BY_NAME = Object.freeze(
 
 // ⟪ctdlHub P3 step 5⟫ a term card's termKind, by the DME role of the base node it addresses. A registry, not a branch:
 // a role absent here mints no term card, and the term pass walks exactly these roles.
+// ⟪ctdlHub P6, ruling R-6⟫ REFERENCES_LOCATOR_READING — what a REFERENCES edge MEANS to a hub, by the edge's `locator` property.
+// An edge with NO locator is the range reading (the forges' schema:rangeIncludes rule stamps none). A locator names a different
+// source statement, and each one the hub may meet is a row here: 'meta:targetScheme' (CTDL's E5: the property's concept scheme
+// targets this class) is NOT a range, so it adds no range class and no RANGE edge. A locator with no row is REFUSED BY NAME at
+// derivation rather than read as a range by default — the defect this table closes read all three E5 edges as ranges.
+const REFERENCES_LOCATOR_READING = Object.freeze({
+	'meta:targetScheme': Object.freeze({ readAsRange: false }),
+});
+
 const TERM_KIND_BY_ROLE = Object.freeze({
 	[DME_ROLES.CLASS]: 'class',
 	[DME_ROLES.PROPERTY]: 'property',
@@ -636,8 +645,15 @@ const moduleFunction =
 					(valueNodesOfOptionSet[fromNode.stableId] =
 						valueNodesOfOptionSet[fromNode.stableId] || []).push(toNode);
 				} else if (oneEdge.type === EDGE_TYPES.REFERENCES && v1(toNode.properties.role) === DME_ROLES.CLASS) {
-					(referencedClassNodeListOfProperty[fromNode.stableId] =
-						referencedClassNodeListOfProperty[fromNode.stableId] || []).push(toNode);
+					const referenceLocator = oneEdge.properties ? oneEdge.properties.locator : undefined;
+					if (referenceLocator !== undefined && REFERENCES_LOCATOR_READING[referenceLocator] === undefined) {
+						recordDerivationFault(`REFERENCES ${fromNode.stableId} -> ${toNode.stableId} carries locator '${referenceLocator}', which REFERENCES_LOCATOR_READING has no reading for; it is not read as a range by default`);
+						return;
+					}
+					if (referenceLocator === undefined || REFERENCES_LOCATOR_READING[referenceLocator].readAsRange) {
+						(referencedClassNodeListOfProperty[fromNode.stableId] =
+							referencedClassNodeListOfProperty[fromNode.stableId] || []).push(toNode);
+					}
 				}
 			});
 
