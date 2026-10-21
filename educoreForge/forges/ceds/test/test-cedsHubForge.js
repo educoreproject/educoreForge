@@ -65,7 +65,12 @@ const cedsHubForgeFactory = require('../hubCeds');
 const gatesLib = require('../lib/roundTripGates')();
 const vocab = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const { ADDRESS_SIGNATURE_FIELD_ORDER, DME_ROLES, IN_HUB_EDGE_TYPE } = vocab;
-const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, hashedSlotNameListOf, cardFieldRefusal } = require(path.join(__dirname, '..', '..', '..', 'lib', 'hub-framework', 'hubCardFieldTable'));
+const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, hashedSlotNameListOf, hubFieldTableOf, cardFieldRefusal } = require(path.join(__dirname, '..', '..', '..', 'lib', 'hub-framework', 'hubCardFieldTable'));
+// ⟪ctdlHub P3⟫ CEDS's VIEW of the field table is the table filtered by CEDS's declared tierList and rangeAddressing, and the
+// FROZEN profile below is that view as it was stamped at 087550f9, before P3 touched the framework. The frozen literal is
+// what stops the profile check from proving only that the filter equals itself (SCARLET_ARROW, 2026-10-20).
+const CEDS_HUB_FIELD_SCOPE = (({ tierList, rangeAddressing }) => ({ tierList, rangeAddressing }))(require('../lib/cedsHubDeclaration'));
+const FROZEN_CEDS_SLOT_PROFILE = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', '..', 'lib', 'hub-framework', 'test', 'fixtures', 'cedsSlotProfile-frozen-087550f9.json'), 'utf8'));
 
 const CEDS_SOURCE_PATH = path.join(
 	__dirname, '..', 'assets', 'standardSourceData', '01', 'CEDS-Ontology.rdf',
@@ -645,19 +650,22 @@ const computeHubDefinitionViolations = ({ hubNodes, hubEdges, cards, hubVersion 
 		if ((slotProfile || {}).cardStructureVersion !== HUB_CARD_STRUCTURE_VERSION) {
 			violations.push(`slotProfile.cardStructureVersion ${JSON.stringify((slotProfile || {}).cardStructureVersion)} != ${HUB_CARD_STRUCTURE_VERSION}`);
 		}
-		if (JSON.stringify((slotProfile || {}).fieldList) !== JSON.stringify(HUB_CARD_FIELD_TABLE)) {
-			violations.push('slotProfile.fieldList is not the hub card field table, serialised');
+		if (JSON.stringify((slotProfile || {}).fieldList) !== JSON.stringify(hubFieldTableOf({ fieldTable: HUB_CARD_FIELD_TABLE, ...CEDS_HUB_FIELD_SCOPE }))) {
+			violations.push('slotProfile.fieldList is not CEDS\'s view of the hub card field table, serialised');
+		}
+		if (hd.slotProfile !== FROZEN_CEDS_SLOT_PROFILE.slotProfileText) {
+			violations.push(`slotProfile is not, character for character, the frozen CEDS profile captured at ${FROZEN_CEDS_SLOT_PROFILE.capturedFromCommit}`);
 		}
 		if (JSON.stringify((slotProfile || {}).addressSignatureFieldOrder) !== JSON.stringify(ADDRESS_SIGNATURE_FIELD_ORDER)) {
 			violations.push('slotProfile.addressSignatureFieldOrder is not vocabulary ADDRESS_SIGNATURE_FIELD_ORDER');
 		}
-		const hashedSlotNameList = hashedSlotNameListOf(HUB_CARD_FIELD_TABLE);
-		if (JSON.stringify(hashedSlotNameList.slice().sort()) !== JSON.stringify(ADDRESS_SIGNATURE_FIELD_ORDER.slice().sort())) {
+		const hashedSlotNameList = hashedSlotNameListOf(hubFieldTableOf({ fieldTable: HUB_CARD_FIELD_TABLE, ...CEDS_HUB_FIELD_SCOPE }));
+		if (JSON.stringify(hashedSlotNameList.slice().sort()) !== JSON.stringify(ADDRESS_SIGNATURE_FIELD_ORDER.slice().sort()) || JSON.stringify(hashedSlotNameList) !== JSON.stringify(FROZEN_CEDS_SLOT_PROFILE.hashedSlotNameList)) {
 			violations.push(`the table's hashed slots [${hashedSlotNameList.join(', ')}] are not ADDRESS_SIGNATURE_FIELD_ORDER [${ADDRESS_SIGNATURE_FIELD_ORDER.join(', ')}]`);
 		}
 		// every card carries exactly what the table allows for its tier (EVERY card, not a sample)
 		const cardFaultList = cards
-			.map((oneCard) => ({ stableId: oneCard.stableId, faultText: cardFieldRefusal({ fieldTable: HUB_CARD_FIELD_TABLE, referenceTier: oneCard.properties.referenceTier, cardPropertyNameList: Object.keys(oneCard.properties) }) }))
+			.map((oneCard) => ({ stableId: oneCard.stableId, faultText: cardFieldRefusal({ fieldTable: HUB_CARD_FIELD_TABLE, referenceTier: oneCard.properties.referenceTier, cardPropertyNameList: Object.keys(oneCard.properties), ...CEDS_HUB_FIELD_SCOPE }) }))
 			.filter((oneVerdict) => oneVerdict.faultText !== '');
 		if (cardFaultList.length) {
 			violations.push(`${cardFaultList.length} card(s) disagree with the field table (first ${cardFaultList[0].stableId}: ${cardFaultList[0].faultText})`);

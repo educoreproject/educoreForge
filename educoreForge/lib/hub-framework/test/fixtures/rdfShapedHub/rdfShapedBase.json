@@ -1,0 +1,296 @@
+{
+	"nodes": [
+		{
+			"stableId": "ex:root",
+			"role": "DmeStandardRoot",
+			"properties": {
+				"role": "DmeStandardRoot",
+				"name": "Example RDF Vocabulary",
+				"uri": "https://example.org/vocab/",
+				"standardKey": "fixture",
+				"snapshotKey": "01",
+				"publishedVersion": "20260101",
+				"version": "20260101",
+				"sourceUrl": "https://example.org/vocab/"
+			}
+		},
+		{
+			"stableId": "ex:Person",
+			"role": "DmeClass",
+			"properties": {
+				"role": "DmeClass",
+				"name": "Person",
+				"definition": "A human being.",
+				"uri": "ex:Person",
+				"canonicalKey": "ex:Person",
+				"domainId": "ex:Person"
+			}
+		},
+		{
+			"stableId": "ex:Credential",
+			"role": "DmeClass",
+			"properties": {
+				"role": "DmeClass",
+				"name": "Credential",
+				"definition": "A qualification awarded to a person.",
+				"uri": "ex:Credential",
+				"canonicalKey": "ex:Credential",
+				"domainId": "ex:Credential"
+			}
+		},
+		{
+			"stableId": "ex:Organization",
+			"role": "DmeClass",
+			"properties": {
+				"role": "DmeClass",
+				"name": "Organization",
+				"uri": "ex:Organization",
+				"canonicalKey": "ex:Organization",
+				"domainId": "ex:Organization"
+			}
+		},
+		{
+			"stableId": "ex:name",
+			"role": "DmeProperty",
+			"properties": {
+				"role": "DmeProperty",
+				"name": "name",
+				"definition": "The name of the thing.",
+				"uri": "ex:name",
+				"canonicalKey": "ex:name",
+				"allDomainIds": [
+					"ex:Person",
+					"ex:Credential",
+					"ex:Organization"
+				],
+				"rangeDatatype": [
+					"xsd:string"
+				]
+			}
+		},
+		{
+			"stableId": "ex:holder",
+			"role": "DmeProperty",
+			"properties": {
+				"role": "DmeProperty",
+				"name": "holder",
+				"definition": "Who holds the credential.",
+				"uri": "ex:holder",
+				"canonicalKey": "ex:holder",
+				"allDomainIds": [
+					"ex:Credential"
+				]
+			}
+		},
+		{
+			"stableId": "ex:status",
+			"role": "DmeProperty",
+			"properties": {
+				"role": "DmeProperty",
+				"name": "status",
+				"definition": "The standing of the thing.",
+				"uri": "ex:status",
+				"canonicalKey": "ex:status",
+				"allDomainIds": [
+					"ex:Credential",
+					"ex:Organization"
+				],
+				"rangeDatatype": [
+					"xsd:string"
+				]
+			}
+		},
+		{
+			"stableId": "ex:orphanProperty",
+			"role": "DmeProperty",
+			"properties": {
+				"role": "DmeProperty",
+				"name": "orphan property",
+				"definition": "A property no class declares.",
+				"uri": "ex:orphanProperty",
+				"canonicalKey": "ex:orphanProperty",
+				"rangeDatatype": [
+					"xsd:date"
+				]
+			}
+		},
+		{
+			"stableId": "ex:StatusScheme",
+			"role": "DmeOptionSet",
+			"properties": {
+				"role": "DmeOptionSet",
+				"name": "Status Scheme",
+				"definition": "Standings a thing may have.",
+				"uri": "ex:StatusScheme",
+				"canonicalKey": "ex:StatusScheme",
+				"rangeOptionSetId": "ex:StatusScheme"
+			}
+		},
+		{
+			"stableId": "ex:Active",
+			"role": "DmeOptionValue",
+			"properties": {
+				"role": "DmeOptionValue",
+				"name": "Active",
+				"definition": "In force.",
+				"uri": "ex:Active",
+				"canonicalKey": "ex:Active"
+			}
+		},
+		{
+			"stableId": "ex:Expired",
+			"role": "DmeOptionValue",
+			"properties": {
+				"role": "DmeOptionValue",
+				"name": "Expired",
+				"uri": "ex:Expired",
+				"canonicalKey": "ex:Expired"
+			}
+		},
+		{
+			"stableId": "ex:Revoked",
+			"role": "DmeOptionValue",
+			"properties": {
+				"role": "DmeOptionValue",
+				"name": "Revoked",
+				"definition": "Withdrawn by the issuer.",
+				"uri": "ex:Revoked",
+				"canonicalKey": "ex:Revoked"
+			}
+		}
+	],
+	"edges": [
+		{
+			"type": "HAS_PROPERTY",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:Person"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:name"
+			}
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:Credential"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:name"
+			}
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:Organization"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:name"
+			}
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:Credential"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:holder"
+			}
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:Credential"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:status"
+			}
+		},
+		{
+			"type": "HAS_PROPERTY",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:Organization"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:status"
+			}
+		},
+		{
+			"type": "REFERENCES",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:holder"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:Person"
+			}
+		},
+		{
+			"type": "REFERENCES",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:holder"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:Organization"
+			}
+		},
+		{
+			"type": "HAS_OPTION_SET",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:status"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:StatusScheme"
+			}
+		},
+		{
+			"type": "HAS_VALUE",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:StatusScheme"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:Active"
+			}
+		},
+		{
+			"type": "HAS_VALUE",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:StatusScheme"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:Expired"
+			}
+		},
+		{
+			"type": "HAS_VALUE",
+			"fromRef": {
+				"source": "FIXTURE",
+				"id": "ex:StatusScheme"
+			},
+			"toRef": {
+				"source": "FIXTURE",
+				"id": "ex:Revoked"
+			}
+		}
+	]
+}

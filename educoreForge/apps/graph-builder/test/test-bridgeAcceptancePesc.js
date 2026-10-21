@@ -898,7 +898,23 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postCtdlP2PescCompose-102026 -> postCtdlP2bPescCompose-102026, tag cut ON this commit. CENSUS: lib/vocabulary/vocabulary.js +8/-0,
 // vocabulary-definitions.js +10/-0, test/test-sifEdgeVocabulary.js +4/-1 (commit 4e5c38a2: the five CTDL-family enrichment edge types),
 // and lib/bridge-framework/test/test-bgNosub.js (its (ii) re-anchor in THIS commit). No bridge-framework source.
-const P1_BASELINE_COMMIT = 'postCtdlP2bPescCompose-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P2b); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (TWILIGHT_MEADOW; ctdlHub lane P3 hubFramework, ruling SCARLET_ARROW; pre-authorised) ═══ BG-COMPOSE-PESC
+// postJevqPerBridgePescCompose-101326 -> postCtdlHubP3PescCompose-102026, tag cut ON this commit. Found red at a34ca338 (25/26;
+// dataStores/ctdlHub_101926/p3Runs/runAllTests-p3.log). CENSUS over this gate's paths (numstat from the old tag, 4 paths, all lib/vocabulary,
+// lane P3's own commits 85838bba and 6cbd320d: the hub term tier and rangeAsMeaning): vocabulary.js 38/1 (REFERENCE_TIER.TERM,
+// HUB_TERM_DECOMPOSITION_SLOTS, HUB_TERM_REFERENCE_EDGE_TYPE, TERM_ADDRESS_SIGNATURE_FIELD_ORDER, nine HUB_REFERENCE_PROPERTIES),
+// graph-contract.js 2/0 (five range list names in LIST_VALUED_PROPERTY_NAME_LIST), vocabulary-definitions.js 1/0 (the HAS_TERM_REFERENCE
+// definition), test/test-sifEdgeVocabulary.js 4/1 (schema-view members 329 -> 334). No bridge-framework source, no plugin, bridge-maker,
+// build.js or interfaces.js change: PESC still composes through the same seam with no plugin edit.
+// ═══ RE-ANCHOR, 2026-10-20 (INDIGO_LOOM; ctdlHub-101926 campaign merge of ctdlHub/hubFramework into ctdlHub/campaign; ruling SCARLET_ARROW) ═══ BG-COMPOSE-PESC
+// postCtdlP2bPescCompose-102026 AND postCtdlHubP3PescCompose-102026 -> postCtdlCampaignMergePescCompose-102026, tag cut ON the merge commit.
+// Both comment histories above are kept, P1-P2b first. CENSUS over this gate's declared paths (numstat to the merge tree). From the P2b tag,
+// lane P3's paths: lib/vocabulary/vocabulary.js 38/1, graph-contract.js 2/0, vocabulary-definitions.js 1/0, test/test-sifEdgeVocabulary.js 7/1,
+// lib/bridge-framework/test/test-bgNosub.js 26/2. From the P3 tag, lanes P1-P2b's paths: vocabulary.js 11/1, graph-contract.js 3/2,
+// vocabulary-definitions.js 10/0, test/test-sifEdgeVocabulary.js 7/1, lib/bridge-framework/test/test-bgNosub.js 40/3 (both lanes' re-anchor
+// histories plus this merge's (ii) and seamDiffEmpty re-anchors, tags cut on the same commit). No bridge-framework source, bridge-maker,
+// build.js or interfaces.js change.
+const P1_BASELINE_COMMIT = 'postCtdlCampaignMergePescCompose-102026'; // re-anchored by INDIGO_LOOM (ctdlHub campaign merge); the tag is cut ON the merge commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

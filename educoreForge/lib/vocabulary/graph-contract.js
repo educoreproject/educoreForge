@@ -31,6 +31,8 @@ const LIST_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 	'explicitOmissionDeclarationList',
 	// hub cards
 	'qualifierKeys', 'qualifierNames',
+	// hub cards, rangeAddressing 'rangeAsMeaning' (ctdlHub P3): a property's ranges are meaning, carried as lists
+	'rangeClassIdList', 'rangeClassNameList', 'rangeOptionSetIdList', 'rangeOptionSetNameList', 'rangeDatatypeList',
 	// finishers
 	'mappingKindList', 'mappingSourceList', 'mappingEdgeTypes', 'properties',
 	// roots

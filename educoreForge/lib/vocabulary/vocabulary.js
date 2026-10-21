@@ -994,7 +994,11 @@ const EQUIVALENCE_NODE_LABELS = {
 
 // referenceTier enum (§8: 3-slot 'property' | 4-slot 'value').
 const REFERENCE_TIERS = ['property', 'value'];
-const REFERENCE_TIER = { PROPERTY: 'property', VALUE: 'value' };
+// ⟪ctdlHub P3⟫ TERM: one card per hub-native term (class, property, option set, value), addressed by the term's own IRI —
+// what an RDF application profile cites. A hub mints only the tiers its declaration's tierList names, and the hub card
+// field table is filtered by that list, so a hub without the term tier (CEDS, until P9) sees none of its rows.
+// REFERENCE_TIERS above is deliberately NOT extended (ruling, SCARLET_ARROW 2026-10-20): it has no reader.
+const REFERENCE_TIER = { PROPERTY: 'property', VALUE: 'value', TERM: 'term' };
 
 // CANONICAL-ADDRESS component property NAMES — PROMOTED from forge-ceds local literals (HANDOFF (d)).
 // Phase 2 stamps these on the CEDS hub structural nodes; Phase 3 reads + extends them. These are the
@@ -1024,6 +1028,18 @@ const HUB_REFERENCE_PROPERTIES = {
 	// ⟪campaign P2, W-A-12⟫ LABEL removed: 'label' is absent on all 94,602 live cards and nothing wrote it
 	ANCHOR_URI: 'anchorUri',
 	EMBEDDING: 'embedding',
+	// ⟪ctdlHub P3⟫ term tier: the address field and the three meaning fields of a term card
+	TERM_IRI: 'termIri',
+	TERM_NAME: 'termName',
+	TERM_DEFINITION: 'termDefinition',
+	TERM_KIND: 'termKind',
+	// ⟪ctdlHub P3⟫ rangeAddressing 'rangeAsMeaning': a property card's ranges as LIST-VALUED meaning, never hashed
+	// (graph-contract LIST_VALUED_PROPERTY_NAME_LIST names all five, so a one-element list stays a list)
+	RANGE_CLASS_ID_LIST: 'rangeClassIdList',
+	RANGE_CLASS_NAME_LIST: 'rangeClassNameList',
+	RANGE_OPTION_SET_ID_LIST: 'rangeOptionSetIdList',
+	RANGE_OPTION_SET_NAME_LIST: 'rangeOptionSetNameList',
+	RANGE_DATATYPE_LIST: 'rangeDatatypeList',
 };
 
 // HubDefinition property NAMES (§8 HubDefinition schema).
@@ -1042,6 +1058,12 @@ const HUB_DEFINITION_PROPERTIES = {
 // parameterized per hub; the concrete CEDS instantiation substitutes the hub name (so multi-hub
 // reuses the family later). IN_HUB (HubReference -> HubDefinition) is hub-independent.
 const HUB_DECOMPOSITION_SLOTS = ['DOMAIN', 'PROPERTY', 'RANGE', 'VALUE', 'QUALIFIER'];
+// ⟪ctdlHub P3 step 5⟫ the TERM tier's own slot roster: a term-tier HubReference to the base node whose IRI it carries
+// (HAS_<HUB>_TERM). DELIBERATELY NOT in HUB_DECOMPOSITION_SLOTS above. That roster is read by the schema-view finisher,
+// which documents every slot for EVERY hub in every finished graph, so adding TERM there would make each CEDS graph's
+// schema view announce a HAS_CEDS_TERM edge CEDS does not have (measured: test-sifEdgeVocabulary b/c went red on it).
+// The work order's stated alternative, taken: term cards get their own roster.
+const HUB_TERM_DECOMPOSITION_SLOTS = ['TERM'];
 const HUB_DECOMPOSITION_EDGE_TYPES = {
 	DOMAIN: 'HAS_HUB_DOMAIN',
 	PROPERTY: 'HAS_HUB_PROPERTY',
@@ -1050,6 +1072,11 @@ const HUB_DECOMPOSITION_EDGE_TYPES = {
 	QUALIFIER: 'HAS_HUB_QUALIFIER',
 };
 const IN_HUB_EDGE_TYPE = 'IN_HUB';
+// ⟪ctdlHub P3 step 5a; PLAN §3.2⟫ HubReference -> HubReference: a property-tier card to the term-tier card of its own
+// property IRI, minted by the hub framework inside the hub's block only when the hub's tierList holds BOTH tiers. It is
+// deliberately NOT HAS_<HUB>_TERM and NOT a decomposition slot: the DME walks HAS_<HUB>_* as card-to-BASE-NODE
+// decomposition, and this edge runs card to card.
+const HUB_TERM_REFERENCE_EDGE_TYPE = 'HAS_TERM_REFERENCE';
 // hubEdgeType(hubName, slot) -> 'HAS_<HUBNAME>_<SLOT>' (the spec's hub-parameterized concrete name).
 const hubEdgeType = (hubName, slot) => `HAS_${String(hubName).toUpperCase()}_${slot}`;
 // CEDS_HUB_EDGE_TYPES WAS HERE AND IS DELETED (Phase 2c, RULING FJ-P2-3; SPEC §4.8(2)).
@@ -1072,6 +1099,10 @@ const hubEdgeType = (hubName, slot) => `HAS_${String(hubName).toUpperCase()}_${s
 // slot preserves determinism + uniqueness (Gate 19) exactly as the two-shape form did.
 // qualifierKeys are SORTED before hashing; an empty slot encodes as the empty string. One source of
 // truth so the producer and any validator compute an identical signature.
+// ⟪ctdlHub P3⟫ THIS IS THE PROPERTY- AND VALUE-TIER ORDER, and it is byte-identical to its pre-P3 self: it is serialised
+// into every hub's HubDefinition.slotProfile and is the hash input of every property/value card, so one more slot here
+// would move every CEDS signature. Term-tier cards use TERM_ADDRESS_SIGNATURE_FIELD_ORDER below (ruling, SCARLET_ARROW
+// 2026-10-20).
 const ADDRESS_SIGNATURE_FIELD_ORDER = [
 	'hubName',
 	'canonicalKey',
@@ -1082,6 +1113,9 @@ const ADDRESS_SIGNATURE_FIELD_ORDER = [
 	'qualifierKeys', // sort()ed
 	'hubVersion',
 ];
+// ⟪ctdlHub P3⟫ the TERM-tier signature order: hubName · termIri · hubVersion, '|'-joined and sha256'd exactly as the order
+// above. A hub's slotProfile carries it (termAddressSignatureFieldOrder) only when its tierList holds 'term'.
+const TERM_ADDRESS_SIGNATURE_FIELD_ORDER = ['hubName', 'termIri', 'hubVersion'];
 
 // =====================================================================
 // STRUCTURAL PROPERTY NAMES (Wave-2 items 5/6; M7/M8) — the per-node structural properties the
@@ -1334,10 +1368,13 @@ const vocabulary = {
 	HUB_REFERENCE_PROPERTIES,
 	HUB_DEFINITION_PROPERTIES,
 	HUB_DECOMPOSITION_SLOTS,
+	HUB_TERM_DECOMPOSITION_SLOTS,
 	HUB_DECOMPOSITION_EDGE_TYPES,
 	IN_HUB_EDGE_TYPE,
+	HUB_TERM_REFERENCE_EDGE_TYPE,
 	hubEdgeType,
 	ADDRESS_SIGNATURE_FIELD_ORDER,
+	TERM_ADDRESS_SIGNATURE_FIELD_ORDER,
 	// structural property names (Wave-2 items 5/6)
 	STRUCTURAL_PROPERTIES,
 	// sequence property names (design-authority upgrade, 2026-07-30 — lib/sequence-contract)

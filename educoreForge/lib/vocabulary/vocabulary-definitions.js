@@ -96,6 +96,7 @@ const TERM_DEFINITIONS = {
 		HAS_HUB_VALUE: 'Hub-parameterized decomposition: HubReference to its value slot node (value tier only).',
 		HAS_HUB_QUALIFIER: 'Hub-parameterized decomposition: HubReference to a qualifier slot node.',
 		IN_HUB: 'HubReference to the HubDefinition it belongs to (hub-independent membership edge).',
+		HAS_TERM_REFERENCE: 'Property-tier HubReference to the term-tier HubReference of its own property IRI, in the same hub. Minted by the hub framework inside the hub\'s block only when the hub mints both tiers; one edge per property card, so a property with three domains gives three edges into one term card. HubReference to HubReference, never to a base node, and never a match: matches landing on a term are found in one hop by following it backwards.',
 		HAS_CEDS_DOMAIN: 'CEDS instantiation of the domain decomposition slot: HubReference to the CEDS class it addresses.',
 		HAS_CEDS_PROPERTY: 'CEDS instantiation of the property decomposition slot: HubReference to the CEDS property it addresses.',
 		HAS_CEDS_RANGE: 'CEDS instantiation of the range decomposition slot: HubReference to the CEDS option set or class forming its range.',

@@ -56,6 +56,32 @@ const hubDeclaration = {
 		name: 'name',
 		definition: 'definition',
 		description: 'description', // divergence report only
+		// ⟪ctdlHub P3 step 2⟫ the two reads that were by bare name until P3; CEDS keeps the names it always had
+		canonicalKey: 'canonicalKey',
+		domainId: 'domainId',
+	},
+
+	// ---- ⟪ctdlHub P3⟫ EXPLICIT DECLARATIONS OF TODAY'S BEHAVIOUR. Each key below is required by the framework and has no
+	// default; each value is what the framework did implicitly before P3, so the CEDS block id does not move
+	// (baseline 45a83bae294ad5efcc9be1136f3831a579c0a2aa3a1c2bc3248b418539b28ac3, ctdlHub P0). CEDS's term tier is OFF until
+	// P9, its own controlled re-key: adding 'term' here moves the block id by design and must not happen in passing.
+	tierList: ['property', 'value'],
+	// one range per card (option set XOR class XOR datatype), hashed into the address slot 'range'
+	rangeAddressing: 'singleRangeSlot',
+	// where on the DmeStandardRoot each sourceProvenance field is read (sourceProvenance is block bytes)
+	rootFieldNames: {
+		standardKey: 'standardKey',
+		snapshotKey: 'snapshotKey',
+		publishedVersion: 'publishedVersion',
+		version: 'version',
+		sourceUrl: 'sourceUrl',
+	},
+	// embedText, slot by slot, exactly as the framework composed it before P3: a slot's fields are joined ' · ', empty
+	// slots drop out, slots are joined ' · '. The value tier's context is its option set because, for CEDS, the range of
+	// an enumerated property IS an option set.
+	embedTextTemplateByTier: {
+		property: [['domainName'], ['propertyName'], ['propertyDefinition'], ['domainDefinition'], ['qualifierNames']],
+		value: [['domainName', 'propertyName', 'rangeOptionSetName'], ['valueName'], ['valueDefinition'], ['rangeOptionSetDefinition']],
 	},
 
 	// ---- QUALIFIED REFERENCE — §4.3 identification patterns, as DATA not a hook ([R1 Q7]) ------

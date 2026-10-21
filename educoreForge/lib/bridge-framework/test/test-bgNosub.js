@@ -195,7 +195,19 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // postCtdlP1VocabularyIi-102026 -> postCtdlP2bVocabularyIi-102026, tag cut ON this commit together with BG-COMPOSE-PESC's. CENSUS
 // (lib/vocabulary/, commit 4e5c38a2): vocabulary.js +8/-0 (EDGE_TYPES BROADER_CONCEPT, TOP_CONCEPT_OF, SUBPROPERTY_OF, INVERSE_OF,
 // RELATED_CONCEPT), vocabulary-definitions.js +10/-0 (their TERM_DEFINITIONS), test/test-sifEdgeVocabulary.js +4/-1 (schema-view 329 -> 334).
-const POST_D1_BASE_TAG = 'postCtdlP2bVocabularyIi-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P2b); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (TWILIGHT_MEADOW; ctdlHub lane P3 hubFramework, ruling SCARLET_ARROW; pre-authorised) ═══ (ii) postUndesVocabularyIi-101326 ->
+// postCtdlHubP3VocabularyIi-102026, tag cut ON this commit. Found red at a34ca338. CENSUS (lib/vocabulary/, numstat from the old tag):
+// vocabulary.js 38/1 (term tier: REFERENCE_TIER.TERM, HUB_TERM_DECOMPOSITION_SLOTS, HUB_TERM_REFERENCE_EDGE_TYPE, TERM_ADDRESS_SIGNATURE_FIELD_ORDER,
+// nine HUB_REFERENCE_PROPERTIES), vocabulary-definitions.js 1/0 (the HAS_TERM_REFERENCE definition), graph-contract.js 2/0 (five range list
+// names, LIST_VALUED_PROPERTY_NAME_LIST), test/test-sifEdgeVocabulary.js 4/1 (schema-view members 329 -> 334) — lane P3's own commits
+// 85838bba and 6cbd320d. Allowed-path list NOT widened.
+// ═══ RE-ANCHOR, 2026-10-20 (INDIGO_LOOM; ctdlHub-101926 campaign merge of ctdlHub/hubFramework into ctdlHub/campaign; ruling SCARLET_ARROW) ═══ (ii)
+// postCtdlP2bVocabularyIi-102026 AND postCtdlHubP3VocabularyIi-102026 -> postCtdlCampaignMergeVocabularyIi-102026, tag cut ON the merge commit.
+// Both comment histories above are kept, P1-P2b first. CENSUS (lib/vocabulary/, numstat to the merge tree). From the P2b tag, lane P3's paths:
+// vocabulary.js 38/1, vocabulary-definitions.js 1/0, graph-contract.js 2/0, test/test-sifEdgeVocabulary.js 7/1. From the P3 tag, lanes P1-P2b's
+// paths: vocabulary.js 11/1, vocabulary-definitions.js 10/0, graph-contract.js 3/2, test/test-sifEdgeVocabulary.js 7/1. The 7/1 on each side is
+// the other lane's +5 comment plus the merge's own comment and the 329 -> 339 sum (measured 34/34). Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postCtdlCampaignMergeVocabularyIi-102026'; // re-anchored by INDIGO_LOOM (ctdlHub campaign merge); the tag is cut ON the merge commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -906,7 +918,19 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // lib/ctdlasnHooks.js +9/-0; forges/ctdlqdata/forgeCtdlqdata.js +19/-0, lib/ctdlqdataForgeDeclaration.js +56/-0, lib/ctdlqdataHooks.js +9/-0 —
 // and forges/ctdl/lib/ctdlHooks.js +3/-62 (its body moved to lib/ctdl-family-forge/jsonLdVocabularyHooks.js). No build.js, forger, replay,
 // replay-manager or framework source.
-const PHASE3_ANCHOR_TAG = 'postCtdlP2SeamDiffEmpty-102026'; // re-anchored by GARDEN_PORTAL (ctdlHub P2); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-20 (TWILIGHT_MEADOW; ctdlHub lane P3 hubFramework, ruling SCARLET_ARROW; pre-authorised) ═══ seamDiffEmpty (and its (i-live) companion):
+// postUndesSeamDiffEmpty-101326 -> postCtdlHubP3SeamDiffEmpty-102026, tag cut ON this commit. Found red at a34ca338. CENSUS: ONE path,
+// forges/ceds/lib/cedsHubDeclaration.js 26/0 (lane P3's commit 85838bba: the four new hub declaration keys tierList, rangeAddressing,
+// rootFieldNames, embedTextTemplateByTier and baseFieldNames canonicalKey/domainId, each equal to CEDS's prior behaviour; the CEDS
+// standardBase block id 45a83bae... unmoved, measured). No build.js, forger, replay, forge-framework or bridge-framework source.
+// ═══ RE-ANCHOR, 2026-10-20 (INDIGO_LOOM; ctdlHub-101926 campaign merge of ctdlHub/hubFramework into ctdlHub/campaign; ruling SCARLET_ARROW) ═══ seamDiffEmpty
+// (and its (i-live) companion): postCtdlP2SeamDiffEmpty-102026 AND postCtdlHubP3SeamDiffEmpty-102026 -> postCtdlCampaignMergeSeamDiffEmpty-102026,
+// tag cut ON the merge commit. Both comment histories above are kept, P1-P2b first. CENSUS (numstat to the merge tree). From the P2 tag, lane
+// P3's ONE path: forges/ceds/lib/cedsHubDeclaration.js 26/0. From the P3 tag, lanes P1-P2b's paths: forges/ctdl/forgeCtdl.js 19/0,
+// lib/ctdlForgeDeclaration.js 58/0, lib/ctdlHooks.js 9/0; forges/ctdlasn/forgeCtdlasn.js 19/0, lib/ctdlasnForgeDeclaration.js 56/0,
+// lib/ctdlasnHooks.js 9/0; forges/ctdlqdata/forgeCtdlqdata.js 19/0, lib/ctdlqdataForgeDeclaration.js 56/0, lib/ctdlqdataHooks.js 9/0;
+// lib/forge-framework/migrationAllowanceRegistry.js 29/1. No build.js, forger, replay or replay-manager source.
+const PHASE3_ANCHOR_TAG = 'postCtdlCampaignMergeSeamDiffEmpty-102026'; // re-anchored by INDIGO_LOOM (ctdlHub campaign merge); the tag is cut ON the merge commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

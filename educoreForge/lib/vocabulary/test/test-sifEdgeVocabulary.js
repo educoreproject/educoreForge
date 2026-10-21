@@ -97,7 +97,13 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // ⟪ctdlHub-101926 P2b, 2026-10-20 (GARDEN_PORTAL); pre-authorised by WORKORDER-P2b⟫ +5 more, unrelated to V1: the CTDL-family enrichment edge
 // types BROADER_CONCEPT, TOP_CONCEPT_OF, SUBPROPERTY_OF, INVERSE_OF, RELATED_CONCEPT, each projected as one edgeType member (measured
 // 329 -> 334).
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13 + 5;
+// ⟪ctdlHub P3, 2026-10-20 (TWILIGHT_MEADOW; re-anchor approved by SCARLET_ARROW)⟫ +5 more, unrelated to V1: the rangeAsMeaning
+// list-valued names rangeClassIdList, rangeClassNameList, rangeOptionSetIdList, rangeOptionSetNameList, rangeDatatypeList
+// (graph-contract §1), each projected as one list-valued-name member (measured 329 -> 334).
+// ⟪ctdlHub-101926 campaign merge, 2026-10-20 (INDIGO_LOOM; ruling SCARLET_ARROW)⟫ the two +5s above are independent: lane P2b's
+// five edgeType members and lane P3's five list-valued-name members do not overlap, so the merged registry carries both
+// (measured on the merge commit: 329 -> 339).
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13 + 5 + 5;
 // ⟪campaign P3, W-C-2⟫ rows RETIRED from V1's own five: the real registry is AFTER_V1 + added − retired, and the pre-V1
 // reading (the remaining V1 rows removed) is BEFORE_V1 + added, unchanged.
 const SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1 = RETIRED_V1_EDGE_TYPE_NAME_LIST.length;

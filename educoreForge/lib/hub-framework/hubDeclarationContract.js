@@ -14,7 +14,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                              registry HUB_FORGE_BY_STANDARD (Phase 2a)
 //   HUB_DECLARATION_CONTRACT   the H1 DATA table of SPEC §4.4 (Phase 2c) — hubName, hubDisplayName,
 //                              canonicalKeyName, canonicalKeyMinted, sourceIdFieldName,
-//                              baseFieldNames, qualifiedReference, provenanceLabel
+//                              baseFieldNames, qualifiedReference, provenanceLabel; and since ctdlHub P3
+//                              tierList, rangeAddressing, rootFieldNames, embedTextTemplateByTier
 // The second was deliberately NOT declared in 2a, when nothing validated it: a contract entry nobody
 // walks is dead surface, the same judgment RULING FB8 made when it deleted refuse.requiredKeys.
 //
@@ -56,11 +57,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // @property {function(BaseNodeEdges, function(errString, HubForgeResult))} forgeHub — R7 error-first
 //     callback even though the derivation is synchronous and pure.
 // @property {function(Object): string} addressSignatureFor
+// @property {function({termIri: string}): string} termAddressSignatureFor — ctdlHub P3, the term tier's signature
 // @property {string} hubDefinitionStableId
 //
 // @typedef {Object} HubForgeResult
-// @property {Array<Object>} nodes — HubReference cards + the one HubDefinition, sorted by stableId
-// @property {Array<Object>} edges — HAS_<HUB>_* decomposition + IN_HUB, sorted
+// @property {Array<Object>} nodes — HubReference cards (every tier the hub declares) + the one HubDefinition, sorted by stableId
+// @property {Array<Object>} edges — HAS_<HUB>_* decomposition + IN_HUB (+ HAS_TERM_REFERENCE when the hub mints both
+//     the term and property tiers), sorted
 // @property {Array<Object>} divergenceReport   explicitly [] when there are none
 // @property {Array<Object>} skipReport         explicitly [] when nothing was skipped
 // @property {Object} counts
@@ -76,6 +79,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
+const { REFERENCE_TIER } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const { HUB_CARD_FIELD_TABLE, hubFieldTableOf } = require(path.join(__dirname, 'hubCardFieldTable'));
 
 // ---- the contract table ----------------------------------------------------------------------
 // Every hub key a parserDescriptor.ini may carry. A key matching /^hub/ that is not named here is
@@ -202,7 +207,27 @@ const BASE_FIELD_NAME_LIST = Object.freeze([
 	// the module rather than by reading the table.
 	'dataType', 'uri',
 	'name', 'definition', 'description',
+	// ⟪ctdlHub P3 step 2; PLAN §2.4 H-a⟫ the last two base reads that were by BARE NAME (hub-framework.js:761, 767-769,
+	// 822, 897 at 087550f9). allDomainIds was already declared; its scalar companion domainId and the lifted canonicalKey
+	// were not, which made "every field the derivation reads is declared" false in exactly the two places a second hub
+	// is likeliest to differ.
+	'canonicalKey', 'domainId',
 ]);
+
+// ⟪ctdlHub P3 step 2; PLAN §2.4 H-b⟫ the five ROOT fields read into HubDefinition.sourceProvenance — BLOCK BYTES. The
+// provenance JSON keeps its own five output names (standardKey, snapshotKey, publishedVersion, sourceVersion,
+// sourceUrl); this map says only where on the root each is READ.
+const ROOT_FIELD_NAME_LIST = Object.freeze(['standardKey', 'snapshotKey', 'publishedVersion', 'version', 'sourceUrl']);
+
+// ⟪ctdlHub P3 step 3⟫ how a property's range takes part in a card. The derivation behind each mode is the hub framework's
+// RANGE_ADDRESSING_REGISTRY, which refuses at load unless it implements exactly these names.
+//   singleRangeSlot  ONE range (option set XOR class XOR datatype), hashed into the address slot 'range' (CEDS)
+//   rangeAsMeaning   every range the property declares, carried as LIST-VALUED meaning and never hashed; value cards
+//                    are minted per option set the property targets (CTDL: schema:rangeIncludes is a hint, not a key)
+const RANGE_ADDRESSING_MODE_LIST = Object.freeze(['singleRangeSlot', 'rangeAsMeaning']);
+
+// the tiers a hub may declare are the vocabulary's own (REFERENCE_TIER), never a list retyped here
+const REFERENCE_TIER_VALUE_LIST = Object.freeze(Object.keys(REFERENCE_TIER).map((tierConstantName) => REFERENCE_TIER[tierConstantName]));
 
 const HUB_DECLARATION_CONTRACT = Object.freeze({
 	hubName: Object.freeze({ required: true, kind: 'nonEmptyString' }),
@@ -215,6 +240,12 @@ const HUB_DECLARATION_CONTRACT = Object.freeze({
 	// entirely, returning identificationPatterns: []. Absent is absent, not zero-by-accident.
 	qualifiedReference: Object.freeze({ required: false, kind: 'qualifiedReference' }),
 	provenanceLabel: Object.freeze({ required: true, kind: 'provenanceLabel' }),
+	// ⟪ctdlHub P3⟫ REQUIRED, never defaulted: a hub that forgot to say which tiers it mints must not silently get CEDS's.
+	// tierList and rangeAddressing precede embedTextTemplateByTier because its checker reads both.
+	tierList: Object.freeze({ required: true, kind: 'tierList' }),
+	rangeAddressing: Object.freeze({ required: true, kind: 'rangeAddressing' }),
+	rootFieldNames: Object.freeze({ required: true, kind: 'rootFieldNameMap' }),
+	embedTextTemplateByTier: Object.freeze({ required: true, kind: 'embedTextTemplateByTier' }),
 });
 const HUB_DECLARATION_KEY_LIST = Object.freeze(Object.keys(HUB_DECLARATION_CONTRACT));
 
@@ -272,6 +303,83 @@ const DECLARATION_KIND_CHECKER_REGISTRY = Object.freeze({
 		);
 		if (unknown.length) {
 			return `carries unknown key '${unknown[0]}' — it declares typePropertyPattern and tokenNamesForStem only`;
+		}
+		return '';
+	},
+	// ⟪ctdlHub P3⟫ a non-empty list of distinct vocabulary tiers. Order is not meaning here, so it is not checked.
+	tierList: (value) => {
+		if (!Array.isArray(value) || value.length === 0) {
+			return `must be a non-empty array of reference tiers drawn from ${REFERENCE_TIER_VALUE_LIST.join(', ')} (got ${JSON.stringify(value)})`;
+		}
+		const unknownTier = value.find((oneTier) => REFERENCE_TIER_VALUE_LIST.indexOf(oneTier) === -1);
+		if (unknownTier !== undefined) {
+			return `names tier ${JSON.stringify(unknownTier)}, which is not one of ${REFERENCE_TIER_VALUE_LIST.join(', ')}`;
+		}
+		const repeatedTier = value.find((oneTier, tierIndex) => value.indexOf(oneTier) !== tierIndex);
+		if (repeatedTier !== undefined) {
+			return `names tier '${repeatedTier}' twice`;
+		}
+		return '';
+	},
+	rangeAddressing: (value) =>
+		RANGE_ADDRESSING_MODE_LIST.indexOf(value) !== -1
+			? ''
+			: `must be one of ${RANGE_ADDRESSING_MODE_LIST.join(', ')} (got ${JSON.stringify(value)})`,
+	// the same discipline as baseFieldNameMap: every root field the derivation reads is declared, and nothing else
+	rootFieldNameMap: (value) => {
+		if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+			return `must be an object mapping provenance field name -> root property name (got ${JSON.stringify(value)})`;
+		}
+		const missing = ROOT_FIELD_NAME_LIST.filter((oneName) => value[oneName] === undefined);
+		if (missing.length) {
+			return `is missing required root field name(s): ${missing.join(', ')} — each is read into sourceProvenance, which is block bytes`;
+		}
+		const unknown = Object.keys(value).filter((oneName) => ROOT_FIELD_NAME_LIST.indexOf(oneName) === -1);
+		if (unknown.length) {
+			return `carries unknown root field name '${unknown[0]}' — the derivation reads ${ROOT_FIELD_NAME_LIST.join(', ')} and nothing else`;
+		}
+		const notAString = Object.keys(value).find((oneName) => typeof value[oneName] !== 'string' || value[oneName].trim() === '');
+		if (notAString !== undefined) {
+			return `root field name '${notAString}' must map to a non-empty string (got ${JSON.stringify(value[notAString])})`;
+		}
+		return '';
+	},
+	// ⟪ctdlHub P3 step 4; PLAN §2.4 H-e⟫ embedText as DECLARED DATA, one template per declared tier. A template is a list of
+	// SLOTS; a slot is a non-empty list of card MEANING field names whose carried values are joined ' · ' (a list-valued
+	// field contributes its items). Empty slots drop out; the slots are joined ' · '. What "the value tier's context is
+	// its option set" used to assume in code is now CEDS's declared template.
+	embedTextTemplateByTier: (value, { hubDeclaration }) => {
+		if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+			return `must be an object mapping each declared tier to its template (got ${JSON.stringify(value)})`;
+		}
+		const declaredTierList = hubDeclaration.tierList;
+		const templateTierList = Object.keys(value);
+		const missingTier = declaredTierList.find((oneTier) => templateTierList.indexOf(oneTier) === -1);
+		if (missingTier !== undefined) {
+			return `has no template for declared tier '${missingTier}' — every tier the hub mints composes embedText from its own declared template`;
+		}
+		const undeclaredTier = templateTierList.find((oneTier) => declaredTierList.indexOf(oneTier) === -1);
+		if (undeclaredTier !== undefined) {
+			return `has a template for tier '${undeclaredTier}', which tierList does not declare`;
+		}
+		const hubFieldTable = hubFieldTableOf({ fieldTable: HUB_CARD_FIELD_TABLE, tierList: declaredTierList, rangeAddressing: hubDeclaration.rangeAddressing });
+		for (let tierIndex = 0; tierIndex < templateTierList.length; tierIndex++) {
+			const oneTier = templateTierList[tierIndex];
+			const slotList = value[oneTier];
+			if (!Array.isArray(slotList) || slotList.length === 0) {
+				return `template for tier '${oneTier}' must be a non-empty array of slots (got ${JSON.stringify(slotList)})`;
+			}
+			const badSlot = slotList.find((oneSlot) => !Array.isArray(oneSlot) || oneSlot.length === 0);
+			if (badSlot !== undefined) {
+				return `template for tier '${oneTier}' has slot ${JSON.stringify(badSlot)}; a slot is a non-empty array of card field names`;
+			}
+			const meaningNameList = hubFieldTable
+				.filter((fieldRow) => fieldRow.group === 'meaning' && fieldRow.tierList.indexOf(oneTier) !== -1)
+				.map((fieldRow) => fieldRow.fieldName);
+			const strangerName = [].concat(...slotList).find((fieldName) => meaningNameList.indexOf(fieldName) === -1);
+			if (strangerName !== undefined) {
+				return `template for tier '${oneTier}' names '${strangerName}', which is not a meaning field of a ${oneTier} card in this hub (${meaningNameList.join(', ')})`;
+			}
 		}
 		return '';
 	},
@@ -382,6 +490,8 @@ module.exports = {
 	HUB_DECLARATION_CONTRACT,
 	HUB_DECLARATION_KEY_LIST,
 	BASE_FIELD_NAME_LIST,
+	ROOT_FIELD_NAME_LIST,
+	RANGE_ADDRESSING_MODE_LIST,
 	validateHubDeclaration,
 	validateHubHooks,
 	moduleName,
