@@ -25,8 +25,11 @@
 // only by the documentary pool producer; a retrieved pool applies none. It matters to the SCORE, and the
 // yardstick scorer applies it to the annotation before its card lookup.
 
-const bridgeDeclaration = Object.freeze({
-	bridgeName: 'sif260928CedsDerivedPlugin',
+// ⟪hub-neutral bridge lane R3, 2026-10-21⟫ MIGRATED from sif260928CedsDerivedPlugin.js: this file now declares the STANDARD half of the
+// bridge; the hub half comes from the hub's own bridging declaration (forges/<hub>/lib/<hub>HubBridging.js) and the two compose
+// (lib/bridge-framework/bridgeComposer.js) into the SAME declaration, digest for digest (test-bridgeComposer (a), P-a1).
+
+const declarationTemplate = Object.freeze({
 	standardKey: 'sif260928',
 	pluginVersion: '1.0.0',
 	producerKind: 'inferred',
@@ -44,26 +47,6 @@ const bridgeDeclaration = Object.freeze({
 	// the sif260928 base block 576db6546c8f minus that one; regenerate it if the forge's Questions change.
 	// Any other narrowing still belongs to the run (window or named set), never to this declaration.
 	subjectSource: { kind: 'graphLabel', label: 'Sif260928Question', scopeStableIdListPath: 'bridges/sif260928ScopeWithoutIdentifierLeak.json' },
-	// TEXT-NODE MATCHING, NO COHORT VOTE (SPEC §5.2). Each of the question's texts (name, description, contextText)
-	// searches the hub's texts. neighbourVote is null because the measured vote HURT SIF (the truth card reached the
-	// top 15 for 98.7% of questions on text votes alone, 77.0% with the vote). hitsPerText, minScore and k are D2's
-	// sweep cell 3, chosen by the rule committed to DEVLOG-D2 before the first cell (highest specified-target
-	// admission with a median pool of at most 40; D1 started at 20 / 0.30 / 20).
-	candidateRetrieval: {
-		method: 'embedTextVote-v1',
-		hitsPerText: 40,
-		minScore: 0.30,
-		k: 40,
-		embeddingModelVersion: 'voyage-4-large',
-		neighbourVote: null,
-	},
-	// THE JUDGE'S VIEW, as an allow-list (SPEC §5.3). objectDomain is not a node property: it is the judgment
-	// partition's label, rendered into each unit's prompt (renderedPropertyName below), and the contract requires it
-	// here. objectNameSampleList is at most twelve object names; a one-element list reaches the graph as a scalar.
-	renderingAllowList: {
-		subject: ['name', 'description', 'relativePath', 'contextText', 'instanceCount', 'objectNameSampleList', 'objectDomain'],
-		candidate: ['name', 'propertyDefinition', 'domainName', 'domainDefinition', 'rangeOptionSetName', 'rangeOptionSetDefinition', 'rangeClassName', 'rangeClassDefinition', 'componentIdeaList'],
-	},
 	judgePromptVariant: 'derivedJudgeSlot',
 	// ⟪lane JEVQ, ruling COPPER_RIVER 2026-10-13⟫ THE SPLIT QUESTION'S FORM, per bridge. SIF keeps the instruction form (Claude's
 	// prompt as matchingInstructions) and the judge identity it has always had: SIF publishes no definition for its objects
@@ -76,18 +59,7 @@ const bridgeDeclaration = Object.freeze({
 	evidenceColumnMap: { subject: [], assertion: [] },
 	consistencyCheckColumnList: [],
 	segmentNormalisationRuleList: [],
-	remodelTableRef: null,
 	classSideRemodelTable: [],
-	// cedsElementId first: it is the SIF column the yardstick scores against. objectName and sharedBlock must NOT
-	// appear here, because the judgment partition reads them from the subject and its instances.
-	blindingDeclaration: ['cedsElementId', 'cedsId', 'crossRefs', 'cedsOriginalAnchorPropertyName', 'cedsOptionCode', 'cedsOptionOriginalAnchorPropertyName'],
-	promptIdentifierScan: {
-		identifierPatternList: [
-			{ patternName: 'cedsPropertyId', regexSource: 'P\\d{6}' },
-			{ patternName: 'cedsClassId', regexSource: 'C\\d{6}' },
-		],
-		identifierListPath: 'bridges/sif260928CedsIdList.json',
-	},
 	blockRecordsJudgeConfig: true,
 	// each Question's Fields, read once through the forge's Question → Field edge and frozen with its record, so the
 	// materialiser writes one edge per Field
@@ -108,11 +80,46 @@ const bridgeDeclaration = Object.freeze({
 	compatibilityDeclarationList: [],
 });
 
+const standardBridging = Object.freeze({
+	standardKey: 'sif260928',
+	bridgeNameStem: 'sif260928',
+	facetList: [
+		{
+			facetName: '',
+			declarationTemplate,
+			// (was on candidateRetrieval)
+			// TEXT-NODE MATCHING, NO COHORT VOTE (SPEC §5.2). Each of the question's texts (name, description, contextText)
+			// searches the hub's texts. neighbourVote is null because the measured vote HURT SIF (the truth card reached the
+			// top 15 for 98.7% of questions on text votes alone, 77.0% with the vote). hitsPerText, minScore and k are D2's
+			// sweep cell 3, chosen by the rule committed to DEVLOG-D2 before the first cell (highest specified-target
+			// admission with a median pool of at most 40; D1 started at 20 / 0.30 / 20).
+			// (was on renderingAllowList)
+			// THE JUDGE'S VIEW, as an allow-list (SPEC §5.3). objectDomain is not a node property: it is the judgment
+			// partition's label, rendered into each unit's prompt (renderedPropertyName below), and the contract requires it
+			// here. objectNameSampleList is at most twelve object names; a one-element list reaches the graph as a scalar.
+			// (was on blindingDeclaration)
+			// cedsElementId first: it is the SIF column the yardstick scores against. objectName and sharedBlock must NOT
+			// appear here, because the judgment partition reads them from the subject and its instances.
+			subjectRenderingAllowList: ['name', 'description', 'relativePath', 'contextText', 'instanceCount', 'objectNameSampleList', 'objectDomain'],
+			pairByHubToken: {
+				ceds: {
+					candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 40, minScore: 0.3, k: 40, neighbourVote: null },
+					candidateRenderingAllowList: null,
+					promptIdentifierScan: 'fromHubWithLegacyListPath',
+					blindingOrder: ['cedsElementId', { hubAnchor: 0 }, 'crossRefs', { hubAnchor: 1 }, { hubAnchor: 2 }, { hubAnchor: 3 }],
+					hubAnchorListLength: 4,
+					declaredTargetRuleList: null,
+					remodelTableRef: null,
+					hubRemodelTableListLength: null,
+				},
+			},
+		},
+	],
+});
+
 // NO HOOKS: both documentary hooks are forbidden on a derived basis
 const bridgeHooks = {};
 
-// ⟪ctdlHub P5; SCARLET_ARROW ruling A⟫ the hub this plugin maps toward, a SIBLING export: bridgeDeclaration is content-addressed
-// into every decision block, so the target is kept out of it; build.js checks it against the recipe pairing's hub
-const bridgeTarget = { targetHub: 'ceds' };
+const bridgeHooksByFacetName = { '': bridgeHooks };
 
-module.exports = { bridgeDeclaration, bridgeHooks, bridgeTarget };
+module.exports = { standardBridging, bridgeHooksByFacetName };
