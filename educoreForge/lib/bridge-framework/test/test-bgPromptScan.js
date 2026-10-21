@@ -282,7 +282,7 @@ const oracleConjunctList = [
 		judge: (scenario) => {
 			const contractLib = contractFor(scenario);
 			const resultList = SHIPPED_DERIVED_PLUGIN_LIST.map((onePlugin) => {
-				const bridgeDeclaration = require(path.join(TREE_ROOT, onePlugin.pluginPath)).bridgeDeclaration;
+				const bridgeDeclaration = require('./testSupport/shippedBridge').shippedBridgeDeclarationFor(onePlugin.bridgeName); // ⟪R3⟫ by name: a bridge may be composed
 				const validated = contractLib.validateBridgeDeclaration({ bridgeDeclaration, bundleDirPath: path.join(TREE_ROOT, 'forges', onePlugin.bundleDirName) });
 				return { bridgeName: onePlugin.bridgeName, declares: bridgeDeclaration.promptIdentifierScan !== undefined, refusal: validated.error ? validated.error.message : '' };
 			});

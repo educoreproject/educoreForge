@@ -193,6 +193,7 @@ const rendererInputFor = (judgePromptVariant) => {
 		],
 		judgePromptVariant,
 		renderingAllowList,
+		blindingNameList: toyDeclarationOf(DERIVED_PLUGIN_NAME).blindingDeclaration,
 	};
 };
 
@@ -335,7 +336,7 @@ const judgeSlotConjunctList = [
 			const contractLib = frameworkLibFor(scenario, CONTRACT_FILE);
 			const rendererLib = frameworkLibFor(scenario, RENDERER_FILE);
 			const faultList = SHIPPED_PLUGIN_LIST.map((onePlugin) => {
-				const resolved = contractLib.judgePromptVariantFor({ bridgeDeclaration: require(path.join(TREE_ROOT, onePlugin.pluginPath)).bridgeDeclaration });
+				const resolved = contractLib.judgePromptVariantFor({ bridgeDeclaration: require('./testSupport/shippedBridge').shippedBridgeDeclarationFor(onePlugin.bridgeName) }); // ⟪R3⟫ by name: a bridge may be composed
 				const rendererVersion = resolved.judgePromptVariant === undefined ? null : rendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[resolved.judgePromptVariant].rendererVersion;
 				return resolved.judgePromptVariant === onePlugin.judgePromptVariant && rendererVersion === onePlugin.rendererVersion ? null : `${onePlugin.bridgeName}: ${JSON.stringify(resolved)} ${rendererVersion}`;
 			}).filter((oneFault) => oneFault !== null);
