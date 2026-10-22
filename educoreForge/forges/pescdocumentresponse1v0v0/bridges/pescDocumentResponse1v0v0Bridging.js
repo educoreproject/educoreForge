@@ -113,6 +113,19 @@ const standardBridging = Object.freeze({
 					remodelTableRef: null,
 					hubRemodelTableListLength: null,
 				},
+				// ⟪zeroBacklog B3⟫ toward the CTDL hub, in the post-refactor form: retrieval copied from the row above as the START (its measured
+				// k / floor reasoning stands until measured against CTDL), the hub's own candidate list and identifier scan, and the union
+				// blinding: this standard's own answer-key names, then every hub it pairs with (computed by the composer, never written here).
+				ctdl: {
+					candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 40, minScore: 0.3, k: 40, neighbourVote: null },
+					candidateRenderingAllowList: null,
+					promptIdentifierScan: 'fromHub',
+					blindingOrder: { standardBlindingNameList: ['crossRefs'], pairedHubAnchors: 'union' },
+					hubAnchorListLength: null,
+					declaredTargetRuleList: null,
+					remodelTableRef: null,
+					hubRemodelTableListLength: null,
+				},
 			},
 		},
 	],
