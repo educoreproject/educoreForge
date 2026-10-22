@@ -64,12 +64,27 @@ const forgeCeds = require('../forgeCeds')({ embedder: null });
 const cedsHubForgeFactory = require('../hubCeds');
 const gatesLib = require('../lib/roundTripGates')();
 const vocab = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
-const { ADDRESS_SIGNATURE_FIELD_ORDER, DME_ROLES, IN_HUB_EDGE_TYPE } = vocab;
+const { ADDRESS_SIGNATURE_FIELD_ORDER, DME_ROLES, IN_HUB_EDGE_TYPE, HUB_TERM_REFERENCE_EDGE_TYPE, hubEdgeType } = vocab;
 const { HUB_CARD_FIELD_TABLE, HUB_CARD_STRUCTURE_VERSION, hashedSlotNameListOf, hubFieldTableOf, cardFieldRefusal } = require(path.join(__dirname, '..', '..', '..', 'lib', 'hub-framework', 'hubCardFieldTable'));
 // ⟪ctdlHub P3⟫ CEDS's VIEW of the field table is the table filtered by CEDS's declared tierList and rangeAddressing, and the
 // FROZEN profile below is that view as it was stamped at 087550f9, before P3 touched the framework. The frozen literal is
 // what stops the profile check from proving only that the filter equals itself (SCARLET_ARROW, 2026-10-20).
 const CEDS_HUB_FIELD_SCOPE = (({ tierList, rangeAddressing }) => ({ tierList, rangeAddressing }))(require('../lib/cedsHubDeclaration'));
+// ⟪zeroBacklog lane A, P9⟫ the term tier is on. The frozen profile pins the TUPLE tiers' view (property, value), so the
+// profile is compared to it RESTRICTED to those tiers; the term tier's share of the profile and its cards' edges are proven
+// by test-termTierStability.js. The term tier's card edges are named here so the tuple gates can set them aside.
+const TERM_TIER_NAME = 'term';
+const CEDS_TUPLE_FIELD_SCOPE = { ...CEDS_HUB_FIELD_SCOPE, tierList: CEDS_HUB_FIELD_SCOPE.tierList.filter((oneTier) => oneTier !== TERM_TIER_NAME) };
+const TERM_SLOT_EDGE_TYPE = hubEdgeType(require('../lib/cedsHubDeclaration').hubName, 'TERM');
+const slotProfileTextRestrictedToTupleTiers = (slotProfile) => {
+	const { termAddressSignatureFieldOrder, ...profileWithoutTermOrder } = slotProfile;
+	return JSON.stringify({
+		...profileWithoutTermOrder,
+		fieldList: profileWithoutTermOrder.fieldList
+			.map((oneRow) => ({ ...oneRow, tierList: oneRow.tierList.filter((oneTier) => CEDS_TUPLE_FIELD_SCOPE.tierList.includes(oneTier)) }))
+			.filter((oneRow) => oneRow.tierList.length > 0),
+	});
+};
 const FROZEN_CEDS_SLOT_PROFILE = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', '..', 'lib', 'hub-framework', 'test', 'fixtures', 'cedsSlotProfile-frozen-087550f9.json'), 'utf8'));
 
 const CEDS_SOURCE_PATH = path.join(
@@ -653,18 +668,19 @@ const computeHubDefinitionViolations = ({ hubNodes, hubEdges, cards, hubVersion 
 		if (JSON.stringify((slotProfile || {}).fieldList) !== JSON.stringify(hubFieldTableOf({ fieldTable: HUB_CARD_FIELD_TABLE, ...CEDS_HUB_FIELD_SCOPE }))) {
 			violations.push('slotProfile.fieldList is not CEDS\'s view of the hub card field table, serialised');
 		}
-		if (hd.slotProfile !== FROZEN_CEDS_SLOT_PROFILE.slotProfileText) {
-			violations.push(`slotProfile is not, character for character, the frozen CEDS profile captured at ${FROZEN_CEDS_SLOT_PROFILE.capturedFromCommit}`);
+		if (slotProfileTextRestrictedToTupleTiers(slotProfile) !== FROZEN_CEDS_SLOT_PROFILE.slotProfileText) {
+			violations.push(`slotProfile restricted to the tuple tiers is not, character for character, the frozen CEDS profile captured at ${FROZEN_CEDS_SLOT_PROFILE.capturedFromCommit}`);
 		}
 		if (JSON.stringify((slotProfile || {}).addressSignatureFieldOrder) !== JSON.stringify(ADDRESS_SIGNATURE_FIELD_ORDER)) {
 			violations.push('slotProfile.addressSignatureFieldOrder is not vocabulary ADDRESS_SIGNATURE_FIELD_ORDER');
 		}
-		const hashedSlotNameList = hashedSlotNameListOf(hubFieldTableOf({ fieldTable: HUB_CARD_FIELD_TABLE, ...CEDS_HUB_FIELD_SCOPE }));
+		const hashedSlotNameList = hashedSlotNameListOf(hubFieldTableOf({ fieldTable: HUB_CARD_FIELD_TABLE, ...CEDS_TUPLE_FIELD_SCOPE }));
 		if (JSON.stringify(hashedSlotNameList.slice().sort()) !== JSON.stringify(ADDRESS_SIGNATURE_FIELD_ORDER.slice().sort()) || JSON.stringify(hashedSlotNameList) !== JSON.stringify(FROZEN_CEDS_SLOT_PROFILE.hashedSlotNameList)) {
 			violations.push(`the table's hashed slots [${hashedSlotNameList.join(', ')}] are not ADDRESS_SIGNATURE_FIELD_ORDER [${ADDRESS_SIGNATURE_FIELD_ORDER.join(', ')}]`);
 		}
 		// every card carries exactly what the table allows for its tier (EVERY card, not a sample)
 		const cardFaultList = cards
+			.concat(hubNodes.filter((oneNode) => oneNode.role === 'HubReference' && oneNode.properties.referenceTier === TERM_TIER_NAME))
 			.map((oneCard) => ({ stableId: oneCard.stableId, faultText: cardFieldRefusal({ fieldTable: HUB_CARD_FIELD_TABLE, referenceTier: oneCard.properties.referenceTier, cardPropertyNameList: Object.keys(oneCard.properties), ...CEDS_HUB_FIELD_SCOPE }) }))
 			.filter((oneVerdict) => oneVerdict.faultText !== '');
 		if (cardFaultList.length) {
@@ -684,9 +700,10 @@ const computeHubDefinitionViolations = ({ hubNodes, hubEdges, cards, hubVersion 
 		violations.push('sourceProvenance is not populated (standardKey/forgeModule)');
 	}
 	const inHubEdges = hubEdges.filter((oneEdge) => oneEdge.type === IN_HUB_EDGE_TYPE);
-	if (inHubEdges.length !== cards.length) {
+	const termCardCount = hubNodes.filter((oneNode) => oneNode.role === 'HubReference' && oneNode.properties.referenceTier === TERM_TIER_NAME).length;
+	if (inHubEdges.length !== cards.length + termCardCount) {
 		violations.push(
-			`IN_HUB degree ${inHubEdges.length} != card count ${cards.length}`,
+			`IN_HUB degree ${inHubEdges.length} != card count ${cards.length} + term card count ${termCardCount}`,
 		);
 	}
 	const strayInHub = inHubEdges.filter(
@@ -778,9 +795,14 @@ const computeEdgeTargetViolations = ({ cards, hubEdges, baseIndexes }) => {
 	cards.forEach((oneCard) => {
 		cardByUri[oneCard.stableId] = oneCard;
 	});
+	// the term tier's edges (term card -> its base node, term card -> HubDefinition, property card -> its term card) are
+	// test-termTierStability.js's to prove; they are set aside here and out of the edge total
+	const termCardStableIdSet = new Set(hubEdges.filter((oneEdge) => oneEdge.type === TERM_SLOT_EDGE_TYPE).map((oneEdge) => oneEdge.fromRef.id));
+	const isTermTierEdge = (oneEdge) => oneEdge.type === TERM_SLOT_EDGE_TYPE || oneEdge.type === HUB_TERM_REFERENCE_EDGE_TYPE || termCardStableIdSet.has(oneEdge.fromRef.id);
+	const tupleTierEdgeCount = hubEdges.filter((oneEdge) => !isTermTierEdge(oneEdge)).length;
 	const edgesByFromUri = {};
 	hubEdges.forEach((oneEdge) => {
-		if (oneEdge.type === IN_HUB_EDGE_TYPE) {
+		if (oneEdge.type === IN_HUB_EDGE_TYPE || isTermTierEdge(oneEdge)) {
 			return; // IN_HUB targeting is G-9's assertion
 		}
 		(edgesByFromUri[oneEdge.fromRef.id] = edgesByFromUri[oneEdge.fromRef.id] || []).push(
@@ -837,9 +859,9 @@ const computeEdgeTargetViolations = ({ cards, hubEdges, baseIndexes }) => {
 			violations.push(`decomposition edge(s) from a non-card node: ${oneFromUri}`);
 		}
 	});
-	if (derivableEdgeTotal !== hubEdges.length) {
+	if (derivableEdgeTotal !== tupleTierEdgeCount) {
 		violations.push(
-			`edge total ${hubEdges.length} != per-card derivable expectation ${derivableEdgeTotal}`,
+			`tuple-tier edge total ${tupleTierEdgeCount} != per-card derivable expectation ${derivableEdgeTotal}`,
 		);
 	}
 	return violations;
@@ -1051,7 +1073,11 @@ forgeCeds.forge(
 					return;
 				}
 
-				const cards = hub.nodes.filter((oneNode) => oneNode.role === 'HubReference');
+				// ⟪zeroBacklog lane A, P9⟫ the gates below are the TUPLE tiers' gates (property and value cards, SPEC §1-§4).
+				// The term tier (one card per class, property, option set and value IRI) is not a tuple; its count, edges and
+				// card identity are proven by test-termTierStability.js, so it is set aside here by name.
+				const termCards = hub.nodes.filter((oneNode) => oneNode.role === 'HubReference' && oneNode.properties.referenceTier === 'term');
+				const cards = hub.nodes.filter((oneNode) => oneNode.role === 'HubReference' && oneNode.properties.referenceTier !== 'term');
 				const expectedKeys = deriveExpectedTupleKeys({
 					nodes: base.nodes,
 					edges: base.edges,
@@ -1617,11 +1643,11 @@ forgeCeds.forge(
 							`forged by module:   property tier ${hub.counts.propertyTier}, ` +
 								`value tier ${hub.counts.valueTier}, ` +
 								`qualified ${hub.counts.qualified}, ` +
-								`total ${hub.counts.hubReferenceTotal}`,
+								`total ${hub.counts.hubReferenceTotal} of which term tier ${hub.counts.termTier}`,
 						);
 						harness.equal(
-							'the two independently computed totals agree',
-							hub.counts.hubReferenceTotal,
+							'the two independently computed totals agree (the tuple tiers: the total less the term tier)',
+							hub.counts.hubReferenceTotal - hub.counts.termTier,
 							expectedKeys.allKeys.size,
 						);
 
