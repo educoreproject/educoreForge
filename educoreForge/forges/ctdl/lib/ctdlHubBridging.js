@@ -16,6 +16,11 @@ const hubBridging = Object.freeze({
 		identifierPatternList: [{ patternName: 'ctdlTermCurie', regexSource: '\\b(?:ceterms|ceasn|qdata):[A-Za-z][A-Za-z0-9_]*' }],
 		identifierListPath: null,
 	},
+	// ⟪zeroBacklog B2, R3-F2⟫ CTDL's own prose cites CTDL terms ("Subclasses of ceterms:Credential …": 402 cards' domainDefinition, 24
+	// cards' propertyDefinition on GOLD_EVAL_261021_ctdlHub), which the scan above refuses. A candidate's prose renders each CURIE as
+	// its local name ("Subclasses of Credential"); the pattern is the scan's own prefix alternation, so nothing the scan would catch
+	// survives in candidate prose, and a CURIE on the SUBJECT side still refuses.
+	renderedProseIdentifierRule: { patternSource: '\\b(?:ceterms|ceasn|qdata):([A-Za-z][A-Za-z0-9_]*)', replacementTemplate: '$1' },
 	// no source forge stamps CTDL anchors today
 	sourceAnchorBlindingNameList: [],
 	judgeWording: { toolCandidateNoun: 'CTDL candidate' },

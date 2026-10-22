@@ -11,6 +11,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                    promptSegmentList, judgePromptVariant, renderingAllowList, blindingNameList })
 //     blindingNameList  the bridge's blindingDeclaration: what a bridge blinds it never renders (with RENDERING_NEVER_NAME_LIST);
 //                       required, as a list, by every variant that renders by allow-list
+//     renderedProseIdentifierRule  ⟪zeroBacklog B2⟫ the target hub's rule for its own identifiers cited in its card prose
+//                       ({ patternSource, replacementTemplate }, renderedProseIdentifierRule.js), applied to every rendered CANDIDATE
+//                       value and never to the subject. null, or absent, means no rule: the documented meaning, because a bridge
+//                       to a hub that declares none carries no key (its digest must not move). Any other value is refused by name.
+//                       The renderer versions are NOT bumped for it: a question with no rule renders byte-identically, so every
+//                       cached answer still answers the identical question, and a rewritten question has a new promptHash anyway.
 //     → { systemPrompt, userPrompt, promptHash, renderedPoolStableIdList, choiceEnum, rendererVersion, judgePredicateRule,
 //         cardCollapseList, qualifiedCardStableIdList } | { error }
 //
@@ -54,6 +60,7 @@ const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const representationPolicyLib = require('./representationPolicy');
 const graphSeamRulesLib = require('./graphSeamRules');
 const componentIdeaSplitterLib = require('./componentIdeaSplitter');
+const renderedProseIdentifierRuleLib = require('./renderedProseIdentifierRule');
 const { JUDGE_PROMPT_VARIANT_LIST, RENDERING_NEVER_NAME_LIST, neverRenderedNameListFor } = require('./bridgePluginContract');
 
 const RENDERER_VERSION = 'bridgeEvidenceRenderer-v1';
@@ -255,11 +262,16 @@ const qualifierNamesRefusalFor = (card) => {
 	return '';
 };
 
-const derivedCandidateData = ({ oneSeat, renderingAllowList }) => {
+const derivedCandidateData = ({ oneSeat, renderingAllowList, renderedProseIdentifierRule }) => {
 	const renderedName = renderedCardNameFor(oneSeat.card);
 	const cardWithIdeas = { ...oneSeat.card, name: renderedName, componentIdeaList: componentIdeaSplitterLib.componentIdeaListFor({
 		nameList: [oneSeat.card.domainName, renderedName] }).join(', ') };
-	return graphSeamRulesLib.allowListedPropertiesFor({ properties: cardWithIdeas, allowNameList: renderingAllowList.candidate });
+	const allowListedProperties = graphSeamRulesLib.allowListedPropertiesFor({ properties: cardWithIdeas, allowNameList: renderingAllowList.candidate });
+	// ⟪zeroBacklog B2⟫ the hub's own identifiers in its own prose, rewritten AFTER the allow-list, so the prompt lines, the collapse
+	// comparison and the split question all read the same text
+	return renderedProseIdentifierRule === null
+		? allowListedProperties
+		: Object.keys(allowListedProperties).reduce((soFar, propertyName) => Object.assign(soFar, { [propertyName]: renderedProseIdentifierRuleLib.rewrittenRenderedValue({ rule: renderedProseIdentifierRule, renderedValue: allowListedProperties[propertyName] }) }), {});
 };
 
 // ⟪lane QUAL⟫ IDENTICAL CARDS COLLAPSE, compared AS RENDERED (the candidate block's own lines, index line excluded). Two
@@ -268,14 +280,14 @@ const derivedCandidateData = ({ oneSeat, renderingAllowList }) => {
 // (memberStableIdListFor): the judge said "this card", and every member IS this card as far as anything it was shown can
 // say. Choosing one member would be an arbitrary choice dressed as the judge's. A variant that does not collapse
 // (crosswalk, byte-frozen) gets the pool exactly as given and an empty cardCollapseList.
-const collapsedPoolFor = ({ candidatePool, variantRow, renderingAllowList }) => {
+const collapsedPoolFor = ({ candidatePool, variantRow, renderingAllowList, renderedProseIdentifierRule }) => {
 	if (!variantRow.collapsesIdenticalCards) {
 		return { collapsedPool: candidatePool, cardCollapseList: [] };
 	}
 	const memberStableIdListByRenderedText = {};
 	const collapsedPool = [];
 	candidatePool.forEach((oneSeat) => {
-		const renderedText = renderKeyValueLines(variantRow.candidateData({ oneSeat, renderingAllowList }), '').join('\n');
+		const renderedText = renderKeyValueLines(variantRow.candidateData({ oneSeat, renderingAllowList, renderedProseIdentifierRule }), '').join('\n');
 		if (memberStableIdListByRenderedText[renderedText] === undefined) {
 			memberStableIdListByRenderedText[renderedText] = [oneSeat.card.stableId];
 			collapsedPool.push(oneSeat);
@@ -297,10 +309,10 @@ const memberStableIdListFor = ({ cardCollapseList, chosenCardStableId }) => {
 	return collapseEntry === undefined ? [chosenCardStableId] : collapseEntry.memberStableIdList.slice();
 };
 
-const derivedCandidateLineList = ({ oneSeat, seatIndex, renderingAllowList }) => {
+const derivedCandidateLineList = ({ oneSeat, seatIndex, renderingAllowList, renderedProseIdentifierRule }) => {
 	const lineList = [];
 	lineList.push(`  CANDIDATE INDEX NUMBER: [${seatIndex + 1}]`);
-	lineList.push(...renderKeyValueLines(derivedCandidateData({ oneSeat, renderingAllowList }), '      '));
+	lineList.push(...renderKeyValueLines(derivedCandidateData({ oneSeat, renderingAllowList, renderedProseIdentifierRule }), '      '));
 	return lineList;
 };
 
@@ -471,7 +483,13 @@ const renderedBlockRefusal = ({ lineList, variantRow, neverRenderedNameList }) =
 	return leaked === undefined ? null : refuse.byName({ moduleName, what: `the rendered prompt carries property '${leaked}', which is on RENDERING_NEVER_NAME_LIST or the bridge's blindingDeclaration`, where: 'an identifier never reaches the judge under a retrieved basis (§4 the bias audit); the allow-list should have made this unreachable — reaching it is a defect in the renderer, not in the declaration' });
 };
 
-const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perCandidateNoteByStableId, promptSegmentList, judgePromptVariant, renderingAllowList, blindingNameList } = {}) => {
+const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perCandidateNoteByStableId, promptSegmentList, judgePromptVariant, renderingAllowList, blindingNameList, renderedProseIdentifierRule: suppliedRenderedProseIdentifierRule } = {}) => {
+	// absent and null both mean "no rule" (the header says why); anything else must be a well-formed rule
+	const renderedProseIdentifierRule = suppliedRenderedProseIdentifierRule === undefined ? null : suppliedRenderedProseIdentifierRule;
+	const proseRuleReason = renderedProseIdentifierRule === null ? '' : renderedProseIdentifierRuleLib.ruleReason(renderedProseIdentifierRule);
+	if (proseRuleReason !== '') {
+		return { error: refuse.byName({ moduleName, what: `renderedProseIdentifierRule ${proseRuleReason}`, where: 'the framework passes the bridge declaration\'s rule, which the plugin contract has already shape-checked; null means none' }) };
+	}
 	if (JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant] === undefined) {
 		return { error: refuse.byName({ moduleName, what: `judgePromptVariant ${JSON.stringify(judgePromptVariant)} names no rendering variant`, where: `the framework passes the variant VARIANT_BY_BASIS_AND_PREDICATE_RULE names for the run; the registered variants are ${JUDGE_PROMPT_VARIANT_LIST.join(', ')} — there is no default renderer` }) };
 	}
@@ -527,12 +545,12 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	}
 	const noteByStableId = perCandidateNoteByStableId === undefined ? {} : perCandidateNoteByStableId;
 	// ⟪lane QUAL⟫ from here on the judge sees the COLLAPSED pool; the A2 gate above swept every card, collapsed or not
-	const { collapsedPool, cardCollapseList } = collapsedPoolFor({ candidatePool, variantRow, renderingAllowList });
+	const { collapsedPool, cardCollapseList } = collapsedPoolFor({ candidatePool, variantRow, renderingAllowList, renderedProseIdentifierRule });
 	// read off what was RENDERED, not off a switch: a card whose rendered name differs from its own name carried its
 	// qualifier to the judge (a variant without candidateData, the crosswalk, renders no such name and lists none)
 	const qualifiedCardStableIdList = variantRow.candidateData === undefined
 		? []
-		: candidatePool.filter((oneSeat) => { const renderedName = variantRow.candidateData({ oneSeat, renderingAllowList }).name; return renderedName !== undefined && renderedName !== oneSeat.card.name; }).map((oneSeat) => oneSeat.card.stableId).sort();
+		: candidatePool.filter((oneSeat) => { const renderedName = variantRow.candidateData({ oneSeat, renderingAllowList, renderedProseIdentifierRule }).name; return renderedName !== undefined && renderedName !== oneSeat.card.name; }).map((oneSeat) => oneSeat.card.stableId).sort();
 	const renderedPoolStableIdList = collapsedPool.map((oneSeat) => oneSeat.card.stableId);
 	const lineList = [];
 	lineList.push(...variantRow.subjectLineList({ sourceElement, renderingAllowList }));
@@ -548,7 +566,7 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 	// come from the variant row (R1), so the crosswalk keeps its shipped heading and answer line.
 	lineList.push(`${variantRow.candidateListHeadingWord} (${collapsedPool.length}), in hub order:`);
 	collapsedPool.forEach((oneSeat, seatIndex) => {
-		lineList.push(...variantRow.candidateLineList({ oneSeat, seatIndex, noteByStableId, renderingAllowList }));
+		lineList.push(...variantRow.candidateLineList({ oneSeat, seatIndex, noteByStableId, renderingAllowList, renderedProseIdentifierRule }));
 	});
 	lineList.push(`Answer with one of: ${renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).join(', ')}, or ${ABSTAIN_TOKEN}${variantRow.answerLineSuffix}`);
 	const blockRefusal = renderedBlockRefusal({ lineList, variantRow, neverRenderedNameList });
@@ -575,7 +593,7 @@ const renderQuestion = ({ sourceElement, candidatePool, globalGuidanceList, perC
 		? Object.assign({}, variantRow.choiceStateFor({ systemPrompt, subjectData: variantRow.subjectData({ sourceElement, renderingAllowList }), sourceElement }), {
 			instructionText: CHOICE_QUESTION_INSTRUCTION_TEXT,
 			criteriaByChoice: collapsedPool.reduce(
-				(soFar, oneSeat, seatIndex) => Object.assign({}, soFar, { [String(seatIndex + 1)]: variantRow.candidateData({ oneSeat, renderingAllowList }) }),
+				(soFar, oneSeat, seatIndex) => Object.assign({}, soFar, { [String(seatIndex + 1)]: variantRow.candidateData({ oneSeat, renderingAllowList, renderedProseIdentifierRule }) }),
 				{ [ABSTAIN_TOKEN]: CHOICE_QUESTION_ABSTAIN_TEXT },
 			),
 		})

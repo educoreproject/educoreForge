@@ -41,6 +41,7 @@ const bridgeAllowanceRegistryLib = require('./bridgeAllowanceRegistry');
 const neighbourVoteLib = require('./neighbourVote');
 const candidateRetrievalMethodRegistryLib = require('./candidateRetrievalMethodRegistry');
 const promptIdentifierScanLib = require('./promptIdentifierScan');
+const renderedProseIdentifierRuleLib = require('./renderedProseIdentifierRule');
 const judgmentPartitionLib = require('./judgmentPartition');
 const materialisationFanoutLib = require('./materialisationFanout');
 const owningConstructDefinitionLib = require('./owningConstructDefinition');
@@ -571,6 +572,11 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	// the IN-RUN identifier scan over everything the judge is shown (promptIdentifierScan.js; SPEC §9 A19). Plain-optional:
 	// absent, nothing is scanned and the run is unchanged. Its checker is a shape check only.
 	promptIdentifierScan: Object.freeze({ optional: true, kind: 'promptIdentifierScan' }),
+	// ⟪zeroBacklog B2, ruling Q-Z10⟫ the TARGET hub's rule for its own identifiers cited in its card prose, rewritten in every rendered
+	// CANDIDATE value (renderedProseIdentifierRule.js). Plain-optional: the composer writes it only when the hub declares one, so a
+	// bridge to a hub that declares null carries no key and its declarationDigest cannot move. Per HUB, so it is not in
+	// DERIVED_PLUGIN_PER_STANDARD_KEY_LIST.
+	renderedProseIdentifierRule: Object.freeze({ optional: true, kind: 'renderedProseIdentifierRule' }),
 	// the judge's configuration and each judged record's rationale, frozen into the block (SPEC §9 A12; PLAN small phases §3
 	// B2). Plain-optional, and `true` is its only value: absent is the one way to say no, so there is no second spelling of it.
 	blockRecordsJudgeConfig: Object.freeze({ optional: true, kind: 'closedValue', allowedValueList: Object.freeze([true]) }),
@@ -863,6 +869,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			: `must match ${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_PATTERN} — lower-case-initial alphanumeric, 32 characters maximum, never carrying the '${vocabularyLib.RELATIONSHIP_DISCRIMINATOR_SEPARATOR}' separator itself (got ${JSON.stringify(value)})`,
 	stringList: (value) => (isStringList(value) ? '' : `must be a list of strings (got ${JSON.stringify(value)}); [] means "none", absence is refused`),
 	promptIdentifierScan: (value) => promptIdentifierScanLib.declarationReason(value),
+	renderedProseIdentifierRule: (value) => renderedProseIdentifierRuleLib.ruleReason(value),
 	judgmentPartition: (value) => judgmentPartitionLib.declarationReason(value),
 	materialisationFanout: (value) => materialisationFanoutLib.declarationReason(value),
 	closedValue: (value, { contractEntry, propertyName }) => closedValueReason(value, contractEntry.allowedValueList, propertyName),

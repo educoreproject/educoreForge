@@ -21,6 +21,7 @@ const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { REFERENCE_TIER } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const promptIdentifierScanLib = require('./promptIdentifierScan');
+const renderedProseIdentifierRuleLib = require('./renderedProseIdentifierRule');
 
 const TERM_KEY_FORM_LIST = Object.freeze(['absoluteIri', 'curie']);
 const REFERENCE_TIER_LIST = Object.freeze(Object.values(REFERENCE_TIER));
@@ -29,6 +30,8 @@ const HUB_BRIDGING_CONTRACT = Object.freeze({
 	hubToken: Object.freeze({ kind: 'bundleToken', whatItIs: 'the hub bundle directory name, which is the recipe hub token' }),
 	candidateRenderingAllowList: Object.freeze({ kind: 'nonEmptyNameList', whatItIs: 'the hub card fields a judge may be shown, in rendering order (a plugin\'s renderingAllowList.candidate)' }),
 	promptIdentifierScan: Object.freeze({ kind: 'promptIdentifierScanOrNone', whatItIs: 'the hub identifier patterns and the bundle-relative path of its one id list, scanned out of every prompt; null declares that this hub has none' }),
+	// ⟪zeroBacklog B2, ruling Q-Z10⟫ for a hub whose OWN card prose cites its own identifiers (a definition that says "Subclasses of <prefix>:<Term>")
+	renderedProseIdentifierRule: Object.freeze({ kind: 'renderedProseIdentifierRuleOrNone', whatItIs: 'how this hub\'s own identifiers in its card prose are rewritten before a judge sees a candidate ({ patternSource, replacementTemplate }; renderedProseIdentifierRule.js); null declares that its prose cites none' }),
 	sourceAnchorBlindingNameList: Object.freeze({ kind: 'nameList', whatItIs: 'the property names a source stamps when it carries this hub\'s anchors, in the order the plugins blind them ([] when no source stamps any)' }),
 	judgeWording: Object.freeze({ kind: 'judgeWording', whatItIs: 'the judge\'s words for this hub: { toolCandidateNoun } (R4 renders them)' }),
 	declaredTargetRuleList: Object.freeze({ kind: 'ruleList', whatItIs: 'how a declared target in a source expands to this hub\'s stableId (the declared basis); [] when none' }),
@@ -53,6 +56,8 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 	// cannot disagree about what a scan declaration is; like it, it does not second-guess the values (a pattern that does not
 	// compile fails loudly the first time a run reaches it)
 	promptIdentifierScanOrNone: (value) => (value === null ? '' : promptIdentifierScanLib.declarationReason(value)),
+	// the plugin contract's own shape rule for the same object (renderedProseIdentifierRule.ruleReason), as for the scan above
+	renderedProseIdentifierRuleOrNone: (value) => (value === null ? '' : renderedProseIdentifierRuleLib.ruleReason(value)),
 	judgeWording: (value) => (isPlainObject(value) && Object.keys(value).join(',') === 'toolCandidateNoun' && isNonEmptyString(value.toolCandidateNoun) ? '' : `must be exactly { toolCandidateNoun: <non-empty string> } (got ${JSON.stringify(value)})`),
 	ruleList: (value) => (Array.isArray(value) && value.every((oneRule) => isPlainObject(oneRule) && isNonEmptyString(oneRule.ruleKind)) ? '' : 'must be a list of rule objects, each naming its ruleKind'),
 });

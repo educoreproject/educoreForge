@@ -110,6 +110,10 @@ const composeOne = ({ standardBridging, oneFacet, hubToken, pairRow, hubBridging
 			? {}
 			: { promptIdentifierScan: promptIdentifierScanFor({ pairRow, hubBridging, bridgeNameStem: standardBridging.bridgeNameStem, hubToken }) }),
 		...(pairRuleList === null ? {} : { declaredTargetRuleList: pairRuleList.map((oneRule) => ({ ...oneRule })) }),
+		// ⟪zeroBacklog B2⟫ ONLY for a bridge that RENDERS candidates (it has a renderingAllowList) toward a hub that declares a rule: a
+		// hub that declares null composes no key, and neither does a declared or documentary bridge, which renders nothing, so no
+		// existing digest moves (P-a1)
+		...(oneFacet.subjectRenderingAllowList === null || hubBridging.renderedProseIdentifierRule === null ? {} : { renderedProseIdentifierRule: { ...hubBridging.renderedProseIdentifierRule } }),
 	};
 	return { pluginModule: { bridgeDeclaration, bridgeHooks, bridgeTarget: { targetHub: hubToken, judgeWording: { ...hubBridging.judgeWording } } } };
 };

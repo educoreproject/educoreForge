@@ -108,6 +108,10 @@ const MODE_REJUDGE = 'rejudge';
 const RUN_KIND_NONE = 'none';
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
+// ⟪zeroBacklog B2⟫ the declaration's rule for the target hub's own identifiers in its card prose. ABSENT means the hub declares none:
+// the composer writes the key only for a hub that declares a rule (bridgeComposer.js), so a bridge to a hub that declares null carries none and its
+// declarationDigest stays byte-identical; the renderer is told so explicitly, as null.
+const renderedProseIdentifierRuleOf = (bridgeDeclaration) => (bridgeDeclaration.renderedProseIdentifierRule === undefined ? null : bridgeDeclaration.renderedProseIdentifierRule);
 const isNonBlank = (value) => typeof value === 'string' && value.trim() !== '';
 const sha256Hex = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 const compareStrings = (leftValue, rightValue) => (leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0);
@@ -1774,7 +1778,7 @@ const moduleFunction =
 								return;
 							}
 							const decoratedPool = candidatePool.map((oneSeat) => (hookState.nominatedByStableId[oneSeat.card.stableId] !== undefined ? { ...oneSeat, nominatedBy: bridgeDeclaration.bridgeName, nominationRationale: hookState.nominatedByStableId[oneSeat.card.stableId] } : oneSeat));
-							const question = { ...evidenceRendererLib.renderQuestion({ sourceElement, candidatePool: decoratedPool, globalGuidanceList, perCandidateNoteByStableId: hookState.perCandidateNoteByStableId, promptSegmentList: hookState.promptSegmentList, judgePromptVariant, renderingAllowList: bridgeDeclaration.renderingAllowList, blindingNameList: bridgeDeclaration.blindingDeclaration }), toolCandidateNoun };
+							const question = { ...evidenceRendererLib.renderQuestion({ sourceElement, candidatePool: decoratedPool, globalGuidanceList, perCandidateNoteByStableId: hookState.perCandidateNoteByStableId, promptSegmentList: hookState.promptSegmentList, judgePromptVariant, renderingAllowList: bridgeDeclaration.renderingAllowList, blindingNameList: bridgeDeclaration.blindingDeclaration, renderedProseIdentifierRule: renderedProseIdentifierRuleOf(bridgeDeclaration) }), toolCandidateNoun };
 							if (question.error) {
 								taskDone(question.error.message);
 								return;
