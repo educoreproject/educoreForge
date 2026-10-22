@@ -75,7 +75,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // THE FORGE DOES NO BRIDGING (FBB-001): the walk ends with a scan that refuses any property whose
 // name speaks of CEDS (gate F14).
 
+const fs = require('fs');
 const path = require('path');
+const configFileProcessor = require('qtools-config-file-processor');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const { EDGE_TYPES } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const resolutionTableLib = require('./resolutionTable');
@@ -95,7 +97,32 @@ const RELEASE_RECORD_SEGMENT = 'release';
 const MESSAGE_LAYER = 'message';
 const SCHEMA_FILE_SEGMENT = 'file';
 const DOCUMENTATION_SOURCE = Object.freeze({ OWN: 'own', BORROWED: 'borrowed', TYPE: 'type' });
-const BRIDGING_PROPERTY_NAME_RE = /ceds/i;
+// ⟪zeroBacklog lane D, D2-3 (deCeds R7-3), 2026-10-22⟫ F14's scan is HUB-NEUTRAL: a property name speaking of ANY hub is a
+// bridge target, so the scan reads the hub REGISTRY (every forge bundle whose parserDescriptor.ini declares hubModule=, the
+// declaration hubBridgingLoader and the forger read), never a hub-name literal. Chosen over the hubs' sourceAnchorBlindingNameList
+// because that list names only the anchors a source is EXPECTED to stamp (CTDL's is empty), so it would have narrowed the scan
+// from 'any property naming the hub' to 'exactly the declared names', and refused nothing for CTDL at all.
+const TREE_FORGES_DIR_PATH = path.join(__dirname, '..', '..', 'forges');
+const DESCRIPTOR_FILE_NAME = 'parserDescriptor.ini';
+const DESCRIPTOR_SECTION_NAME = 'parserDescriptor';
+const HUB_DECLARATION_DESCRIPTOR_KEY = 'hubModule';
+// hubTokenListFor — the bundle tokens whose descriptor declares a hub module, sorted
+const hubTokenListFor = ({ forgesDirPath }) =>
+	fs
+		.readdirSync(forgesDirPath, { withFileTypes: true })
+		.filter((oneEntry) => oneEntry.isDirectory() && fs.existsSync(path.join(forgesDirPath, oneEntry.name, DESCRIPTOR_FILE_NAME)))
+		.filter((oneEntry) => ((configFileProcessor.getConfig(path.join(forgesDirPath, oneEntry.name, DESCRIPTOR_FILE_NAME)) || {})[DESCRIPTOR_SECTION_NAME] || {})[HUB_DECLARATION_DESCRIPTOR_KEY] !== undefined)
+		.map((oneEntry) => oneEntry.name)
+		.sort();
+// bridgingPropertyNameReFor — one case-insensitive pattern over every hub token; a registry with NO hub is refused, because a scan
+// that can match nothing is a scan that passes everything
+const bridgingPropertyNameReFor = ({ forgesDirPath }) => {
+	const hubTokenList = hubTokenListFor({ forgesDirPath });
+	if (hubTokenList.length === 0) {
+		throw refuse.byName({ moduleName, what: `no forge bundle under ${forgesDirPath} declares ${HUB_DECLARATION_DESCRIPTOR_KEY}=`, where: 'F14 (FBB-001) scans property names for every hub token; with no hub it could refuse nothing' });
+	}
+	return new RegExp(hubTokenList.join('|'), 'i');
+};
 // the section rule (§2.8): the first two segments BELOW the root element
 const SECTION_DEPTH_BELOW_ROOT = 2;
 // the declaration's path sample (§2.2): the first two readable paths of every section it occurs in
@@ -707,10 +734,11 @@ const emitReleaseGraph = ({ xsdSet, loadedManifestEntry, loadedDonorSet, standar
 	});
 
 	// ---- F14: the forge names no bridge target
+	const bridgingPropertyNameRe = bridgingPropertyNameReFor({ forgesDirPath: TREE_FORGES_DIR_PATH });
 	kit.nodes.forEach((oneNode) => {
-		const bridgingPropertyName = Object.keys(oneNode.properties).find((onePropertyName) => BRIDGING_PROPERTY_NAME_RE.test(onePropertyName));
+		const bridgingPropertyName = Object.keys(oneNode.properties).find((onePropertyName) => bridgingPropertyNameRe.test(onePropertyName));
 		if (bridgingPropertyName !== undefined) {
-			throw refuse.byName({ moduleName, what: `node '${oneNode.stableId}' carries property '${bridgingPropertyName}'`, where: 'THE FORGE DOES NO BRIDGING (FBB-001): no property of a PESC release graph names CEDS' });
+			throw refuse.byName({ moduleName, what: `node '${oneNode.stableId}' carries property '${bridgingPropertyName}'`, where: `THE FORGE DOES NO BRIDGING (FBB-001): no property of a PESC release graph names a hub (${bridgingPropertyNameRe.source})` });
 		}
 	});
 
@@ -733,4 +761,4 @@ const SYMBOL_SPACE_BY_KIND = Object.freeze({
 	group: SYMBOL_SPACE.GROUP,
 });
 
-module.exports = { emitReleaseGraph, CARRY_LIST_BY_NODE_KIND, STABLE_ID_SEGMENT_BY_NODE_KIND, SECTION_DEPTH_BELOW_ROOT, PER_SECTION_SAMPLE_COUNT, sectionPathOf, moduleName };
+module.exports = { emitReleaseGraph, hubTokenListFor, bridgingPropertyNameReFor, TREE_FORGES_DIR_PATH, CARRY_LIST_BY_NODE_KIND, STABLE_ID_SEGMENT_BY_NODE_KIND, SECTION_DEPTH_BELOW_ROOT, PER_SECTION_SAMPLE_COUNT, sectionPathOf, moduleName };

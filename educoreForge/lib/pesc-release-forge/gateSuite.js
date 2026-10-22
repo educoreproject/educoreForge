@@ -1047,42 +1047,58 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 	);
 
 	// ---- F14-NO-BRIDGING
+	// ⟪zeroBacklog lane D, D2-3 (deCeds R7-3), 2026-10-22⟫ hub-neutral: the scan's pattern is the walk's own, built from the hub
+	// REGISTRY (every bundle declaring hubModule=), and the refusal is proven for EVERY registered hub, not for one named here
 	const BRIDGING_GATE_ID = 'F14-NO-BRIDGING';
-	const CEDS_PROPERTY_MUTATION = {
+	const { hubTokenListFor, bridgingPropertyNameReFor, TREE_FORGES_DIR_PATH } = require('./walk');
+	const registeredHubTokenList = hubTokenListFor({ forgesDirPath: TREE_FORGES_DIR_PATH });
+	const hubIdPropertyMutationFor = (hubToken) => ({
 		modulePath: WALK_PATH,
 		find: '			carriedProperties: kit.carriedProperties({ parsedObject: presentFactsOf(facts), carryList: CARRY_LIST_BY_NODE_KIND[nodeKind] }),',
-		replace: "			carriedProperties: { ...kit.carriedProperties({ parsedObject: presentFactsOf(facts), carryList: CARRY_LIST_BY_NODE_KIND[nodeKind] }), ...(nodeKind === 'element' ? { cedsId: 'P000001' } : {}) },",
-	};
-	const bridgingRefusalRe = /walk REFUSED: node '[^']+' carries property 'cedsId'/;
+		replace: `			carriedProperties: { ...kit.carriedProperties({ parsedObject: presentFactsOf(facts), carryList: CARRY_LIST_BY_NODE_KIND[nodeKind] }), ...(nodeKind === 'element' ? { ${hubToken}Id: 'P000001' } : {}) },`,
+	});
+	const bridgingRefusalReFor = (hubToken) => new RegExp(`walk REFUSED: node '[^']+' carries property '${hubToken}Id'`);
 	const bridgingConjunctList = [
 		{
 			conjunctId: 'noBridgingInTheGraph',
-			title: 'the forge names no bridge target: no property name speaks of CEDS, mappingInstruction is empty, and every edge stays inside the release',
-			twinNameList: ['cedsIdPropertyAdded'],
+			title: 'the forge names no bridge target: no property name speaks of any registered hub, mappingInstruction is empty, and every edge stays inside the release',
+			twinNameList: ['hubIdPropertyAdded'],
 			evaluate: (subject, callback) => {
 				forgeOrFail({ subject }, callback, (forged) => {
-					const cedsNamedNode = forged.nodes.find((oneNode) => Object.keys(oneNode.properties).some((onePropertyName) => /ceds/i.test(onePropertyName)));
+					const bridgingPropertyNameRe = bridgingPropertyNameReFor({ forgesDirPath: TREE_FORGES_DIR_PATH });
+					const hubNamedNode = forged.nodes.find((oneNode) => Object.keys(oneNode.properties).some((onePropertyName) => bridgingPropertyNameRe.test(onePropertyName)));
 					const foreignEdge = forged.edges.find((oneEdge) => oneEdge.fromRef.source !== subject.forgeDeclaration.standardSource || oneEdge.toRef.source !== subject.forgeDeclaration.standardSource);
 					const mappingInstruction = subject.forgeDeclaration.mappingInstruction;
-					const pass = cedsNamedNode === undefined && foreignEdge === undefined && mappingInstruction.cedsOriginalAnchorPropertyName.length === 0 && mappingInstruction.impliedTargets.length === 0;
-					callback('', { pass, detail: `CEDS-named property on ${cedsNamedNode ? cedsNamedNode.stableId : 'no node'}; cross-standard edge ${foreignEdge ? foreignEdge.type : 'none'}` });
+					const pass = hubNamedNode === undefined && foreignEdge === undefined && mappingInstruction.cedsOriginalAnchorPropertyName.length === 0 && mappingInstruction.impliedTargets.length === 0;
+					callback('', { pass, detail: `hub-named property (${bridgingPropertyNameRe.source}) on ${hubNamedNode ? hubNamedNode.stableId : 'no node'}; cross-standard edge ${foreignEdge ? foreignEdge.type : 'none'}` });
 				});
 			},
 		},
 		{
-			conjunctId: 'cedsPropertyRefusedByScan',
-			title: "a scratch walk that adds a 'cedsId' property to the elements is REFUSED BY NAME by the forge's own scan",
+			conjunctId: 'hubIdPropertyRefusedByScan',
+			title: `for EVERY registered hub (${registeredHubTokenList.join(', ')}), a scratch walk that adds a '<hub>Id' property to the elements is REFUSED BY NAME by the forge's own scan`,
 			twinNameList: ['bridgingScanDisabled'],
 			evaluate: (subject, callback) => {
-				forgeSnapshot({ subject: withExtraHooksMutation(subject, CEDS_PROPERTY_MUTATION), snapshotDirPath: subject.snapshotDirPath }, (forgeError, forged) => {
-					callback('', { pass: refusedLike({ forgeError, refusalRe: bridgingRefusalRe }), detail: refusalDetail(forgeError, forged) });
-				});
+				const outcomeList = [];
+				const forgeNext = (hubIndex) => {
+					if (hubIndex >= registeredHubTokenList.length) {
+						const unrefusedList = outcomeList.filter((oneOutcome) => !oneOutcome.refused);
+						callback('', { pass: registeredHubTokenList.length > 0 && unrefusedList.length === 0, detail: outcomeList.map((oneOutcome) => `${oneOutcome.hubToken}Id: ${oneOutcome.refused ? 'refused' : `NOT refused (${oneOutcome.detail})`}`).join('; ') || 'no registered hub' });
+						return;
+					}
+					const hubToken = registeredHubTokenList[hubIndex];
+					forgeSnapshot({ subject: withExtraHooksMutation(subject, hubIdPropertyMutationFor(hubToken)), snapshotDirPath: subject.snapshotDirPath }, (forgeError, forged) => {
+						outcomeList.push({ hubToken, refused: refusedLike({ forgeError, refusalRe: bridgingRefusalReFor(hubToken) }), detail: refusalDetail(forgeError, forged) });
+						forgeNext(hubIndex + 1);
+					});
+				};
+				forgeNext(0);
 			},
 		},
 	];
-	registerWalkTwin(BRIDGING_GATE_ID, 'noBridgingInTheGraph', 'cedsIdPropertyAdded', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', CEDS_PROPERTY_MUTATION));
-	registerWalkTwin(BRIDGING_GATE_ID, 'cedsPropertyRefusedByScan', 'bridgingScanDisabled', 'productionMutation', (subject) =>
-		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: 'const BRIDGING_PROPERTY_NAME_RE = /ceds/i;', replace: 'const BRIDGING_PROPERTY_NAME_RE = /^$/;' }),
+	registerWalkTwin(BRIDGING_GATE_ID, 'noBridgingInTheGraph', 'hubIdPropertyAdded', 'productionMutation', (subject) => addMutation(subject, 'hooksMutationList', hubIdPropertyMutationFor(registeredHubTokenList[registeredHubTokenList.length - 1])));
+	registerWalkTwin(BRIDGING_GATE_ID, 'hubIdPropertyRefusedByScan', 'bridgingScanDisabled', 'productionMutation', (subject) =>
+		addMutation(subject, 'hooksMutationList', { modulePath: WALK_PATH, find: '	const bridgingPropertyNameRe = bridgingPropertyNameReFor({ forgesDirPath: TREE_FORGES_DIR_PATH });\n	kit.nodes.forEach', replace: '	const bridgingPropertyNameRe = /^$/;\n	kit.nodes.forEach' }),
 	);
 
 	// ---- F22-SEQUENCE
