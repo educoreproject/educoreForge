@@ -38,8 +38,12 @@ const ROOT_ROLE = 'DmeStandardRoot';
 // Layer 2 is OUR hub — HubReference and HubDefinition nodes and every edge touching one (HAS_CTDL_*, IN_HUB,
 // HAS_TERM_REFERENCE). The source states none of it, so reading it back would INVENT statements. The hub layer is excluded
 // BY ROLE, named here, so the exclusion is a stated decision: any OTHER unknown role or edge still faults by name.
-const { EQUIVALENCE_NODE_LABELS } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const { EQUIVALENCE_NODE_LABELS, DME_ROLES } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const HUB_LAYER_ROLE_LIST = Object.freeze([EQUIVALENCE_NODE_LABELS.HUB_REFERENCE, EQUIVALENCE_NODE_LABELS.HUB_DEFINITION]);
+// ⟪zeroBacklog B1⟫ the framework's embed-text layer (embedTextDerivation: DmeEmbedText nodes, and EMBEDS_TEXT_OF from each to the
+// node it describes) is DERIVED from text the round trip already reads off the described node, so reading it back would
+// INVENT statements. Excluded by role, named here, exactly as the hub layer is (sif260928's pair declares it DERIVED_STRUCTURE).
+const DERIVED_TEXT_LAYER_ROLE_LIST = Object.freeze([DME_ROLES.EMBED_TEXT]);
 
 // the graph edges that express a native reference, read in BOTH directions where the source states both
 // (meta:domainFor is the inverse of schema:domainIncludes; meta:hasConcept of skos:inScheme). An inverse is read back ONLY
@@ -226,6 +230,9 @@ const moduleFunction =
 					if (HUB_LAYER_ROLE_LIST.indexOf(role) !== -1) {
 						return; // Layer 2, ours: see HUB_LAYER_ROLE_LIST
 					}
+					if (DERIVED_TEXT_LAYER_ROLE_LIST.indexOf(role) !== -1) {
+						return; // the framework's text layer: see DERIVED_TEXT_LAYER_ROLE_LIST
+					}
 					if (role === ROOT_ROLE && properties.foreignTermEntryList === undefined) {
 						fault = `the root '${stableId}' carries no foreignTermEntryList (the forge always writes it, '[]' when the source has no foreign entry)`;
 						return;
@@ -268,6 +275,9 @@ const moduleFunction =
 					const touchesHubLayer = HUB_LAYER_ROLE_LIST.indexOf(roleById[oneEdge.fromStableId]) !== -1 || HUB_LAYER_ROLE_LIST.indexOf(roleById[oneEdge.toStableId]) !== -1;
 					if (touchesHubLayer) {
 						return; // a hub edge (HAS_CTDL_*, IN_HUB, HAS_TERM_REFERENCE) states nothing the source said
+					}
+					if (DERIVED_TEXT_LAYER_ROLE_LIST.indexOf(roleById[oneEdge.fromStableId]) !== -1) {
+						return; // EMBEDS_TEXT_OF, from a text node: derived, states nothing the source said
 					}
 					const touchesRoot = roleById[oneEdge.fromStableId] === ROOT_ROLE || roleById[oneEdge.toStableId] === ROOT_ROLE;
 					if (touchesRoot) {

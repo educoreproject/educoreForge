@@ -52,6 +52,10 @@ const EXPECTED = Object.freeze({
 	duplicateEdgeSuppressedCount: 9,
 	unresolvedNativePrefixReferenceCount: 21,
 	foreignTermEntryCount: 20,
+	// ⟪zeroBacklog B1⟫ the embed texts (embedTextDeclaration: name + description on DmeClass, DmeProperty, DmeOptionSet), counted
+	// independently of the derivation over the snapshot-01 walk: 1,062 distinct trimmed texts over 1,096 (text, node) pairs
+	embedTextNodeCount: 1062,
+	embedTextEdgeCount: 1096,
 	explicitlyOmittedByKind: { changeHistory: 993, secondaryDescription: 265, usageNoteOffProperty: 62, unresolvedNativePrefixReference: 21, nativeReferenceNotModelled: 942, schemeStatus: 34 },
 });
 
@@ -139,9 +143,16 @@ taskList.push((args, next) => forgeSource({ sourceFilePath: SOURCE_FILE_PATH }, 
 		next(forgeError, args);
 		return;
 	}
-	const nodeCountByRole = forgeResult.nodes.reduce((counts, oneNode) => ({ ...counts, [oneNode.role]: (counts[oneNode.role] || 0) + 1 }), {});
+	// the walk's roles are the July oracle's; the framework's DmeEmbedText nodes and EMBEDS_TEXT_OF edges are counted apart (B1)
+	const walkNodeList = forgeResult.nodes.filter((oneNode) => oneNode.role !== 'DmeEmbedText');
+	const walkEdgeList = forgeResult.edges.filter((oneEdge) => oneEdge.type !== 'EMBEDS_TEXT_OF');
+	const nodeCountByRole = walkNodeList.reduce((counts, oneNode) => ({ ...counts, [oneNode.role]: (counts[oneNode.role] || 0) + 1 }), {});
 	harness.equal('node count by role = the July oracle (994)', JSON.stringify(nodeCountByRole), JSON.stringify(EXPECTED.nodeCountByRole));
-	harness.equal('edge count = the oracle graph 10,119 (the July forge emitted 10,128 with 9 duplicates) + 12 root HAS_PROPERTY (A6) + the P2b rows', forgeResult.edges.length, EXPECTED.edgeCount + enrichedCountOf('edgeDelta'));
+	harness.equal('edge count = the oracle graph 10,119 (the July forge emitted 10,128 with 9 duplicates) + 12 root HAS_PROPERTY (A6) + the P2b rows', walkEdgeList.length, EXPECTED.edgeCount + enrichedCountOf('edgeDelta'));
+	harness.equal('B1: DmeEmbedText nodes = the distinct name/description texts of classes, properties, option sets (1,062)', forgeResult.nodes.length - walkNodeList.length, EXPECTED.embedTextNodeCount);
+	harness.equal('B1: EMBEDS_TEXT_OF edges = the distinct (text, node) pairs (1,096)', forgeResult.edges.length - walkEdgeList.length, EXPECTED.embedTextEdgeCount);
+	harness.equal('B1: stats.embedTextNodeCount reports the same', forgeResult.stats.embedTextNodeCount, EXPECTED.embedTextNodeCount);
+	harness.ok('B1: every text node id is the root, /embedText/, and a sha256', forgeResult.nodes.filter((oneNode) => oneNode.role === 'DmeEmbedText').every((oneNode) => /^ctdl:root\/embedText\/[0-9a-f]{64}$/.test(oneNode.stableId)));
 	harness.equal('A6: every property with no native domain hangs from the root by HAS_PROPERTY (12)', forgeResult.edges.filter((oneEdge) => oneEdge.type === 'HAS_PROPERTY' && oneEdge.fromRef.id === 'ctdl:root').length, EXPECTED.domainlessPropertyRootEdgeCount);
 	['declaredCorrespondenceTotal', 'duplicateEdgeSuppressedCount', 'unresolvedNativePrefixReferenceCount'].forEach((statName) => harness.equal(`stats.${statName}`, forgeResult.stats[statName], EXPECTED[statName]));
 	harness.equal('stats.crossRefTotal (+ E11)', forgeResult.stats.crossRefTotal, EXPECTED.crossRefTotal + enrichedCountOf('crossRefDelta'));
