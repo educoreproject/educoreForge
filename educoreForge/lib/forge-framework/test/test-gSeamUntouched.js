@@ -238,7 +238,11 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 //                                                     the hub fold's reports named for their hub; comments
 // The other five UNTOUCHED; the seam file list unchanged. Forge OUTPUT proven byte-identical to main for the 18 base subjects of the
 // recipes of record and the old SIF forge (the lane folder's evidence/R5/forgeOutputEquality).
-const PRE_MIGRATION_REF = 'postSharedSurfacesR5OnR2GSeamUntouched-102126'; // re-anchored by VELVET_CHORUS (R5 shared forge and build surfaces; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (CRYSTAL_RIVER; R7 sweep, wording only; mandate of BRONZE_CROWN's R7 brief) ═══ G-SEAM-UNTOUCHED
+// postSharedSurfacesR5OnR2GSeamUntouched-102126 -> postHubNeutralR7SweepGSeamUntouched-102226, tag cut ON this commit. CENSUS over the seam
+// file list (numstat from the R5 tag; R7's only, commit 8ec5c662): apps/graph-builder/lib/build.js 1/1 (REPLAY_FIDELITY_DETAIL says
+// "standard", not "CEDS": the -replay BuildAttestation row's text, graph-only). The other six UNTOUCHED.
+const PRE_MIGRATION_REF = 'postHubNeutralR7SweepGSeamUntouched-102226'; // re-anchored by VELVET_CHORUS (R5 shared forge and build surfaces; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

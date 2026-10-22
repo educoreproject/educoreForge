@@ -479,7 +479,10 @@ const POST_D1_BASE_TAG = 'postSharedSurfacesR5OnR2VocabularyIi-102126'; // re-an
 // ═══ RE-ANCHOR, 2026-10-21 (TWILIGHT_HAVEN, successor of VELVET_CHORUS; R5 full-suite reds; GO BRONZE_CROWN) ═══ (iii) postSharedSurfacesR5OnR2ForgeFrameworkIii-102126
 // -> postSharedSurfacesR5FixForgeFrameworkIii-102126, tag cut ON this commit. CENSUS (lib/forge-framework/, numstat from the OnR2 tag): test/test-gDet.js
 // 2/2 and test/test-gSeam.js 1/1 (their mutation twins' find-texts follow R5 S2's forge-framework.js lines; commit 6c0cd656). No forge-framework source.
-const PHASE0_ANCHOR_TAG = 'postSharedSurfacesR5FixForgeFrameworkIii-102126'; // re-anchored by TWILIGHT_HAVEN (R5 full-suite reds; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (CRYSTAL_RIVER; R7 sweep; mandate of BRONZE_CROWN's R7 brief) ═══ (iii) postSharedSurfacesR5FixForgeFrameworkIii-102126
+// -> postHubNeutralR7SweepForgeFrameworkIii-102226, tag cut ON this commit. CENSUS (lib/forge-framework/): test/test-gSeamUntouched.js ONLY
+// (its own re-anchor, this commit: the coupling). No forge-framework source.
+const PHASE0_ANCHOR_TAG = 'postHubNeutralR7SweepForgeFrameworkIii-102226'; // re-anchored by TWILIGHT_HAVEN (R5 full-suite reds; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -990,7 +993,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // ═══ RE-ANCHOR, 2026-10-21 (TWILIGHT_HAVEN, successor of VELVET_CHORUS; R5 full-suite reds; GO BRONZE_CROWN) ═══ BG-SEAM-UNTOUCHED seamDiffEmpty and (i-live)
 // postSharedSurfacesR5OnR2SeamDiffEmpty-102126 -> postSharedSurfacesR5FixSeamDiffEmpty-102126, tag cut ON this commit. CENSUS from the OnR2 tag over this
 // gate's path list: lib/forge-framework/ as (iii) (test-gDet.js 2/2, test-gSeam.js 1/1; commit 6c0cd656). (i-live): no shape moved.
-const PHASE3_ANCHOR_TAG = 'postSharedSurfacesR5FixSeamDiffEmpty-102126'; // re-anchored by TWILIGHT_HAVEN (R5 full-suite reds; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (CRYSTAL_RIVER; R7 sweep; mandate of BRONZE_CROWN's R7 brief) ═══ BG-SEAM-UNTOUCHED seamDiffEmpty and (i-live)
+// postSharedSurfacesR5FixSeamDiffEmpty-102126 -> postHubNeutralR7SweepSeamDiffEmpty-102226, tag cut ON this commit. CENSUS from the R5 tag over
+// this gate's path list (R7's only): build.js 1/1 (as G-SEAM); forges/edfi/lib/forgeEdfiContractGraph.js 1/1 and forges/sif/lib/
+// forgeSifContractGraph.js 1/1 (comments naming kit.hubAnchorValue, commit 8ec5c662); lib/forge-framework/ as (iii). (i-live): no shape moved.
+const PHASE3_ANCHOR_TAG = 'postHubNeutralR7SweepSeamDiffEmpty-102226'; // re-anchored by TWILIGHT_HAVEN (R5 full-suite reds; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

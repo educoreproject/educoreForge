@@ -979,7 +979,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // pescLdFixture 2/1 each (judgeWording); tests test-judgeWording.js 153/0 (new), bgJudgeConfig 5/5, bgJudgePredicate 7/7, bgJudgeSlot
 // 7/7, bgPromptScan 4/3 (twin re-anchors), bgJevQuestion 2/2 (the scan's question carries the noun, this commit). No build.js, no lib/vocabulary/, no PESC plugin. declarationDigest unchanged (P-a1);
 // frameworkFingerprint moves; every CEDS cache key unchanged (P-b option (i): 0 re-keyed).
-const P1_BASELINE_COMMIT = 'postHubNeutralR4JudgeWordingPescCompose-102126'; // re-anchored by DAWN_STREAM (R4; census REANCHOR-CENSUS-R4-102126.md; BRONZE_CROWN condition (e)); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (CRYSTAL_RIVER; R7 sweep; mandate of BRONZE_CROWN's R7 brief) ═══ BG-COMPOSE-PESC
+// postHubNeutralR4JudgeWordingPescCompose-102126 -> postHubNeutralR7SweepPescCompose-102226, tag cut ON this commit. CENSUS over this gate's
+// paths (numstat from R4's tag; R7's only): build.js 1/1 (graph-only replay text, commit 8ec5c662); lib/bridge-framework/
+// promptIdentifierScan.js 2/2 (header comment: the scan names the target hub's identifiers; 8ec5c662); test/test-bgNosub.js (its three
+// re-anchors, this commit). No logic. frameworkFingerprint moves (a lib/bridge-framework comment); declarationDigest and every cache key do not.
+const P1_BASELINE_COMMIT = 'postHubNeutralR7SweepPescCompose-102226'; // re-anchored by DAWN_STREAM (R4; census REANCHOR-CENSUS-R4-102126.md; BRONZE_CROWN condition (e)); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
