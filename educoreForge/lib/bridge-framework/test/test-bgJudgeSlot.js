@@ -79,7 +79,8 @@ const JUDGE_SLOT_PREDICATE_ENUM_LITERAL = Object.freeze(['exactMatch', 'closeMat
 
 // every bridge plugin shipped under forges/ on 2026-09-28, with the variant and renderer version each resolves to
 const SHIPPED_PLUGIN_LIST = [
-	{ bridgeName: 'sifCedsStandardPlugin', pluginPath: 'forges/sif/bridges/sifCedsStandardPlugin.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
+	// RETIRED 2026-10-22 (zeroBacklog lane D, D3-6; TQ ruling Q-Z4 under the mandate): sifCedsStandardPlugin left with the old SIF forge
+	// (codeAttic/forges/sif). It was the one shipped 'standard'-basis plugin; that registry row is now exercised by no shipped plugin.
 	// ADDED 2026-10-21 (STERLING_PORTAL, ctdlHub P6, rulings R-2/R-5): the two DECLARED-correspondence plugins. A declared basis judges
 	// nothing; its variant row is the documentary 'crosswalk' (registration resolves one), and nothing is ever rendered under it.
 	{ bridgeName: 'ctdlCedsDeclaredCorrespondence', pluginPath: 'forges/ctdl/bridges/ctdlCedsDeclaredCorrespondence.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
@@ -357,7 +358,7 @@ const judgeSlotConjunctList = [
 	pureConjunct({
 		conjunctId: 'f_allShippedPluginsRegisterThroughDiscovery',
 		title: `pluginRegistry.buildRegistryFromDirectory over the real forges/ registers exactly the ${SHIPPED_PLUGIN_LIST.length} shipped plugins and does not throw`,
-		twinNameList: ['standardRowDeleted'],
+		twinNameList: ['declaredRowDeleted'],
 		judge: (scenario) => {
 			const registryLib = frameworkLibFor(scenario, REGISTRY_FILE);
 			let registry = null;
@@ -423,7 +424,7 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunct
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'c_derivedJudgeSlotRendersDerivedPromptsUnderItsOwnVersion', twinName: 'judgeSlotGivenDerivedRendererVersion', fileName: RENDERER_FILE, find: "derivedJudgeSlot: Object.freeze({ ...DERIVED_VARIANT_ROW, rendererVersion: DERIVED_JUDGE_SLOT_RENDERER_VERSION, judgePredicateRule: 'judgeSlot-v1' }),", replace: "derivedJudgeSlot: Object.freeze({ ...DERIVED_VARIANT_ROW, rendererVersion: DERIVED_RENDERER_VERSION, judgePredicateRule: 'judgeSlot-v1' })," });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'd_shippedPluginsResolveToTheirVariants', twinName: 'categoryTableMappedToJudgeSlot', fileName: CONTRACT_FILE, find: CATEGORY_TABLE_ROW_FIND, replace: CATEGORY_TABLE_ROW_TO_JUDGE_SLOT });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'e_unregisteredPairRefused', twinName: 'wildcardVariantDefault', fileName: CONTRACT_FILE, find: 'if (!Object.prototype.hasOwnProperty.call(variantByPredicateRule, predicateRule)) {', replace: "if (!Object.prototype.hasOwnProperty.call(variantByPredicateRule, predicateRule)) { return { judgePromptVariant: 'crosswalk' };" });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'f_allShippedPluginsRegisterThroughDiscovery', twinName: 'standardRowDeleted', fileName: CONTRACT_FILE, find: "\tstandard: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),\n", replace: '' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'f_allShippedPluginsRegisterThroughDiscovery', twinName: 'declaredRowDeleted', fileName: CONTRACT_FILE, find: "\tdeclared: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),\n", replace: '' }); // ⟪zeroBacklog D3-6⟫ was standardRowDeleted, blind once the one 'standard' plugin retired; the two shipped 'declared' plugins now carry the twin
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'g_judgeSlotToolTextHasAScanRow', twinName: 'judgeSlotToolTextRowDeleted', fileName: SCAN_FILE, find: "\t'judgeSlot-v1': ({ choiceEnum, toolCandidateNoun }) =>", replace: "\t'judgeSlot-v1-deleted': ({ choiceEnum, toolCandidateNoun }) =>" });
 
 // ---------------------------------------------------------------------

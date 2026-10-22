@@ -260,8 +260,8 @@
  * (standardName, entryModule, defaultSnapshot, sourceFile). Its entry module exports the
  * SECOND stage of `moduleFunction({moduleName})` — a factory taking the injected dependencies:
  *
- *   require(entryPath)({ embedder: Embedder|null, hubAnchorPrefixByHubToken }) -> bundle
- *   (hubAnchorPrefixByHubToken, R5 S2: the forger's hubAnchorPrefixByHubTokenFor() map, read by the kit's hubAnchorValue)
+ *   require(entryPath)({ embedder: Embedder|null }) -> bundle
+ *   (R5 S2's hubAnchorPrefixByHubToken dep retired 2026-10-22 with the kit's hubAnchorValue, zeroBacklog D3-6)
  *
  * @property {function({sourcePath: string, owner?: string, embedNodeLimit?: number,
  *           skipEmbedding?: boolean}, function(string, Object=): void): void} forge

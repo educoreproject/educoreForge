@@ -35,10 +35,8 @@ const DME_ROLE_VALUE_LIST = Object.freeze(Object.values(DME_ROLES));
 const EDGE_TYPE_VALUE_LIST = Object.freeze(Object.values(EDGE_TYPES));
 const RETIRED_MAPPING_EDGE_TYPE_LIST = Object.freeze(Object.values(MAPPING_EDGE_TYPES));
 
-// ⟪R5 S2, 2026-10-21⟫ the anchor's numeric core (the last digit run of the raw value). The PREFIX per kind and the
-// digit count are the HUB's: each hub bundle declares them (forges/<hub>/parserDescriptor.ini anchorPrefixDeclaration=), the
-// forger collects them into hubAnchorPrefixByHubToken and the bundle hands that to the kit. The kit names no hub.
-const HUB_ANCHOR_DIGIT_RE = /(\d+)(?!.*\d)/;
+// ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ hubAnchorValue (R5 S2's hub-generic anchor normalizer) is RETIRED with its last caller,
+// the old SIF forge (now codeAttic/forges/sif): no forge in the tree normalizes another standard's hub ids (FBB-001).
 
 // the surface as data (SPEC §3.4): member name → arity, kind
 const CONTRACT_GRAPH_KIT_SURFACE = Object.freeze({
@@ -54,7 +52,6 @@ const CONTRACT_GRAPH_KIT_SURFACE = Object.freeze({
 	carriedProperties: Object.freeze({ arity: 1, kind: 'function', returns: 'object' }),
 	crossRefsJson: Object.freeze({ arity: 1, kind: 'function', returns: 'string' }),
 	searchTextElementFor: Object.freeze({ arity: 1, kind: 'function', returns: 'element' }),
-	hubAnchorValue: Object.freeze({ arity: 1, kind: 'function', returns: '{ hubAnchorValue } | { absent: true }' }),
 	isCleanStableId: Object.freeze({ arity: 1, kind: 'function', returns: 'boolean' }),
 	rootStableId: Object.freeze({ kind: 'string' }),
 	emitOptionValue: Object.freeze({ arity: 1, kind: 'function', returns: 'node' }),
@@ -69,14 +66,14 @@ const universalMintPropertyNameListFor = ({ stableUriPropertyName }) =>
 const isPlainObject = (candidate) =>
 	candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 
-const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}, hubAnchorPrefixByHubToken } = {}) => {
+const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {} } = {}) => {
 	if (!isPlainObject(forgeDeclaration)) {
 		throw refuse.byName({ moduleName, what: 'forgeDeclaration is not an object', where: 'the framework creates the kit from the validated H1 declaration' });
 	}
 	if (!isPlainObject(metadata)) {
 		throw refuse.byName({ moduleName, what: 'metadata is not an object', where: 'the framework creates the kit after forge() step 4' });
 	}
-	const { standardSource, stableUriPropertyName, stableIdPattern, nonEmbeddableRoleList, hubAnchorAbsentSentinelList } = forgeDeclaration;
+	const { standardSource, stableUriPropertyName, stableIdPattern, nonEmbeddableRoleList } = forgeDeclaration;
 	const stableIdRegex = new RegExp(stableIdPattern.pattern);
 	const universalMintPropertyNameList = universalMintPropertyNameListFor({ stableUriPropertyName });
 	// the bundle's list plus the framework-owned roles (R-ET-3): no searchText is built for either
@@ -409,33 +406,6 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 	};
 
 	// ---------------------------------------------------------------
-	// hubAnchorValue — the ONE normalizer (D14); a JOIN-KEY value, never an address. ⟪R5 S2⟫ hub-generic: the hub
-	// whose id the source carries names its prefixes and digit count (its anchorPrefixDeclaration); absent, refused by name.
-	// ---------------------------------------------------------------
-	const hubAnchorValue = ({ hubToken, rawValue, kind } = {}) => {
-		if (hubAnchorPrefixByHubToken === undefined || hubAnchorPrefixByHubToken === null) {
-			throw refuse.byName({ moduleName, what: `hubAnchorValue: no hub anchor declarations were handed to this bundle (asked for hub '${hubToken}')`, where: 'the forger collects every bundle\'s anchorPrefixDeclaration and passes { hubAnchorPrefixByHubToken } to the bundle factory; a direct caller passes forger.hubAnchorPrefixByHubTokenFor()' });
-		}
-		const anchorDeclaration = hubAnchorPrefixByHubToken[hubToken];
-		if (anchorDeclaration === undefined) {
-			throw refuse.byName({ moduleName, what: `hubAnchorValue: no bundle declares anchors for hub '${hubToken}'`, where: `declared hubs: ${Object.keys(hubAnchorPrefixByHubToken).sort().join(', ') || '(none)'}` });
-		}
-		const prefix = anchorDeclaration.anchorPrefixByKind[kind];
-		if (prefix === undefined) {
-			throw refuse.byName({ moduleName, what: `hubAnchorValue: unknown kind '${kind}' for hub '${hubToken}'`, where: `kind is one of ${Object.keys(anchorDeclaration.anchorPrefixByKind).join(', ')}` });
-		}
-		const trimmedValue = rawValue === undefined || rawValue === null ? '' : `${rawValue}`.trim();
-		if (trimmedValue === '' || hubAnchorAbsentSentinelList.indexOf(trimmedValue) !== -1) {
-			return { absent: true };
-		}
-		const digitMatch = trimmedValue.match(HUB_ANCHOR_DIGIT_RE);
-		if (!digitMatch) {
-			throw refuse.byName({ moduleName, what: `hubAnchorValue: could not extract a numeric '${hubToken}' anchor from '${rawValue}' for kind '${kind}'`, where: 'a present-but-unnormalizable anchor is a refusal, never data (R3)' });
-		}
-		return { hubAnchorValue: `${prefix}${digitMatch[1].padStart(anchorDeclaration.anchorDigitCount, '0')}` };
-	};
-
-	// ---------------------------------------------------------------
 	// emitOptionValue — DERIVED from the three real expanders (cg:669-, forgeCeds.js:757-803,
 	// forgeSif.js:598-623): each mints an OPTION_VALUE node parented on its set and joins it with
 	// HAS_VALUE (set → value). Every per-standard byte stays a caller input: the value's stableId
@@ -510,7 +480,6 @@ const contractGraphKit = ({ forgeDeclaration, metadata, activeAllowanceById = {}
 		carriedProperties,
 		crossRefsJson,
 		searchTextElementFor,
-		hubAnchorValue,
 		isCleanStableId,
 		get rootStableId() {
 			return kitState.rootStableId;

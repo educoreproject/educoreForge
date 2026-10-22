@@ -101,7 +101,7 @@ if (vectorize) {
 // in-code width standing in for it (polyArch2 §6). Nothing embedded means nothing to declare.
 const declaredEmbeddingDims = embedder ? embedder.resolveEmbeddingIdentity().embeddingDims : undefined;
 
-const bundle = require(resolved.entryPath)({ embedder, hubAnchorPrefixByHubToken: forgerModule.hubAnchorPrefixByHubTokenFor().hubAnchorPrefixByHubToken });
+const bundle = require(resolved.entryPath)({ embedder });
 
 xLog.status(
 	`[capture-baseline] forging ${resolved.standardName} from ${path.basename(

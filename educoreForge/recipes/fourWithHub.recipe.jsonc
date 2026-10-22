@@ -1,4 +1,6 @@
 {
+  // ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ the old SIF forge (token sif) retired to codeAttic (TQ ruling Q-Z4 under the mandate); this
+  // dev recipe now carries sif260928, its replacement, in the same position.
   // fourWithHub — THE FOUR CERTIFIED STANDARDS, WITH THE CEDS HUB, STILL NO BRIDGES.
   //
   // Commissioned by tqii 2026-08-11 as the step before a debug-judge bridged build: "make a good
@@ -34,7 +36,7 @@
     { "token": "ceds", "version": "current" },
     { "token": "edfi", "version": "current" },
     { "token": "pesc260805", "version": "current" },
-    { "token": "sif", "version": "current" }
+    { "token": "sif260928", "version": "current" }
   ],
   "hubs": [
     { "standard": "ceds" }

@@ -18,7 +18,7 @@
 //       an XSD's comment / whitespace / processing instruction land as those kinds
 //   (i) the SIF 2.6 pair declares 'container' under forges/sif260928/lib/sif260928RoundTripPair.js, and its source side
 //       stamps that kind on every container statement
-//   (j) CEDS, Ed-Fi and the SIF incumbent carry an EMPTY explicitlyOmittedList (their registries are empty)
+//   (j) CEDS and Ed-Fi carry an EMPTY explicitlyOmittedList (their registries are empty); the SIF incumbent left with its forge (zeroBacklog D3-6)
 //   (k) the stage summary row states the omissions per standard BY KIND with the rule, and the caveat
 //   (l) the roundTrip BuildAttestation row carries explicitOmissionDeclarationList (one line per standard) and its detail
 //       says the same; graph-contract §4 declares the field for the roundTrip gate (stringList) and §1 keeps it a list
@@ -57,7 +57,7 @@ const GRAPH_CONTRACT_PATH = path.join(TREE_ROOT, 'lib', 'vocabulary', 'graph-con
 const VALIDATOR_PATH_BY_NAME = {
 	ceds: path.join(TREE_ROOT, 'forges', 'ceds', 'roundTripValidator.js'),
 	edfi: path.join(TREE_ROOT, 'forges', 'edfi', 'roundTripValidator.js'),
-	sif: path.join(TREE_ROOT, 'forges', 'sif', 'roundTripValidator.js'),
+	// ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ the SIF incumbent's validator left with the old SIF forge (codeAttic/forges/sif)
 };
 
 const doubleOrReal = (modulePath, mutationList) => (mutationList.length === 0 ? require(modulePath) : loadBuildJsDouble({ buildJsPath: modulePath, mutationList }));
@@ -118,7 +118,6 @@ const PESC_DECLARATION_TEXT = 'pesccollegetranscript1v8v0: whitespace 28,428, co
 const BESPOKE_PART_BY_VALIDATOR = {
 	ceds: (validator) => validator.normativeVerdictPartFor({ report: { headline: { sourceStatements: 3, emittedStatements: 2, matched: 2 }, lostItemList: [{ statementKey: 'k1', statement: { subject: 'a', predicate: 'p', objectKind: 'literal', object: 'x', datatype: '' } }], inventedItemList: [] }, explicitlyOmittedPredicateList: [], wallClockMs: 1, peakMemoryBytes: 1 }),
 	edfi: (validator) => validator.normativeVerdictPartFor({ report: { headline: { sourceStatements: 3, emittedStatements: 2, reproduced: 2 }, lostDetailList: [{ subject: 'a', predicate: 'p', object: 'x', bucketName: 'contentGap' }], inventedDetailList: [] }, crosswalkGuardViolationList: [], wallClockMs: 1, peakMemoryBytes: 1 }),
-	sif: (validator) => validator.normativeVerdictPartFor({ report: { headline: { sourceStatements: 3, emittedStatements: 2, matched: 2 }, lostDetailList: [{ subject: 'a', predicate: 'p', object: 'x', lostCategory: 'contentGap' }], inventedDetailList: [] }, wallClockMs: 1, peakMemoryBytes: 1 }),
 };
 const bespokeConjunctFor = (validatorName) => (mutationList, done) => {
 	const loaded = doubleOrReal(VALIDATOR_PATH_BY_NAME[validatorName], mutationList);
@@ -189,7 +188,6 @@ const conjunctJudgeByRefId = {
 	},
 	jCeds_emptyOmittedList: bespokeConjunctFor('ceds'),
 	jEdfi_emptyOmittedList: bespokeConjunctFor('edfi'),
-	jSif_emptyOmittedList: bespokeConjunctFor('sif'),
 	k_stageSummaryByKindWithRule: (mutationList, done) =>
 		runStageWith(mutationList, pescCleanVerdict(), (err, summary) => {
 			const row = ((summary || {}).standards || [])[0] || {};
@@ -250,7 +248,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'p_textBearingKindsAreDeclaredKinds', twinName: 'subsetUnchecked', modulePath: ASSEMBLER_PATH, find: 'const undeclaredTextKind = declaration.textBearingKindList.find(', replace: 'const undeclaredTextKind = [].find(' },
 	{ conjunctRefId: 'h_pescPairDeclaresItsKinds', twinName: 'pescCaveatDropped', modulePath: PESC_PAIR_PATH, find: "	caveatText: 'formatting only: comments are carried and compared as content (PLAN G20), never omitted',", replace: "	caveatText: '',"},
 	{ conjunctRefId: 'i_sifPairDeclaresContainer', twinName: 'sifKindUnstamped', modulePath: SIF_PAIR_PATH, find: 'kindList: Object.freeze([STATEMENT_KIND.CONTAINER])', replace: 'kindList: Object.freeze([])' },
-	...['ceds', 'edfi', 'sif'].map((oneValidatorName) => ({ conjunctRefId: `j${oneValidatorName.charAt(0).toUpperCase()}${oneValidatorName.slice(1)}_emptyOmittedList`, twinName: `${oneValidatorName}PartWithoutOmittedList`, modulePath: VALIDATOR_PATH_BY_NAME[oneValidatorName], find: 'explicitlyOmittedList: partitioned.explicitlyOmittedList,', replace: '' })),
+	...['ceds', 'edfi'].map((oneValidatorName) => ({ conjunctRefId: `j${oneValidatorName.charAt(0).toUpperCase()}${oneValidatorName.slice(1)}_emptyOmittedList`, twinName: `${oneValidatorName}PartWithoutOmittedList`, modulePath: VALIDATOR_PATH_BY_NAME[oneValidatorName], find: 'explicitlyOmittedList: partitioned.explicitlyOmittedList,', replace: '' })),
 	{ conjunctRefId: 'k_stageSummaryByKindWithRule', twinName: 'summaryWithoutDeclaration', modulePath: STAGE_PATH, find: '					explicitOmissionDeclarationText: omissionDeclarationText,', replace: '' },
 	{ conjunctRefId: 'l_attestationCarriesTheDeclaration', twinName: 'fieldUndeclared', modulePath: GRAPH_CONTRACT_PATH, find: "	{ name: 'explicitOmissionDeclarationList',", replace: "	{ name: 'explicitOmissionDeclarationListUndeclared'," },
 ];

@@ -1,4 +1,6 @@
 {
+  // ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ the old SIF forge (token sif) retired to codeAttic (TQ ruling Q-Z4 under the mandate); this
+  // dev recipe now carries sif260928, its replacement, in the same position.
   // fourWithHubEdfiDerived — THE EYE GRAPH. The same four certified standards and CEDS hub as
   // fourWithHubEdfiBridge, but carrying the DERIVED bridge instead of the authored crosswalk one, so a person
   // can open the graph and look at what a machine proposed from meaning alone.
@@ -19,7 +21,7 @@
     { "token": "ceds", "version": "current" },
     { "token": "edfi", "version": "current" },
     { "token": "pesc260805", "version": "current" },
-    { "token": "sif", "version": "current" }
+    { "token": "sif260928", "version": "current" }
   ],
   "hubs": [
     { "standard": "ceds" }

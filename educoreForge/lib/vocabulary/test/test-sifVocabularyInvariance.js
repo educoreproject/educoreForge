@@ -70,7 +70,8 @@ const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
 	// (8/8); expectedFingerprints.json carries the same move. ceds d167724b… -> 61273989…, edfi eeeefa88… -> aee80fdc…, sif
 	// 6d808b95… -> dbb78746…, pesc260805 cc1ab741… -> afe8a0ec….
 	edfi: 'aee80fdcc2d23548fc7492564fdb76309b11e563ca2383c94de6e9e3f4cd7a26',
-	sif: 'dbb7874641bd8b0de0e642a6a2ab1d62440b2f6dc0b69d39e58074c06d78dc5c',
+	// ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ sif LEFT this table (its last literal dbb78746…) when the old SIF forge retired to
+	// codeAttic/forges/sif; its replacement sif260928 was never a G0 member. The other three still hold the V1 oracle.
 	pesc260805: 'afe8a0ec9ab3bb2e18967735ba5286c577e76eead7301b4d3778a46d9f0ed8ed',
 });
 const STANDARD_TOKEN_LIST = Object.keys(G0_PROXY_FINGERPRINT_BY_STANDARD);

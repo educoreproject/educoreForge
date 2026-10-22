@@ -82,7 +82,7 @@ standardListText.split(',').map((oneToken) => oneToken.trim()).forEach((standard
 			next(`${standardToken}: resolveBundle refused: ${resolvedBundle.error}`);
 			return;
 		}
-		const bundle = require(resolvedBundle.entryPath)({ embedder: null, hubAnchorPrefixByHubToken: forger.hubAnchorPrefixByHubTokenFor().hubAnchorPrefixByHubToken });
+		const bundle = require(resolvedBundle.entryPath)({ embedder: null });
 		bundle.forge({ sourcePath: resolvedBundle.defaultSource, owner: 'test', skipEmbedding: true }, (forgeError, forgeResult) => {
 			if (forgeError) {
 				next(`${standardToken}: forge refused: ${forgeError}`);

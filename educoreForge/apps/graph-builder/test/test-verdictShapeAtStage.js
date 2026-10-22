@@ -17,7 +17,7 @@
 // full normative verdict, including the lost/invented ITEM lists (empty when clean, so cheap), and the stage applies the whole
 // rule. Gate it with a red twin on each."⟫
 //   (e) a verdict without its lostList FAILS the stage, named; (f) without its inventedList; (g) without the A8 census
-//   (h-ceds) (h-edfi) (h-sif) each bespoke validator's normativeVerdictPartFor, over a synthetic lossy report, makes a verdict
+//   (h-ceds) (h-edfi) each bespoke validator's normativeVerdictPartFor, over a synthetic lossy report, makes a verdict
 //       verifyVerdictShape accepts — so that validator emits the whole shape. RED TWIN ON EACH: a validator double whose
 //       part omits its lostList (the shape every one of them carried before P3) -> its conjunct red.
 // (c)'s fixture now carries the whole shape (5 contentGap items, 2 declared omissions (G21), no inventions, a limit, a census).
@@ -71,7 +71,7 @@ const TREE_ROOT = path.join(__dirname, '..', '..', '..');
 const VALIDATOR_PATH_BY_NAME = {
 	ceds: path.join(TREE_ROOT, 'forges', 'ceds', 'roundTripValidator.js'),
 	edfi: path.join(TREE_ROOT, 'forges', 'edfi', 'roundTripValidator.js'),
-	sif: path.join(TREE_ROOT, 'forges', 'sif', 'roundTripValidator.js'),
+	// ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ the SIF incumbent's validator left with the old SIF forge (codeAttic/forges/sif)
 };
 const validatorFor = (validatorName, mutationList) => {
 	const loaded = mutationList.length === 0 ? require(VALIDATOR_PATH_BY_NAME[validatorName]) : loadBuildJsDouble({ buildJsPath: VALIDATOR_PATH_BY_NAME[validatorName], mutationList });
@@ -80,7 +80,6 @@ const validatorFor = (validatorName, mutationList) => {
 const SYNTHETIC_PART_BY_VALIDATOR = {
 	ceds: (validator) => validator.normativeVerdictPartFor({ report: { headline: { sourceStatements: 3, emittedStatements: 2, matched: 2 }, lostItemList: [{ statementKey: 'k1', statement: { subject: 'a', predicate: 'p', objectKind: 'literal', object: 'x', datatype: '' } }], inventedItemList: [] }, explicitlyOmittedPredicateList: [], wallClockMs: 1, peakMemoryBytes: 1 }),
 	edfi: (validator) => validator.normativeVerdictPartFor({ report: { headline: { sourceStatements: 3, emittedStatements: 2, reproduced: 2 }, lostDetailList: [{ subject: 'a', predicate: 'p', object: 'x', bucketName: 'contentGap' }], inventedDetailList: [] }, crosswalkGuardViolationList: [], wallClockMs: 1, peakMemoryBytes: 1 }),
-	sif: (validator) => validator.normativeVerdictPartFor({ report: { headline: { sourceStatements: 3, emittedStatements: 2, matched: 2 }, lostDetailList: [{ subject: 'a', predicate: 'p', object: 'x', lostCategory: 'contentGap' }], inventedDetailList: [] }, wallClockMs: 1, peakMemoryBytes: 1 }),
 };
 const bespokeConjunctFor = (validatorName) => (mutationList, done) => {
 	const part = SYNTHETIC_PART_BY_VALIDATOR[validatorName](validatorFor(validatorName, mutationList));
@@ -92,7 +91,6 @@ const bespokeConjunctFor = (validatorName) => (mutationList, done) => {
 const LOST_LIST_FIND_BY_VALIDATOR = {
 	ceds: 'lostList: partitioned.lostList,',
 	edfi: 'lostList: partitioned.lostList,',
-	sif: 'lostList: partitioned.lostList,',
 };
 
 const conjunctJudgeByRefId = {
@@ -104,7 +102,6 @@ const conjunctJudgeByRefId = {
 	g_noCensusRefused: (mutationList, done) => runStageWith(mutationList, withoutMember(WELL_TYPED, 'census'), (err) => done({ pass: /verdict lacks the A8 census/.test(err), detail: err || 'the stage passed a verdict with no census' })),
 	hCeds_bespokeVerdictHasTheWholeShape: bespokeConjunctFor('ceds'),
 	hEdfi_bespokeVerdictHasTheWholeShape: bespokeConjunctFor('edfi'),
-	hSif_bespokeVerdictHasTheWholeShape: bespokeConjunctFor('sif'),
 	d_oneListOnly: (mutationList, done) => {
 		const stageText = fs.readFileSync(STAGE_PATH, 'utf8');
 		done({ pass: stageText.indexOf('NORMATIVE_VERDICT_FIELD_NAMES') === -1 && verdictAssembler.NORMATIVE_VERDICT_FIELD_NAME_LIST.join(',') === 'roundTripClean,inventedTotal,lostTotal,contentGapTotal,explicitlyOmittedTotal', detail: verdictAssembler.NORMATIVE_VERDICT_FIELD_NAME_LIST.join(',') });
@@ -118,7 +115,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'f_noInventedListRefused', twinName: 'stageAppliesNormativeHalfOnly', find: '			const typeShapeError = verifyVerdictShape(verdict).error;', replace: '			const typeShapeError = require(path.join(__dirname, \'..\', \'..\', \'..\', \'lib\', \'forge-framework\', \'roundTripHarness\', \'verdictAssembler\')).normativeFieldShapeError(verdict);' },
 	{ conjunctRefId: 'g_noCensusRefused', twinName: 'stageAppliesNormativeHalfOnly', find: '			const typeShapeError = verifyVerdictShape(verdict).error;', replace: '			const typeShapeError = require(path.join(__dirname, \'..\', \'..\', \'..\', \'lib\', \'forge-framework\', \'roundTripHarness\', \'verdictAssembler\')).normativeFieldShapeError(verdict);' },
 	// A RED TWIN ON EACH bespoke validator (the ruling's words): its verdict part without the lostList it lacked before P3
-	...['ceds', 'edfi', 'sif'].map((oneValidatorName) => ({ conjunctRefId: `h${oneValidatorName.charAt(0).toUpperCase()}${oneValidatorName.slice(1)}_bespokeVerdictHasTheWholeShape`, twinName: `${oneValidatorName}PartWithoutLostList`, validatorName: oneValidatorName, find: LOST_LIST_FIND_BY_VALIDATOR[oneValidatorName], replace: `${LOST_LIST_FIND_BY_VALIDATOR[oneValidatorName].replace('lostList:', 'lostListWithheld:')}` })),
+	...['ceds', 'edfi'].map((oneValidatorName) => ({ conjunctRefId: `h${oneValidatorName.charAt(0).toUpperCase()}${oneValidatorName.slice(1)}_bespokeVerdictHasTheWholeShape`, twinName: `${oneValidatorName}PartWithoutLostList`, validatorName: oneValidatorName, find: LOST_LIST_FIND_BY_VALIDATOR[oneValidatorName], replace: `${LOST_LIST_FIND_BY_VALIDATOR[oneValidatorName].replace('lostList:', 'lostListWithheld:')}` })),
 ];
 
 const refIdList = Object.keys(conjunctJudgeByRefId);

@@ -1,4 +1,6 @@
 {
+  // ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ the old SIF forge (token sif) retired to codeAttic (TQ ruling Q-Z4 under the mandate); this
+  // dev recipe now carries sif260928, its replacement, in the same position.
   // fourWithNewPescRoundTripNoBridges — THE REFERENCE GRAPH, WITH THE REBUILT PESC. All four
   // round-trip-declaring standards forged into ONE graph, materialized, with the RT-13 stage running
   // each bundle's DECLARED roundTripValidator against that combined product.
@@ -92,7 +94,7 @@
     { "token": "ceds", "version": "current" },
     { "token": "edfi", "version": "current" },
     { "token": "pesc260805", "version": "current" },
-    { "token": "sif", "version": "current" }
+    { "token": "sif260928", "version": "current" }
   ],
   "hubs": [],
   "bridges": []

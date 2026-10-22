@@ -1,4 +1,6 @@
 {
+  // ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ the old SIF forge (token sif) retired to codeAttic (TQ ruling Q-Z4 under the mandate); this
+  // dev recipe now carries sif260928, its replacement, in the same position.
   // fourWithHub-baseline — PHASE 1 BASELINE RECIPE for the root-and-branch reset (2026-08-15).
   //
   // A verbatim copy of fourWithHub.recipe.jsonc (which STAYS and is unchanged) with ONE addition:
@@ -48,7 +50,7 @@
     { "token": "ceds", "version": "current" },
     { "token": "edfi", "version": "current" },
     { "token": "pesc260805", "version": "current" },
-    { "token": "sif", "version": "current" }
+    { "token": "sif260928", "version": "current" }
   ],
   "hubs": [
     { "standard": "ceds" }

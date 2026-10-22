@@ -310,9 +310,6 @@ const resolveBundle = ({ standard }) => {
 		// ⟪lane DES, 2026-10-12⟫ the one declared root of every layer id this kit mints (layers/<layerKey>/); undefined on a kit
 		// that declares no layer. A recipe naming a layer of such a kit is refused by name in forgeLayersOf.
 		layerNamespace: descriptor.layerNamespace,
-		// ⟪R5 S2, 2026-10-21⟫ the bundle's anchor-prefix declaration (how its ids are written), when it declares one; read only by
-		// hubAnchorPrefixByHubTokenFor below. undefined on every bundle but a hub whose ids other standards carry.
-		anchorPrefixDeclarationPath: descriptor.anchorPrefixDeclaration === undefined ? undefined : path.join(bundleDir, `${descriptor.anchorPrefixDeclaration}`),
 		// ⟪R5 S4, 2026-10-21⟫ the bundle's in-build fidelity gate (a module exporting runFidelityGate), when it declares one; read
 		// only by build.js runDeclaredFidelityGate, which runs the gate a recipe's standard declares. Reaches no node.
 		fidelityGateModulePath: descriptor.fidelityGateModule === undefined ? undefined : path.join(bundleDir, `${descriptor.fidelityGateModule}`),
@@ -521,35 +518,8 @@ const declaredHubStandardList = () =>
 		})
 		.sort();
 
-// hubAnchorPrefixByHubTokenFor — ⟪R5 S2, 2026-10-21⟫ every bundle's anchorPrefixDeclaration, keyed by the hubToken it declares:
-// { hubAnchorPrefixByHubToken } | { error }. The forge kit's hubAnchorValue reads it, so a source forge normalizes a hub's ids
-// without the shared kit naming any hub. A declaration that does not load or is malformed, and two bundles declaring the
-// same hubToken, are refused by name. Discovered the same way resolveBundle discovers kits.
-const ANCHOR_PREFIX_DECLARATION_MEMBER_LIST = Object.freeze(['hubToken', 'anchorPrefixByKind', 'anchorDigitCount']);
-const hubAnchorPrefixByHubTokenFor = () => {
-	const bundleNameList = fs.existsSync(FORGES_DIR)
-		? fs.readdirSync(FORGES_DIR, { withFileTypes: true }).filter((oneEntry) => oneEntry.isDirectory()).map((oneEntry) => oneEntry.name).sort()
-		: [];
-	const hubAnchorPrefixByHubToken = {};
-	for (let bundleIndex = 0; bundleIndex < bundleNameList.length; bundleIndex += 1) {
-		const oneBundle = resolveBundle({ standard: bundleNameList[bundleIndex] });
-		if (!oneBundle.error && oneBundle.anchorPrefixDeclarationPath !== undefined) {
-			if (!fs.existsSync(oneBundle.anchorPrefixDeclarationPath)) {
-				return { error: `forger: ${bundleNameList[bundleIndex]} declares anchorPrefixDeclaration ${oneBundle.anchorPrefixDeclarationPath}, which is not on disk` };
-			}
-			const anchorDeclaration = require(oneBundle.anchorPrefixDeclarationPath);
-			const missingMemberList = ANCHOR_PREFIX_DECLARATION_MEMBER_LIST.filter((memberName) => anchorDeclaration[memberName] === undefined);
-			if (missingMemberList.length || typeof anchorDeclaration.hubToken !== 'string' || !Number.isInteger(anchorDeclaration.anchorDigitCount) || anchorDeclaration.anchorDigitCount < 1) {
-				return { error: `forger: ${oneBundle.anchorPrefixDeclarationPath} is not an anchor-prefix declaration { ${ANCHOR_PREFIX_DECLARATION_MEMBER_LIST.join(', ')} } (missing: ${missingMemberList.join(', ') || 'none'})` };
-			}
-			if (hubAnchorPrefixByHubToken[anchorDeclaration.hubToken] !== undefined) {
-				return { error: `forger: two bundles declare anchors for hub '${anchorDeclaration.hubToken}'; one hub, one declaration` };
-			}
-			hubAnchorPrefixByHubToken[anchorDeclaration.hubToken] = Object.freeze({ anchorPrefixByKind: Object.freeze({ ...anchorDeclaration.anchorPrefixByKind }), anchorDigitCount: anchorDeclaration.anchorDigitCount });
-		}
-	}
-	return { hubAnchorPrefixByHubToken: Object.freeze(hubAnchorPrefixByHubToken) };
-};
+// ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ hubAnchorPrefixByHubTokenFor (R5 S2) is RETIRED with the kit's hubAnchorValue and its last
+// caller, the old SIF forge (codeAttic/forges/sif); no bundle declares anchorPrefixDeclaration= any more.
 
 // hubEdgeDefinitionByHubNameFor — ⟪R5 S7, 2026-10-21⟫ every bundle's edgeDefinitionDeclaration, keyed by the hubName it declares:
 // { hubEdgeDefinitionByHubName: { <hubName>: { <SLOT>: text } } } | { error }. The schema-view finisher reads it, so a hub's
@@ -1026,13 +996,7 @@ const moduleFunction =
 			declaredEmbeddingModelVersion = embeddingIdentity.model;
 		}
 
-		// ⟪R5 S2⟫ every hub's anchor prefixes, for a source forge whose data carries a hub's ids (the old SIF forge)
-		const anchorPrefixes = hubAnchorPrefixByHubTokenFor();
-		if (anchorPrefixes.error) {
-			callback(anchorPrefixes.error);
-			return;
-		}
-		const bundle = require(resolved.entryPath)({ embedder, hubAnchorPrefixByHubToken: anchorPrefixes.hubAnchorPrefixByHubToken });
+		const bundle = require(resolved.entryPath)({ embedder });
 
 		const taskList = new taskListPlus();
 
@@ -1213,7 +1177,6 @@ const moduleFunction =
 module.exports = moduleFunction({ moduleName });
 module.exports.resolveBundle = resolveBundle;
 module.exports.resolveVoyageConfigPath = resolveVoyageConfigPath;
-module.exports.hubAnchorPrefixByHubTokenFor = hubAnchorPrefixByHubTokenFor;
 module.exports.hubEdgeDefinitionByHubNameFor = hubEdgeDefinitionByHubNameFor;
 module.exports.resolveReportedVersion = resolveReportedVersion;
 module.exports.getVersionStamp = getVersionStamp;

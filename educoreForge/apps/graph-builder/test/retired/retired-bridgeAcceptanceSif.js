@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 'use strict';
 
+// ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+// ║ RETIRED 2026-10-22 — DO NOT USE (zeroBacklog lane D, D3-6; TQ ruling Q-Z4 under the mandate, BRONZE_CROWN).    ║
+// ║ The OLD SIF forge and its sifCedsStandardPlugin moved to codeAttic/forges/sif; sif260928 replaced them on      ║
+// ║ 2026-09-28. This was that plugin's acceptance suite. Kept as HISTORY only: outside every discovery path, and   ║
+// ║ it will not run (it resolves the plugin from the shipped registry, which no longer holds it).                  ║
+// ╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
 // test-bridgeAcceptanceSif.js — the SIF plugin's ACCEPTANCE gates (SPEC-bridgeFramework-v1.md §11, §12, §12.1, §13.1;
 // the B4 order), MIRRORING test-bridgeAcceptanceEdfi.js. Two halves, and the split is the point of this phase:
 //

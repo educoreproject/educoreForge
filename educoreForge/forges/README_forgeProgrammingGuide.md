@@ -30,7 +30,7 @@ declares, each in its own `parserDescriptor.ini` (code fact, `forges/ceds/parser
 |---|---|---|
 | `hubModule=`, `hubNamespace=` | the bundle can play the HUB role (`lib/hub-framework`, `hubDeclarationContract.js`) | hub kit role, 2026-08 (Phase 2c) |
 | `hubBridgingModule=` | the hub's HALF of every bridge toward it (`lib/bridge-framework/hubBridgingContract.js`), a file the hub kit never requires | deCeds R2 |
-| `anchorPrefixDeclaration=` | the prefix table `kit.hubAnchorValue({ hubToken, kind, rawValue })` uses to canonicalise a source's anchors to this hub (it was `kit.cedsAnchorValue`) | deCeds R5 S2 |
+| ~~`anchorPrefixDeclaration=`~~ | RETIRED 2026-10-22 (zeroBacklog lane D, D3-6) with `kit.hubAnchorValue` and its last caller, the old SIF forge (now `codeAttic/forges/sif`): no forge normalizes another standard's hub ids any more | deCeds R5 S2; retired zeroBacklog D3-6 |
 | `fidelityGateModule=` | the R-1 fidelity gate a build runs for this standard (it was the CEDS-only `runCedsFidelityGate`) | deCeds R5 S4 |
 | `roundTripVerbModule=` | the bodies of `graphBuilder -roundTripCompile` / `-roundTripGates --standard=<token>` (they were `-cedsRoundTrip` / `-cedsGates`) | deCeds R5 S9 |
 | `edgeDefinitionDeclaration=` | the authored definitions of the hub's `HAS_<HUB>_*` edges, read by the schema view | deCeds R5 S7 |

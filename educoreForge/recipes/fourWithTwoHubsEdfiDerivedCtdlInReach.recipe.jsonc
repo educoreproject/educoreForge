@@ -1,4 +1,6 @@
 {
+  // ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ the old SIF forge (token sif) retired to codeAttic (TQ ruling Q-Z4 under the mandate); this
+  // dev recipe now carries sif260928, its replacement, in the same position.
   // fourWithTwoHubsEdfiDerivedCtdlInReach — fourWithTwoHubsEdfiDerived with ctdl ADDED to the bridge's dependencies (ctdlHub-101926 P6 step 0, run B).
   // A bridge reads only its restored DEPENDENCY graph ([source, hub] ∪ dependencies), so without this the CTDL cards never reach it;
   // with it, the CTDL base and its hub cards (and their vectors) sit in the very graph the derived bridge retrieves from. Rebridged
@@ -12,7 +14,7 @@
     { "token": "ceds", "version": "current" },
     { "token": "edfi", "version": "current" },
     { "token": "pesc260805", "version": "current" },
-    { "token": "sif", "version": "current" },
+    { "token": "sif260928", "version": "current" },
     { "token": "ctdl", "version": "current" }
   ],
   "hubs": [

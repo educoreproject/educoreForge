@@ -61,10 +61,9 @@ const EDGE_TYPE_VALUE_LIST = Object.freeze(Object.values(EDGE_TYPES));
 
 // the seam's four argument keys (interfaces.js:229-240; forger.js:827) — the framework READS three
 const SEAM_ARGUMENT_NAME_LIST = Object.freeze(['sourcePath', 'owner', 'embedNodeLimit', 'skipEmbedding']);
-// ⟪R5 S2, 2026-10-21⟫ hubAnchorPrefixByHubToken: the forger's map of every hub bundle's anchorPrefixDeclaration, for the kit's
-// hubAnchorValue. Optional at this seam: a bundle that never normalizes a hub anchor needs none, and the kit refuses by name
-// the one call that would need it.
-const DEP_NAME_LIST = Object.freeze(['embedder', 'xLog', 'migratingBundleListOverride', 'hubAnchorPrefixByHubToken']);
+// ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ hubAnchorPrefixByHubToken (R5 S2) left this list with the kit's hubAnchorValue and its last
+// caller, the old SIF forge (codeAttic/forges/sif); a factory handed it is refused as any unknown dep is.
+const DEP_NAME_LIST = Object.freeze(['embedder', 'xLog', 'migratingBundleListOverride']);
 const DESCRIBE_SOURCE_KEY_LIST = Object.freeze(['version', 'selfDescribedVersion', 'sourceFormat', 'sourceFiles', 'sourceUrl']);
 // DESCRIBE_SOURCE_KEY_LIST is the PERMITTED set (what a bundle may return). The REQUIRED set is
 // narrower: `version` is OPTIONAL as of the versionFromStamp order — a bundle that read no version
@@ -239,7 +238,7 @@ const moduleFunction =
 				const { activeAllowanceById, activeAllowanceRowList } = activeAllowancesFor({ forgeDeclaration });
 
 				// 1. a fresh kit
-				const { kit, kitInternals } = contractGraphKitLib.contractGraphKit({ forgeDeclaration, metadata, activeAllowanceById, hubAnchorPrefixByHubToken: deps.hubAnchorPrefixByHubToken });
+				const { kit, kitInternals } = contractGraphKitLib.contractGraphKit({ forgeDeclaration, metadata, activeAllowanceById });
 
 				// 2. the ROOT first, from declared data; registered so the walk can refer to kit.rootStableId
 				const describedRoot = hooks.describeRoot({ parsed, metadata });

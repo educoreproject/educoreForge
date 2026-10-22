@@ -1528,8 +1528,9 @@ harness.ok(
 // nothing substituted; the refusals are simply no longer conflated. Both are gated below, so the
 // separation costs no coverage and buys precision.)
 //
-// edfi, sif and pesc260805 are REAL kits that genuinely declare no hub today — the honest fixture.
-['edfi', 'sif', 'pesc260805'].forEach((oneHublessStandard) => {
+// edfi, sif260928 and pesc260805 are REAL kits that genuinely declare no hub today — the honest fixture. (⟪zeroBacklog D3-6⟫ sif260928
+// replaces the old sif, retired to codeAttic.)
+['edfi', 'sif260928', 'pesc260805'].forEach((oneHublessStandard) => {
 	const hublessKitOutcome = foldOutcome({
 		standard: oneHublessStandard,
 		bundleVersion: '14.0.0.0',
@@ -1662,7 +1663,7 @@ const noSuchKitOutcome = foldOutcome({
 // those names broke (pesccollegetranscript1v8v0 did). What the test MEANS is: the refusal names the
 // missing standard and the descriptor it looked for, and lists the kits that exist. So the kit names
 // are checked as a SET, order-free: each named kit must appear; others may.
-const KITS_THAT_MUST_BE_LISTED = ['ceds', 'edfi', 'pesc260805', 'sif'];
+const KITS_THAT_MUST_BE_LISTED = ['ceds', 'edfi', 'pesc260805', 'sif260928']; // ⟪zeroBacklog D3-6⟫ sif260928 for the retired sif
 harness.match(
 	"a standard declared a hub that has NO FORGE BUNDLE AT ALL is refused at bundle resolution, naming the descriptor it looked for and the kits that exist",
 	noSuchKitOutcome.error,
@@ -1739,12 +1740,12 @@ harness.ok(
 	}),
 );
 harness.ok(
-	'a kit that is NOT a hub declares neither key — capability is declared, never inferred (edfi, sif, pesc260805)',
-	['edfi', 'sif', 'pesc260805'].every((oneStandard) => {
+	'a kit that is NOT a hub declares neither key — capability is declared, never inferred (edfi, sif260928, pesc260805)',
+	['edfi', 'sif260928', 'pesc260805'].every((oneStandard) => {
 		const bundle = forgerModule.resolveBundle({ standard: oneStandard });
 		return !bundle.error && bundle.hubModuleFileName === undefined && bundle.hubNamespace === undefined;
 	}),
-	'edfi, sif, pesc260805',
+	'edfi, sif260928, pesc260805',
 );
 
 // forge() actually WIRES the fold in, reading deriveHub and calling foldHubIntoNodeEdges

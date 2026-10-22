@@ -51,7 +51,7 @@ const FORGE_FRAMEWORK_DIR = path.join(TREE_ROOT, 'lib', 'forge-framework');
 const ENTRY_MODULE_PATH = path.join(BUNDLE_DIR, 'forgeSif260928.js');
 const VALIDATOR_PATH = path.join(BUNDLE_DIR, 'roundTripValidator.js');
 const DESCRIPTOR_PATH = path.join(BUNDLE_DIR, 'parserDescriptor.ini');
-const INCUMBENT_SNAPSHOT_DIR = path.join(TREE_ROOT, 'forges', 'sif', 'assets', 'standardSourceData', '01');
+const INCUMBENT_SNAPSHOT_DIR = path.join(TREE_ROOT, 'codeAttic', 'forges', 'sif', 'assets', 'standardSourceData', '01'); // ⟪zeroBacklog D3-6⟫ the old SIF forge retired to codeAttic; same bytes
 
 const { runGateFamily } = require(path.join(FORGE_FRAMEWORK_DIR, 'test', 'testSupport', 'gateSuiteRunner'));
 const { makeTwinRegistry } = require(path.join(FORGE_FRAMEWORK_DIR, 'roundTripHarness', 'twinRegistry'));

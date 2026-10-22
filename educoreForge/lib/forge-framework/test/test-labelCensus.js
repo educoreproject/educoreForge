@@ -64,7 +64,8 @@ const DME_ROLE_LABEL_PREFIX = 'Dme';
 const MIGRATED_FORGE_ROSTER = Object.freeze([
 	Object.freeze({ standardKey: 'ceds', bundlePath: 'forges/ceds/forgeCeds.js', snapshotPath: 'forges/ceds/assets/standardSourceData/01' }),
 	Object.freeze({ standardKey: 'edfi', bundlePath: 'forges/edfi/forgeEdfi.js', snapshotPath: 'forges/edfi/assets/standardSourceData/04' }),
-	Object.freeze({ standardKey: 'sif', bundlePath: 'forges/sif/forgeSif.js', snapshotPath: 'forges/sif/assets/standardSourceData/01' }),
+	// ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ sif (the old SIF forge) LEFT the roster when it retired to codeAttic/forges/sif; its frozen
+	// census stays in expectedLabelCensus.json as history. Its by-native-kind label axis lives on in sif260928 below.
 	Object.freeze({ standardKey: 'pesc260805', bundlePath: 'forges/pesc260805/forgePesc260805.js', snapshotPath: 'forges/pesc260805/assets/standardSourceData/01' }),
 	// (phase M1) sif260928 reads ONE file: the forger hands it <snapshot>/<sourceFile> (parserDescriptor.ini), so its
 	// snapshotPath names that file rather than the snapshot directory the other bundles take.
@@ -188,8 +189,7 @@ const runOneStandard = (rosterIndex, whenDone) => {
 	}
 	const rosterEntry = MIGRATED_FORGE_ROSTER[rosterIndex];
 	const expectation = expectationFor({ expectationByStandardKey, standardKey: rosterEntry.standardKey });
-	// R5 S2: the bundle is handed the forger's map of hub anchor declarations, as the forger hands it (the old SIF forge normalizes its 'CEDS ID' column through it)
-	const bundle = require(path.join(TREE_ROOT, rosterEntry.bundlePath))({ embedder: null, hubAnchorPrefixByHubToken: require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'apps', 'forger', 'forger')).hubAnchorPrefixByHubTokenFor().hubAnchorPrefixByHubToken });
+	const bundle = require(path.join(TREE_ROOT, rosterEntry.bundlePath))({ embedder: null });
 	bundle.forge(
 		{ sourcePath: path.join(TREE_ROOT, rosterEntry.snapshotPath), skipEmbedding: true },
 		(forgeError, forged) => {

@@ -41,6 +41,8 @@
 // THE TWO POPULATIONS' STATISTICS ARE REPORTED SEPARATELY AND NEVER POOLED — see the eval sibling's
 // header for why. That rule survives into every artifact this recipe produces.
 {
+  // ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ the old SIF forge (token sif) retired to codeAttic (TQ ruling Q-Z4 under the mandate); this
+  // dev recipe now carries sif260928, its replacement, in the same position.
 	"schemaVersion": "1.0.0",
 	"recipeName": "fourWithHubPescDerived",
 	"kind": "dev",
@@ -49,7 +51,7 @@
 		{ "token": "ceds", "version": "current" },
 		{ "token": "edfi", "version": "current" },
 		{ "token": "pesc260805", "version": "current" },
-		{ "token": "sif", "version": "current" }
+		{ "token": "sif260928", "version": "current" }
 	],
 	"hubs": [
 		{ "standard": "ceds" }
