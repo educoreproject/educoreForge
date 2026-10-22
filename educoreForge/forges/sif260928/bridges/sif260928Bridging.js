@@ -80,6 +80,10 @@ const declarationTemplate = Object.freeze({
 	compatibilityDeclarationList: [],
 });
 
+// ⟪zeroBacklog B3⟫ SIF's own answer-key column (see WHAT THE JUDGE NEVER SEES above), named ONCE and blinded by every pair row: it is
+// not a hub anchor, so no hub's union supplies it. Hoisted from the ceds row with its value unchanged (P-a1 is the proof).
+const SIF_ANSWER_KEY_COLUMN_NAME = 'cedsElementId';
+
 const standardBridging = Object.freeze({
 	standardKey: 'sif260928',
 	bridgeNameStem: 'sif260928',
@@ -106,8 +110,21 @@ const standardBridging = Object.freeze({
 					candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 40, minScore: 0.3, k: 40, neighbourVote: null },
 					candidateRenderingAllowList: null,
 					promptIdentifierScan: 'fromHubWithLegacyListPath',
-					blindingOrder: ['cedsElementId', { hubAnchor: 0 }, 'crossRefs', { hubAnchor: 1 }, { hubAnchor: 2 }, { hubAnchor: 3 }],
+					blindingOrder: [SIF_ANSWER_KEY_COLUMN_NAME, { hubAnchor: 0 }, 'crossRefs', { hubAnchor: 1 }, { hubAnchor: 2 }, { hubAnchor: 3 }],
 					hubAnchorListLength: 4,
+					declaredTargetRuleList: null,
+					remodelTableRef: null,
+					hubRemodelTableListLength: null,
+				},
+				// ⟪zeroBacklog B3⟫ toward the CTDL hub, in the post-refactor form: retrieval copied from the row above as the START (its measured
+				// k / floor reasoning stands until measured against CTDL), the hub's own candidate list and identifier scan, and the union
+				// blinding: this standard's own answer-key names, then every hub it pairs with (computed by the composer, never written here).
+				ctdl: {
+					candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 40, minScore: 0.3, k: 40, neighbourVote: null },
+					candidateRenderingAllowList: null,
+					promptIdentifierScan: 'fromHub',
+					blindingOrder: { standardBlindingNameList: [SIF_ANSWER_KEY_COLUMN_NAME, 'crossRefs'], pairedHubAnchors: 'union' },
+					hubAnchorListLength: null,
 					declaredTargetRuleList: null,
 					remodelTableRef: null,
 					hubRemodelTableListLength: null,
