@@ -1007,7 +1007,13 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // standardBridgingContract.js (DECLARED_TARGET_RULE_KIND_FILTER_BY_PAIR_VALUE), test/test-bridgeComposer.js (section i). No PESC plugin,
 // build.js, interfaces.js, bridge-maker or lib/vocabulary/ change; no existing pair row uses the new value (declarationDigest unchanged);
 // frameworkFingerprint moves.
-const P1_BASELINE_COMMIT = 'zbCTemplateRulesOnD0PescCompose-102226'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C3 framework commit on D0; BRONZE_CROWN authorised); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, the D2 range; ruled by BRONZE_CROWN) ═══ BG-COMPOSE-PESC
+// zbCTemplateRulesOnD0PescCompose-102226 -> postZeroBacklogD2PescCompose-102226, tag cut ON this commit. CENSUS over this gate's paths (numstat
+// from lane C's tag): lib/bridge-framework/bridgePluginContract.js 3/3 (D2-5: unknownKey -> unknownBridgeTargetPropertyName, a name only) and
+// lib/bridge-framework/test/test-judgeWording.js 31/0 (D2-6: Jev's missing-noun refusal, twinned). No logic: frameworkFingerprint MOVES
+// (bridgePluginContract.js is in its scope); declarationDigest and every cache key do not. The D2 range moved no other seam: G-SEAM,
+// bgNosub (ii), (iii) and seamDiffEmpty read EMPTY from their D0 tags (measured), so their constants stay.
+const P1_BASELINE_COMMIT = 'postZeroBacklogD2PescCompose-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D2 range; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
