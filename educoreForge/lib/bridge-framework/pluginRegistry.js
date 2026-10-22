@@ -78,6 +78,7 @@ const registerPlugin = ({ pluginModule, pluginFilePath, bundleDirPath } = {}) =>
 			bridgeDeclaration: pluginModule.bridgeDeclaration,
 			bridgeHooks: pluginModule.bridgeHooks,
 			targetHub: pluginModule.bridgeTarget.targetHub,
+			judgeWording: pluginModule.bridgeTarget.judgeWording,
 			channelResolutionByKey: validated.channelResolutionByKey,
 			declarationCanonicalText,
 		}),

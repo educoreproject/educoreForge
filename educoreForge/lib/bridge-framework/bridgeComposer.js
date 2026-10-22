@@ -100,7 +100,7 @@ const composeOne = ({ standardBridging, oneFacet, hubToken, pairRow, hubBridging
 			: { promptIdentifierScan: promptIdentifierScanFor({ pairRow, hubBridging, bridgeNameStem: standardBridging.bridgeNameStem, hubToken }) }),
 		...(pairRow.declaredTargetRuleList === null ? {} : { declaredTargetRuleList: hubBridging.declaredTargetRuleList.map((oneRule) => ({ ...oneRule })) }),
 	};
-	return { pluginModule: { bridgeDeclaration, bridgeHooks, bridgeTarget: { targetHub: hubToken } } };
+	return { pluginModule: { bridgeDeclaration, bridgeHooks, bridgeTarget: { targetHub: hubToken, judgeWording: { ...hubBridging.judgeWording } } } };
 };
 
 const composePluginModuleList = ({ standardBridging, bridgeHooksByFacetName, hubBridgingByToken, bundleDirName } = {}) => {

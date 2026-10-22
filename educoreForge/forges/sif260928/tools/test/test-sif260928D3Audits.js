@@ -36,7 +36,7 @@ const userPromptFor = ({ subjectName, candidateName }) =>
 		'Answer with one of: 1, or NONE, as well as a RATIONALE.',
 	].join('\n');
 const recordFor = (overrides) => ({ promptHash: 'h', systemPrompt: 'You are a data standards expert.', userPrompt: userPromptFor({ subjectName: 'LocalId', candidateName: 'Person Identifier' }), reaskUserPrompt: null, renderedPoolStableIdList: ['card1'], ...overrides });
-const auditOf = (record) => promptAuditLib.auditRecord({ record, compiledScan, predicateRule: 'judgeSlot-v1' });
+const auditOf = (record) => promptAuditLib.auditRecord({ record, compiledScan, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate' });
 
 harness.section('M4 — the prompt audit');
 const cleanAudit = auditOf(recordFor({}));
@@ -53,10 +53,10 @@ harness.ok('both tool texts are rendered and scanned', cleanAudit.charCountBySur
 	harness.ok(`RED on ${oneCase.label}`, planted.hitList.some((oneHit) => oneHit.surfaceName === oneCase.surfaceName && oneHit.patternName === oneCase.patternName), JSON.stringify(planted.hitList));
 });
 harness.equal('a listed id inside a longer digit run is not a list hit', auditOf(recordFor({ userPrompt: userPromptFor({ subjectName: 'LocalId 10005051', candidateName: 'Person Identifier' }) })).hitList.length, 0);
-const hubTokenAudit = promptAuditLib.auditRecordList({ recordList: [recordFor({ userPrompt: userPromptFor({ subjectName: 'LocalId corresponds to the global CEDS Id 000102', candidateName: 'Person Identifier' }) })], compiledScan, predicateRule: 'judgeSlot-v1' });
+const hubTokenAudit = promptAuditLib.auditRecordList({ recordList: [recordFor({ userPrompt: userPromptFor({ subjectName: 'LocalId corresponds to the global CEDS Id 000102', candidateName: 'Person Identifier' }) })], compiledScan, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate' });
 harness.equal('a bare id the hub knows but the list does not is a hub hit', hubTokenAudit.hubHitRecordList.length, 1);
 harness.equal('…and is not a list hit', hubTokenAudit.hitRecordList.length, 0);
-const unknownTokenAudit = promptAuditLib.auditRecordList({ recordList: [recordFor({ userPrompt: userPromptFor({ subjectName: 'LocalId zip 123456', candidateName: 'Person Identifier' }) })], compiledScan, predicateRule: 'judgeSlot-v1' });
+const unknownTokenAudit = promptAuditLib.auditRecordList({ recordList: [recordFor({ userPrompt: userPromptFor({ subjectName: 'LocalId zip 123456', candidateName: 'Person Identifier' }) })], compiledScan, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate' });
 harness.ok('a bare six-digit token the hub does not know is information only', unknownTokenAudit.hubHitRecordList.length === 0 && unknownTokenAudit.unlistedSixDigitCountByToken['123456'] === 1, JSON.stringify(unknownTokenAudit.unlistedSixDigitCountByToken));
 harness.match('a prompt without the renderer headings is refused by name', auditOf(recordFor({ userPrompt: 'no headings here' })).refusalText, /lacks, or misorders, the subject heading/);
 

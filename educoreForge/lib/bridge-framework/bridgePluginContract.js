@@ -465,9 +465,14 @@ const FORBIDDEN_SOURCE_TOKEN_LIST = Object.freeze(['addressSignature', 'HubRefer
 // (module.exports.bridgeTarget), never inside bridgeDeclaration: the declaration is content-addressed into every decision
 // block (declarationDigest, pluginRegistry), so a key added there would re-key every bridge block. header.hubName already
 // records the hub in each block. Checked at run against the recipe pairing's hub.
+// ⟪hub-neutral bridge lane R4, 2026-10-21⟫ judgeWording { toolCandidateNoun }: the hub's words for the judge, copied by the
+// composer from hubBridging.judgeWording. HERE and not in the declaration for the same reason as targetHub: it reaches the
+// judge's tool text (and so judgeToolSchemaSha256 and the cache key) by render, never the declarationDigest. Required: a plugin
+// that states no noun is refused by name, never rendered with some hub's word.
 // ---------------------------------------------------------------------
 const BRIDGE_TARGET_CONTRACT = Object.freeze({
 	targetHub: Object.freeze({ required: true, kind: 'lowercaseString' }),
+	judgeWording: Object.freeze({ required: true, kind: 'judgeWording' }),
 });
 const BRIDGE_TARGET_KEY_LIST = Object.freeze(Object.keys(BRIDGE_TARGET_CONTRACT));
 
@@ -483,6 +488,10 @@ const validateBridgeTarget = ({ bridgeTarget } = {}) => {
 	const faultReason = KIND_CHECKER_REGISTRY[BRIDGE_TARGET_CONTRACT.targetHub.kind](bridgeTarget.targetHub, BRIDGE_TARGET_CONTRACT.targetHub);
 	if (faultReason) {
 		return refuse.byName({ moduleName, what: `bridgeTarget.targetHub ${faultReason}`, where: 'the hub standard token the recipe pairs this bridge with (recipe.bridges[].hub), lowercase as every recipe token is' });
+	}
+	const wordingReason = KIND_CHECKER_REGISTRY[BRIDGE_TARGET_CONTRACT.judgeWording.kind](bridgeTarget.judgeWording, BRIDGE_TARGET_CONTRACT.judgeWording);
+	if (wordingReason) {
+		return refuse.byName({ moduleName, what: `bridgeTarget.judgeWording ${wordingReason}`, where: 'the target hub\'s words for the judge (hubBridging.judgeWording); the composer copies them, a plugin file states them' });
 	}
 	return null;
 };
@@ -827,6 +836,10 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 	stringOrNull: (value) => (value === null || isNonEmptyString(value) ? '' : `must be a non-empty string or null (got ${JSON.stringify(value)})`),
 	lowercaseString: (value) =>
 		isNonEmptyString(value) && value === value.toLowerCase() ? '' : `must be a non-empty lowercase string (got ${JSON.stringify(value)})`,
+	judgeWording: (value) =>
+		isPlainObject(value) && Object.keys(value).join(',') === 'toolCandidateNoun' && isNonEmptyString(value.toolCandidateNoun) && value.toolCandidateNoun.trim() !== ''
+			? ''
+			: `must be exactly { toolCandidateNoun: <non-empty string> } (got ${JSON.stringify(value)})`,
 	lowerCamelString: (value) =>
 		isNonEmptyString(value) && /^[a-z][A-Za-z0-9]*$/.test(value) ? '' : `must be a lowerCamel identifier (got ${JSON.stringify(value)})`,
 	// subjectDiscriminator — validated against the vocabulary's ONE authored pattern, never a local copy, so

@@ -90,7 +90,7 @@ const crypto = require('crypto');
 // than restating the strings as a second, driftable literal — the same boundary-review discipline
 // llmClient.js documents at its own require site.
 const { SELECT_CATEGORY_ENUM } = require('./evidenceContracts');
-const { PREDICATE_RULE_NAME_LIST, PREDICATE_FIELD_BY_PREDICATE_RULE, unknownPredicateRuleRefusalText } = require('./selectCandidateSchema');
+const { PREDICATE_RULE_NAME_LIST, PREDICATE_FIELD_BY_PREDICATE_RULE, unknownPredicateRuleRefusalText, toolCandidateNounRefusalReason } = require('./selectCandidateSchema');
 
 // PICK_CATEGORIES — the categories a judge may assert ABOUT A PICK. 'none' is excluded by
 // construction: abstention is expressed as choice 'NONE', never as a category on a chosen candidate
@@ -311,7 +311,7 @@ const moduleFunction =
 		// Answers and refusals alike travel by callback; an asynchronous rule registered later needs no
 		// change here (see the callback-shape note in this file's header).
 		const rerank = (rerankOptions = {}, callback) => {
-			const { systemPrompt, userPrompt, choiceEnum, predicateRule } = rerankOptions;
+			const { systemPrompt, userPrompt, choiceEnum, predicateRule, toolCandidateNoun } = rerankOptions;
 			void systemPrompt; // accepted for contract parity; a rule that reads no prompt cannot read this one either.
 
 			const refuse = (message) => {
@@ -355,6 +355,12 @@ const moduleFunction =
 
 			if (PREDICATE_RULE_NAME_LIST.indexOf(predicateRule) === -1) {
 				refuse(`${moduleName}.rerank: ${unknownPredicateRuleRefusalText(predicateRule)}`);
+				return;
+			}
+			// ⟪R4⟫ the debug judge sends no tool, but the seam requires the noun: an absent one is refused as a real provider refuses it
+			const nounRefusalReason = toolCandidateNounRefusalReason(toolCandidateNoun);
+			if (nounRefusalReason) {
+				refuse(`${moduleName}.rerank: ${nounRefusalReason}`);
 				return;
 			}
 

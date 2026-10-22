@@ -110,18 +110,35 @@ const categoryProse = (categoryList) => {
 	return `${categoryList.slice(0, -1).join(', ')}, or ${categoryList[categoryList.length - 1]}`;
 };
 
-// The three description strings, built ONCE at module load from the contract. Their wording is BYTE-FOR-
-// BYTE what llmClient emitted before JOB 2 (gate G2-a pins it to a pre-edit capture); only their SOURCE
-// changed, from a literal in a provider to a derivation from the contract.
-const TOOL_DESCRIPTION =
+// The description strings, built from the contract. Their wording is BYTE-FOR-BYTE what llmClient emitted before
+// JOB 2 (gate G2-a pins it to a pre-edit capture); only their SOURCE changed, from a literal in a provider to a
+// derivation from the contract.
+// ⟪hub-neutral bridge lane R4, 2026-10-21⟫ the tool description's hub noun is the HUB's: toolCandidateNoun comes from
+// hubBridging.judgeWording, carried per bridge in bridgeTarget and handed to every render. The CEDS hub declares today's exact
+// text, so a CEDS bridge renders the same bytes as before R4 (TQ, Q-R1 option (i); test-judgeWording (a)). There is no
+// default noun: an absent or empty one is refused by name, never rendered as some hub's word.
+const toolDescriptionFor = (toolCandidateNoun) =>
 	'FIRST record sourceElementIdeaList: the distinct ideas the SOURCE ELEMENT refers to. ' +
 	'THEN record candidateIdeaList: the same for every candidate. ' +
 	'THEN record sortedCandidateList: every CANDIDATE INDEX NUMBER ordered from closest in meaning to furthest. ' +
 	'THEN record ideaCoverage for the candidate you are about to choose: which SOURCE ELEMENT nouns it covers and which it misses. ' +
-	'THEN record the single best matching CEDS candidate by its number, or NONE if no candidate is a ' +
+	`THEN record the single best matching ${toolCandidateNoun} by its number, or NONE if no candidate is a ` +
 	'correct match. You MUST ALSO record a discrete confidence CATEGORY (never a numeric ' +
 	'probability) and a short RATIONALE — both are REQUIRED on every answer. When choice is NONE, ' +
 	`category MUST be ${ABSTAIN_CATEGORY_NAME}: an abstention carries no confidence about any candidate.`;
+const absentToolCandidateNounRefusalText = (receivedValue) =>
+	`[${moduleName}] toolCandidateNoun is ${JSON.stringify(receivedValue)}; it is the hub's noun for a candidate ` +
+	`(hubBridging.judgeWording.toolCandidateNoun, carried in the bridge's bridgeTarget), a non-empty string, and there is no default.`;
+// toolCandidateNounRefusalReason — '' for a usable noun, else the refusal text: what a provider's rerank answers by callback
+const toolCandidateNounRefusalReason = (toolCandidateNoun) =>
+	typeof toolCandidateNoun === 'string' && toolCandidateNoun.trim() !== '' ? '' : absentToolCandidateNounRefusalText(toolCandidateNoun);
+const toolCandidateNounOrRefuse = (toolCandidateNoun) => {
+	const refusalReason = toolCandidateNounRefusalReason(toolCandidateNoun);
+	if (refusalReason) {
+		throw new Error(refusalReason);
+	}
+	return toolCandidateNoun;
+};
 const CHOICE_DESCRIPTION = 'The chosen candidate number, or the string NONE.';
 const CATEGORY_DESCRIPTION =
 	`A discrete confidence category for the choice — ${categoryProse(PICK_CATEGORY_ENUM)} for a pick, ` +
@@ -199,8 +216,8 @@ const JUDGE_SLOT_REQUIRED_FIELD_LIST = Object.freeze(
 		.concat(['predicate'])
 		.concat(JUDGMENT_REQUIRED_FIELD_LIST.slice(JUDGMENT_REQUIRED_FIELD_LIST.indexOf('category') + 1)),
 );
-const JUDGE_SLOT_TOOL_DESCRIPTION =
-	`${TOOL_DESCRIPTION} You MUST ALSO record a PREDICATE: how the chosen candidate relates in meaning to the ` +
+const judgeSlotToolDescriptionFor = (toolCandidateNoun) =>
+	`${toolDescriptionFor(toolCandidateNoun)} You MUST ALSO record a PREDICATE: how the chosen candidate relates in meaning to the ` +
 	`SOURCE ELEMENT. When choice is NONE, predicate MUST be ${ABSTAIN_CATEGORY_NAME}.`;
 const PREDICATE_DESCRIPTION =
 	'How the chosen candidate relates in meaning to the SOURCE ELEMENT. exactMatch: they mean the same thing and ' +
@@ -230,13 +247,13 @@ const unknownDialectRefusalText = (receivedDialectName, knownDialectNameList) =>
 // is the pre-edit order and must stay that way. That is not fussiness: the tool DESCRIPTION is part of
 // what the model reads, and JOB 0 learned that a description string is exactly the thing that drifts
 // unnoticed — so the whole object is pinned, not merely its enum.
-const buildCanonicalSelectCandidateSchema = ({ choiceEnum } = {}) => {
+const buildCanonicalSelectCandidateSchema = ({ choiceEnum, toolCandidateNoun } = {}) => {
 	if (!Array.isArray(choiceEnum) || choiceEnum.length === 0) {
 		throw new Error(absentChoiceEnumRefusalText(choiceEnum));
 	}
 	return Object.freeze({
 		toolName: SELECT_CANDIDATE_TOOL_NAME,
-		toolDescription: TOOL_DESCRIPTION,
+		toolDescription: toolDescriptionFor(toolCandidateNounOrRefuse(toolCandidateNoun)),
 		jsonSchema: Object.freeze({
 			type: 'object',
 			properties: Object.freeze({
@@ -307,12 +324,12 @@ const buildCanonicalSelectCandidateSchema = ({ choiceEnum } = {}) => {
 
 // buildJudgeSlotSelectCandidateSchema — the categoryTable-v1 schema plus the predicate slot, placed after
 // category, and the tool description that asks for it. Everything else is the categoryTable-v1 schema's own.
-const buildJudgeSlotSelectCandidateSchema = ({ choiceEnum } = {}) => {
-	const categoryTableSchema = buildCanonicalSelectCandidateSchema({ choiceEnum });
+const buildJudgeSlotSelectCandidateSchema = ({ choiceEnum, toolCandidateNoun } = {}) => {
+	const categoryTableSchema = buildCanonicalSelectCandidateSchema({ choiceEnum, toolCandidateNoun });
 	const { choice, category, ...laterPropertyByName } = categoryTableSchema.jsonSchema.properties;
 	return Object.freeze({
 		toolName: categoryTableSchema.toolName,
-		toolDescription: JUDGE_SLOT_TOOL_DESCRIPTION,
+		toolDescription: judgeSlotToolDescriptionFor(toolCandidateNoun),
 		jsonSchema: Object.freeze({
 			...categoryTableSchema.jsonSchema,
 			properties: Object.freeze({
@@ -400,15 +417,25 @@ const dialectRowOrRefuse = (dialectName) => {
 
 // renderSelectCandidateSchema — the one entry point a provider calls. It never learns which OTHER
 // providers exist and no caller ever builds a schema itself.
-const renderSelectCandidateSchema = (dialectName, { choiceEnum } = {}) =>
-	dialectRowOrRefuse(dialectName).render(buildCanonicalSelectCandidateSchema({ choiceEnum }));
+const renderSelectCandidateSchema = (dialectName, { choiceEnum, toolCandidateNoun } = {}) =>
+	dialectRowOrRefuse(dialectName).render(buildCanonicalSelectCandidateSchema({ choiceEnum, toolCandidateNoun }));
 
 // renderSelectCandidateSchemaForPredicateRule — the same, for the schema of a named predicate rule
-const renderSelectCandidateSchemaForPredicateRule = (dialectName, { choiceEnum, predicateRule } = {}) => {
+const renderSelectCandidateSchemaForPredicateRule = (dialectName, { choiceEnum, predicateRule, toolCandidateNoun } = {}) => {
 	if (!Object.prototype.hasOwnProperty.call(CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE, predicateRule)) {
 		throw new Error(unknownPredicateRuleRefusalText(predicateRule));
 	}
-	return dialectRowOrRefuse(dialectName).render(CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum }));
+	return dialectRowOrRefuse(dialectName).render(CANONICAL_SCHEMA_BUILDER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum, toolCandidateNoun }));
+};
+
+// renderJudgeToolDescription — the tool description alone, for a hub's noun under a predicate rule (the render seam R4 names):
+// what a reader, a scan or a price study needs without a choice enum
+const JUDGE_TOOL_DESCRIPTION_BY_PREDICATE_RULE = Object.freeze({ 'categoryTable-v1': toolDescriptionFor, 'judgeSlot-v1': judgeSlotToolDescriptionFor });
+const renderJudgeToolDescription = ({ toolCandidateNoun, predicateRule } = {}) => {
+	if (!Object.prototype.hasOwnProperty.call(JUDGE_TOOL_DESCRIPTION_BY_PREDICATE_RULE, predicateRule)) {
+		throw new Error(unknownPredicateRuleRefusalText(predicateRule));
+	}
+	return JUDGE_TOOL_DESCRIPTION_BY_PREDICATE_RULE[predicateRule](toolCandidateNounOrRefuse(toolCandidateNoun));
 };
 
 // categoryEnumOfRendering — reads the category enum back out of a rendering. This is how a gate asserts
@@ -433,6 +460,9 @@ module.exports = {
 	buildJudgeSlotSelectCandidateSchema,
 	renderSelectCandidateSchema,
 	renderSelectCandidateSchemaForPredicateRule,
+	renderJudgeToolDescription,
+	absentToolCandidateNounRefusalText,
+	toolCandidateNounRefusalReason,
 	categoryEnumOfRendering,
 	unknownDialectRefusalText,
 };

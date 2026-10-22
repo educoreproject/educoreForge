@@ -348,7 +348,7 @@ const debugAnswersFor = (scenario, { ruleName, predicateRule, userPromptList }) 
 	const debugJudge = libAt(scenario, DEBUG_JUDGE_FILE_PATH)({ ruleName });
 	return userPromptList.map((oneUserPrompt) => {
 		let answered = null;
-		debugJudge.rerank({ systemPrompt: 's', userPrompt: oneUserPrompt, choiceEnum: CHOICE_ENUM_FIXTURE.slice(), predicateRule }, (rerankError, clientReturn) => {
+		debugJudge.rerank({ systemPrompt: 's', userPrompt: oneUserPrompt, choiceEnum: CHOICE_ENUM_FIXTURE.slice(), predicateRule, toolCandidateNoun: 'CEDS candidate' }, (rerankError, clientReturn) => {
 			answered = rerankError ? { refusal: rerankError } : clientReturn;
 		});
 		return answered;
@@ -526,15 +526,15 @@ const ollamaIniPath = () => scratchIniPath('ollamaJudge.ini', '[ollamaJudge]\nen
 const OLLAMA_TAG_LIST = { models: [{ name: 'qwen2.5:32b', model: 'qwen2.5:32b', digest: '9f13ba1299afea09d9a956fc6a85becc99115a6d596fae201a5487a03bdc4368' }] };
 // the judgment a model returns, with a predicate present in the answer whatever the rule; the provider decides what it reads
 const MODEL_ANSWER = Object.freeze({ choice: '2', category: 'moderate', rationale: 'Last Name is the family name the source element holds', predicate: 'broadMatch', sourceElementIdeaList: [], candidateIdeaList: [], sortedCandidateList: ['2', '1', '3'], ideaCoverage: { candidateIndexNumber: '2', sourceNounsCovered: [], sourceNounsNotCovered: [] } });
-const askProvider = ({ provider, predicateRule }, callback) => provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: CHOICE_ENUM_FIXTURE.slice(), predicateRule, maxRetries: 1 }, (rerankError, clientReturn) => callback({ rerankError, clientReturn }));
+const askProvider = ({ provider, predicateRule }, callback) => provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: CHOICE_ENUM_FIXTURE.slice(), predicateRule, toolCandidateNoun: 'CEDS candidate', maxRetries: 1 }, (rerankError, clientReturn) => callback({ rerankError, clientReturn }));
 // providerRoundTrip — both rules through one provider; judge what went on the wire and what came back
 const providerRoundTrip = ({ scenario, makeProvider, sentSchemaOf, dialectName }, callback) => {
 	const schemaLib = require(SCHEMA_FILE_PATH);
 	const sentByRule = {};
 	askProvider({ provider: makeProvider((payload) => { sentByRule.judgeSlot = sentSchemaOf(payload); }), predicateRule: 'judgeSlot-v1' }, (judgeSlotAnswer) => {
 		askProvider({ provider: makeProvider((payload) => { sentByRule.categoryTable = sentSchemaOf(payload); }), predicateRule: 'categoryTable-v1' }, (categoryTableAnswer) => {
-			const expectedJudgeSlot = JSON.stringify(schemaLib.renderSelectCandidateSchemaForPredicateRule(dialectName, { choiceEnum: CHOICE_ENUM_FIXTURE.slice(), predicateRule: 'judgeSlot-v1' }));
-			const expectedCategoryTable = JSON.stringify(schemaLib.renderSelectCandidateSchemaForPredicateRule(dialectName, { choiceEnum: CHOICE_ENUM_FIXTURE.slice(), predicateRule: 'categoryTable-v1' }));
+			const expectedJudgeSlot = JSON.stringify(schemaLib.renderSelectCandidateSchemaForPredicateRule(dialectName, { choiceEnum: CHOICE_ENUM_FIXTURE.slice(), predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate' }));
+			const expectedCategoryTable = JSON.stringify(schemaLib.renderSelectCandidateSchemaForPredicateRule(dialectName, { choiceEnum: CHOICE_ENUM_FIXTURE.slice(), predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' }));
 			const faultList = [];
 			if (judgeSlotAnswer.rerankError || categoryTableAnswer.rerankError) {
 				faultList.push(`refused: ${judgeSlotAnswer.rerankError || categoryTableAnswer.rerankError}`);
@@ -629,9 +629,9 @@ const providerConjunctList = [
 		},
 	}),
 ];
-absoluteMutationTwin({ gateId: 'BG-JUDGEPRED', conjunctId: 'i1_llmClientSendsAndReadsTheRuleSchema', twinName: 'llmClientAlwaysSendsCategoryTable', modulePath: LLM_CLIENT_FILE_PATH, find: "const buildTool = ({ choiceEnum, predicateRule } = {}) => renderSelectCandidateSchemaForPredicateRule('anthropic', { choiceEnum, predicateRule });", replace: "const buildTool = ({ choiceEnum, predicateRule } = {}) => renderSelectCandidateSchemaForPredicateRule('anthropic', { choiceEnum, predicateRule: 'categoryTable-v1' });" });
-absoluteMutationTwin({ gateId: 'BG-JUDGEPRED', conjunctId: 'i2_ollamaSendsAndReadsTheRuleSchema', twinName: 'ollamaAlwaysSendsCategoryTable', modulePath: OLLAMA_FILE_PATH, find: 'const renderedSchema = renderSelectCandidateSchemaForPredicateRule(PROVIDER_NAME, { choiceEnum, predicateRule });', replace: "const renderedSchema = renderSelectCandidateSchemaForPredicateRule(PROVIDER_NAME, { choiceEnum, predicateRule: 'categoryTable-v1' });" });
-absoluteMutationTwin({ gateId: 'BG-JUDGEPRED', conjunctId: 'i3_providersRefuseAnAbsentRule', twinName: 'debugJudgeDefaultsTheRule', modulePath: DEBUG_JUDGE_FILE_PATH, find: 'const { systemPrompt, userPrompt, choiceEnum, predicateRule } = rerankOptions;', replace: "const { systemPrompt, userPrompt, choiceEnum, predicateRule = 'categoryTable-v1' } = rerankOptions;" });
+absoluteMutationTwin({ gateId: 'BG-JUDGEPRED', conjunctId: 'i1_llmClientSendsAndReadsTheRuleSchema', twinName: 'llmClientAlwaysSendsCategoryTable', modulePath: LLM_CLIENT_FILE_PATH, find: "const buildTool = ({ choiceEnum, predicateRule, toolCandidateNoun } = {}) => renderSelectCandidateSchemaForPredicateRule('anthropic', { choiceEnum, predicateRule, toolCandidateNoun });", replace: "const buildTool = ({ choiceEnum, predicateRule, toolCandidateNoun } = {}) => renderSelectCandidateSchemaForPredicateRule('anthropic', { choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun });" });
+absoluteMutationTwin({ gateId: 'BG-JUDGEPRED', conjunctId: 'i2_ollamaSendsAndReadsTheRuleSchema', twinName: 'ollamaAlwaysSendsCategoryTable', modulePath: OLLAMA_FILE_PATH, find: 'const renderedSchema = renderSelectCandidateSchemaForPredicateRule(PROVIDER_NAME, { choiceEnum, predicateRule, toolCandidateNoun });', replace: "const renderedSchema = renderSelectCandidateSchemaForPredicateRule(PROVIDER_NAME, { choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun });" });
+absoluteMutationTwin({ gateId: 'BG-JUDGEPRED', conjunctId: 'i3_providersRefuseAnAbsentRule', twinName: 'debugJudgeDefaultsTheRule', modulePath: DEBUG_JUDGE_FILE_PATH, find: 'const { systemPrompt, userPrompt, choiceEnum, predicateRule, toolCandidateNoun } = rerankOptions;', replace: "const { systemPrompt, userPrompt, choiceEnum, predicateRule = 'categoryTable-v1', toolCandidateNoun } = rerankOptions;" });
 
 // ---------------------------------------------------------------------
 // BG-JUDGEPRED-ORACLE — R1, and the §1.7 masked comparison against the text captured at this phase's branch cut

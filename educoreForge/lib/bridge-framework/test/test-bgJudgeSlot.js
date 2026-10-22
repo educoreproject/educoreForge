@@ -253,8 +253,8 @@ const judgeSlotConjunctList = [
 		twinNameList: ['predicateSentenceLeaksIntoSharedDescription'],
 		judge: (scenario) => {
 			const schemaLib = schemaLibFor(scenario);
-			const directSha = sha256(JSON.stringify(schemaLib.renderSelectCandidateSchema('anthropic', { choiceEnum: X0_CHOICE_ENUM_FIXTURE }), null, 2));
-			const byRuleSha = sha256(JSON.stringify(schemaLib.renderSelectCandidateSchemaForPredicateRule('anthropic', { choiceEnum: X0_CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1' }), null, 2));
+			const directSha = sha256(JSON.stringify(schemaLib.renderSelectCandidateSchema('anthropic', { choiceEnum: X0_CHOICE_ENUM_FIXTURE, toolCandidateNoun: 'CEDS candidate' }), null, 2));
+			const byRuleSha = sha256(JSON.stringify(schemaLib.renderSelectCandidateSchemaForPredicateRule('anthropic', { choiceEnum: X0_CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' }), null, 2));
 			return { pass: directSha === X0_ANTHROPIC_RENDERING_SHA256 && byRuleSha === X0_ANTHROPIC_RENDERING_SHA256, detail: `renderSelectCandidateSchema ${directSha.slice(0, 12)}, by rule ${byRuleSha.slice(0, 12)}, pin ${X0_ANTHROPIC_RENDERING_SHA256.slice(0, 12)}` };
 		},
 	}),
@@ -266,8 +266,8 @@ const judgeSlotConjunctList = [
 			const schemaLib = schemaLibFor(scenario);
 			const faultList = [];
 			schemaLib.SCHEMA_DIALECT_NAME_LIST.forEach((oneDialectName) => {
-				const judgeSlotRendering = schemaLib.renderSelectCandidateSchemaForPredicateRule(oneDialectName, { choiceEnum: X0_CHOICE_ENUM_FIXTURE, predicateRule: 'judgeSlot-v1' });
-				const categoryTableRendering = schemaLib.renderSelectCandidateSchema(oneDialectName, { choiceEnum: X0_CHOICE_ENUM_FIXTURE });
+				const judgeSlotRendering = schemaLib.renderSelectCandidateSchemaForPredicateRule(oneDialectName, { choiceEnum: X0_CHOICE_ENUM_FIXTURE, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate' });
+				const categoryTableRendering = schemaLib.renderSelectCandidateSchema(oneDialectName, { choiceEnum: X0_CHOICE_ENUM_FIXTURE, toolCandidateNoun: 'CEDS candidate' });
 				const judgeSlotJsonSchema = judgeSlotRendering.input_schema || judgeSlotRendering;
 				const categoryTableJsonSchema = categoryTableRendering.input_schema || categoryTableRendering;
 				const predicateProperty = judgeSlotJsonSchema.properties.predicate;
@@ -386,8 +386,8 @@ const judgeSlotConjunctList = [
 			if (typeof judgeSlotRenderer !== 'function') {
 				return { pass: false, detail: `TOOL_TEXT_RENDERER_BY_PREDICATE_RULE has no judgeSlot-v1 row (rows: ${Object.keys(scanLib.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE).join(', ')})` };
 			}
-			const judgeSlotText = judgeSlotRenderer({ choiceEnum: X0_CHOICE_ENUM_FIXTURE.slice() });
-			const categoryTableText = scanLib.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE['categoryTable-v1']({ choiceEnum: X0_CHOICE_ENUM_FIXTURE.slice() });
+			const judgeSlotText = judgeSlotRenderer({ choiceEnum: X0_CHOICE_ENUM_FIXTURE.slice(), toolCandidateNoun: 'CEDS candidate' });
+			const categoryTableText = scanLib.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE['categoryTable-v1']({ choiceEnum: X0_CHOICE_ENUM_FIXTURE.slice(), toolCandidateNoun: 'CEDS candidate' });
 			const lineList = judgeSlotText.split('\n');
 			const linesWithSlot = lineList.filter((oneLine) => oneLine.indexOf('"predicate":{"type":"string","enum":["exactMatch","closeMatch","broadMatch","narrowMatch","none"]') !== -1).length;
 			return { pass: lineList.length >= 2 && linesWithSlot === lineList.length && judgeSlotText !== categoryTableText, detail: `${linesWithSlot}/${lineList.length} dialect line(s) carry the slot; differs from categoryTable-v1: ${judgeSlotText !== categoryTableText}` };
@@ -424,7 +424,7 @@ frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunct
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'd_shippedPluginsResolveToTheirVariants', twinName: 'categoryTableMappedToJudgeSlot', fileName: CONTRACT_FILE, find: CATEGORY_TABLE_ROW_FIND, replace: CATEGORY_TABLE_ROW_TO_JUDGE_SLOT });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'e_unregisteredPairRefused', twinName: 'wildcardVariantDefault', fileName: CONTRACT_FILE, find: 'if (!Object.prototype.hasOwnProperty.call(variantByPredicateRule, predicateRule)) {', replace: "if (!Object.prototype.hasOwnProperty.call(variantByPredicateRule, predicateRule)) { return { judgePromptVariant: 'crosswalk' };" });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'f_allShippedPluginsRegisterThroughDiscovery', twinName: 'standardRowDeleted', fileName: CONTRACT_FILE, find: "\tstandard: Object.freeze({ [NO_JUDGE_PREDICATE_RULE]: 'crosswalk' }),\n", replace: '' });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'g_judgeSlotToolTextHasAScanRow', twinName: 'judgeSlotToolTextRowDeleted', fileName: SCAN_FILE, find: "\t'judgeSlot-v1': ({ choiceEnum }) =>", replace: "\t'judgeSlot-v1-deleted': ({ choiceEnum }) =>" });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGESLOT', conjunctId: 'g_judgeSlotToolTextHasAScanRow', twinName: 'judgeSlotToolTextRowDeleted', fileName: SCAN_FILE, find: "\t'judgeSlot-v1': ({ choiceEnum, toolCandidateNoun }) =>", replace: "\t'judgeSlot-v1-deleted': ({ choiceEnum, toolCandidateNoun }) =>" });
 
 // ---------------------------------------------------------------------
 // BG-JUDGESLOT-ORACLE — R1: run E's frozen block still replays hermetically

@@ -20,10 +20,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // the gate: on unchanged code every sampled promptHash must equal the one frozen in the decision record. It cannot agree by
 // accident; a unit that disagrees is named with the first differing line of the prompt against the forensic record.
 //
-//   renderSampleFor({ bridgeEntry, frozenBlock, sampleSize, sourceStandardName, hubStandardName, baseNodeIndex }) → { unitList } | { error }
+//   renderSampleFor({ bridgeEntry, frozenBlock, sampleSize, sourceStandardName, hubStandardName, baseNodeIndex, toolCandidateNoun }) → { unitList } | { error }
+//     toolCandidateNoun  ⟪R4⟫ the hub noun the tool text is rendered with: the caller passes the entry's judgeWording noun (the
+//                        gate) or, for the option-(ii) price study only, the neutral noun; required, refused by name absent
 //     baseNodeIndex  { nodeByStableId: Map, sourceRawRecordList, hubCardRawRecordList } — bolt-shaped raw records (see rawRecordFor)
 //   rawRecordFor(resolvedNode) → { stableId, labels, properties }   the record the bolt reader returns for a replayed node
-//   toolSchemaSha256For({ predicateRule }) → hex
+//   toolSchemaSha256For({ predicateRule, toolCandidateNoun }) → hex
 //   cacheModelKeyFor({ judgeModel, frozenHeader, toolSchemaSha256 }) → the judgment cache's model column for the unit
 
 const path = require('path');
@@ -54,7 +56,7 @@ const rawRecordFor = (resolvedNode) => {
 	return { stableId: properties.stableId, labels: resolvedNode.labels.slice(), properties };
 };
 
-const toolSchemaSha256For = ({ predicateRule }) => sha256Hex(promptIdentifierScanLib.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: judgeConfigRecordLib.TOOL_SCHEMA_CHOICE_ENUM_PLACEHOLDER.slice() }));
+const toolSchemaSha256For = ({ predicateRule, toolCandidateNoun }) => sha256Hex(promptIdentifierScanLib.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: judgeConfigRecordLib.TOOL_SCHEMA_CHOICE_ENUM_PLACEHOLDER.slice(), toolCandidateNoun }));
 
 const cacheModelKeyFor = ({ judgeModel, frozenHeader, toolSchemaSha256 }) => {
 	const judgeConfigHeader = {
@@ -66,7 +68,10 @@ const cacheModelKeyFor = ({ judgeModel, frozenHeader, toolSchemaSha256 }) => {
 	return judgeComponentLib.cacheModelFor({ model: judgeModel, judgeConfigCacheDigest: sha256Hex(bridgePluginContractLib.canonicalJsonText(judgeConfigHeader)) });
 };
 
-const renderSampleFor = ({ bridgeEntry, frozenBlock, sampleSize, sourceStandardName, hubStandardName, baseNodeIndex }) => {
+const renderSampleFor = ({ bridgeEntry, frozenBlock, sampleSize, sourceStandardName, hubStandardName, baseNodeIndex, toolCandidateNoun }) => {
+	if (typeof toolCandidateNoun !== 'string' || toolCandidateNoun.trim() === '') {
+		return { error: `${moduleName}: toolCandidateNoun is ${JSON.stringify(toolCandidateNoun)}; the caller names the hub noun the tool text is rendered with (there is no default)` };
+	}
 	const bridgeDeclaration = bridgeEntry.bridgeDeclaration;
 	const judgePromptVariant = bridgePluginContractLib.judgePromptVariantFor({ bridgeDeclaration }).judgePromptVariant;
 	const variantRow = evidenceRendererLib.JUDGE_PROMPT_VARIANT_REGISTRY[judgePromptVariant];
@@ -93,7 +98,7 @@ const renderSampleFor = ({ bridgeEntry, frozenBlock, sampleSize, sourceStandardN
 		.slice()
 		.sort((leftRecord, rightRecord) => compareStrings(leftRecord.subjectStableId, rightRecord.subjectStableId) || compareStrings(String(leftRecord.targetKey), String(rightRecord.targetKey)))
 		.slice(0, sampleSize);
-	const toolSchemaSha256 = toolSchemaSha256For({ predicateRule: bridgeDeclaration.predicateSource.predicateRule });
+	const toolSchemaSha256 = toolSchemaSha256For({ predicateRule: bridgeDeclaration.predicateSource.predicateRule, toolCandidateNoun });
 	const unitList = sampledRecordList.map((oneRecord) => {
 		const subjectNode = subjectNodeByStableId[oneRecord.subjectStableId];
 		const unitIdentity = { subjectStableId: oneRecord.subjectStableId, targetKey: oneRecord.targetKey, frozenPromptHash: oneRecord.judge.promptHash, judgeModel: oneRecord.judge.judgeModel, rendererVersion: oneRecord.judge.rendererVersion };

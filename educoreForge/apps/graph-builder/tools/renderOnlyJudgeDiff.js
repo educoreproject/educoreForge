@@ -13,6 +13,7 @@ NAME
 SYNOPSIS
      node --max-old-space-size=24000 ${moduleName} -capture --outputDirPath=<dir> [-help]
      node --max-old-space-size=24000 ${moduleName} -compare --baselineRenderOnlyDirPath=<dir written by -capture> --outputDirPath=<dir>
+          [--toolCandidateNounOverride=<noun>]
 
 DESCRIPTION
      The sample, the stores and the forensic trail are DECLARED in graphBuilder.ini [noRebuildProof] baselineDirectoryPath:
@@ -33,6 +34,12 @@ DESCRIPTION
                 moved (the re-keyed set), with the first differing line of each prompt, to <outputDirPath>/rekeyed.json.
                 Exit 0 when nothing re-keyed. Prices nothing: the re-keyed counts are priced from the spend ledger's table
                 by the phase that proposes the change.
+
+OPTIONS
+     --toolCandidateNounOverride=<noun>
+                A PRICE STUDY ONLY (deCeds R4, the option (ii) neutral wording): render every pair's tool text with this noun
+                instead of the noun its hub declares (registry entry judgeWording, the gate). OPTIONAL; absent, each pair renders
+                with its own hub's noun. An empty value is refused by name. Never a build flag: nothing outside this harness reads it.
 
 EXIT STATUS
      0 PASS (capture) / nothing re-keyed (compare);  1 otherwise, or refused.
@@ -90,6 +97,10 @@ if (typeof outputDirPath !== 'string' || outputDirPath === '') {
 	refuse('--outputDirPath is required and absent. There is no default.');
 }
 const baselineRenderOnlyDirPath = flagValueOf('baselineRenderOnlyDirPath');
+const toolCandidateNounOverride = flagValueOf('toolCandidateNounOverride');
+if (toolCandidateNounOverride !== undefined && (typeof toolCandidateNounOverride !== 'string' || toolCandidateNounOverride.trim() === '')) {
+	refuse(`--toolCandidateNounOverride is ${JSON.stringify(toolCandidateNounOverride)}; it names a noun, or is omitted (each pair then renders its own hub's noun)`);
+}
 if (actionName === 'compare' && (typeof baselineRenderOnlyDirPath !== 'string' || !fs.existsSync(path.join(baselineRenderOnlyDirPath, 'summary.json')))) {
 	refuse('-compare needs --baselineRenderOnlyDirPath naming a directory -capture wrote (summary.json)');
 }
@@ -180,7 +191,9 @@ Object.keys(pairByBlockHash).forEach((decisionBlockHash) => {
 				next(`${pairKey}: hub cards: ${hubError}`);
 				return;
 			}
-			const rendered = renderOnlyLib.renderSampleFor({ bridgeEntry: registry.entryByBridgeName[bridge.bridgeName], frozenBlock, sampleSize: gateSet.renderOnly.sampleSize, sourceStandardName: standardNameOf(recipeBridge.source), hubStandardName, baseNodeIndex: { sourceRawRecordList, hubCardRawRecordList } });
+			const bridgeEntry = registry.entryByBridgeName[bridge.bridgeName];
+			const toolCandidateNoun = toolCandidateNounOverride === undefined ? bridgeEntry.judgeWording.toolCandidateNoun : toolCandidateNounOverride;
+			const rendered = renderOnlyLib.renderSampleFor({ toolCandidateNoun, bridgeEntry, frozenBlock, sampleSize: gateSet.renderOnly.sampleSize, sourceStandardName: standardNameOf(recipeBridge.source), hubStandardName, baseNodeIndex: { sourceRawRecordList, hubCardRawRecordList } });
 			if (rendered.error) {
 				next(`${pairKey}: ${rendered.error}`);
 				return;

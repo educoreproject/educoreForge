@@ -226,7 +226,7 @@ const caseList = [
 		const jev = realJevWithTransport([pickBody(0.9), relationBody('closeMatch')]);
 		const anthropic = anthropicDouble();
 		const cascade = cascadeFor({ jev, anthropic });
-		cascade.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'], predicateRule: 'judgeSlot-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
+		cascade.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'], predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
 			harness.section("judgeSlot-v1, JEV ANSWERS: THE CASCADE CARRIES THE JEV LEG'S PREDICATE");
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('answeredBy is jev', verdict && verdict.answeredBy, 'jev');
@@ -240,7 +240,7 @@ const caseList = [
 	(done) => {
 		const jev = realJevWithTransport([pickBody(0.9)]);
 		const anthropic = anthropicDouble();
-		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'], predicateRule: 'categoryTable-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
+		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'], predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
 			harness.section('categoryTable-v1, JEV ANSWERS: NO PREDICATE KEY THROUGH THE CASCADE');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('no predicate key', verdict && Object.prototype.hasOwnProperty.call(verdict, 'predicate'), false);
@@ -251,7 +251,7 @@ const caseList = [
 	(done) => {
 		const jev = realJevWithTransport([pickBody(0.5), relationBody('broadMatch')]);
 		const anthropic = anthropicDouble({ predicate: 'exactMatch' });
-		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'], predicateRule: 'judgeSlot-v1', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
+		cascadeFor({ jev, anthropic }).rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum: ['1', '2', 'NONE'], predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion: cascadeChoiceQuestion }, (rerankError, verdict) => {
 			harness.section('judgeSlot-v1, ESCALATED: OPUS GETS predicateRule AND ITS PREDICATE STANDS');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('the Anthropic leg received predicateRule', anthropic.receivedOptionsList[0] && anthropic.receivedOptionsList[0].predicateRule, 'judgeSlot-v1');

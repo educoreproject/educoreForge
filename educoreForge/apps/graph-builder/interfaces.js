@@ -486,7 +486,9 @@ const JUDGE_PROVIDER_SHAPE = Object.freeze({
 		arity: 2,
 		// ⟪B3b, 2026-09-28⟫ predicateRule names the select_candidate schema the provider sends (selectCandidateSchema.js); required,
 		// and refused by name when absent or unknown
-		argKeys: Object.freeze(['systemPrompt', 'userPrompt', 'choiceEnum', 'predicateRule']),
+		// ⟪hub-neutral bridge lane R4, 2026-10-21⟫ toolCandidateNoun: the bridge's hub noun for the select_candidate tool
+		// description (bridgeTarget.judgeWording). Required and never defaulted; a provider that sends no tool still refuses it absent
+		argKeys: Object.freeze(['systemPrompt', 'userPrompt', 'choiceEnum', 'predicateRule', 'toolCandidateNoun']),
 		// ⟪JOB 1⟫ `model` and `attempts` are CONTRACT MEMBERS of the result, no longer the "harmless
 		// surplus the pipeline ignores" llmClient's header used to call them: `model` is the identity
 		// the judgment travelled under and must agree with the provider's own `model`.

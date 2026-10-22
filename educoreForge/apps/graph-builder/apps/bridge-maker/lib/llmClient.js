@@ -103,6 +103,7 @@ const {
 	PREDICATE_RULE_NAME_LIST,
 	PREDICATE_FIELD_BY_PREDICATE_RULE,
 	unknownPredicateRuleRefusalText,
+	toolCandidateNounRefusalReason,
 	renderSelectCandidateSchemaForPredicateRule,
 } = require('./selectCandidateSchema');
 
@@ -360,7 +361,8 @@ const extractPredicate = (responseBody, predicateField) => {
 // callback. [code fact] it is unreachable from production — judgeComponent.js:211 refuses a question whose
 // choiceEnum is not an array before `rerank` is ever called — so this guards direct callers of the export
 // and the providers JOB 3 adds.
-const buildTool = ({ choiceEnum, predicateRule } = {}) => renderSelectCandidateSchemaForPredicateRule('anthropic', { choiceEnum, predicateRule });
+// ⟪R4⟫ toolCandidateNoun: the bridge's hub noun for the tool description (required; the schema module refuses it absent).
+const buildTool = ({ choiceEnum, predicateRule, toolCandidateNoun } = {}) => renderSelectCandidateSchemaForPredicateRule('anthropic', { choiceEnum, predicateRule, toolCandidateNoun });
 
 // START OF moduleFunction() ============================================================
 
@@ -590,7 +592,7 @@ const moduleFunction =
 		//   judgment. lib/bridge-framework/judgeComponent.js is the sole production caller and reads
 		//   choice, category and rationale.
 		const rerank = (rerankOptions = {}, callback) => {
-			const { systemPrompt, userPrompt, choiceEnum, predicateRule, maxRetries = 6 } = rerankOptions;
+			const { systemPrompt, userPrompt, choiceEnum, predicateRule, toolCandidateNoun, maxRetries = 6 } = rerankOptions;
 			if (!cfg.apiKey) {
 				// unreachable in normal use (construction already threw), kept as defense-in-depth.
 				callback(`${moduleName}: no Anthropic API key ([anthropicAi].apiKey or ANTHROPIC_API_KEY)`);
@@ -609,8 +611,13 @@ const moduleFunction =
 				callback(`${moduleName}.rerank: ${unknownPredicateRuleRefusalText(predicateRule)}`);
 				return;
 			}
+			const nounRefusalReason = toolCandidateNounRefusalReason(toolCandidateNoun);
+			if (nounRefusalReason) {
+				callback(`${moduleName}.rerank: ${nounRefusalReason}`);
+				return;
+			}
 			const predicateField = PREDICATE_FIELD_BY_PREDICATE_RULE[predicateRule];
-			const tool = buildTool({ choiceEnum, predicateRule });
+			const tool = buildTool({ choiceEnum, predicateRule, toolCandidateNoun });
 			// ⟪R-a THIRD REAL-RUN FIX; UNCONDITIONAL since JOB 0⟫ raise the budget to the max of the
 			// configured value and JUDGMENT_MAX_TOKENS — never LOWER cfg.maxTokens if an operator already
 			// configured something bigger than 400, only ever raise a too-small default. This is now the

@@ -139,7 +139,7 @@ const headerFaultList = (block, expectedByName) =>
 // the tool-schema sha the header must carry, rendered through whatever judgeConfigRecord the scenario loads (a double
 // when the scenario carries mutations), so (a3) and its twin compare like with like
 const judgeConfigRecordFor = (mutationList) => (mutationList.length ? moduleDouble.loadWithMutations({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, JUDGE_CONFIG_FILE), mutationList }) : require('../judgeConfigRecord'));
-const expectedToolSchemaSha256 = () => require('../judgeConfigRecord').judgeConfigHeaderFor({ judgeClient: { judgeConfig: {} }, predicateRule: 'categoryTable-v1' }).judgeToolSchemaSha256;
+const expectedToolSchemaSha256 = () => require('../judgeConfigRecord').judgeConfigHeaderFor({ judgeClient: { judgeConfig: {} }, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' }).judgeToolSchemaSha256;
 
 // the rationale drop, used by both (a0) and (a1): opted in, the record carries no rationale
 const RATIONALE_FIND = '\t\t\t\t\t\t\t\t\tjudgeRecord.rationale = judged.rationale;\n';
@@ -237,9 +237,9 @@ const judgeConfigConjunctList = [
 		twinNameList: ['toolSchemaShaHashesRuleNameOnly'],
 		judge: (scenario) => {
 			const stubClient = { judgeConfig: { temperaturePolicy: 'noWire', maxTokens: null } };
-			const plantMutation = { modulePath: SCHEMA_FILE_PATH, find: "'THEN record the single best matching CEDS candidate by its number, or NONE if no candidate is a ' +", replace: "'THEN record the single best matching CEDS candidate (planted) by its number, or NONE if no candidate is a ' +" };
-			const unplanted = judgeConfigRecordFor(scenario.frameworkMutationList).judgeConfigHeaderFor({ judgeClient: stubClient, predicateRule: 'categoryTable-v1' }).judgeToolSchemaSha256;
-			const planted = judgeConfigRecordFor(scenario.frameworkMutationList.concat([plantMutation])).judgeConfigHeaderFor({ judgeClient: stubClient, predicateRule: 'categoryTable-v1' }).judgeToolSchemaSha256;
+			const plantMutation = { modulePath: SCHEMA_FILE_PATH, find: "\t`THEN record the single best matching ${toolCandidateNoun} by its number, or NONE if no candidate is a ` +", replace: "\t`THEN record the single best matching ${toolCandidateNoun} (planted) by its number, or NONE if no candidate is a ` +" };
+			const unplanted = judgeConfigRecordFor(scenario.frameworkMutationList).judgeConfigHeaderFor({ judgeClient: stubClient, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' }).judgeToolSchemaSha256;
+			const planted = judgeConfigRecordFor(scenario.frameworkMutationList.concat([plantMutation])).judgeConfigHeaderFor({ judgeClient: stubClient, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' }).judgeToolSchemaSha256;
 			return { pass: unplanted !== planted, detail: `unplanted ${unplanted.slice(0, 12)}, planted ${planted.slice(0, 12)}` };
 		},
 	}),
@@ -274,7 +274,7 @@ const judgeConfigConjunctList = [
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGECONFIG', conjunctId: 'a0_debugJudgeOptedInCarriesKeysAndRationales', twinName: 'rationaleDroppedUnderDebugJudge', fileName: FRAMEWORK_FILE, find: RATIONALE_FIND, replace: '' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGECONFIG', conjunctId: 'a1_realClientOptedInCarriesConfigAndVerbatimRationales', twinName: 'rationaleDroppedUnderRealClient', fileName: FRAMEWORK_FILE, find: RATIONALE_FIND, replace: '' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGECONFIG', conjunctId: 'a2_iniMaxTokensMovesBlockId', twinName: 'maxTokensFrozenAsConstant', fileName: JUDGE_CONFIG_FILE, find: 'judgeMaxTokens: judgeClient.judgeConfig.maxTokens,', replace: `judgeMaxTokens: ${INI_MAX_TOKENS},` });
-frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGECONFIG', conjunctId: 'a3_toolSchemaShaFollowsToolText', twinName: 'toolSchemaShaHashesRuleNameOnly', fileName: JUDGE_CONFIG_FILE, find: 'judgeToolSchemaSha256: sha256Hex(promptIdentifierScanLib.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: TOOL_SCHEMA_CHOICE_ENUM_PLACEHOLDER.slice() })),', replace: 'judgeToolSchemaSha256: sha256Hex(predicateRule),' });
+frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGECONFIG', conjunctId: 'a3_toolSchemaShaFollowsToolText', twinName: 'toolSchemaShaHashesRuleNameOnly', fileName: JUDGE_CONFIG_FILE, find: 'judgeToolSchemaSha256: sha256Hex(promptIdentifierScanLib.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: TOOL_SCHEMA_CHOICE_ENUM_PLACEHOLDER.slice(), toolCandidateNoun })),', replace: 'judgeToolSchemaSha256: sha256Hex(predicateRule),' });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGECONFIG', conjunctId: 'b_optedOutToyBlockMaskedIdentical', twinName: 'judgeConfigForcedOn', fileName: FRAMEWORK_FILE, find: OPT_IN_FIND, replace: OPT_IN_FORCED });
 frameworkMutationTwin({ registry: twinRegistry, gateId: 'BG-JUDGECONFIG', conjunctId: 'm_unmaskedDiffersOnlyInFrameworkFingerprint', twinName: 'judgeConfigForcedOnUnmasked', fileName: FRAMEWORK_FILE, find: OPT_IN_FIND, replace: OPT_IN_FORCED });
 

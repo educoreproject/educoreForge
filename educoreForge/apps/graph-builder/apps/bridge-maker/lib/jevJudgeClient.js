@@ -57,7 +57,7 @@ const fs = require('fs');
 const https = require('https');
 const crypto = require('crypto');
 const configFileProcessor = require('qtools-config-file-processor');
-const { PICK_PREDICATE_ENUM, PREDICATE_FIELD_BY_PREDICATE_RULE, PREDICATE_RULE_NAME_LIST, unknownPredicateRuleRefusalText } = require('./selectCandidateSchema');
+const { PICK_PREDICATE_ENUM, PREDICATE_FIELD_BY_PREDICATE_RULE, PREDICATE_RULE_NAME_LIST, unknownPredicateRuleRefusalText, toolCandidateNounRefusalReason } = require('./selectCandidateSchema');
 
 const defaultConfigFilePath =
 	'/Users/tqwhite/Documents/webdev/educoreForge/system/configs/instanceSpecific/qbook/jevJudge.ini';
@@ -419,7 +419,7 @@ const moduleFunction = (constructionOptions = {}) => {
 	// Under a rule with no slot (categoryTable-v1) the verdict carries NO predicate key: judgeComponent counts a
 	// present key as discarded. On NONE the slot holds the rule's abstain value and no second call is made.
 	const rerank = (rerankOptions = {}, callback) => {
-		const { choiceQuestion, choiceQuestionFormName, choiceEnum, predicateRule } = rerankOptions;
+		const { choiceQuestion, choiceQuestionFormName, choiceEnum, predicateRule, toolCandidateNoun } = rerankOptions;
 		if (!choiceQuestion || !choiceQuestion.stateObject || !choiceQuestion.instructionText || !choiceQuestion.criteriaByChoice) {
 			callback(`${moduleName}: rerank received no choiceQuestion {stateObject, instructionText, criteriaByChoice}. The renderer's variant must declare subjectData and candidateData for Jev to judge it; there is no text parse to fall back to.`);
 			return;
@@ -440,6 +440,12 @@ const moduleFunction = (constructionOptions = {}) => {
 		const formModel = modelByChoiceQuestionFormName[choiceQuestionFormName];
 		if (PREDICATE_RULE_NAME_LIST.indexOf(predicateRule) === -1) {
 			callback(`${moduleName}.rerank: ${unknownPredicateRuleRefusalText(predicateRule)}`);
+			return;
+		}
+		// ⟪R4⟫ Jev reads no tool text, but the seam requires the noun: an absent one is refused as a tool-sending provider refuses it
+		const nounRefusalReason = toolCandidateNounRefusalReason(toolCandidateNoun);
+		if (nounRefusalReason) {
+			callback(`${moduleName}.rerank: ${nounRefusalReason}`);
 			return;
 		}
 		const predicateField = PREDICATE_FIELD_BY_PREDICATE_RULE[predicateRule];

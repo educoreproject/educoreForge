@@ -375,7 +375,7 @@ const wireWitnessProvider = llmClientLib({
 	},
 });
 let rerankResult = null;
-wireWitnessProvider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'], predicateRule: 'categoryTable-v1' }, (rerankError, clientReturn) => {
+wireWitnessProvider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'], predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' }, (rerankError, clientReturn) => {
 	rerankResult = { rerankError, clientReturn };
 });
 
@@ -423,7 +423,7 @@ const sentTemperatureFor = (llmClientFactory, wireModel) => {
 	llmClientFactory({
 		configFilePath: temperatureIniFilePath(wireModel),
 		componentOverrides: { postOnce: ({ payload }, postCallback) => { sentWirePayload = payload; postCallback('', cannedToolUseResponse, 200); } },
-	}).rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'], predicateRule: 'categoryTable-v1' }, () => {});
+	}).rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', 'NONE'], predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' }, () => {});
 	return sentWirePayload ? sentWirePayload.temperature : 'NO PAYLOAD WAS SENT';
 };
 const temperatureRuleVerdict = (llmClientFactory) => {

@@ -74,6 +74,7 @@ const {
 	PREDICATE_RULE_NAME_LIST,
 	PREDICATE_FIELD_BY_PREDICATE_RULE,
 	unknownPredicateRuleRefusalText,
+	toolCandidateNounRefusalReason,
 } = require('./selectCandidateSchema');
 
 // canonical config home for this project, matching the incumbent's [anthropicAi] twin. No secrets live
@@ -543,7 +544,7 @@ const moduleFunction =
 			// predicate). predicateRule names the schema sent and is required (phase B3b, 2026-09-28). judgeComponent.js is the sole
 			// production caller and reads choice, category, rationale and predicate.
 			const rerank = (rerankOptions = {}, callback) => {
-				const { systemPrompt, userPrompt, choiceEnum, predicateRule, maxRetries = 6 } = rerankOptions;
+				const { systemPrompt, userPrompt, choiceEnum, predicateRule, toolCandidateNoun, maxRetries = 6 } = rerankOptions;
 				// hasOwnProperty, not `!== undefined`: the fault is that the caller MENTIONED the retired option
 				// at all. `true` and `false` are refused identically — there is no longer a value of it that
 				// means anything, so accepting either would be accepting a lie.
@@ -557,7 +558,12 @@ const moduleFunction =
 					callback(`${moduleName}.rerank: ${unknownPredicateRuleRefusalText(predicateRule)}`);
 					return;
 				}
-				const renderedSchema = renderSelectCandidateSchemaForPredicateRule(PROVIDER_NAME, { choiceEnum, predicateRule });
+				const nounRefusalReason = toolCandidateNounRefusalReason(toolCandidateNoun);
+				if (nounRefusalReason) {
+					callback(`${moduleName}.rerank: ${nounRefusalReason}`);
+					return;
+				}
+				const renderedSchema = renderSelectCandidateSchemaForPredicateRule(PROVIDER_NAME, { choiceEnum, predicateRule, toolCandidateNoun });
 				const extractJudgment = makeJudgmentExtractor(choiceEnum);
 				const predicateField = PREDICATE_FIELD_BY_PREDICATE_RULE[predicateRule];
 				const extractPredicate = makePredicateExtractor(predicateField);

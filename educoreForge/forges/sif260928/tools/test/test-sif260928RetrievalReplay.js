@@ -168,7 +168,7 @@ const replayShape = (scenario) => {
 	scenario.spec.config = { ...scenario.spec.config, sourceStandard: STANDARD_KEY, sourceStandardName: SOURCE_STANDARD_NAME, sourceVersion: SOURCE_VERSION, familyStandards: [STANDARD_KEY] };
 	// ⟪ctdlHub P5⟫ the shipped plugin targets 'ceds' (its bridgeTarget export); this suite runs it on the toy hub DOUBLE, so the
 	// target is laid over as the toy's own — the run-time pairing check is unchanged
-	scenario.pluginModuleOverrides[PLUGIN_NAME] = { ...(scenario.pluginModuleOverrides[PLUGIN_NAME] || {}), bridgeTarget: { targetHub: scenario.spec.hub } };
+	scenario.pluginModuleOverrides[PLUGIN_NAME] = { ...(scenario.pluginModuleOverrides[PLUGIN_NAME] || {}), bridgeTarget: { targetHub: scenario.spec.hub, judgeWording: { toolCandidateNoun: 'CEDS candidate' } } };
 };
 
 // the subject: the framework scenario plus the instrument's own mutation list and graph edit (a twin writes either)

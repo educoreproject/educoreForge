@@ -85,15 +85,16 @@ const userPromptPartsFor = (userPrompt) => {
 const choiceEnumFor = (renderedPoolStableIdList) => renderedPoolStableIdList.map((unused, seatIndex) => String(seatIndex + 1)).concat([ABSTAIN_TOKEN]);
 
 // surfaceTextByNameFor — every surface of one record, in scan order
-const surfaceTextByNameFor = ({ record, predicateRule, partTextByName }) => {
+// ⟪R4⟫ toolCandidateNoun: the audited bridge's hub noun (its registry entry's judgeWording), so the tool text is the one the run rendered
+const surfaceTextByNameFor = ({ record, predicateRule, toolCandidateNoun, partTextByName }) => {
 	const choiceEnum = choiceEnumFor(record.renderedPoolStableIdList);
 	const surfaceTextByName = {
 		systemPrompt: record.systemPrompt,
 		userFixedWording: partTextByName.userFixedWording,
 		subjectText: partTextByName.subjectText,
 		candidateText: partTextByName.candidateText,
-		toolTextEveryDialect: TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum }),
-		toolTextRealJudge: JSON.stringify(buildTool({ choiceEnum, predicateRule })),
+		toolTextEveryDialect: TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum, toolCandidateNoun }),
+		toolTextRealJudge: JSON.stringify(buildTool({ choiceEnum, predicateRule, toolCandidateNoun })),
 	};
 	if (record.reaskUserPrompt !== null) {
 		surfaceTextByName.reaskUserPrompt = record.reaskUserPrompt;
@@ -106,12 +107,12 @@ const hitListIn = ({ compiledScan, surfaceName, text }) =>
 	compiledScan.compiledPatternList.reduce((soFar, onePattern) => soFar.concat((text.match(onePattern.regex) || []).map((matchedText) => ({ surfaceName, patternName: onePattern.patternName, matchedText }))), []);
 
 // auditRecord — the hits and the per-surface character counts of one forensic record, plus the bare six-digit tokens that are not listed ids
-const auditRecord = ({ record, compiledScan, predicateRule }) => {
+const auditRecord = ({ record, compiledScan, predicateRule, toolCandidateNoun }) => {
 	const parts = userPromptPartsFor(record.userPrompt);
 	if (parts.refusalText) {
 		return { refusalText: `record ${record.promptHash}: ${parts.refusalText}` };
 	}
-	const surfaceTextByName = surfaceTextByNameFor({ record, predicateRule, partTextByName: parts.partTextByName });
+	const surfaceTextByName = surfaceTextByNameFor({ record, predicateRule, toolCandidateNoun, partTextByName: parts.partTextByName });
 	const hitList = Object.keys(surfaceTextByName).reduce((soFar, oneSurfaceName) => soFar.concat(hitListIn({ compiledScan, surfaceName: oneSurfaceName, text: surfaceTextByName[oneSurfaceName] })), []);
 	const unlistedSixDigitList = Object.keys(surfaceTextByName).reduce((soFar, oneSurfaceName) => soFar.concat((surfaceTextByName[oneSurfaceName].match(compiledScan.bareSixDigitRegex) || []).filter((oneToken) => !compiledScan.listedIdentifierSet.has(oneToken)).map((oneToken) => ({ surfaceName: oneSurfaceName, token: oneToken, hubKnowsToken: compiledScan.hubBareIdentifierSet.has(oneToken) }))), []);
 	const charCountBySurfaceName = Object.keys(surfaceTextByName).reduce((soFar, oneSurfaceName) => ({ ...soFar, [oneSurfaceName]: surfaceTextByName[oneSurfaceName].length }), {});
@@ -120,7 +121,7 @@ const auditRecord = ({ record, compiledScan, predicateRule }) => {
 
 // auditRecordList — the whole log: hits by record, surface coverage (how many records had non-empty text on each surface),
 // and the seat check (every record's candidate headings number exactly its rendered pool)
-const auditRecordList = ({ recordList, compiledScan, predicateRule }) => {
+const auditRecordList = ({ recordList, compiledScan, predicateRule, toolCandidateNoun }) => {
 	const hitRecordList = [];
 	const hubHitRecordList = [];
 	const nonEmptyRecordCountBySurfaceName = {};
@@ -129,7 +130,7 @@ const auditRecordList = ({ recordList, compiledScan, predicateRule }) => {
 	const seatMismatchList = [];
 	for (let recordIndex = 0; recordIndex < recordList.length; recordIndex++) {
 		const oneRecord = recordList[recordIndex];
-		const audited = auditRecord({ record: oneRecord, compiledScan, predicateRule });
+		const audited = auditRecord({ record: oneRecord, compiledScan, predicateRule, toolCandidateNoun });
 		if (audited.refusalText) {
 			return { refusalText: audited.refusalText };
 		}

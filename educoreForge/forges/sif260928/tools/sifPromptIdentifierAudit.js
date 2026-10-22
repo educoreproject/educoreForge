@@ -33,7 +33,8 @@ require(path.join(TREE_ROOT, 'test', 'testLib', 'testAppStartup'))({ moduleName,
 const { xLog, commandLineParameters } = process.global;
 const auditLib = require(path.join(__dirname, 'sifPromptIdentifierAuditLib'));
 // ⟪hub-neutral bridge lane R3⟫ the bridge is composed (sif260928Bridging.js + the CEDS hub's declaration): read it through the registry
-const { bridgeDeclaration } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'pluginRegistry')).buildRegistryFromDirectory({ forgesDirPath: path.join(TREE_ROOT, 'forges') }).entryByBridgeName.sif260928CedsDerivedPlugin;
+const { bridgeDeclaration, judgeWording } = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'pluginRegistry')).buildRegistryFromDirectory({ forgesDirPath: path.join(TREE_ROOT, 'forges') }).entryByBridgeName.sif260928CedsDerivedPlugin;
+const toolCandidateNoun = judgeWording.toolCandidateNoun;
 
 const refuseAndExit = (refusalText) => {
 	xLog.error(`${moduleName}: REFUSED: ${refusalText}`);
@@ -68,7 +69,7 @@ const hubIdentifierList = JSON.parse(fs.readFileSync(hubIdentifierListFilePath, 
 const compiledScan = auditLib.compileAuditScan({ identifierPatternList: scanDeclaration.identifierPatternList, identifierList, hubIdentifierList });
 const recordList = fs.readFileSync(forensicsFilePath, 'utf8').split('\n').filter((oneLine) => oneLine.length > 0).map((oneLine) => JSON.parse(oneLine));
 
-const audit = auditLib.auditRecordList({ recordList, compiledScan, predicateRule });
+const audit = auditLib.auditRecordList({ recordList, compiledScan, predicateRule, toolCandidateNoun });
 if (audit.refusalText) {
 	refuseAndExit(audit.refusalText);
 }
@@ -80,7 +81,7 @@ const plantControlList = [
 	{ controlName: 'subjectClassId', expectedSurfaceName: 'subjectText', expectedPatternName: 'cedsClassId', plant: (record) => ({ ...record, userPrompt: record.userPrompt.replace(/\n( {2}name: )/, '\n$1C000001 ') }) },
 ];
 const controlResultList = plantControlList.map((oneControl) => {
-	const planted = auditLib.auditRecord({ record: oneControl.plant(recordList[0]), compiledScan, predicateRule });
+	const planted = auditLib.auditRecord({ record: oneControl.plant(recordList[0]), compiledScan, predicateRule, toolCandidateNoun });
 	const foundOnTarget = !planted.refusalText && planted.hitList.some((oneHit) => oneHit.surfaceName === oneControl.expectedSurfaceName && oneHit.patternName === oneControl.expectedPatternName);
 	return { controlName: oneControl.controlName, foundOnTarget, hitList: planted.hitList || [], refusalText: planted.refusalText || '' };
 });

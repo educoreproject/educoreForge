@@ -104,9 +104,10 @@ const scannedShape = (scenario) => {
 const plantInSubject = (scenario, propertyName, plantedText) => {
 	scenario.graph.nodeList = scenario.graph.nodeList.map((oneNode) => (oneNode.stableId === PLANTED_SUBJECT_STABLE_ID ? { ...oneNode, properties: { ...oneNode.properties, [propertyName]: `${oneNode.properties[propertyName]} ${plantedText}` } } : oneNode));
 };
-const TOOL_DESCRIPTION_FIND = "'THEN record the single best matching CEDS candidate by its number, or NONE if no candidate is a ' +";
+// ⟪R4 re-anchor⟫ the description's noun is the hub's since R4 (selectCandidateSchema.toolDescriptionFor): the plant lands in the template line
+const TOOL_DESCRIPTION_FIND = "\t`THEN record the single best matching ${toolCandidateNoun} by its number, or NONE if no candidate is a ` +";
 const plantInToolDescription = (scenario) => {
-	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, SCHEMA_FILE), find: TOOL_DESCRIPTION_FIND, replace: "'THEN record the single best matching CEDS candidate (see 007777) by its number, or NONE if no candidate is a ' +" });
+	scenario.frameworkMutationList.push({ modulePath: path.join(scenarioLib.FRAMEWORK_DIR, SCHEMA_FILE), find: TOOL_DESCRIPTION_FIND, replace: "\t`THEN record the single best matching ${toolCandidateNoun} (see 007777) by its number, or NONE if no candidate is a ` +" });
 };
 const captureLog = (scenario) => {
 	scenario.reportLineList = [];
@@ -199,7 +200,7 @@ const promptScanConjunctList = [
 		regex: /prompt identifier scan hit for subject toy:[^:]+: pattern 'identifierList' matched '007777' in the toolText/,
 		twinName: 'toolTextNotScanned',
 		fileName: SCAN_FILE,
-		find: '\ttoolText: TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: question.choiceEnum }),\n',
+		find: '\ttoolText: TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: question.choiceEnum, toolCandidateNoun: question.toolCandidateNoun }),\n',
 		replace: '',
 	}),
 	runConjunct({

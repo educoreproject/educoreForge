@@ -220,7 +220,7 @@ harness.match('an unset key variable is refused naming the variable', constructi
 
 const pickCase = ({ label, confidence, expectedCategory }) => (done) => {
 	const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence, probabilities: { 1: confidence, 2: 0.1, NONE: 0.05 } }) }]);
-	provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, systemPrompt: 's', userPrompt: 'u', choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+	provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, systemPrompt: 's', userPrompt: 'u', choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 		harness.section(label);
 		harness.ok('no error', !rerankError, rerankError);
 		harness.equal('choice is the pick', verdict && verdict.choice, '1');
@@ -242,7 +242,7 @@ const caseList = [
 	pickCase({ label: 'A PICK BELOW moderateMinConfidence IS weakButReal', confidence: 0.3, expectedCategory: 'weakButReal' }),
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, () => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, () => {
 			harness.section('THE data FORM SENDS OBJECTS');
 			const payload = transport.sentPayloadList[0];
 			harness.equal('a candidate is an object', typeof payload.questions.matchingCandidate.criteria['1'], 'object');
@@ -254,7 +254,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({ requestForm: 'string' }, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, () => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, () => {
 			harness.section('THE string FORM SENDS THE SAME FIELDS AS name: value LINES');
 			const payload = transport.sentPayloadList[0];
 			harness.equal('a candidate is a string', typeof payload.questions.matchingCandidate.criteria['1'], 'string');
@@ -265,7 +265,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: 'NONE', confidence: 0.5, probabilities: { 1: 0.3, 2: 0.1, NONE: 0.6 } }) }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('AN ABSTENTION IS CATEGORY none WITH A RATIONALE');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('choice NONE', verdict && verdict.choice, 'NONE');
@@ -276,7 +276,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '7', confidence: 0.9, probabilities: { 7: 0.9 } }) }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError) => {
 			harness.section('AN ANSWER OUTSIDE THE OFFERED OPTIONS IS REFUSED');
 			harness.match('refused by name', rerankError, /Jev chose '7' for 'matchingCandidate', which is not one of the offered options/);
 			done();
@@ -287,7 +287,7 @@ const caseList = [
 			{ statusCode: 429, responseBody: { error: 'rate limited' } },
 			{ statusCode: 200, responseBody: answerBody({ choice: '2', confidence: 0.9, probabilities: { 1: 0.05, 2: 0.9, NONE: 0.05 } }) },
 		]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('A 429 IS RETRIED');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('two calls were made', transport.sentPayloadList.length, 2);
@@ -303,7 +303,7 @@ const caseList = [
 			{ statusCode: edgeStatusCode, responseBody: { error: `error code: ${edgeStatusCode}` } },
 			{ statusCode: 200, responseBody: answerBody({ choice: '2', confidence: 0.9, probabilities: { 1: 0.05, 2: 0.9, NONE: 0.05 } }) },
 		]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section(`A ${edgeStatusCode} (${edgeStatusCode === 529 ? 'JEV OVERLOADED' : 'THE EDGE PROXY'}) IS RETRIED`);
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('two calls were made', transport.sentPayloadList.length, 2);
@@ -313,7 +313,7 @@ const caseList = [
 	}),
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 400, responseBody: { error: 'bad request' } }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError) => {
 			harness.section('A 400 IS NOT RETRIED');
 			harness.match('refused naming the status', rerankError, /HTTP 400 after 1 attempt/);
 			harness.equal('one call only', transport.sentPayloadList.length, 1);
@@ -322,7 +322,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 503, responseBody: { error: 'down' } }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError) => {
 			harness.section('RETRIES STOP AT maxAttempts');
 			harness.match('refused after three attempts', rerankError, /HTTP 503 after 3 attempt/);
 			harness.equal('three calls', transport.sentPayloadList.length, 3);
@@ -331,7 +331,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9 } }) }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, systemPrompt: 's', userPrompt: 'u', choiceEnum, predicateRule: 'categoryTable-v1' }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, systemPrompt: 's', userPrompt: 'u', choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' }, (rerankError) => {
 			harness.section('A QUESTION WITHOUT choiceQuestion IS REFUSED — THERE IS NO TEXT PARSE');
 			harness.match('refused by name', rerankError, /rerank received no choiceQuestion/);
 			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
@@ -344,7 +344,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
 			{ statusCode: 200, responseBody: relationBody({ choice: 'broadMatch', confidence: 0.55, probabilities: RELATION_PROBABILITIES }) },
 		]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('judgeSlot-v1 WITH A PICK: A SECOND CALL NAMES THE RELATION');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('two calls were made', transport.sentPayloadList.length, 2);
@@ -381,7 +381,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '2', confidence: 0.9, probabilities: { 1: 0.05, 2: 0.9, NONE: 0.05 } }) },
 			{ statusCode: 200, responseBody: relationBody({ choice: 'exactMatch', confidence: 0.8, probabilities: RELATION_PROBABILITIES }) },
 		]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('THE RELATION QUESTION FOLLOWS requestForm');
 			harness.ok('no error', !rerankError, rerankError);
 			const relationPayload = transport.sentPayloadList[1] || { state: {} };
@@ -393,7 +393,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: 'NONE', confidence: 0.7, probabilities: { 1: 0.2, 2: 0.1, NONE: 0.7 } }) }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('judgeSlot-v1 WITH NONE: THE ABSTAIN VALUE, NO SECOND CALL');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('ONE call only', transport.sentPayloadList.length, 1);
@@ -407,7 +407,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
 			{ statusCode: 200, responseBody: relationBody({ choice: 'relatedMatch', confidence: 0.9, probabilities: { relatedMatch: 0.9 } }) },
 		]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError) => {
 			harness.section('A RELATION OUTSIDE THE FOUR IS REFUSED, NEVER MAPPED');
 			harness.match('refused by name', rerankError, /picked '1' but the relation question failed: .*Jev chose 'relatedMatch' for 'relationToChosenCandidate'/);
 			done();
@@ -418,7 +418,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
 			{ statusCode: 400, responseBody: { error: 'bad request' } },
 		]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('A FAILED RELATION CALL FAILS THE JUDGMENT — NO PREDICATE-LESS PICK');
 			harness.match('refused naming the status', rerankError, /relation question failed: .*HTTP 400 after 1 attempt/);
 			harness.equal('no verdict', verdict, undefined);
@@ -429,7 +429,7 @@ const caseList = [
 	// W-B-3 (campaign P3): a probability map that does not name exactly the offered options is refused by name
 	(done) => {
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, NONE: 0.1 } }) }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('W-B-3: A PARTIAL PROBABILITY MAP IS REFUSED BY NAME');
 			harness.match('refused naming the options', rerankError, /probabilities for 'matchingCandidate' name \[1, NONE\], not exactly the offered options \[1, 2, NONE\]/);
 			harness.equal('no verdict', verdict, undefined);
@@ -441,7 +441,7 @@ const caseList = [
 	(done) => {
 		const partialUsageBody = { ...answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }), usage: { input_tokens: 100 } };
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: partialUsageBody }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('W-B-8: A WIRE USAGE WITHOUT BOTH INTEGER COUNTS IS REFUSED BY NAME');
 			harness.match('refused naming the usage', rerankError, /usage for 'matchingCandidate' is \{"input_tokens":100\}; input_tokens and output_tokens must be non-negative integers/);
 			harness.equal('no verdict', verdict, undefined);
@@ -450,7 +450,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('W-B-8: A ONE-CALL VERDICT CARRIES USAGE IN THE DECLARED SHAPE');
 			harness.equal('usage is { inputTokens, outputTokens }', JSON.stringify(verdict && verdict.usage), JSON.stringify({ inputTokens: 100, outputTokens: 10 }));
 			done();
@@ -468,7 +468,7 @@ const caseList = [
 	// ── lane JEVQ (2026-10-13; per-bridge form, ruling COPPER_RIVER): the form travels with every question ──
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError) => {
 			harness.section('LANE JEVQ: A QUESTION WITHOUT ITS FORM IS REFUSED BY NAME (NO DEFAULT FORM)');
 			harness.match('refused naming the forms', rerankError, /rerank received choiceQuestionFormName undefined; the forms are: matchingInstructionsState, owningConstructDefinitionState/);
 			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
@@ -477,7 +477,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceQuestionFormName: OWNING_DEFINITION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: OWNING_DEFINITION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('LANE JEVQ: AN INSTRUCTION-FORM QUESTION TOLD IT IS THE OWNING-DEFINITION FORM IS REFUSED');
 			harness.match('refused naming both', rerankError, /told the split question is 'owningConstructDefinitionState', and the question's own questionFormName is undefined/);
 			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
@@ -487,7 +487,7 @@ const caseList = [
 	},
 	(done) => {
 		const { provider, transport } = providerFor({}, [{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) }]);
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion: owningDefinitionChoiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion: owningDefinitionChoiceQuestion }, (rerankError) => {
 			harness.section('LANE JEVQ: AN OWNING-DEFINITION QUESTION TOLD IT IS THE INSTRUCTION FORM IS REFUSED');
 			harness.match('refused naming both', rerankError, /told the split question is 'matchingInstructionsState', and the question's own questionFormName is "owningConstructDefinitionState"/);
 			harness.equal('nothing was sent', transport.sentPayloadList.length, 0);
@@ -499,7 +499,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
 			{ statusCode: 200, responseBody: relationBody({ choice: 'closeMatch', confidence: 0.7, probabilities: RELATION_PROBABILITIES }) },
 		]);
-		provider.rerank({ choiceQuestionFormName: OWNING_DEFINITION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion: owningDefinitionChoiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: OWNING_DEFINITION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion: owningDefinitionChoiceQuestion }, (rerankError, verdict) => {
 			harness.section('LANE JEVQ: THE OWNING-DEFINITION FORM SENDS THE DEFINITION, NO INSTRUCTIONS, UNDER ITS OWN IDENTITY; THE RELATION QUESTION IS UNCHANGED');
 			harness.ok('no error', !rerankError, rerankError);
 			const pickPayload = transport.sentPayloadList[0] || { state: {} };
@@ -524,7 +524,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: relationBody({ choice: 'closeMatch', confidence: 0.7, probabilities: RELATION_PROBABILITIES }) },
 		]);
 		const twinProvider = twinLib({ configFilePath: iniFilePathFor({}), componentOverrides: { postOnce: transport.postOnce } });
-		twinProvider.rerank({ choiceQuestionFormName: OWNING_DEFINITION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', choiceQuestion: owningDefinitionChoiceQuestion }, () => {
+		twinProvider.rerank({ choiceQuestionFormName: OWNING_DEFINITION_FORM, choiceEnum, predicateRule: 'judgeSlot-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion: owningDefinitionChoiceQuestion }, () => {
 			harness.section('LANE JEVQ TWIN: RELATION SOURCE READ FROM THE PICK STATE');
 			const relationPayload = transport.sentPayloadList[1] || { state: {} };
 			harness.ok('TWIN observed RED: the relation question now carries the owning definition', JSON.stringify(relationPayload.state.sourceElement) !== JSON.stringify(choiceQuestion.stateObject.sourceElement), JSON.stringify(relationPayload.state.sourceElement));
@@ -539,7 +539,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
 		]);
 		const provider = jevJudgeClientLib({ configFilePath: iniFilePathFor({}), componentOverrides: { postOnce: transport.postOnce, retryNote: (noteText) => retryNoteList.push(noteText) } });
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError, verdict) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError, verdict) => {
 			harness.section('LANE JEVQ: A 499 (JEV INTERNAL ERROR) IS RETRIED, AND THE RETRY IS LOGGED');
 			harness.ok('no error', !rerankError, rerankError);
 			harness.equal('two attempts', verdict && verdict.attempts, 2);
@@ -552,7 +552,7 @@ const caseList = [
 		const retryNoteList = [];
 		const transport = scriptedTransport([{ statusCode: 499, responseBody: { detail: { error_type: 'internal_error' } } }]);
 		const provider = jevJudgeClientLib({ configFilePath: iniFilePathFor({}), componentOverrides: { postOnce: transport.postOnce, retryNote: (noteText) => retryNoteList.push(noteText) } });
-		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+		provider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError) => {
 			harness.section('LANE JEVQ: A PERSISTENT 499 IS BOUNDED BY maxAttempts');
 			harness.match('refused after three attempts', rerankError, /HTTP 499 after 3 attempt/);
 			harness.equal('three posts', transport.sentPayloadList.length, 3);
@@ -568,7 +568,7 @@ const caseList = [
 			{ statusCode: 200, responseBody: answerBody({ choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } }) },
 		]);
 		const twinProvider = twinLib({ configFilePath: iniFilePathFor({}), componentOverrides: { postOnce: transport.postOnce, retryNote: () => {} } });
-		twinProvider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', choiceQuestion }, (rerankError) => {
+		twinProvider.rerank({ choiceQuestionFormName: INSTRUCTION_FORM, choiceEnum, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate', choiceQuestion }, (rerankError) => {
 			harness.section('LANE JEVQ TWIN: 499 NOT RETRYABLE');
 			harness.ok('TWIN observed RED: the single 499 now kills the question', /HTTP 499 after 1 attempt/.test(`${rerankError}`), rerankError);
 			done();

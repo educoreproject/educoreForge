@@ -117,6 +117,7 @@ const subjectStableIdFor = ({ subjectIdentityList, sourceReader, xLog }, callbac
 
 const bridgeHooks = { walkSourceAssertions, subjectStableIdFor };
 
-const bridgeTarget = { targetHub: 'ctdl' };
+// ⟪R4⟫ judgeWording: the CTDL hub's own noun (forges/ctdl/lib/ctdlHubBridging.js)
+const bridgeTarget = { targetHub: 'ctdl', judgeWording: { toolCandidateNoun: 'CTDL candidate' } };
 
 module.exports = { bridgeDeclaration, bridgeHooks, bridgeTarget };

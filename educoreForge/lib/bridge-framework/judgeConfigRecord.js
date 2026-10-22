@@ -7,7 +7,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // (decisionBlock.js OPTIONAL_HEADER_KEY_LIST) and a verbatim judge.rationale in every judged record; a plugin that does
 // not declare it gets neither, and its block text is what it was.
 //
-//   judgeConfigHeaderFor({ judgeClient, predicateRule }) → { judgeTemperaturePolicy, judgeMaxTokens, judgeToolSchemaSha256
+//   judgeConfigHeaderFor({ judgeClient, predicateRule, toolCandidateNoun }) → { judgeTemperaturePolicy, judgeMaxTokens, judgeToolSchemaSha256
 //                                                           [, judgeCategoryFloorByCategory] }
 //
 // WHERE EACH VALUE COMES FROM.
@@ -18,7 +18,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //       prompt identifier scan uses (promptIdentifierScan.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE, every dialect). It is
 //       therefore the same whichever provider is active, as the scan is. The one per-question part of the schema, the
 //       candidate-number enum, is replaced by TOOL_SCHEMA_CHOICE_ENUM_PLACEHOLDER, so the sha names the schema and not
-//       any one pool's size.
+//       any one pool's size. ⟪R4⟫ toolCandidateNoun is the bridge's hub noun (bridgeTarget.judgeWording): required, no default
+//       (the schema module refuses it by name), and the CEDS hub's noun renders today's text, so CEDS shas do not move.
 //   judgeCategoryFloorByCategory — the provider's judgeConfig.categoryFloorByCategory (W-B-6, V1-C11; campaign P3): the
 //       confidence floors that turned a provider's NUMBER into the category the block records (Jev: { strong, moderate };
 //       weakButReal is the remainder). OMITTED when the provider declares none — a provider whose category is the model's
@@ -31,10 +32,10 @@ const { sha256Hex } = require('./decisionBlock');
 
 const TOOL_SCHEMA_CHOICE_ENUM_PLACEHOLDER = Object.freeze(['<one candidate number per pool member, then NONE>']);
 
-const judgeConfigHeaderFor = ({ judgeClient, predicateRule }) => ({
+const judgeConfigHeaderFor = ({ judgeClient, predicateRule, toolCandidateNoun }) => ({
 	judgeTemperaturePolicy: judgeClient.judgeConfig.temperaturePolicy,
 	judgeMaxTokens: judgeClient.judgeConfig.maxTokens,
-	judgeToolSchemaSha256: sha256Hex(promptIdentifierScanLib.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: TOOL_SCHEMA_CHOICE_ENUM_PLACEHOLDER.slice() })),
+	judgeToolSchemaSha256: sha256Hex(promptIdentifierScanLib.TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: TOOL_SCHEMA_CHOICE_ENUM_PLACEHOLDER.slice(), toolCandidateNoun })),
 	...(judgeClient.judgeConfig.categoryFloorByCategory === undefined ? {} : { judgeCategoryFloorByCategory: judgeClient.judgeConfig.categoryFloorByCategory }),
 });
 

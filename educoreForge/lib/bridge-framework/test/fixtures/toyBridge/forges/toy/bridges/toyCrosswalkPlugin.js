@@ -201,6 +201,7 @@ const subjectStableIdFor = ({ subjectIdentityList, sourceReader, xLog }, callbac
 const bridgeHooks = { walkSourceAssertions, subjectStableIdFor };
 
 // ⟪ctdlHub P5⟫ the hub this toy plugin maps toward (the sibling bridgeTarget export)
-const bridgeTarget = { targetHub: 'toyhub' };
+// ⟪R4⟫ judgeWording: the toy hub stands in for the CEDS hub, so it states today's exact CEDS noun and every pinned toy sha and block stays byte-identical
+const bridgeTarget = { targetHub: 'toyhub', judgeWording: { toolCandidateNoun: 'CEDS candidate' } };
 
 module.exports = { bridgeDeclaration, bridgeHooks, bridgeTarget };

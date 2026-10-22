@@ -6,7 +6,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // small phases §3 B1). Before a judged subject's question reaches the judge, every text the judge would be shown
 // is scanned for a CEDS identifier, and ONE hit refuses the whole run by name, naming the subject and the pattern.
 //
-//   TOOL_TEXT_RENDERER_BY_PREDICATE_RULE             predicateRule → ({ choiceEnum }) → the tool text for that rule
+//   TOOL_TEXT_RENDERER_BY_PREDICATE_RULE             predicateRule → ({ choiceEnum, toolCandidateNoun }) → the tool text for that rule
 //   declarationReason(value)                         the contract row's shape check → '' | reason
 //   identifierListFilePathFor({ identifierListPath, forgesDirPath, standardKey }) → absolute path
 //   readIdentifierList({ filePath })                 → identifierList
@@ -46,9 +46,10 @@ const PATTERN_ROW_MEMBER_LIST = Object.freeze(['patternName', 'regexSource']);
 // rule is the key because the schema is the rule's: judgeSlot-v1's schema carries the predicate slot. The text is
 // every dialect's rendering, each on its own line under its dialect name. A rule with no row here fails at the first
 // judged subject with a TypeError (B1 back-gate ruling: no guard), so a new rule adds its row with its schema.
+// ⟪R4⟫ toolCandidateNoun is the bridge's hub noun (bridgeTarget.judgeWording); the schema module refuses it absent, by name.
 const TOOL_TEXT_RENDERER_BY_PREDICATE_RULE = Object.freeze({
-	'categoryTable-v1': ({ choiceEnum }) => SCHEMA_DIALECT_NAME_LIST.map((oneDialectName) => `${oneDialectName}: ${JSON.stringify(renderSelectCandidateSchema(oneDialectName, { choiceEnum }))}`).join('\n'),
-	'judgeSlot-v1': ({ choiceEnum }) => SCHEMA_DIALECT_NAME_LIST.map((oneDialectName) => `${oneDialectName}: ${JSON.stringify(renderSelectCandidateSchemaForPredicateRule(oneDialectName, { choiceEnum, predicateRule: 'judgeSlot-v1' }))}`).join('\n'),
+	'categoryTable-v1': ({ choiceEnum, toolCandidateNoun }) => SCHEMA_DIALECT_NAME_LIST.map((oneDialectName) => `${oneDialectName}: ${JSON.stringify(renderSelectCandidateSchema(oneDialectName, { choiceEnum, toolCandidateNoun }))}`).join('\n'),
+	'judgeSlot-v1': ({ choiceEnum, toolCandidateNoun }) => SCHEMA_DIALECT_NAME_LIST.map((oneDialectName) => `${oneDialectName}: ${JSON.stringify(renderSelectCandidateSchemaForPredicateRule(oneDialectName, { choiceEnum, predicateRule: 'judgeSlot-v1', toolCandidateNoun }))}`).join('\n'),
 });
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
@@ -106,7 +107,7 @@ const compileScan = ({ scanDeclaration, identifierList }) => {
 const questionSurfaceTextByName = ({ predicateRule, question }) => ({
 	systemPrompt: question.systemPrompt,
 	userPrompt: question.userPrompt,
-	toolText: TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: question.choiceEnum }),
+	toolText: TOOL_TEXT_RENDERER_BY_PREDICATE_RULE[predicateRule]({ choiceEnum: question.choiceEnum, toolCandidateNoun: question.toolCandidateNoun }),
 	...(question.choiceQuestion === undefined ? {} : { choiceQuestionText: JSON.stringify(question.choiceQuestion) }),
 });
 

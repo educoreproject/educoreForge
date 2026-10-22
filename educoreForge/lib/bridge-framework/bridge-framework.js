@@ -385,7 +385,9 @@ const moduleFunction =
 			// the configuration the header will state, taken once, and its digest: the judgment cache folds the digest
 			// into its key so a cached judgment is served only under the configuration the header states (phase B3b,
 			// 2026-09-28). null when the plugin does not opt in, which keeps every cache key exactly what it was.
-			const runJudgeConfigHeader = recordsJudgeConfig && judgeClient !== null ? judgeConfigRecordLib.judgeConfigHeaderFor({ judgeClient, predicateRule: bridgeDeclaration.predicateSource.predicateRule }) : null;
+			// ⟪R4⟫ the hub's noun for the judge's tool text, carried in bridgeTarget (pluginRegistry entry.judgeWording)
+			const toolCandidateNoun = pluginEntry.judgeWording.toolCandidateNoun;
+			const runJudgeConfigHeader = recordsJudgeConfig && judgeClient !== null ? judgeConfigRecordLib.judgeConfigHeaderFor({ judgeClient, predicateRule: bridgeDeclaration.predicateSource.predicateRule, toolCandidateNoun }) : null;
 			const judgeConfigCacheDigest = runJudgeConfigHeader === null ? null : sha256Hex(canonicalJson(runJudgeConfigHeader));
 			const debugMark = spec.rebridge ? debugJudgeLib.debugMarkFromLlmClient({ inferenceConfig: spec.inferenceConfig }) : undefined;
 			// ⟪2026-09-10⟫ ONE DOOR: sourceSelectionMarkFor answers for whichever selector was asked for — the
@@ -1633,7 +1635,7 @@ const moduleFunction =
 						const { hit } = promptIdentifierScanLib.scanSurfaces({ compiledScan: args.compiledPromptScan, surfaceTextByName: surfaceTextByName() });
 						return hit === null
 							? ''
-							: refuse.byName({ moduleName, what: `prompt identifier scan hit for subject ${subjectStableId}: pattern '${hit.patternName}' matched '${hit.matchedText}' in the ${hit.surfaceName}`, where: 'a CEDS identifier must never reach the judge (SPEC-sifStructuralBridge-replacement §9 A19); remove it from the source text or the rendering, never from the scan' }).message;
+							: refuse.byName({ moduleName, what: `prompt identifier scan hit for subject ${subjectStableId}: pattern '${hit.patternName}' matched '${hit.matchedText}' in the ${hit.surfaceName}`, where: 'a hub identifier must never reach the judge (SPEC-sifStructuralBridge-replacement §9 A19); remove it from the source text or the rendering, never from the scan' }).message;
 					};
 					const judgeOneTask = (oneTask, taskIndex, taskDone) => {
 						const subjectNode = args.subjectNodeByStableId[oneTask.baseRecord.subjectStableId];
@@ -1740,7 +1742,7 @@ const moduleFunction =
 								return;
 							}
 							const decoratedPool = candidatePool.map((oneSeat) => (hookState.nominatedByStableId[oneSeat.card.stableId] !== undefined ? { ...oneSeat, nominatedBy: bridgeDeclaration.bridgeName, nominationRationale: hookState.nominatedByStableId[oneSeat.card.stableId] } : oneSeat));
-							const question = evidenceRendererLib.renderQuestion({ sourceElement, candidatePool: decoratedPool, globalGuidanceList, perCandidateNoteByStableId: hookState.perCandidateNoteByStableId, promptSegmentList: hookState.promptSegmentList, judgePromptVariant, renderingAllowList: bridgeDeclaration.renderingAllowList, blindingNameList: bridgeDeclaration.blindingDeclaration });
+							const question = { ...evidenceRendererLib.renderQuestion({ sourceElement, candidatePool: decoratedPool, globalGuidanceList, perCandidateNoteByStableId: hookState.perCandidateNoteByStableId, promptSegmentList: hookState.promptSegmentList, judgePromptVariant, renderingAllowList: bridgeDeclaration.renderingAllowList, blindingNameList: bridgeDeclaration.blindingDeclaration }), toolCandidateNoun };
 							if (question.error) {
 								taskDone(question.error.message);
 								return;

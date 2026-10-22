@@ -96,7 +96,7 @@ const anthropicWith = (envelopeList) => {
 		},
 	});
 };
-const TEXT_RERANK_OPTIONS = { systemPrompt: 's', userPrompt: 'Which candidate? [1] Person Birth Date', choiceEnum: ['1', 'NONE'], predicateRule: 'categoryTable-v1' };
+const TEXT_RERANK_OPTIONS = { systemPrompt: 's', userPrompt: 'Which candidate? [1] Person Birth Date', choiceEnum: ['1', 'NONE'], predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' };
 
 // ---- jev: the real client over its scripted transport (pick, then relation)
 process.env.SPEND_CLIENTS_GATE_JEV_KEY = 'test-key-not-real';
@@ -129,7 +129,7 @@ const JEV_CHOICE_QUESTION = {
 	instructionText: 'Which candidate element has the same meaning as the source element?',
 	criteriaByChoice: { NONE: 'None of them.', 1: { name: 'Has Organization Identifier' }, 2: { name: 'Learning Resource Identifier' } },
 };
-const jevRerankOptions = (predicateRule) => ({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', '2', 'NONE'], predicateRule, choiceQuestion: JEV_CHOICE_QUESTION, choiceQuestionFormName: 'matchingInstructionsState' });
+const jevRerankOptions = (predicateRule) => ({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', '2', 'NONE'], predicateRule, toolCandidateNoun: 'CEDS candidate', choiceQuestion: JEV_CHOICE_QUESTION, choiceQuestionFormName: 'matchingInstructionsState' });
 
 const caseList = [
 	(done) => {
