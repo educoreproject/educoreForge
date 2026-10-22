@@ -722,7 +722,7 @@ const inventoryGateVerbGates = ({ standardsDatabase, driveGoldEvalCheck, realAct
 
 const goldEvalCheckGates = ({ standardsDatabase, cleanManifestRefId, debugManifestRefId, forgeOnlyManifestRefId, twoJudgeManifestRefId, missingToolManifestRefId, otherJudgeManifestRefId, finish }) => {
 	harness.section('SECTION 4 — (f) the VERB -goldEvalCheck: a bridged recipe without the sibling REFUSES BY NAME; with it, PASS/REFUSED by the audit');
-	const bridgedRunDirPath = runDirFor({ recipeName: 'fourWithHubEdfiBridge' }); // recipes/fourWithHubEdfiBridge.recipe.jsonc declares ONE bridge
+	const bridgedRunDirPath = runDirFor({ recipeName: 'fourWithHubEdfiDerived' }); // recipes/fourWithHubEdfiDerived.recipe.jsonc declares ONE bridge (zeroBacklog D2-2: the crosswalk recipe fourWithHubEdfiBridge went to codeAttic)
 	const forgeOnlyRunDirPath = runDirFor({ recipeName: 'fourWithHub' }); // recipes/fourWithHub.recipe.jsonc declares bridges: []
 	// ⟪JOB 6b⟫ the fixtures get the conservation artifacts a real build writes. BOTH manifests driven
 	// against the bridged directory are minted; the forge-only manifest is minted into its OWN directory.
@@ -764,7 +764,7 @@ const goldEvalCheckGates = ({ standardsDatabase, cleanManifestRefId, debugManife
 				// total rose 45 → 54 while this witness vanished, which is how a healthy aggregate hides a
 				// missing member. Restored on BOTH surviving PASS payloads, counts READ from the recipes.
 				harness.ok('    … and the bridge declaration is STATED on the payload (recipe known)', cleanPayload.bridgeDeclaration && cleanPayload.bridgeDeclaration.known === true, JSON.stringify(cleanPayload.bridgeDeclaration));
-				harness.equal('    … with the count the BRIDGED recipe actually declares (read from the recipe, not a literal)', cleanPayload.bridgeDeclaration && cleanPayload.bridgeDeclaration.bridgeCount, declaredBridgeCountOf('fourWithHubEdfiBridge'));
+				harness.equal('    … with the count the BRIDGED recipe actually declares (read from the recipe, not a literal)', cleanPayload.bridgeDeclaration && cleanPayload.bridgeDeclaration.bridgeCount, declaredBridgeCountOf('fourWithHubEdfiDerived'));
 				// ⟪JOB 6b NEGATIVE⟫ WITHOUT THIS, THE PASS ABOVE IS A SILENCE. Strip ONE artifact and the same
 				// CLEAN manifest must refuse BY NAME — proof the audit reads these files rather than passing
 				// because nothing looked. Restored immediately so later assertions see the fixture intact.
