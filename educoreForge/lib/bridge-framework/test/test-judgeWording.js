@@ -15,6 +15,9 @@
 //   (e) no CEDS literal is left in the judge path's code (string literals of selectCandidateSchema.js and bridge-framework.js)
 //   (f) every tool-sending provider and the debug judge REFUSE a rerank that names no toolCandidateNoun, by name, and never
 //       answer it (BRONZE_CROWN condition (a)); stubbed transports, no network
+//   (g) ⟪zeroBacklog lane D, D2-6, 2026-10-22; DAWN_STREAM's unchecked R4 item⟫ JEV refuses it too: a COMPLETE choiceQuestion
+//       (so the noun check is the only one left to fire) with no toolCandidateNoun is refused by name and never posted; its twin
+//       (the refusal removed, in memory) answers, so the conjunct is observed red
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -149,5 +152,33 @@ const nounRefusalRe = /toolCandidateNoun is undefined; it is the hub's noun for 
 	}
 	harness.ok(`${providerLabel}: a rerank with no toolCandidateNoun is refused by name`, nounRefusalRe.test(outcomeText), outcomeText.slice(0, 240));
 });
+
+harness.section('(g) Jev refuses a rerank with no noun, by name, with a complete choiceQuestion, and never posts it');
+const { loadBuildJsDouble } = require('./testSupport/bridgeTwinFactories');
+const JEV_CLIENT_PATH = path.join(BRIDGE_MAKER_LIB_DIR, 'jevJudgeClient.js');
+const JEV_TEST_KEY_VARIABLE_NAME = 'JUDGE_WORDING_TEST_JEV_KEY';
+process.env[JEV_TEST_KEY_VARIABLE_NAME] = 'test-key-not-real';
+const jevIniPath = scratchIniPath('jevJudge.ini', ['[jevJudge]', 'endpointHostName=api.example.invalid', 'endpointPath=/v1/systemone', 'wireModel=jev-1.13.0', `apiKeyEnvironmentVariableName=${JEV_TEST_KEY_VARIABLE_NAME}`, 'maxConcurrency=1', 'requestTimeoutMs=1000', 'maxAttempts=1', 'requestForm=data', 'strongMinConfidence=0.8', 'moderateMinConfidence=0.5', 'relationInstructionText=How does the source element relate?', 'exactMatchDescription=Exact.', 'closeMatchDescription=Close.', 'broadMatchDescription=Broad.', 'narrowMatchDescription=Narrow.'].join('\n'));
+const JEV_FORM_NAME = 'matchingInstructionsState'; // the instruction form: its split question carries no questionFormName stamp
+const JEV_CHOICE_QUESTION = Object.freeze({
+	stateObject: { sourceElement: { name: 'School Identifier', description: 'The identifier of a school.' } },
+	instructionText: 'Which candidate element has the same meaning as the source element?',
+	criteriaByChoice: { NONE: 'None of the candidate elements has the same meaning.', 1: { name: 'School Identifier', domainName: 'Organization' }, 2: { name: 'Learning Resource Identifier', domainName: 'Learning Resource' } },
+});
+const jevNounOutcomeFor = (mutationList) => {
+	const postedPayloadList = [];
+	const jevLib = mutationList.length === 0 ? require(JEV_CLIENT_PATH) : loadBuildJsDouble({ buildJsPath: JEV_CLIENT_PATH, mutationList });
+	const jevProvider = jevLib({ configFilePath: jevIniPath, componentOverrides: { postOnce: ({ payload }, postCallback) => { postedPayloadList.push(payload); postCallback('', { statusCode: 200, responseBody: { answers: { matchingCandidate: { type: 'choice', choice: '1', confidence: 0.9, probabilities: { 1: 0.9, 2: 0.05, NONE: 0.05 } } }, usage: { input_tokens: 1, output_tokens: 1 } }, responseText: '{}' }); }, retryNote: () => {} } });
+	let outcomeText = 'never called back';
+	jevProvider.rerank({ choiceQuestion: JEV_CHOICE_QUESTION, choiceQuestionFormName: JEV_FORM_NAME, choiceEnum: ['1', '2', 'NONE'], predicateRule: 'categoryTable-v1' }, (rerankError, clientReturn) => {
+		outcomeText = rerankError ? String(rerankError) : `ANSWERED (choice ${clientReturn.choice})`;
+	});
+	return { refused: nounRefusalRe.test(outcomeText) && postedPayloadList.length === 0, detail: `${outcomeText.slice(0, 200)}; posted ${postedPayloadList.length}` };
+};
+const jevVerdict = jevNounOutcomeFor([]);
+harness.ok('jev: a rerank with a complete choiceQuestion and no toolCandidateNoun is refused by name, nothing posted', jevVerdict.refused, jevVerdict.detail);
+const jevTwinVerdict = jevNounOutcomeFor([{ find: '		if (nounRefusalReason) {', replace: '		if (false) {' }]);
+harness.ok("jev: observed RED under 'nounRefusalRemoved' (the same question is then posted)", !jevTwinVerdict.refused, jevTwinVerdict.detail);
+harness.note(`RED-OBSERVED g_jevNounRefused twin='nounRefusalRemoved' → ${jevTwinVerdict.refused ? 'STILL PASSING' : 'FAIL'}: ${jevTwinVerdict.detail}`);
 
 harness.report();
