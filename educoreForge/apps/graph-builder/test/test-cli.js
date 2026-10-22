@@ -655,8 +655,10 @@ const pcValidateWithOverlay = runCli(['-validate', '--recipePath=' + pcRecipePat
 harness.equal('-validate of a new-form edfi→ctdl dev recipe WITH the overlay exits 0', pcValidateWithOverlay.status, 0);
 harness.ok('  and its verdict is valid, its one bridge edfi->ctdl', (parsedStdout(pcValidateWithOverlay) || {}).valid === true && /bridges:\s+1\s+\[edfi->ctdl\]/.test(pcValidateWithOverlay.stdout + pcValidateWithOverlay.stderr), pcValidateWithOverlay.stdout + pcValidateWithOverlay.stderr);
 const pcValidateWithoutOverlay = runCli(['-validate', '--recipePath=' + pcRecipePath]);
-harness.equal('-validate of the same recipe WITHOUT the overlay exits 1', pcValidateWithoutOverlay.status, 1);
-harness.match('  refused at load: the shipped tree declares no edfi→ctdl pair', pcValidateWithoutOverlay.stdout + pcValidateWithoutOverlay.stderr, /does not pair with hub\(s\) \[ctdl\]/);
+// ⟪zeroBacklog B3⟫ the shipped tree declares edfi→ctdl now, so the recipe validates without the overlay too. The proof that the overlay
+// reaches the load (the file it reads) is test-recipeBridgeExpansion (e): standardBridgingFor names the OVERLAY file.
+harness.equal('-validate of the same recipe WITHOUT the overlay exits 0 (B3 ships the pair)', pcValidateWithoutOverlay.status, 0);
+harness.ok('  and its verdict is valid, its one bridge edfi->ctdl, from the shipped row', (parsedStdout(pcValidateWithoutOverlay) || {}).valid === true && /bridges:\s+1\s+\[edfi->ctdl\]/.test(pcValidateWithoutOverlay.stdout + pcValidateWithoutOverlay.stderr), pcValidateWithoutOverlay.stdout + pcValidateWithoutOverlay.stderr);
 const pcValidateGoldenOverlay = runCli(['-validate', '--recipePath=' + goldenFixturePath, '--bridgingOverlayDirPath=' + pcOverlayDirPath]);
 harness.match('-validate refuses the overlay for a golden recipe too', pcValidateGoldenOverlay.stderr, /graphBuilder -validate: --bridgingOverlayDirPath is a test\/scratch seam and recipe .* is kind "golden"/);
 harness.match('-help documents --embeddingCacheOnly', helpRun.stdout, /--embeddingCacheOnly=true\|false/);

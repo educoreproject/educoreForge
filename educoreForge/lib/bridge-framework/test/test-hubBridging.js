@@ -125,7 +125,8 @@ const hubSourceFileList = ['ceds', 'ctdl'].map((hubToken) => fs.readFileSync(pat
 harness.equal('no hub module or hub-framework file reads a HubBridging module', hubSourceFileList.filter((sourceText) => /HubBridging\b/.test(sourceText) && /require\([^)]*HubBridging/.test(sourceText)).length, 0);
 
 harness.section('(f) CTDL: each value equals today\'s CTDL-targeting plugin');
-const ctdlEntryList = towardHub(ctdlHubBridging.hubToken);
+// ⟪zeroBacklog B3⟫ the DECLARED bridges toward CTDL: B3's derived bridges toward it carry no declared target rules
+const ctdlEntryList = towardHub(ctdlHubBridging.hubToken).filter((oneEntry) => oneEntry.bridgeDeclaration.matchBasis === 'declared');
 harness.equal('declared target rules = the declared CTDL plugin\'s (one plugin)', `${ctdlEntryList.length} ${ctdlEntryList.every((oneEntry) => sameText(oneEntry.bridgeDeclaration.declaredTargetRuleList, ctdlHubBridging.declaredTargetRuleList))}`, '1 true');
 
 harness.section('(g) no hub literal in the framework files');

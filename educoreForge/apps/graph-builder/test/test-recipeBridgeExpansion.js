@@ -139,7 +139,8 @@ harness.ok('an undeclared facet is refused', /facet "Nope" is not declared by 't
 harness.ok('a hub the facet does not pair with is refused, naming the declared hubs', /facet "Codes" does not pair with hub\(s\) \[huby\]; it declares \[hubx\]/.test(refusalText([{ source: 'toy', hubs: ['huby'], facet: 'Codes', dependencies: ['toy'] }])));
 harness.ok('a source with no bridging file is refused', /no bridging file for 'nobody'/.test(refusalText([{ source: 'nobody', hubs: ['hubx'], dependencies: ['nobody'] }])));
 harness.ok('every refusal in a recipe is reported, not only the first', refusalText([{ source: 'toy', hubs: [], dependencies: ['toy'] }, { source: 'nobody', hubs: ['hubx'], dependencies: ['nobody'] }]).split('\n').length === 2);
-harness.ok('the shipped tree: edfi does not pair with ctdl', /does not pair with hub\(s\) \[ctdl\]; it declares \[ceds\]/.test((recipeBridgeExpansionLib.expandRecipeBridges({ recipe: { bridges: [{ source: 'edfi', hubs: ['ceds', 'ctdl'], dependencies: ['edfi', 'ceds', 'ctdl'] }] }, standardBridgingFor: shippedStandardBridgingFor }).error || {}).message || ''));
+// ⟪zeroBacklog B3⟫ edfi pairs with ctdl now; ctdlasn still pairs with ctdl only, so it carries the shipped-tree refusal
+harness.ok('the shipped tree: ctdlasn does not pair with ceds', /does not pair with hub\(s\) \[ceds\]; it declares \[ctdl\]/.test((recipeBridgeExpansionLib.expandRecipeBridges({ recipe: { bridges: [{ source: 'ctdlasn', hubs: ['ceds', 'ctdl'], dependencies: ['ctdlasn', 'ceds', 'ctdl'] }] }, standardBridgingFor: shippedStandardBridgingFor }).error || {}).message || ''));
 const scratchDirectoryPath = fs.mkdtempSync(path.join(os.tmpdir(), `${moduleName}-`));
 const newFormRecipePath = path.join(scratchDirectoryPath, 'newForm.recipe.jsonc');
 fs.writeFileSync(newFormRecipePath, JSON.stringify({ recipeName: 'newForm', bridges: [{ source: 'edfi', hubs: ['ceds'], dependencies: ['edfi', 'ceds'] }] }));
@@ -152,7 +153,9 @@ harness.section('(e) the bridging overlay reaches the expansion (deCeds R3 P-c: 
 const PC_OVERLAY_DIR_PATH = path.join(__dirname, 'fixtures', 'deCedsPcOverlay');
 const pcRecipePath = path.join(scratchDirectoryPath, 'pcEdfiCtdl.recipe.jsonc');
 fs.writeFileSync(pcRecipePath, JSON.stringify({ recipeName: 'pcEdfiCtdl', kind: 'dev', bridges: [{ source: 'edfi', hubs: ['ctdl'], dependencies: ['edfi', 'ctdl'] }] }));
-harness.ok('without the overlay, edfi→ctdl is refused at load (the shipped tree declares no such pair)', /does not pair with hub\(s\) \[ctdl\]/.test(recipeLib.loadRecipe(pcRecipePath, { forgesDirPath: FORGES_DIR_PATH }).error || ''));
+// ⟪zeroBacklog B3⟫ the shipped tree declares the pair now, so the recipe expands without the overlay too; the overlay's proof is the
+// file it read (standardBridgingFor, below)
+harness.equal('without the overlay, edfi→ctdl expands from the shipped row (B3)', JSON.stringify((recipeLib.loadRecipe(pcRecipePath, { forgesDirPath: FORGES_DIR_PATH }).recipe || {}).bridges), JSON.stringify([{ source: 'edfi', hub: 'ctdl', bridge: 'edfiCtdlDerivedPlugin', dependencies: ['edfi', 'ctdl'] }]));
 const overlaidLoad = recipeLib.loadRecipe(pcRecipePath, { forgesDirPath: FORGES_DIR_PATH, bridgingOverlayDirPath: PC_OVERLAY_DIR_PATH });
 harness.equal('with the overlay, it expands to the bridge the overlaid registry registers', JSON.stringify((overlaidLoad.recipe || {}).bridges || overlaidLoad.error), JSON.stringify([{ source: 'edfi', hub: 'ctdl', bridge: 'edfiCtdlDerivedPlugin', dependencies: ['edfi', 'ctdl'] }]));
 const overlaidFound = pluginRegistryLib.standardBridgingFor({ forgesDirPath: FORGES_DIR_PATH, standardKey: 'edfi', bridgingOverlayDirPath: PC_OVERLAY_DIR_PATH });

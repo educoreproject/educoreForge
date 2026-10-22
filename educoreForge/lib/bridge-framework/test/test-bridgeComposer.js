@@ -63,6 +63,8 @@ const digestFilePath = typeof baselineDirectoryPath === 'string' ? path.join(bas
 harness.ok('graphBuilder.ini [noRebuildProof] baselineDirectoryPath holds pluginDigestsAtR3Start.json', digestFilePath !== '' && fs.existsSync(digestFilePath), `got ${JSON.stringify(baselineDirectoryPath)}; there is no default and the gate does not skip`);
 
 const registry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: FORGES_DIR_PATH });
+// ⟪zeroBacklog B3⟫ the ten judged bridges toward the CTDL hub (one pair row per standard bridging file, added one commit at a time)
+const ZERO_BACKLOG_B3_BRIDGE_NAME_LIST = Object.freeze(['edfi', 'sif260928', 'pescCollegeTranscript1v8v0', 'pescCollegeTranscript1v7v0', 'pescHighSchoolTranscript1v6v0', 'pescTestScoreReport1v1v0', 'pescLearningRecord1v0v0', 'pescDocumentRequest1v0v0', 'pescDocumentResponse1v0v0', 'pescAcademicEportfolio1v0v0'].map((bridgeNameStem) => `${bridgeNameStem}CtdlDerivedPlugin`));
 const sha256Hex = (text) => crypto.createHash('sha256').update(text).digest('hex');
 
 if (digestFilePath !== '' && fs.existsSync(digestFilePath)) {
@@ -74,7 +76,8 @@ if (digestFilePath !== '' && fs.existsSync(digestFilePath)) {
 		const nowText = entry === undefined ? (RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName] !== undefined ? `RETIRED: ${RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName]}` : 'NOT REGISTERED') : `${entry.standardKey} → ${entry.targetHub} ${sha256Hex(entry.declarationCanonicalText)} hooks[${Object.keys(entry.bridgeHooks).sort().join(',')}]`;
 		harness.equal(`${bridgeName}${entry !== undefined && entry.pluginFilePath !== path.join(TREE_ROOT, was.pluginFile) ? ' (now composed from ' + path.relative(TREE_ROOT, entry.pluginFilePath) + ')' : ''}`, nowText, RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName] !== undefined && entry === undefined ? `RETIRED: ${RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName]}` : `${was.standardKey} → ${was.targetHub} ${was.declarationDigest} hooks[${was.hookNameList.join(',')}]`);
 	});
-	harness.equal('no bridge registered now that was not registered at the start', Object.keys(registry.entryByBridgeName).filter((bridgeName) => atStart[bridgeName] === undefined).join(','), '');
+	// ⟪zeroBacklog B3⟫ the ONLY bridges added since the R3 start are B3's judged bridges toward the CTDL hub, one per standard bridging file
+	harness.equal('no bridge registered now that was not registered at the start, except B3\'s derived bridges toward ctdl', Object.keys(registry.entryByBridgeName).filter((bridgeName) => atStart[bridgeName] === undefined && !(ZERO_BACKLOG_B3_BRIDGE_NAME_LIST.indexOf(bridgeName) !== -1 && registry.entryByBridgeName[bridgeName].targetHub === 'ctdl')).join(','), '');
 }
 
 harness.section('(b) every frozen bridgeName is registered or retired by name');
@@ -171,12 +174,13 @@ const PC_OVERLAY_DIR_PATH = path.join(TREE_ROOT, 'apps', 'graph-builder', 'test'
 const overlaidRegistry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: FORGES_DIR_PATH, bridgingOverlayDirPath: PC_OVERLAY_DIR_PATH });
 const pcEntry = overlaidRegistry.entryByBridgeName.edfiCtdlDerivedPlugin;
 harness.ok('the overlay registers edfiCtdlDerivedPlugin, targeting ctdl', pcEntry !== undefined && pcEntry.targetHub === 'ctdl');
-harness.equal('the shipped registry does NOT have it', registry.entryByBridgeName.edfiCtdlDerivedPlugin, undefined);
+// ⟪zeroBacklog B3⟫ the pairing ships now; the overlay's own ctdl row (cosine retrieval, a narrowed allow-list) stays the fixture's
+harness.ok('the shipped registry has it too, since B3 (its own row, not the overlay\'s)', registry.entryByBridgeName.edfiCtdlDerivedPlugin !== undefined && registry.entryByBridgeName.edfiCtdlDerivedPlugin.declarationCanonicalText !== pcEntry.declarationCanonicalText);
 const cedsAnchorList = hubBridgingLoaderLib.loadHubBridging({ forgesDirPath: FORGES_DIR_PATH, hubToken: 'ceds' }).hubBridging.sourceAnchorBlindingNameList;
 const ctdlAnchorList = hubBridgingLoaderLib.loadHubBridging({ forgesDirPath: FORGES_DIR_PATH, hubToken: 'ctdl' }).hubBridging.sourceAnchorBlindingNameList;
 harness.equal('its blinding is the union: crossRefs, then every hub edfi pairs with (ceds, ctdl)', JSON.stringify(pcEntry && pcEntry.bridgeDeclaration.blindingDeclaration), JSON.stringify(['crossRefs'].concat(cedsAnchorList, ctdlAnchorList)));
 harness.equal('its identifier scan is the CTDL hub\'s own', JSON.stringify(pcEntry && pcEntry.bridgeDeclaration.promptIdentifierScan), JSON.stringify({ identifierPatternList: hubBridgingLoaderLib.loadHubBridging({ forgesDirPath: FORGES_DIR_PATH, hubToken: 'ctdl' }).hubBridging.promptIdentifierScan.identifierPatternList, identifierListPath: null }));
-harness.equal('every shipped bridge is byte-identical beside it (the overlay copy keeps edfi→ceds exact)', Object.keys(registry.entryByBridgeName).filter((bridgeName) => overlaidRegistry.entryByBridgeName[bridgeName] === undefined || overlaidRegistry.entryByBridgeName[bridgeName].declarationCanonicalText !== registry.entryByBridgeName[bridgeName].declarationCanonicalText).join(','), '');
+harness.equal('every other shipped bridge is byte-identical beside it (the overlay copy keeps edfi→ceds exact)', Object.keys(registry.entryByBridgeName).filter((bridgeName) => bridgeName !== 'edfiCtdlDerivedPlugin' && (overlaidRegistry.entryByBridgeName[bridgeName] === undefined || overlaidRegistry.entryByBridgeName[bridgeName].declarationCanonicalText !== registry.entryByBridgeName[bridgeName].declarationCanonicalText)).join(','), '');
 const overlayRefusalFor = (bridgingOverlayDirPath) => {
 	try {
 		pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: FORGES_DIR_PATH, bridgingOverlayDirPath });
