@@ -259,6 +259,11 @@ OPTIONS
                            qualifies, FREEZES the result to the decision store, and materializes it.
                            This is the only mode that spends LLM credit; the framework never embeds
                            (no Voyage) and there is no reranking pre-pass.
+                           A PAIR token <source>:<hub> (e.g. --rebridge=edfi:ctdl) rebridges only that
+                           pairing of a source the recipe pairs with more than one hub; the other
+                           pairing materialises its frozen block untouched. A bare <source> keeps its
+                           meaning (every pairing of it). A pair token that is malformed, names a hub the
+                           recipe does not mint, or names no bridge of the recipe is REFUSED by name.
      --useDebugJudge[=<rule>]
                            Answer this run's judgments MECHANICALLY instead of asking the real
                            reranker, so the whole bridging chain can be exercised at ZERO Opus cost.

@@ -949,7 +949,15 @@ const resolveRebridge = (deps) => {
 
 // pairInRebridgeScope — is THIS pairing to run the inference pre-pass? The scope match happens HERE, where
 // the recipe pair is known, not guessed inside the plugin (§6 no-silent-default). 'all' rebridges every pair;
-// an array rebridges a pair whose source token is named (case-insensitive).
+// an array rebridges a pair whose source token is named (case-insensitive). ⟪zeroBacklog B3, ruling Q-B3-1⟫ A PAIR
+// token <source>:<hub> rebridges only the pairing of that source with that hub (the expanded recipe bridge carries
+// its hub), so a source paired with two hubs can be judged toward one while the other's frozen block materialises
+// untouched; a bare token keeps its meaning (every pairing of that source). rebridgeScopeRefusalFor checks the pair
+// tokens against the recipe before anything runs. This file is OUTSIDE the decision blocks' frameworkFingerprint
+// (code fact: decisionBlock.js FINGERPRINT_ROOT_LIST names lib/bridge-framework and the bridge-maker app only), so
+// this scope moves no block id.
+const REBRIDGE_PAIR_TOKEN_SEPARATOR = ':';
+const rebridgePairPartListOf = (oneToken) => `${oneToken}`.toLowerCase().split(REBRIDGE_PAIR_TOKEN_SEPARATOR);
 const pairInRebridgeScope = (rebridgeScope, bridge) => {
 	if (rebridgeScope === 'all') {
 		return true;
@@ -958,7 +966,36 @@ const pairInRebridgeScope = (rebridgeScope, bridge) => {
 		return false;
 	}
 	const source = `${bridge.source}`.toLowerCase();
-	return rebridgeScope.some((oneToken) => `${oneToken}`.toLowerCase() === source);
+	const hub = `${bridge.hub}`.toLowerCase();
+	return rebridgeScope.some((oneToken) => {
+		const partList = rebridgePairPartListOf(oneToken);
+		return partList.length === 1 ? partList[0] === source : partList[0] === source && partList[1] === hub;
+	});
+};
+
+// rebridgeScopeRefusalFor — '' or the refusal for a pair token the recipe cannot honour: malformed (not exactly
+// <source>:<hub>, both non-empty), naming a hub the recipe does not mint, or naming no bridge of the recipe (it would
+// rebridge nothing, silently). Bare tokens and 'all' keep today's behaviour and are not checked here.
+const rebridgeScopeRefusalFor = ({ rebridgeScope, bridgeList, hubTokenList }) => {
+	if (!Array.isArray(rebridgeScope)) {
+		return '';
+	}
+	const pairTokenList = rebridgeScope.filter((oneToken) => `${oneToken}`.indexOf(REBRIDGE_PAIR_TOKEN_SEPARATOR) !== -1);
+	for (let tokenIndex = 0; tokenIndex < pairTokenList.length; tokenIndex++) {
+		const oneToken = pairTokenList[tokenIndex];
+		const partList = rebridgePairPartListOf(oneToken);
+		if (partList.length !== 2 || partList[0] === '' || partList[1] === '') {
+			return `graphBuilder build: --rebridge token '${oneToken}' is not <source>:<hub> (a bare <source> scopes every pairing of that source). It was NOT corrected.`;
+		}
+		const lowerHubTokenList = hubTokenList.map((oneHubToken) => `${oneHubToken}`.toLowerCase());
+		if (lowerHubTokenList.indexOf(partList[1]) === -1) {
+			return `graphBuilder build: --rebridge token '${oneToken}' names hub '${partList[1]}', which the recipe does not mint (its hubs: ${hubTokenList.join(', ')}).`;
+		}
+		if (!bridgeList.some((oneBridge) => pairInRebridgeScope([oneToken], oneBridge))) {
+			return `graphBuilder build: --rebridge token '${oneToken}' names no bridge of this recipe, so it would rebridge nothing. Name a pairing the recipe composes.`;
+		}
+	}
+	return '';
 };
 
 // rebridgeScopeIsActive — does the resolved scope mean a real --rebridge is happening this run (as opposed
@@ -1437,6 +1474,12 @@ const build = (recipe, deps, buildCallback) => {
 		return;
 	}
 	const rebridgeScope = rebridgeResolution.value;
+	// ⟪zeroBacklog B3⟫ a <source>:<hub> token must name a hub and a pairing this recipe has, before anything is provisioned
+	const rebridgeScopeRefusal = rebridgeScopeRefusalFor({ rebridgeScope, bridgeList: Array.isArray(recipe.bridges) ? recipe.bridges : [], hubTokenList: (Array.isArray(recipe.hubs) ? recipe.hubs : []).map((oneHub) => oneHub.standard) });
+	if (rebridgeScopeRefusal !== '') {
+		callback(rebridgeScopeRefusal);
+		return;
+	}
 	// the inferred producer's run resources — injected by the orchestrator for a real reforge (P3b):
 	// decisionStore is where a frozen decision block is read (plain build) / written (--rebridge);
 	// inferenceConfig carries the real llmClient + topK/cosineFloor for a real --rebridge. Absent for an
@@ -3013,6 +3056,7 @@ module.exports.FINISH_REPORT_LOG_FIELD_LIST = FINISH_REPORT_LOG_FIELD_LIST;
 module.exports.fidelityAttestationFaultFor = fidelityAttestationFaultFor;
 module.exports.resolveRebridge = resolveRebridge;
 module.exports.pairInRebridgeScope = pairInRebridgeScope;
+module.exports.rebridgeScopeRefusalFor = rebridgeScopeRefusalFor;
 module.exports.rebridgeScopeIsActive = rebridgeScopeIsActive;
 // the real-vs-stub reranker SELECTION seam (P3b), exported so the factory choice is gated directly: a stub is
 // used when injected, a real client is minted (via the injected/default factory) for an active --rebridge.

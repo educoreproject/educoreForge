@@ -1217,6 +1217,18 @@ const stageRebridgeWiring = () => {
 	harness.ok("pairInRebridgeScope: ['ctdl'] rebridges the ctdl pair", buildStatics.pairInRebridgeScope(['ctdl'], { source: 'ctdl' }) === true);
 	harness.ok("pairInRebridgeScope: ['lif'] does NOT rebridge the ctdl pair", buildStatics.pairInRebridgeScope(['lif'], { source: 'ctdl' }) === false);
 	harness.ok('pairInRebridgeScope: [] (default) rebridges NOTHING', buildStatics.pairInRebridgeScope([], { source: 'ctdl' }) === false);
+	// ⟪zeroBacklog B3, ruling Q-B3-1⟫ the PAIR token <source>:<hub> scopes one pairing of a source with two hubs
+	harness.ok("pairInRebridgeScope: ['edfi:ctdl'] rebridges the edfi→ctdl pair", buildStatics.pairInRebridgeScope(['edfi:ctdl'], { source: 'edfi', hub: 'ctdl' }) === true);
+	harness.ok("pairInRebridgeScope: ['edfi:ctdl'] does NOT rebridge the edfi→ceds pair", buildStatics.pairInRebridgeScope(['edfi:ctdl'], { source: 'edfi', hub: 'ceds' }) === false);
+	harness.ok("pairInRebridgeScope: a pair token matches case-insensitively, as a bare token does", buildStatics.pairInRebridgeScope(['EdFi:CTDL'], { source: 'edfi', hub: 'ctdl' }) === true);
+	harness.ok("pairInRebridgeScope: a bare ['edfi'] keeps its meaning: BOTH edfi pairs", buildStatics.pairInRebridgeScope(['edfi'], { source: 'edfi', hub: 'ctdl' }) === true && buildStatics.pairInRebridgeScope(['edfi'], { source: 'edfi', hub: 'ceds' }) === true);
+	const scopeRecipeBridgeList = [{ source: 'edfi', hub: 'ceds' }, { source: 'edfi', hub: 'ctdl' }, { source: 'ctdlasn', hub: 'ctdl' }];
+	const scopeRefusalFor = (rebridgeScope) => typeof buildStatics.rebridgeScopeRefusalFor !== 'function' ? 'rebridgeScopeRefusalFor is not exported' : buildStatics.rebridgeScopeRefusalFor({ rebridgeScope, bridgeList: scopeRecipeBridgeList, hubTokenList: ['ceds', 'ctdl'] });
+	harness.equal('rebridgeScopeRefusalFor: a pair token naming a recipe pairing is admitted', scopeRefusalFor(['edfi:ctdl', 'ctdlasn']), '');
+	harness.equal("rebridgeScopeRefusalFor: 'all' and the empty scope are admitted", `${scopeRefusalFor('all')}|${scopeRefusalFor([])}`, '|');
+	harness.match('rebridgeScopeRefusalFor: a pair token naming a hub the recipe does not mint is REFUSED by name', scopeRefusalFor(['edfi:nohub']), /--rebridge token 'edfi:nohub' names hub 'nohub', which the recipe does not mint \(its hubs: ceds, ctdl\)/);
+	harness.match('rebridgeScopeRefusalFor: a pair token naming no recipe pairing is REFUSED by name (it would rebridge nothing)', scopeRefusalFor(['ctdlasn:ceds']), /--rebridge token 'ctdlasn:ceds' names no bridge of this recipe/);
+	['edfi:', ':ctdl', 'edfi:ctdl:ceds'].forEach((malformedToken) => harness.match(`rebridgeScopeRefusalFor: a malformed pair token '${malformedToken}' is REFUSED by name`, scopeRefusalFor([malformedToken]), /is not <source>:<hub>/));
 
 	// THE PRODUCER DECLARES ITS KIND: an inferred producer that wrote NO edges (no frozen block yet) still
 	// returns producer:'inferred', so build.js names the empty block _close — NOT _exact, which would collide
