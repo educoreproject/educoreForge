@@ -54,6 +54,8 @@ const forgeFrameworkLib = require(path.join(FRAMEWORK_DIR_PATH, 'forge-framework
 const { DME_ROLES, EDGE_TYPES } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 const sifForgeDeclaration = require('../lib/sifForgeDeclaration');
 const sifHooks = require('../lib/sifHooks')();
+// ⟪R5 S2⟫ the SIF hooks normalize CEDS anchors through the kit's hubAnchorValue, which refuses without the forger's map
+const { hubAnchorPrefixByHubToken } = require(path.join(__dirname, '..', '..', '..', 'apps', 'graph-builder', 'apps', 'forger', 'forger')).hubAnchorPrefixByHubTokenFor();
 
 const SNAPSHOT_PATH = path.join(__dirname, '..', 'assets', 'standardSourceData', '01');
 const DERIVATION_FILE_PATH = path.join(FRAMEWORK_DIR_PATH, 'embedTextDerivation.js');
@@ -215,7 +217,7 @@ const TWIN_LIST = Object.freeze([
 // forgeWith — the real hooks, a (possibly cloned) declaration, a (possibly compiled-with-mutations) framework
 const forgeWith = ({ forgeDeclaration, mutationList }, callback) => {
 	const frameworkFactory = mutationList.length ? moduleDouble.loadWithMutations({ modulePath: FORGE_FRAMEWORK_FILE_PATH, mutationList }) : forgeFrameworkLib;
-	const bundle = frameworkFactory({ embedder: null }).injectStandardHooks({ forgeDeclaration, hooks: sifHooks });
+	const bundle = frameworkFactory({ embedder: null, hubAnchorPrefixByHubToken }).injectStandardHooks({ forgeDeclaration, hooks: sifHooks });
 	bundle.forge({ sourcePath: SNAPSHOT_PATH, owner: moduleName, skipEmbedding: true }, callback);
 };
 
