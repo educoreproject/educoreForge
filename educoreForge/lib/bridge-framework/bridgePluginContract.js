@@ -492,9 +492,9 @@ const validateBridgeTarget = ({ bridgeTarget } = {}) => {
 	if (!isPlainObject(bridgeTarget)) {
 		return refuse.byName({ moduleName, what: `bridgeTarget is ${bridgeTarget === null ? 'null' : `a ${typeof bridgeTarget}`}`, where: 'a plugin file exports bridgeTarget = { targetHub: <the hub standard token> } beside bridgeDeclaration and bridgeHooks' });
 	}
-	const unknownKey = Object.keys(bridgeTarget).find((oneName) => BRIDGE_TARGET_KEY_LIST.indexOf(oneName) === -1);
-	if (unknownKey !== undefined) {
-		return refuse.byName({ moduleName, what: `bridgeTarget carries unknown key '${unknownKey}'`, where: `BRIDGE_TARGET_CONTRACT names ${listAsText(BRIDGE_TARGET_KEY_LIST)}` });
+	const unknownBridgeTargetPropertyName = Object.keys(bridgeTarget).find((oneName) => BRIDGE_TARGET_KEY_LIST.indexOf(oneName) === -1);
+	if (unknownBridgeTargetPropertyName !== undefined) {
+		return refuse.byName({ moduleName, what: `bridgeTarget carries unknown key '${unknownBridgeTargetPropertyName}'`, where: `BRIDGE_TARGET_CONTRACT names ${listAsText(BRIDGE_TARGET_KEY_LIST)}` });
 	}
 	const faultReason = KIND_CHECKER_REGISTRY[BRIDGE_TARGET_CONTRACT.targetHub.kind](bridgeTarget.targetHub, BRIDGE_TARGET_CONTRACT.targetHub);
 	if (faultReason) {
