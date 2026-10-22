@@ -98,6 +98,11 @@ frameworkFingerprint substituted, never by sha) and `apps/graph-builder/tools/hu
 
 ---
 
+**Which property names a hub's version.** On a built graph the `:HubDefinition` carries its hub's release in `version`
+(measured on GOLD_EVAL_261021_ctdlHub, 2026-10-22, zeroBacklog lane D: `"14.0.0.0"` and `"Release 20260327"`). There is no
+`hubVersion` property; a query for it reads NULL for every hub, which is how deCeds P-c's green Cypher came to report none.
+The query: `MATCH (h:HubDefinition) RETURN h.hubName, h.version`.
+
 ## History
 
 

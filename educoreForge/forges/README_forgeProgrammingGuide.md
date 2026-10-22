@@ -42,6 +42,22 @@ the `mappingInstruction` key names `cedsOriginalAnchorPropertyName` and `cedsOpt
 id. They wait for a controlled re-key batched with P9 (`DEFERRED-rekey-102126.md` rows D1, D3); write them exactly as
 the existing declarations do.
 
+**Following a new release of a standard (the version-follow method; ctdlHub P10, recorded 2026-10-22 by zeroBacklog lane D).**
+A new release goes in as a NEW snapshot directory beside the old one (`assets/standardSourceData/02` beside `01`), pinned by
+`defaultSnapshot` in the bundle's `parserDescriptor.ini`. The new snapshot is gated by two things: its own round trip
+against its own source (invented 0, lost 0, omitted 0), and a written change record that explains every forged difference
+from the previous snapshot, edge for edge, with none unexplained (P10's is
+`system/management/zNotesPlansDocs/ctdlHub-101926/CHANGES-ctdlFamily-01to02-102126.md`). Any older oracle, such as the July
+port oracle that `apps/graph-builder/tools/oracleDiff.js` compares against, keeps gating the snapshot it was made for. It is
+not taught to accept a new release's removals: a release that drops edges is explained in its change record, not by an
+allowance that would outlive its reason.
+
+**Replay graphs carry `notRun` forge attestations, by design.** A graph built by `-replay` (or any materialise from stored
+blocks) forges nothing, so its channel-A forge gates (`fidelity`, `roundTrip`, `forgeCensus`) are written with the verdict
+`notRun`, never `pass`. A `-build` of the same manifest and a replay of it differ there, and in `frameworkFingerprintBasis`,
+and nowhere else (measured at ctdlHub P8). Read `notRun` as "this graph did not run that gate", never as a failure and never as
+a pass; the certificate for the forged content is the build that produced the blocks.
+
 Audience: a competent JS programmer who has never seen this codebase. Every factual claim below is
 grounded in code read in the working tree of `educoreForge/system/code/educoreForge` (branch
 `architecture-improvement`, 2026-07-30, including the SIF sequence-capture work) — file paths are
