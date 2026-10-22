@@ -9,6 +9,11 @@
 //
 // THE IRI FORM. The PESC_LD rows write CURIEs (ceterms:name) and the CTDL term cards carry termIri in the same CURIE form
 // (measured on DEV_p5TwoHubs, 2026-10-21), so the transform is identity; no namespace is expanded here.
+//
+// ⟪zeroBacklog lane C, 2026-10-22⟫ THE HUB'S RULES DECIDE SCOPE AND KEY FORM. A declared-identity bridge now carries the target hub's
+// declaredTargetRuleList (stableIdTemplate rules only): a subject key no rule matches is OUT OF THE HUB'S SCOPE (counted, never an
+// orphan); a key a rule matches is filled into the template and looked up as a term card's termIri. The rule below is a copy of the
+// CTDL hub's own (forges/ctdl/lib/ctdlHubBridging.js), which a composed bridge takes 'fromHub'; this legacy-form fixture states it.
 
 const path = require('path');
 const vocabularyLib = require(path.join(__dirname, '..', '..', '..', '..', '..', '..', '..', 'vocabulary', 'vocabulary'));
@@ -66,6 +71,7 @@ const bridgeDeclaration = Object.freeze({
 			citation: 'Each application-profile row names its property by IRI in propertyID; a row whose propertyID is ceterms:<term> USES that CTDL term as its own property, the same IRI. Identity of IRI is the assertion; it is not a judgment of meaning.',
 		},
 	},
+	declaredTargetRuleList: [{ ruleKind: 'stableIdTemplate', pattern: '^(ceterms:[A-Za-z][A-Za-z0-9_]*)$', stableIdTemplate: '{1}' }],
 	evidenceColumnMap: { subject: [], assertion: [] },
 	consistencyCheckColumnList: [],
 	segmentNormalisationRuleList: [],

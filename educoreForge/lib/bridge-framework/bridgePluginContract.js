@@ -98,6 +98,9 @@ const PRODUCER_KIND_BY_MATCH_BASIS = Object.freeze({ standard: 'authored', cross
 //                              is refused by name in STEP 7 rather than asked, so zero judge calls is enforced, not hoped for
 //   declaredTargetRuleListPresence ⟪ctdlHub P6⟫ 'required' | 'forbidden': whether the declaration carries declaredTargetRuleList
 //                              (the namespace expansion rule a declared bridge resolves its raw targets by)
+//   declaredTargetRuleKindList ⟪zeroBacklog lane C, 2026-10-22⟫ the rule kinds (declaredTargetResolution.js) the basis admits, or null
+//                              where the list is forbidden: every kind for 'declared' (a base node, or a member reached from one);
+//                              stableIdTemplate alone for 'declaredIdentity' (its target is a term card's termIri, never a member)
 //   objectReferenceTier        ⟪ctdlHub P6⟫ the tier of hub card a match edge of this basis may reach (the write seam reads it):
 //                              property for the hub-card bases, term for declared identity; null where the object is no card
 // ---------------------------------------------------------------------
@@ -115,6 +118,7 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		edgeShapeKind: 'skosMatchToHubCard',
 		admitsJudgment: true,
 		declaredTargetRuleListPresence: 'forbidden',
+		declaredTargetRuleKindList: null,
 		objectReferenceTier: 'property',
 		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
 		forbiddenHookNameList: EMPTY_NAME_LIST,
@@ -130,6 +134,7 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		edgeShapeKind: 'skosMatchToHubCard',
 		admitsJudgment: true,
 		declaredTargetRuleListPresence: 'forbidden',
+		declaredTargetRuleKindList: null,
 		objectReferenceTier: 'property',
 		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
 		forbiddenHookNameList: EMPTY_NAME_LIST,
@@ -145,6 +150,7 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		edgeShapeKind: 'skosMatchToHubCard',
 		admitsJudgment: true,
 		declaredTargetRuleListPresence: 'forbidden',
+		declaredTargetRuleKindList: null,
 		objectReferenceTier: 'property',
 		// A derived plugin has NO hooks at all. There is no document to walk, and a graph-sourced subject IS its
 		// own stableId, so a subjectStableIdFor that returned anything but identity would be resolving a question
@@ -162,6 +168,9 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 	// ⟪ctdlHub P6, WORKORDER-P6 step 2⟫ the spoke's term IRI, walked off its forged node, joined on the target hub's TERM cards
 	// (termIriIndex: the cards of referenceTier 'term', keyed by termIri). Documentary in every other respect: the source
 	// names the target, so every record is specified or orphan, and nothing is judged.
+	// ⟪zeroBacklog lane C, 2026-10-22; BRONZE_CROWN ruling, option A⟫ the HUB's declaredTargetRuleList (stableIdTemplate rules) decides
+	// scope and key form: a subject key no rule matches is out of the hub's scope (counted, never an orphan); a matched key is filled
+	// into the template and that is the termIri joined. So one standard facet, reading the source's own term form, pairs with any hub.
 	declaredIdentity: Object.freeze({
 		walkChannelSourceKind: 'forgedGraph',
 		subjectGroupProducerKind: 'walkAssertion',
@@ -169,7 +178,8 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		targetKeyTupleField: 'termIri',
 		edgeShapeKind: 'skosMatchToHubCard',
 		admitsJudgment: false,
-		declaredTargetRuleListPresence: 'forbidden',
+		declaredTargetRuleListPresence: 'required',
+		declaredTargetRuleKindList: Object.freeze(['stableIdTemplate']),
 		objectReferenceTier: 'term',
 		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
 		forbiddenHookNameList: EMPTY_NAME_LIST,
@@ -189,6 +199,7 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		edgeShapeKind: 'declaredCorrespondenceToBaseNode',
 		admitsJudgment: false,
 		declaredTargetRuleListPresence: 'required',
+		declaredTargetRuleKindList: Object.freeze(Object.keys(declaredTargetResolutionLib.DECLARED_TARGET_RULE_KIND_REGISTRY)),
 		objectReferenceTier: null,
 		requiredHookNameList: DOCUMENTARY_REQUIRED_HOOK_NAME_LIST,
 		forbiddenHookNameList: EMPTY_NAME_LIST,
@@ -197,7 +208,7 @@ const SOURCE_ACQUISITION_REGISTRY = Object.freeze({
 		admitsMaterialisationFanout: false,
 	}),
 });
-const SOURCE_ACQUISITION_ROW_KEY_LIST = Object.freeze(['walkChannelSourceKind', 'subjectGroupProducerKind', 'poolProducerKind', 'requiredHookNameList', 'forbiddenHookNameList', 'requiredDeclarationKeyList', 'forbiddenDeclarationKeyList', 'admitsMaterialisationFanout', 'targetKeyTupleField', 'edgeShapeKind', 'admitsJudgment', 'declaredTargetRuleListPresence', 'objectReferenceTier']);
+const SOURCE_ACQUISITION_ROW_KEY_LIST = Object.freeze(['walkChannelSourceKind', 'subjectGroupProducerKind', 'poolProducerKind', 'requiredHookNameList', 'forbiddenHookNameList', 'requiredDeclarationKeyList', 'forbiddenDeclarationKeyList', 'admitsMaterialisationFanout', 'targetKeyTupleField', 'edgeShapeKind', 'admitsJudgment', 'declaredTargetRuleListPresence', 'declaredTargetRuleKindList', 'objectReferenceTier']);
 const SUBJECT_GROUP_PRODUCER_KIND_LIST = Object.freeze(['walkAssertion', 'graphLabel']);
 const POOL_PRODUCER_KIND_LIST = Object.freeze(['canonicalKeyIndex', 'vectorRetrieval', 'termIriIndex', 'declaredTargetIndex']);
 const EDGE_SHAPE_KIND_LIST = Object.freeze(['skosMatchToHubCard', 'declaredCorrespondenceToBaseNode']);
@@ -532,9 +543,10 @@ const BRIDGE_DECLARATION_CONTRACT = Object.freeze({
 	tupleFieldColumnMap: Object.freeze({ required: false, basisConditional: true, kind: 'tupleFieldColumnMap' }),
 	predicateSource: Object.freeze({ required: true, kind: 'predicateSource' }),
 	// ⟪ctdlHub P6⟫ the namespace expansion rule of a declared bridge, as DATA (R-7): how a raw target the source wrote resolves to
-	// a base node of the target standard. Required by matchBasis 'declared', forbidden by every other basis.
-	// Its presence is the acquisition row's declaredTargetRuleListPresence (required on 'declared', forbidden on every other
-	// basis), checked in validateBridgeDeclaration's cross-key rules, so the walk treats it as optional.
+	// a base node of the target standard. ⟪zeroBacklog lane C⟫ For declared identity, how a subject's term key maps to a term card's
+	// termIri, and which keys are the hub's at all. Its presence is the acquisition row's declaredTargetRuleListPresence (required on
+	// 'declared' and 'declaredIdentity', forbidden on every other basis) and its rule kinds the row's declaredTargetRuleKindList,
+	// both checked in validateBridgeDeclaration's cross-key rules, so the walk treats it as optional.
 	declaredTargetRuleList: Object.freeze({ optional: true, kind: 'declaredTargetRuleList' }),
 	subjectSource: Object.freeze({ required: false, basisConditional: true, kind: 'subjectSource' }),
 	candidateRetrieval: Object.freeze({ required: false, basisConditional: true, kind: 'candidateRetrieval' }),
@@ -1487,6 +1499,12 @@ const validateBridgeDeclaration = ({ bridgeDeclaration, bundleDirPath } = {}) =>
 	}
 	if (ruleListPresence === 'forbidden' && bridgeDeclaration.declaredTargetRuleList !== undefined) {
 		return refuseWith(`bridgeDeclaration carries declaredTargetRuleList, which matchBasis '${bridgeDeclaration.matchBasis}' FORBIDS`, 'only a declared bridge resolves targets to base nodes by rule; the key would be read by nothing');
+	}
+	// ⟪zeroBacklog lane C⟫ a rule kind the basis does not admit is refused by name (declared identity: stableIdTemplate alone)
+	const admittedRuleKindList = SOURCE_ACQUISITION_REGISTRY[bridgeDeclaration.matchBasis].declaredTargetRuleKindList;
+	const unadmittedRuleIndex = admittedRuleKindList === null || bridgeDeclaration.declaredTargetRuleList === undefined ? -1 : bridgeDeclaration.declaredTargetRuleList.findIndex((oneRule) => admittedRuleKindList.indexOf(oneRule.ruleKind) === -1);
+	if (unadmittedRuleIndex !== -1) {
+		return refuseWith(`bridgeDeclaration declaredTargetRuleList rule ${unadmittedRuleIndex} ruleKind '${bridgeDeclaration.declaredTargetRuleList[unadmittedRuleIndex].ruleKind}', which matchBasis '${bridgeDeclaration.matchBasis}' does not admit`, `the basis admits ${admittedRuleKindList.join(', ')} (SOURCE_ACQUISITION_REGISTRY declaredTargetRuleKindList)`);
 	}
 	// judgmentPartition (phase B4p): it splits the instance list fan-out reads, so it requires fan-out (phase B4a), and
 	// through it the acquisition row's admission; its label renders only if the subject allow-list names the line it

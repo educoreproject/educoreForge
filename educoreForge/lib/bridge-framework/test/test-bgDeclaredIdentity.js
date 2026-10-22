@@ -14,8 +14,16 @@
 //   f  a target resolving to TWO term cards is refused by name (admitsJudgment false) rather than handed to a judge
 //   g  the contract: a declaredIdentity tupleFieldColumnMap must name termIri, and may not name canonicalKey; a standard plugin may
 //      not name termIri
+//   ⟪zeroBacklog lane C, 2026-10-22: the hub's rules decide scope and key form⟫
+//   h  a subject whose key no rule of the hub matches (a pesc: row) is OUT OF SCOPE: no record, no orphan; counted and listed in the
+//      run report's counts.outOfHubScopeList, with the 16 in-scope rows still specified
+//   i  the contract: a declaredIdentity bridge REQUIRES declaredTargetRuleList, and admits only stableIdTemplate rules (a
+//      memberByNotation rule addresses a base node's member, never a term card: refused by name)
+//   j  the composer composes a declaredIdentity facet: bridgeName <stem><Hub>DeclaredIdentity, the hub's rules 'fromHub'
+//   k  a rule maps the subject key to the card key: a rule whose template rewrites the key (a CURIE to a full IRI) is what is joined
 // RED TWINS: (b) under 'termIriIndexJoinsOnCanonicalKey' (the pool keyed by the wrong field) every row orphans; (d)/(f) under
-// 'admitsJudgmentGuardRemoved' the two-card target reaches the judge.
+// 'admitsJudgmentGuardRemoved' the two-card target reaches the judge; (h) under 'outOfScopeFallsThroughToOrphan' an out-of-scope
+// key reaches the join and orphans; (i) under 'memberByNotationAdmitted' the rule-kind admission no longer refuses.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -88,6 +96,13 @@ const POOL_JOIN_FIND = "const cardListByCanonicalKey = classificationLib.makeCar
 const POOL_JOIN_REPLACE = "const cardListByCanonicalKey = classificationLib.makeCardListByJoinField({ cardList: termCardList.filter((oneCard) => typeof oneCard.canonicalKey === 'string'), joinFieldName: 'canonicalKey' });";
 const JUDGMENT_GUARD_FIND = 'if (acquisitionRow.admitsJudgment === false && args.judgedTaskList.length > 0) {';
 const JUDGMENT_GUARD_REPLACE = 'if (false && args.judgedTaskList.length > 0) {';
+// ⟪zeroBacklog lane C⟫ the scope gate removed: a key no rule matches falls through to the join, and orphans
+const SCOPE_GATE_FIND = 'if (resolved.ruleIndex === -1) {\n\t\t\t\t\t\t\t\toutOfScopeRawTargetSet.add(rawTarget);';
+const SCOPE_GATE_REPLACE = 'if (false) {\n\t\t\t\t\t\t\t\toutOfScopeRawTargetSet.add(rawTarget);';
+// ⟪zeroBacklog lane C⟫ the rule-kind admission removed: a memberByNotation rule is admitted on declared identity
+const CONTRACT_FILE_PATH = path.join(__dirname, '..', 'bridgePluginContract.js');
+const RULE_KIND_GATE_FIND = 'bridgeDeclaration.declaredTargetRuleList.findIndex((oneRule) => admittedRuleKindList.indexOf(oneRule.ruleKind) === -1);';
+const RULE_KIND_GATE_REPLACE = 'bridgeDeclaration.declaredTargetRuleList.findIndex((oneRule) => false && admittedRuleKindList.indexOf(oneRule.ruleKind) === -1);';
 
 const judgeResolution = (result) => {
 	const text = failureTextOf(result);
@@ -136,7 +151,7 @@ conjunct('d_zeroJudgeCalls', (done) => toyBridgeScenario.runScenario(scenarioFor
 	const judgedList = block ? block.decisionRecordList.filter((oneRecord) => oneRecord.resolution === 'judged') : [];
 	done({
 		pass: block !== null && judgedList.length === 0 && result.stores.judgmentCache.getCallCount === 0 && block.header.judgeKind === 'none',
-		detail: `${failureTextOf(result)} judged records ${judgedList.length}; judgment cache get() ${result.stores.judgmentCache.getCallCount}; header.judgeKind ${block ? block.header.judgeKind : '?'}`,
+		detail: `${failureTextOf(result)} judged records ${judgedList.length}; judgment cache get() ${result.stores ? result.stores.judgmentCache.getCallCount : '(no run)'}; header.judgeKind ${block ? block.header.judgeKind : '?'}`,
 	});
 }));
 
@@ -145,7 +160,7 @@ conjunct('e_unresolvedIriIsANamedOrphan', (done) => {
 	toyBridgeScenario.runScenario(scenarioFor({ graph: fixtureGraph({ extraRowList: [absentRow] }) }), (unusedError, result) => {
 		const block = failureTextOf(result) ? null : frozenBlockOf(result);
 		const orphanList = block ? block.decisionRecordList.filter((oneRecord) => oneRecord.classification === 'orphan') : [];
-		const named = orphanList.length === 1 && JSON.stringify(orphanList[0].targetCanonicalKeyList) === JSON.stringify(['ceterms:termAddedAfter20260327']) && orphanList[0].subjectStableId === rowNodeFor(absentRow).stableId;
+		const named = orphanList.length === 1 && JSON.stringify(orphanList[0].targetCanonicalKeyList) === JSON.stringify(['ceterms:termAddedAfter20260327']) && orphanList[0].subjectStableId === rowNodeFor(absentRow).stableId && orphanList[0].reason === 'noCardUnderKey';
 		const specifiedCount = block ? block.decisionRecordList.filter((oneRecord) => oneRecord.resolution === 'specified').length : 0;
 		done({ pass: named && specifiedCount === ROW_FIXTURE.rowCount, detail: `${failureTextOf(result)} orphans ${JSON.stringify(orphanList.map((oneRecord) => ({ subject: oneRecord.subjectStableId, target: oneRecord.targetCanonicalKeyList, reason: oneRecord.reason })))}; specified ${specifiedCount}` });
 	});
@@ -159,7 +174,7 @@ const twoCardScenario = (frameworkMutationList) => {
 };
 const judgeTwoCardRefusal = (result) => {
 	const text = failureTextOf(result);
-	return { pass: /matchBasis 'declaredIdentity' produced \d+ judged task\(s\)/.test(text) && result.stores.judgmentCache.getCallCount === 0, detail: `${text || 'NOT REFUSED'}; judgment cache get() ${result.stores.judgmentCache.getCallCount}` };
+	return { pass: /matchBasis 'declaredIdentity' produced \d+ judged task\(s\)/.test(text) && result.stores !== undefined && result.stores.judgmentCache.getCallCount === 0, detail: `${text || 'NOT REFUSED'}; judgment cache get() ${result.stores ? result.stores.judgmentCache.getCallCount : '(no run)'}` };
 };
 conjunct('f_twoCardTargetRefusedNotJudged', (done) => toyBridgeScenario.runScenario(twoCardScenario([]), (unusedError, result) => done(judgeTwoCardRefusal(result))));
 
@@ -177,8 +192,84 @@ conjunct('g_contractJoinFieldByBasis', (done) => {
 	});
 });
 
+const outOfScopeConjunct = (frameworkMutationList) => (done) => {
+	const outOfScopeRowList = [
+		{ shape: 'CollegeTranscript', shapeID: 'CollegeTranscriptShape', propertyID: 'pesc:createdDateTime', propertyLabel: 'Created Date Time', valueClass: '' },
+		{ shape: 'Note', shapeID: 'NoteShape', propertyID: 'elm:noteLiteral', propertyLabel: 'Note literal', valueClass: '' },
+	];
+	toyBridgeScenario.runScenario(scenarioFor({ graph: fixtureGraph({ extraRowList: outOfScopeRowList }), frameworkMutationList }), (unusedError, result) => {
+		const block = failureTextOf(result) ? null : frozenBlockOf(result);
+		const recordList = block ? block.decisionRecordList : [];
+		const outOfScopeSubjectSet = new Set(outOfScopeRowList.map((oneRow) => rowNodeFor(oneRow).stableId));
+		const recordsOnOutOfScope = recordList.filter((oneRecord) => outOfScopeSubjectSet.has(oneRecord.subjectStableId));
+		const listed = result.runReport && result.runReport.counts && Array.isArray(result.runReport.counts.outOfHubScopeList) ? result.runReport.counts.outOfHubScopeList : null;
+		const listedKeyList = listed === null ? [] : listed.map((oneEntry) => `${oneEntry.rawTarget}:${oneEntry.subjectCount}`).sort();
+		const specifiedCount = recordList.filter((oneRecord) => oneRecord.resolution === 'specified').length;
+		done({
+			pass: block !== null && recordsOnOutOfScope.length === 0 && specifiedCount === ROW_FIXTURE.rowCount && JSON.stringify(listedKeyList) === JSON.stringify(['elm:noteLiteral:1', 'pesc:createdDateTime:1']),
+			detail: `${failureTextOf(result)} records on out-of-scope subjects ${recordsOnOutOfScope.length}; specified ${specifiedCount}; outOfHubScopeList ${JSON.stringify(listed)}`,
+		});
+	});
+};
+conjunct('h_outOfScopeSubjectCountedNotOrphaned', outOfScopeConjunct([]));
+
+conjunct('i_contractRulesRequiredAndTemplateOnly', (done) => {
+	const loaded = require(PLUGIN_PATH);
+	const register = (bridgeDeclaration) => pluginRegistryLib.registerPlugin({ pluginModule: { ...loaded, bridgeDeclaration }, pluginFilePath: PLUGIN_PATH, bundleDirPath: path.dirname(path.dirname(PLUGIN_PATH)) });
+	const textOf = (outcome) => (outcome.error ? outcome.error.message : 'ADMITTED');
+	const { declaredTargetRuleList, ...withoutRules } = loaded.bridgeDeclaration;
+	void declaredTargetRuleList;
+	const noRules = register(withoutRules);
+	const memberRule = register({ ...loaded.bridgeDeclaration, declaredTargetRuleList: [{ ruleKind: 'memberByNotation', pattern: '^ceterms:(\\w+)#(.+)$', containerStableIdTemplate: 'ceterms:{1}', memberEdgeType: 'HAS_VALUE', memberMatchProperty: 'notation', memberMatchGroup: 2 }] });
+	done({
+		pass: /is missing declaredTargetRuleList, which matchBasis 'declaredIdentity' REQUIRES/.test(textOf(noRules)) && /rule 0 ruleKind 'memberByNotation', which matchBasis 'declaredIdentity' does not admit/.test(textOf(memberRule)),
+		detail: `no rules: ${textOf(noRules)} | memberByNotation: ${textOf(memberRule)}`,
+	});
+});
+
+conjunct('j_composerComposesADeclaredIdentityFacet', (done) => {
+	const bridgeComposerLib = require('../bridgeComposer');
+	const ctdlHubBridging = require('../../../forges/ctdl/lib/ctdlHubBridging').hubBridging;
+	const loaded = require(PLUGIN_PATH);
+	const { bridgeName, blindingDeclaration, remodelTableRef, declaredTargetRuleList, ...declarationTemplate } = loaded.bridgeDeclaration;
+	void bridgeName; void blindingDeclaration; void remodelTableRef; void declaredTargetRuleList;
+	const standardBridging = {
+		standardKey: 'pescldfixture',
+		bridgeNameStem: 'pescldfixture',
+		facetList: [{ facetName: '', declarationTemplate, subjectRenderingAllowList: null, pairByHubToken: { ctdl: { candidateRetrieval: null, candidateRenderingAllowList: null, promptIdentifierScan: null, blindingOrder: { standardBlindingNameList: ['termIri'], pairedHubAnchors: 'union' }, hubAnchorListLength: null, declaredTargetRuleList: 'fromHub', remodelTableRef: null, hubRemodelTableListLength: null } } }],
+	};
+	const composed = bridgeComposerLib.composePluginModuleList({ standardBridging, bridgeHooksByFacetName: { '': loaded.bridgeHooks }, hubBridgingByToken: { ctdl: ctdlHubBridging }, bundleDirName: 'pescldfixture' });
+	const pluginModule = composed.pluginModuleList ? composed.pluginModuleList[0] : null;
+	const registered = pluginModule === null ? { error: new Error(String(composed.error && composed.error.message)) } : pluginRegistryLib.registerPlugin({ pluginModule, pluginFilePath: PLUGIN_PATH, bundleDirPath: path.dirname(path.dirname(PLUGIN_PATH)) });
+	done({
+		pass: pluginModule !== null && pluginModule.bridgeDeclaration.bridgeName === 'pescldfixtureCtdlDeclaredIdentity' && JSON.stringify(pluginModule.bridgeDeclaration.declaredTargetRuleList) === JSON.stringify(ctdlHubBridging.declaredTargetRuleList) && !registered.error,
+		detail: pluginModule === null ? `NOT COMPOSED: ${composed.error && composed.error.message}` : `bridgeName ${pluginModule.bridgeDeclaration.bridgeName}; rules ${JSON.stringify(pluginModule.bridgeDeclaration.declaredTargetRuleList)}; registers: ${registered.error ? registered.error.message : 'yes'}`,
+	});
+});
+
+conjunct('k_ruleTemplateRewritesTheKeyBeforeTheJoin', (done) => {
+	// the cards carry termIri as a FULL IRI here, the rows a CURIE: only a template that rewrites one into the other can join them
+	const fullIriCardList = TERM_CARD_FIXTURE.cardList.map(cloneJson).map((oneCard) => ({ ...oneCard, properties: { ...oneCard.properties, termIri: oneCard.properties.termIri.replace(/^ceterms:/, 'https://purl.org/ctdl/terms/') } }));
+	const scenario = scenarioFor({ graph: { nodeList: fullIriCardList.concat(ROW_FIXTURE.rowList.map(rowNodeFor)), edgeList: [] } });
+	const loaded = require(PLUGIN_PATH);
+	scenario.pluginModuleOverrides = { [BRIDGE_NAME]: { bridgeDeclaration: { ...loaded.bridgeDeclaration, declaredTargetRuleList: [{ ruleKind: 'stableIdTemplate', pattern: '^ceterms:([A-Za-z][A-Za-z0-9_]*)$', stableIdTemplate: 'https://purl.org/ctdl/terms/{1}' }] } } };
+	toyBridgeScenario.runScenario(scenario, (unusedError, result) => {
+		const block = failureTextOf(result) ? null : frozenBlockOf(result);
+		const specifiedCount = block ? block.decisionRecordList.filter((oneRecord) => oneRecord.resolution === 'specified').length : 0;
+		done({ pass: specifiedCount === ROW_FIXTURE.rowCount, detail: `${failureTextOf(result)} specified ${specifiedCount} of ${ROW_FIXTURE.rowCount}` });
+	});
+});
+
 const runTwinSweep = () => {
 	harness.section('THE TWIN SWEEP');
+	const ruleKindVerdictUnderMutation = () => {
+		// the contract module is read through the module double only inside a scenario run, so the admission twin edits a COPY of the
+		// declaration check by registering through a framework double built with the mutation
+		const mutatedScenario = scenarioFor({ graph: fixtureGraph(), frameworkMutationList: [{ modulePath: CONTRACT_FILE_PATH, find: RULE_KIND_GATE_FIND, replace: RULE_KIND_GATE_REPLACE }] });
+		const loaded = require(PLUGIN_PATH);
+		mutatedScenario.pluginModuleOverrides = { [BRIDGE_NAME]: { bridgeDeclaration: { ...loaded.bridgeDeclaration, declaredTargetRuleList: [{ ruleKind: 'memberByNotation', pattern: '^ceterms:(\\w+)#(.+)$', containerStableIdTemplate: 'ceterms:{1}', memberEdgeType: 'HAS_VALUE', memberMatchProperty: 'notation', memberMatchGroup: 2 }] } } };
+		return mutatedScenario;
+	};
 	toyBridgeScenario.runScenario(scenarioFor({ graph: fixtureGraph(), frameworkMutationList: [{ modulePath: FRAMEWORK_FILE_PATH, find: POOL_JOIN_FIND, replace: POOL_JOIN_REPLACE }] }), (unusedError, joinTwin) => {
 		const joinVerdict = judgeResolution(joinTwin);
 		harness.ok("(b) observed RED under 'termIriIndexJoinsOnCanonicalKey'", !joinVerdict.pass, joinVerdict.detail);
@@ -187,7 +278,17 @@ const runTwinSweep = () => {
 			const guardVerdict = judgeTwoCardRefusal(guardTwin);
 			harness.ok("(f) observed RED under 'admitsJudgmentGuardRemoved'", !guardVerdict.pass, guardVerdict.detail);
 			harness.note(`RED-OBSERVED f twin='admitsJudgmentGuardRemoved' → ${guardVerdict.detail.slice(0, 240)}`);
-			harness.report();
+			outOfScopeConjunct([{ modulePath: FRAMEWORK_FILE_PATH, find: SCOPE_GATE_FIND, replace: SCOPE_GATE_REPLACE }])((scopeVerdict) => {
+				harness.ok("(h) observed RED under 'outOfScopeFallsThroughToOrphan'", !scopeVerdict.pass, scopeVerdict.detail);
+				harness.note(`RED-OBSERVED h twin='outOfScopeFallsThroughToOrphan' → ${scopeVerdict.detail.slice(0, 240)}`);
+				toyBridgeScenario.runScenario(ruleKindVerdictUnderMutation(), (unusedKindError, kindTwin) => {
+					const kindText = failureTextOf(kindTwin);
+					const refusedByName = /ruleKind 'memberByNotation', which matchBasis 'declaredIdentity' does not admit/.test(kindText);
+					harness.ok("(i) observed RED under 'memberByNotationAdmitted'", !refusedByName, kindText || 'ADMITTED (no refusal)');
+					harness.note(`RED-OBSERVED i twin='memberByNotationAdmitted' → ${(kindText || 'ADMITTED (no refusal)').slice(0, 240)}`);
+					harness.report();
+				});
+			});
 		});
 	});
 };

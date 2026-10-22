@@ -683,7 +683,7 @@ const moduleFunction =
 										return;
 									}
 									const finish = (sssomExportPath) => {
-										const counts = { cardinalityCensus: block.header.cardinalityCensus, contentionCensus: block.header.contentionCensus, edgesWritten: materialised.edgesWritten, conflictCount: report.conflictCount, judgeSpend: report.judgeSpend, refusalCount: report.refusalList.length, discardedPredicateKeyCount: report.discardedPredicateKeyCount, ...(report.owningConstructDefinitionCoverage === null ? {} : { owningConstructDefinitionCoverage: report.owningConstructDefinitionCoverage }) };
+										const counts = { cardinalityCensus: block.header.cardinalityCensus, contentionCensus: block.header.contentionCensus, edgesWritten: materialised.edgesWritten, conflictCount: report.conflictCount, judgeSpend: report.judgeSpend, refusalCount: report.refusalList.length, discardedPredicateKeyCount: report.discardedPredicateKeyCount, ...(report.owningConstructDefinitionCoverage === null ? {} : { owningConstructDefinitionCoverage: report.owningConstructDefinitionCoverage }), ...(report.outOfHubScopeList === undefined ? {} : { outOfHubScopeList: report.outOfHubScopeList }) };
 										say(`materialised ${materialised.edgesWritten} edge(s) under ${pairScopedLabel} from block ${decisionBlockHash.slice(0, 12)}… (${mode})`);
 										const note = mode === MODE_MATERIALISE ? `replayed frozen block ${decisionBlockHash} for ${pairKey}` : `re-judged and froze block ${decisionBlockHash} for ${pairKey}`;
 										tailCallback('', { runReport: runReportFor({ decisionBlockHash, blocksDecisionBlock: { decisionBlockHash, pairKey, generation: block.header.generation }, edgesWritten: materialised.edgesWritten, counts, sssomExportPath, note, loadedConservationSummary }), writtenEdgeList: materialised.writtenEdgeList, report });
@@ -1469,8 +1469,39 @@ const moduleFunction =
 					// embedTextVote-v1 votes, paths, cardTextCosine and neighbour trace); the trace is recorded on the record as
 					// forensics and never rendered — the pool reaches the judge sorted by stableId, which is what makes the order neutral.
 					// ⟪ctdlHub P6⟫ termIriIndex — the keyed pool over the TERM cards STEP 1b indexed by termIri: the same classification
-					// as canonicalKeyIndex, record for record (specified on one card, orphan on none), so nothing about it is new but the index
-					termIriIndex: (args, next) => poolProducerByKind.canonicalKeyIndex(args, next),
+					// as canonicalKeyIndex, record for record (specified on one card, orphan on none), so nothing about it is new but the index.
+					// ⟪zeroBacklog lane C, 2026-10-22; option A⟫ the HUB'S RULES decide scope and key form. Each distinct raw key the walk named
+					// (the subject's term as its source writes it) goes through the declaration's declaredTargetRuleList, FIRST match wins:
+					//   no rule matches        OUT OF THE HUB'S SCOPE: the key is not this hub's term; its assertions leave the run, counted
+					//                          and listed in the run report's counts.outOfHubScopeList, never an orphan record
+					//   a rule matches         the filled template is the termIri looked up; the term cards under it are indexed under the
+					//                          raw key, so a key with no card is an ORPHAN (noCardUnderKey) and two cards are refused
+					// The term cards ARE the rule's target index (recordByStableId keyed by termIri): resolveDeclaredTarget is reused as is.
+					termIriIndex: (args, next) => {
+						const rawTargetList = Array.from(new Set(args.leafList.reduce((soFar, oneLeaf) => soFar.concat(oneLeaf.assertionList.reduce((leafSoFar, oneAssertion) => leafSoFar.concat(oneAssertion.targetKeyList), [])), []))).sort(compareStrings);
+						const termIriTargetIndex = { recordByStableId: args.cardList.reduce((soFar, oneCard) => ({ ...soFar, [oneCard[acquisitionRow.targetKeyTupleField]]: oneCard }), {}), memberStableIdListByContainerAndEdgeType: {} };
+						const outOfScopeRawTargetSet = new Set();
+						const indexedCardList = [];
+						rawTargetList.forEach((rawTarget) => {
+							const resolved = declaredTargetResolutionLib.resolveDeclaredTarget({ ruleList: bridgeDeclaration.declaredTargetRuleList, rawTarget, targetIndex: termIriTargetIndex });
+							if (resolved.ruleIndex === -1) {
+								outOfScopeRawTargetSet.add(rawTarget);
+								return;
+							}
+							resolved.stableIdList.forEach((termIri) => args.cardListByCanonicalKey.get(termIri).forEach((oneCard) => indexedCardList.push({ ...oneCard, declaredTarget: rawTarget })));
+						});
+						const inScopeLeafList = args.leafList
+							.map((oneLeaf) => ({ ...oneLeaf, assertionList: oneLeaf.assertionList.map((oneAssertion) => ({ ...oneAssertion, targetKeyList: oneAssertion.targetKeyList.filter((rawTarget) => !outOfScopeRawTargetSet.has(rawTarget)) })).filter((oneAssertion) => oneAssertion.targetKeyList.length > 0) }))
+							.filter((oneLeaf) => oneLeaf.assertionList.length > 0);
+						report.outOfHubScopeList = Array.from(outOfScopeRawTargetSet).sort(compareStrings).map((rawTarget) => ({
+							rawTarget,
+							subjectCount: args.leafList.filter((oneLeaf) => oneLeaf.assertionList.some((oneAssertion) => oneAssertion.targetKeyList.indexOf(rawTarget) !== -1)).length,
+						}));
+						const cardListByCanonicalKey = classificationLib.makeCardListByJoinField({ cardList: indexedCardList, joinFieldName: 'declaredTarget' });
+						const contention = censusLib.contentionCensus({ cardListByCanonicalKey, tier: graphSeamRulesLib.TERM_REFERENCE_TIER });
+						say(`declared identity: ${rawTargetList.length} distinct subject key(s); ${rawTargetList.length - outOfScopeRawTargetSet.size} in the hub's scope by its ${bridgeDeclaration.declaredTargetRuleList.length} rule(s), ${outOfScopeRawTargetSet.size} out of scope (${args.leafList.length - inScopeLeafList.length} subject(s) leave the run)`);
+						poolProducerByKind.canonicalKeyIndex({ ...args, leafList: inScopeLeafList, cardListByCanonicalKey, contention }, (poolError, pooled) => (poolError ? next(poolError) : next('', { ...pooled, contention })));
+					},
 					// ⟪ctdlHub P6⟫ declaredTargetIndex — each distinct raw target the walk named is resolved ONCE by the plugin's declared
 					// rules (declaredTargetResolution.js) against the target standard's base nodes, and the resolved nodes are indexed
 					// under that raw target; the keyed pool then classifies exactly as canonicalKeyIndex does. A raw target that resolves

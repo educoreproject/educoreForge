@@ -34,6 +34,8 @@ const BASIS_NAME_SUFFIX_BY_MATCH_BASIS = Object.freeze({
 	derived: 'DerivedPlugin',
 	standard: 'StandardPlugin',
 	declared: 'DeclaredCorrespondence',
+	// ⟪zeroBacklog lane C, 2026-10-22⟫ the composed declared-identity bridge (option A, BRONZE_CROWN ruling)
+	declaredIdentity: 'DeclaredIdentity',
 });
 const LEGACY_IDENTIFIER_LIST_PATH_TEMPLATE = Object.freeze({ directoryName: 'bridges', fileSuffix: 'IdList.json' });
 
