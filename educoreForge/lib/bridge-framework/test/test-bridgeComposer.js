@@ -80,6 +80,12 @@ if (digestFilePath !== '' && fs.existsSync(digestFilePath)) {
 	harness.equal('no bridge registered now that was not registered at the start, except B3\'s derived bridges toward ctdl', Object.keys(registry.entryByBridgeName).filter((bridgeName) => atStart[bridgeName] === undefined && !(ZERO_BACKLOG_B3_BRIDGE_NAME_LIST.indexOf(bridgeName) !== -1 && registry.entryByBridgeName[bridgeName].targetHub === 'ctdl')).join(','), '');
 }
 
+harness.section('(a2) zeroBacklog B3: all ten judged bridges toward the CTDL hub are registered, each a derived bridge carrying the hub\'s prose rule');
+harness.equal('every B3 bridge is registered, targets ctdl, is derived and carries the CTDL hub\'s renderedProseIdentifierRule', ZERO_BACKLOG_B3_BRIDGE_NAME_LIST.filter((bridgeName) => {
+	const entry = registry.entryByBridgeName[bridgeName];
+	return entry === undefined || entry.targetHub !== 'ctdl' || entry.bridgeDeclaration.matchBasis !== 'derived' || entry.bridgeDeclaration.renderedProseIdentifierRule === undefined;
+}).join(','), '');
+
 harness.section('(b) every frozen bridgeName is registered or retired by name');
 const distinctBridgeNameFilePath = typeof baselineDirectoryPath === 'string' ? path.join(baselineDirectoryPath, 'frozenPairKeyCensus', 'distinctBridgeNameAndKind.txt') : '';
 if (distinctBridgeNameFilePath !== '' && fs.existsSync(distinctBridgeNameFilePath)) {
