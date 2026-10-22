@@ -984,7 +984,15 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // paths (numstat from R4's tag; R7's only): build.js 1/1 (graph-only replay text, commit 8ec5c662); lib/bridge-framework/
 // promptIdentifierScan.js 2/2 (header comment: the scan names the target hub's identifiers; 8ec5c662); test/test-bgNosub.js (its three
 // re-anchors, this commit). No logic. frameworkFingerprint moves (a lib/bridge-framework comment); declarationDigest and every cache key do not.
-const P1_BASELINE_COMMIT = 'postHubNeutralR7SweepPescCompose-102226'; // re-anchored by DAWN_STREAM (R4; census REANCHOR-CENSUS-R4-102126.md; BRONZE_CROWN condition (e)); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (IVORY_TRAIL; zeroBacklog lane C, the declared-identity framework commit; AUTHORISED by BRONZE_CROWN, IMCS
+// f5647419) ═══ BG-COMPOSE-PESC postHubNeutralR7SweepPescCompose-102226 -> zbCDeclaredIdentityPescCompose-102226, tag cut ON this commit.
+// CENSUS over this gate's paths (numstat from R7's tag; all commit 41d46003): lib/bridge-framework/ bridge-framework.js 34/3 (the termIriIndex
+// pool maps subject keys through the hub's rules; counts.outOfHubScopeList), bridgePluginContract.js 23/5 (declaredIdentity requires
+// declaredTargetRuleList; row member declaredTargetRuleKindList), bridgeComposer.js 2/0 (suffix DeclaredIdentity); test fixture
+// pescLdFixtureCtdlDeclaredIdentityPlugin.js 6/0 (the CTDL rule) and test-bgDeclaredIdentity.js 106/5 (conjuncts h-k, twins h, i). No PESC
+// plugin, no build.js, interfaces.js, bridge-maker or lib/vocabulary/ change. declarationDigest unchanged (P-a1 16/16); frameworkFingerprint
+// moves; every CEDS cache key unchanged (P-b 0 re-keyed).
+const P1_BASELINE_COMMIT = 'zbCDeclaredIdentityPescCompose-102226'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C framework commit; BRONZE_CROWN authorised); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
