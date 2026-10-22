@@ -13,6 +13,8 @@
 //       judgeWording, read from that hub's own bridging declaration
 //   (d) the seam: the judge provider's rerank argKeys name toolCandidateNoun
 //   (e) no CEDS literal is left in the judge path's code (string literals of selectCandidateSchema.js and bridge-framework.js)
+//   (f) every tool-sending provider and the debug judge REFUSE a rerank that names no toolCandidateNoun, by name, and never
+//       answer it (BRONZE_CROWN condition (a)); stubbed transports, no network
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -118,5 +120,34 @@ const stringLiteralCedsLineList = (filePath) =>
 		.map((oneRow) => `${path.basename(filePath)}:${oneRow.lineNumber}`);
 const literalLineList = stringLiteralCedsLineList(SCHEMA_FILE_PATH).concat(stringLiteralCedsLineList(FRAMEWORK_FILE_PATH));
 harness.ok('selectCandidateSchema.js and bridge-framework.js name CEDS only in comments', literalLineList.length === 0, literalLineList.join(', '));
+
+harness.section('(f) the providers refuse a rerank with no noun, by name, and never answer it');
+const os = require('os');
+const BRIDGE_MAKER_LIB_DIR = path.join(TREE_ROOT, 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib');
+const scratchIniPath = (fileName, sectionText) => {
+	const filePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), `${moduleName}-`)), fileName);
+	fs.writeFileSync(filePath, sectionText);
+	return filePath;
+};
+const MODEL_ANSWER = Object.freeze({ choice: '1', category: 'moderate', rationale: 'stub', sourceElementIdeaList: [], candidateIdeaList: [], sortedCandidateList: ['1', '2'], ideaCoverage: { covered: [], missed: [] } });
+const llmClientFactory = require(path.join(BRIDGE_MAKER_LIB_DIR, 'llmClient'));
+const llmProvider = llmClientFactory({ configFilePath: scratchIniPath('anthropicAi.ini', '[anthropicAi]\napiKey=DUMMY-NEVER-SENT\nmodel=claude-opus-5\nmaxTokens=2000\n'), componentOverrides: { postOnce: (unusedArgs, postCallback) => postCallback('', { content: [{ type: 'tool_use', name: llmClientFactory.TOOL_NAME, input: { ...MODEL_ANSWER } }], stop_reason: 'end_turn' }, 200) } });
+let ollamaProvider = null;
+require(path.join(BRIDGE_MAKER_LIB_DIR, 'ollamaJudgeClient'))({ configFilePath: scratchIniPath('ollamaJudge.ini', '[ollamaJudge]\nendpointHostName=127.0.0.1\nendpointPortNumber=11434\nwireModel=qwen2.5:32b\nmaxConcurrency=1\nrequestTimeoutMs=180000\nnumPredict=400\n'), componentOverrides: { fetchModelTagList: (tagCallback) => tagCallback('', { models: [{ name: 'qwen2.5:32b', model: 'qwen2.5:32b', digest: '9f13ba1299afea09d9a956fc6a85becc99115a6d596fae201a5487a03bdc4368' }] }), postOnce: (unusedArgs, postCallback) => postCallback('', { message: { content: JSON.stringify(MODEL_ANSWER) }, done: true, prompt_eval_count: 1, eval_count: 1 }, 200) } }, (constructionError, constructed) => {
+	ollamaProvider = constructionError ? null : constructed;
+});
+const debugProvider = require(path.join(BRIDGE_MAKER_LIB_DIR, 'debugJudge'))({ ruleName: 'digest' });
+const nounRefusalRe = /toolCandidateNoun is undefined; it is the hub's noun for a candidate/;
+[['llmClient', llmProvider], ['ollama', ollamaProvider], ['debug judge', debugProvider]].forEach(([providerLabel, provider]) => {
+	let outcomeText = 'never called back';
+	if (provider === null) {
+		outcomeText = 'not constructed';
+	} else {
+		provider.rerank({ systemPrompt: 's', userPrompt: 'u', choiceEnum: ['1', '2', 'NONE'], predicateRule: 'categoryTable-v1', maxRetries: 1 }, (rerankError, clientReturn) => {
+			outcomeText = rerankError ? String(rerankError) : `ANSWERED (choice ${clientReturn.choice})`;
+		});
+	}
+	harness.ok(`${providerLabel}: a rerank with no toolCandidateNoun is refused by name`, nounRefusalRe.test(outcomeText), outcomeText.slice(0, 240));
+});
 
 harness.report();

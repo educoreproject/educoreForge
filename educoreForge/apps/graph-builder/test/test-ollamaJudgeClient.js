@@ -579,6 +579,7 @@ const mutableCallerEnum = ['1', '2', 'NONE'];
 const extractorOverMutableEnum = ollamaJudgeClientLib.makeJudgmentExtractor(mutableCallerEnum);
 const schemaOverMutableEnum = selectCandidateSchemaLib.renderSelectCandidateSchema('ollama', {
 	choiceEnum: mutableCallerEnum,
+	toolCandidateNoun: 'CEDS candidate',
 });
 
 // NON-VACUITY FIRST: the extractor must actually WORK over this array, or every assertion below passes
@@ -857,7 +858,7 @@ harness.equal(
 harness.equal(
 	'`format` is BYTE-IDENTICAL to renderSelectCandidateSchema("ollama"), never a schema this module wrote',
 	JSON.stringify(capturedPayload && capturedPayload.format),
-	JSON.stringify(selectCandidateSchemaLib.renderSelectCandidateSchema('ollama', { choiceEnum: CHOICE_ENUM_FIXTURE })),
+	JSON.stringify(selectCandidateSchemaLib.renderSelectCandidateSchema('ollama', { choiceEnum: CHOICE_ENUM_FIXTURE, toolCandidateNoun: 'CEDS candidate' })),
 );
 harness.equal(
 	'…and the category enum on the wire equals the FULL contract enum (abstain category included), DERIVED in this assertion (2026-09-10)',

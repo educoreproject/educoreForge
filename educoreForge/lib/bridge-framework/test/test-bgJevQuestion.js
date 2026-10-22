@@ -222,9 +222,9 @@ harness.equal('the ten shipped judgeSlot plugins declare what was ruled: Ed-Fi a
 harness.section('(e) THE IDENTIFIER SCAN READS THE SPLIT QUESTION');
 const { compiledScan } = promptIdentifierScanLib.compileScan({ scanDeclaration: { identifierPatternList: [{ patternName: 'cedsPropertyId', regexSource: 'P\\d{6}' }] }, identifierList: null });
 const leakingRendered = renderedOrNull(renderInputFor({ judgePromptVariant: NEW_VARIANT_NAME, owningConstructDefinition: `${SURVEY_DEFINITION} See P000206.`, owningConstructDefinitionAbsentReason: null }));
-const leakScan = leakingRendered ? promptIdentifierScanLib.scanSurfaces({ compiledScan, surfaceTextByName: promptIdentifierScanLib.questionSurfaceTextByName({ predicateRule: 'judgeSlot-v1', question: leakingRendered }) }) : { hit: null };
+const leakScan = leakingRendered ? promptIdentifierScanLib.scanSurfaces({ compiledScan, surfaceTextByName: promptIdentifierScanLib.questionSurfaceTextByName({ predicateRule: 'judgeSlot-v1', question: { ...leakingRendered, toolCandidateNoun: 'CEDS candidate' } }) }) : { hit: null };
 harness.equal('an identifier in the owning definition is a hit, on the choiceQuestionText surface (no text prompt carries it)', leakScan.hit && `${leakScan.hit.surfaceName}:${leakScan.hit.matchedText}`, 'choiceQuestionText:P000206');
-const cleanScan = promptIdentifierScanLib.scanSurfaces({ compiledScan, surfaceTextByName: promptIdentifierScanLib.questionSurfaceTextByName({ predicateRule: 'judgeSlot-v1', question: newRendered }) });
+const cleanScan = promptIdentifierScanLib.scanSurfaces({ compiledScan, surfaceTextByName: promptIdentifierScanLib.questionSurfaceTextByName({ predicateRule: 'judgeSlot-v1', question: { ...newRendered, toolCandidateNoun: 'CEDS candidate' } }) });
 harness.equal('the clean question has no hit', cleanScan.hit, null);
 
 harness.section('(f) END TO END THROUGH THE FRAMEWORK: A TOY judgeSlot-v1 RUN RESOLVES EACH SUBJECT\'S OWNER');

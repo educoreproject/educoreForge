@@ -969,7 +969,17 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // test-bgDecl 12/10, bgJevQuestion 19/17, bgSubjectDiscriminator 8/6, bgReg 5/3, bgDerived 4/4, bgQualifier 2/1, bgJudgeSlot 2/1,
 // bgJudgeConfig 1/1, bgPromptScan 1/1, bgSiblingDeclarations 1/1. No build.js, interfaces.js or lib/vocabulary/ change. Every composed
 // declarationDigest equals the plugin's (test-bridgeComposer (a)); frameworkFingerprint MOVES (R3 edits framework source).
-const P1_BASELINE_COMMIT = 'postHubNeutralR3ComposePescCompose-102126'; // re-anchored by DAWN_STREAM (R3; census REANCHOR-CENSUS-R3-102126.md; pre-authorised by BRONZE_CROWN); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (DAWN_STREAM; R4 hub-declared judge wording; BRONZE_CROWN condition (e): ONE coupled re-anchor for
+// interfaces.js) ═══ BG-COMPOSE-PESC postHubNeutralR3ComposePescCompose-102126 -> postHubNeutralR4JudgeWordingPescCompose-102126, tag
+// cut ON this commit. CENSUS over this gate's paths (numstat from R3's tag; all R4's, commits 958be236 and b76e450d):
+// interfaces.js 4/2 (rerank argKeys + toolCandidateNoun); bridge-maker/lib selectCandidateSchema.js 46/16 (the noun-taking renders),
+// llmClient.js 11/4, ollamaJudgeClient.js 9/3, debugJudge.js 9/3, jevJudgeClient.js 8/2 (read and refuse the noun); lib/bridge-framework/
+// bridgePluginContract.js 13/0 (bridgeTarget.judgeWording), bridge-framework.js 5/3, judgeConfigRecord.js 5/4, promptIdentifierScan.js
+// 5/4, pluginRegistry.js 4/2, bridgeComposer.js 2/1, judgeComponent.js 1/1; test fixtures toyCrosswalk/toyDerived/toyStandard and
+// pescLdFixture 2/1 each (judgeWording); tests test-judgeWording.js 153/0 (new), bgJudgeConfig 5/5, bgJudgePredicate 7/7, bgJudgeSlot
+// 7/7, bgPromptScan 4/3 (twin re-anchors), bgJevQuestion 2/2 (the scan's question carries the noun, this commit). No build.js, no lib/vocabulary/, no PESC plugin. declarationDigest unchanged (P-a1);
+// frameworkFingerprint moves; every CEDS cache key unchanged (P-b option (i): 0 re-keyed).
+const P1_BASELINE_COMMIT = 'postHubNeutralR4JudgeWordingPescCompose-102126'; // re-anchored by DAWN_STREAM (R4; census REANCHOR-CENSUS-R4-102126.md; BRONZE_CROWN condition (e)); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
