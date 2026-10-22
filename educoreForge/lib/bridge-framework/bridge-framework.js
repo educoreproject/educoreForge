@@ -1479,7 +1479,8 @@ const moduleFunction =
 					// The term cards ARE the rule's target index (recordByStableId keyed by termIri): resolveDeclaredTarget is reused as is.
 					termIriIndex: (args, next) => {
 						const rawTargetList = Array.from(new Set(args.leafList.reduce((soFar, oneLeaf) => soFar.concat(oneLeaf.assertionList.reduce((leafSoFar, oneAssertion) => leafSoFar.concat(oneAssertion.targetKeyList), [])), []))).sort(compareStrings);
-						const termIriTargetIndex = { recordByStableId: args.cardList.reduce((soFar, oneCard) => ({ ...soFar, [oneCard[acquisitionRow.targetKeyTupleField]]: oneCard }), {}), memberStableIdListByContainerAndEdgeType: {} };
+						// built in one pass: a hub's term tier runs to tens of thousands of cards, and a spread per card would be quadratic
+						const termIriTargetIndex = { recordByStableId: Object.fromEntries(args.cardList.map((oneCard) => [oneCard[acquisitionRow.targetKeyTupleField], oneCard])), memberStableIdListByContainerAndEdgeType: {} };
 						const outOfScopeRawTargetSet = new Set();
 						const indexedCardList = [];
 						rawTargetList.forEach((rawTarget) => {
