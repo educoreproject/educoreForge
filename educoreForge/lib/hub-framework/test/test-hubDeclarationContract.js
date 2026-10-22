@@ -262,7 +262,7 @@ harness.match(
 
 harness.section('H1 DECLARATION — ⟪ctdlHub P3⟫ tierList, rangeAddressing, rootFieldNames, embedTextTemplateByTier');
 const withDeclared = (overrideObject) => Object.assign({}, liveDeclaration, overrideObject);
-harness.equal('CONTROL: CEDS declares exactly the two tiers it minted before P3 (its term tier is P9)', JSON.stringify(liveDeclaration.tierList), JSON.stringify(['property', 'value']));
+harness.equal('CONTROL: CEDS declares the term tier as well as the two it minted before P3 (turned on in P9)', JSON.stringify(liveDeclaration.tierList), JSON.stringify(['term', 'property', 'value']));
 harness.equal('CONTROL: CEDS declares singleRangeSlot (the pre-P3 range rule)', liveDeclaration.rangeAddressing, 'singleRangeSlot');
 harness.equal(
 	'CONTROL: a CTDL-shaped declaration (term tier, rangeAsMeaning, a term template) is ADMITTED',
@@ -293,12 +293,12 @@ harness.match(
 harness.match('an UNKNOWN root field name is REFUSED', declarationRefusalFor(withDeclared({ rootFieldNames: Object.assign({}, liveDeclaration.rootFieldNames, { releaseDate: 'x' }) })), /unknown root field name 'releaseDate'/);
 harness.match(
 	'a template MISSING for a declared tier is REFUSED (every tier composes from its own declared template)',
-	declarationRefusalFor(withDeclared({ tierList: ['term', 'property', 'value'] })),
+	declarationRefusalFor(withDeclared({ embedTextTemplateByTier: (({ term: omittedTemplate, ...restTemplateMap }) => restTemplateMap)(liveDeclaration.embedTextTemplateByTier) })),
 	/has no template for declared tier 'term'/,
 );
 harness.match(
 	'a template for an UNDECLARED tier is REFUSED',
-	declarationRefusalFor(withDeclared({ embedTextTemplateByTier: Object.assign({}, liveDeclaration.embedTextTemplateByTier, { term: [['termName']] }) })),
+	declarationRefusalFor(withDeclared({ tierList: liveDeclaration.tierList.filter((oneTier) => oneTier !== 'term') })),
 	/template for tier 'term', which tierList does not declare/,
 );
 harness.match(
