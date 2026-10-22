@@ -368,7 +368,7 @@ const moduleFunction =
 				let crossRefsForNode;
 
 				// CEDS cross-ref (annotated fields only): canonicalize to P###### through the KIT's own
-				// cedsAnchorValue, which is byte-identical to the bespoke normalize.normalizeCedsCrossRef
+				// hubAnchorValue (the CEDS hub's declared prefix table), which is byte-identical to the bespoke normalize.normalizeCedsCrossRef
 				// — VERIFIED by reading both before this file was written: the same last-digit-run regex
 				// /(\d+)(?!.*\d)/, the same 'P' prefix for kind 'property', the same padStart(6, '0').
 				// The kit REFUSES a present-but-unnormalizable anchor by name where the bespoke threw

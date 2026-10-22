@@ -1130,7 +1130,7 @@ and the reviewer freezes a NEW fixture; the gate compares EQUAL, never approxima
 
 ## 11. The SIF plugin — the sketch and the composability proof ⟨RULING P5–P7, R9, R10⟩ ⟨IMPL §2⟩
 
-`forges/sif/bridges/sifCedsStandardPlugin.js` — `matchBasis: standard`, `producerKind: authored`. The
+`forges/sif/bridges/sifCedsStandardPlugin.js` ⟪since deCeds R3, 2026-10-21: composed from `forges/sif/bridges/sifBridging.js` and the CEDS hub's `forges/ceds/lib/cedsHubBridging.js`; the bridgeName `sifCedsStandardPlugin` is derived by rule — `forges/README_bridgeProgrammingGuide.md`⟫ — `matchBasis: standard`, `producerKind: authored`. The
 standard supplies ONLY the join key ⟨IMPL §2.1⟩: `[code fact]` `forges/sif/lib/parser.js:19,97` reads
 `CEDS ID` (column 6) → `cedsId`, ALREADY normalised to `P######` by `normalizeCedsCrossRef` and stamped
 with `crossRefs` — a JSON STRING, `[code fact]` `forgeSif.js:355` `crossRefs: JSON.stringify(...)` — and

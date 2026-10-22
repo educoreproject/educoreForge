@@ -202,7 +202,7 @@ TERMS
                     and counts. The framework satisfies this contract unchanged; the graph builder
                     was not modified.
      kit            the set of utensils the framework hands the cook: makeNode, addEdge,
-                    emitOptionValue, carriedProperties, crossRefsJson, cedsAnchorValue,
+                    emitOptionValue, carriedProperties, crossRefsJson, hubAnchorValue,
                     isCleanStableId, searchTextElementFor, rootStableId.
      compatibility  a named row, keyed by an id from the Profile's punch list, that licenses one
      declaration    known departure from the Profile while a forge is migrated byte-identically.
@@ -217,7 +217,7 @@ WHAT A FORGE SUPPLIES
      (equal to the descriptor's standardName), standardDisplayName, stableUriPropertyName,
      stableIdPattern ({ pattern, trimmed } -- the real predicate, as data), rootStableIdFrom and
      rootStableId, rootLabel, parserVersion, mappingInstruction (six keys, fixed order -- the JSON
-     string is a byte of the block), nonEmbeddableRoleList, cedsAnchorAbsentSentinelList,
+     string is a byte of the block), nonEmbeddableRoleList, hubAnchorAbsentSentinelList,
      additionalSourceInputList, compatibilityDeclarationList. Ed-Fi's is 71 lines.
 
      The hooks (lib/<std>Hooks.js) are functions the framework calls:

@@ -11,7 +11,7 @@
 // WHAT MOVED TO THE FRAMEWORK (SPEC §8.2, byte-identical — block aea6d8dfe789…): the constants
 // (→ lib/edfiForgeDeclaration.js), makeNode / addEdge / registerStableId / isCleanStableId /
 // searchTextElementFor / normalizeCedsCrossRef / carriedScalars' scalar copy (→ kit.makeNode,
-// kit.addEdge, kit.isCleanStableId, kit.searchTextElementFor, kit.cedsAnchorValue,
+// kit.addEdge, kit.isCleanStableId, kit.searchTextElementFor, kit.hubAnchorValue,
 // kit.carriedProperties, kit.crossRefsJson, kit.emitOptionValue), the ROOT (→ rootNode.js from the
 // declaration + describeRoot), the dangling-endpoint terminal check and the structural finalizer
 // (→ buildContractGraph's integrity pass). What remains is Ed-Fi: the registries, the identity rule,

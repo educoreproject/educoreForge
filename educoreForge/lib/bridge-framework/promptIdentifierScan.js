@@ -4,7 +4,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // promptIdentifierScan.js — the IN-RUN blinding scan (SPEC-sifStructuralBridge-replacement §9 A14/A19; PLAN
 // small phases §3 B1). Before a judged subject's question reaches the judge, every text the judge would be shown
-// is scanned for a CEDS identifier, and ONE hit refuses the whole run by name, naming the subject and the pattern.
+// is scanned for an identifier of the bridge's target hub, and ONE hit refuses the whole run by name, naming the subject and the pattern.
 //
 //   TOOL_TEXT_RENDERER_BY_PREDICATE_RULE             predicateRule → ({ choiceEnum, toolCandidateNoun }) → the tool text for that rule
 //   declarationReason(value)                         the contract row's shape check → '' | reason
@@ -20,7 +20,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // WHAT IT BANS, AND WHAT IT DELIBERATELY DOES NOT. Identifiers only (TQ, 2026-09-28, A19): the plugin's declared
 // patterns (a CEDS-hub plugin declares P\d{6} and C\d{6}) and the ids in its declared list file. There is no word list. The word
-// "CEDS" reveals nothing about which card is the answer, and the shared tool description uses it legitimately.
+// "CEDS" reveals nothing about which card is the answer, and the CEDS hub's declared tool noun (R4) uses it legitimately.
 //
 // WHY THE TOOL TEXT IS RENDERED HERE RATHER THAN READ FROM THE CLIENT. The debug judge never builds a schema at all,
 // so a scan that read "what the client sent" would scan nothing under the debug judge and something else under the

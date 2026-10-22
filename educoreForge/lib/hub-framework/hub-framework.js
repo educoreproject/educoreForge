@@ -68,8 +68,20 @@ const moduleName = 'hub-framework';
 // WHAT IS PROVEN, SAID PLAINLY: one REAL hub (CEDS: byte-identical across P3, by in-process sha of the derived hub and
 // by its re-forged standardBase block id; GATEREPORT-P3-101926.md) plus one SYNTHETIC RDF-shaped fixture hub
 // (test/fixtures/rdfShapedHub, 3 classes, 4 properties, 1 scheme of 3 concepts; test-rdfShapedFixtureHub.js). That
-// is still NOT two real hubs: CTDL's real base (P1) has never been through this derivation, and two hubs in one build
-// is untested (P5). The hooks seam remains proven only in the negative (HUB_HOOK_NAME_LIST is empty).
+// was still NOT two real hubs when P3 closed. ⟪deCeds R7, 2026-10-22⟫ Since then both have happened: CTDL's real base runs
+// through this derivation (ctdlHub P4; its forged block fd3a4b81, re-measured in deCeds R3/R4 P-c), and two hubs share one
+// build (ctdlHub P5–P8; GOLD_EVAL_261021_ctdlHub carries two HubDefinitions, CEDS and CTDL). The hooks seam remains proven
+// only in the negative (HUB_HOOK_NAME_LIST is empty; both real hubs declare their hooks present and empty).
+//
+// WHAT THIS FRAMEWORK DOES NOT READ: THE HUB'S BRIDGING FILE (deCeds R2–R4, 2026-10-21). What a BRIDGE needs from a hub —
+// the card fields a judge may see, the hub's identifier patterns and id list, the anchor names a source stamps (blinded),
+// the judge's word for a hub candidate (judgeWording.toolCandidateNoun), declared-target rules, termKeyForm, the card
+// vectors' model, remodel tables, the retrieval tier — is declared by each hub in a SEPARATE file,
+// forges/<hub>/lib/<hub>HubBridging.js, located by that bundle's parserDescriptor.ini hubBridgingModule=, validated by
+// lib/bridge-framework/hubBridgingContract.js and read ONLY by the bridge framework (hubBridgingLoader.js, called from
+// pluginRegistry.js; consumed by bridgeComposer.js). Neither this module nor the hub kit requires it, so nothing in it reaches a HubDefinition
+// or a card, and no hub block id can move by an edit there (plan trap T4). A bridge is composed from the standard's
+// bridging file (forges/<standard>/bridges/<standard>Bridging.js) and that hub file; see forges/README_bridgeProgrammingGuide.md.
 //
 // The card contract is unchanged and is the reason the extraction could be byte-neutral: one card =
 // one addressable idea = one tuple, SELF-SUFFICIENT (ADDRESS / IDENTITY / MEANING / PROVENANCE /
@@ -337,7 +349,7 @@ const uniqueByStableId = (entryList) =>
 
 // FORMAL INTERFACE (polyArch2 — the seam's contract in one place).
 //
-// @typedef {Object} BaseNodeEdges — the forged (or deserialized) CEDS base.
+// @typedef {Object} BaseNodeEdges — the forged (or deserialized) base of the hub standard (CEDS, CTDL).
 // @property {Array<{stableId:string, role:string, properties:Object}>} nodes
 // @property {Array<{type:string, fromRef:{id:string}, toRef:{id:string}}>} edges
 //
@@ -358,7 +370,7 @@ const uniqueByStableId = (entryList) =>
 //     hubReferenceTotal, nodeTotal, edgeTotal }.
 // @property {Array<Object>} identificationPatterns — every §4.3 pattern examined.
 //
-// @interface CedsHubForge
+// @interface HubForge
 // @property {function(BaseNodeEdges, function(errString, HubForgeResult))} forgeHub — R7
 //     error-first callback; refuses malformed input and unresolvable slots BY NAME.
 // @property {function(Object): string} addressSignatureFor — the R-P1-1 incumbent signature (property/value tiers).

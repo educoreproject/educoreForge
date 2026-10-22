@@ -445,7 +445,7 @@ const eachSeries = (items, iterator, done) => {
 // its blocks were gated when they were forged, and R-1 here has no fresh forge to round-trip. Until this existed the replay
 // handed the REAL gate an empty token list and the row read "CEDS is not among this build's standards ([])" on a graph
 // that holds CEDS. The row now says what happened.
-const REPLAY_FIDELITY_DETAIL = 'replay: no forge ran in this materialize, so R-1 has no freshly forged CEDS to round-trip; the stored blocks were gated when they were forged';
+const REPLAY_FIDELITY_DETAIL = 'replay: no forge ran in this materialize, so R-1 has no freshly forged standard to round-trip; the stored blocks were gated when they were forged';
 const runReplayFidelityGate = (runnerArguments, callback) => callback('', { gate: 'fidelity', verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN, detail: REPLAY_FIDELITY_DETAIL });
 
 // runDeclaredFidelityGate — ⟪R5 S4, 2026-10-21⟫ the R-1 runner build() hands materialize: it runs the fidelity gate a

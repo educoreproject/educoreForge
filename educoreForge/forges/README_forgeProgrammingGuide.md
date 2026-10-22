@@ -7,8 +7,40 @@ This is one of a pair. **Standard-side vs mapping-side — you likely need both:
 - **This guide** covers the standard side: parsing a standard's native source and emitting it into the
   universal forge contract, through the build-and-verify workflow.
 - **[`README_bridgeProgrammingGuide.md`](./README_bridgeProgrammingGuide.md)** covers the mapping
-  side: getting your forged standard evidence-judged against the CEDS hub, from the zero-code
-  `genericBridge` path to writing a custom evidence bridge.
+  side: a bridge is composed from your standard's bridging file and a hub's bridging file, and a
+  recipe names the standard and its hubs.
+
+> ⚠️ **READ THIS FIRST (deCeds R7, 2026-10-22).** The body of this guide was written on 2026-07-30 and
+> describes the tree BEFORE the forge framework (`lib/forge-framework`: a forge is a declaration plus
+> hooks, and the framework owns the root, the kit and the finalizer) and before the 2026-08-15 reset.
+> Its worked example (`forges/lif/`), its bundle-module shape (§3.1), its `crossRefs` → `sifEvidenceBridge`
+> story (§3.2.3) and most of its file:line citations no longer hold. The current forge documentation is
+> `apps/graph-builder/README_ForgeDocumentation/` (start with `README.md`, then `README_ForgeCreationOverview.md`,
+> `README_ForgeFrameworkSpecification.md` and `README_HOWTO_ForgeCreationInstructions.md`). §2's bundle list and the
+> section below were re-measured on 2026-10-22; the rest is kept as written, as history.
+
+### What the hub-neutral refactor (deCeds R0–R7, 2026-10-21) changed for a forge
+
+A forge does no bridging (FBB-001). What used to be CEDS knowledge in shared files is now declared by the bundle that
+owns it; the hub names still left in shared files are listed, each with its reason, in the lane's residue record
+(`system/management/zNotesPlansDocs/deCedsRefactor-102126/RESIDUE-cedsLiterals-102126.md`). What a forge bundle now
+declares, each in its own `parserDescriptor.ini` (code fact, `forges/ceds/parserDescriptor.ini`):
+
+| key | what it declares | lane |
+|---|---|---|
+| `hubModule=`, `hubNamespace=` | the bundle can play the HUB role (`lib/hub-framework`, `hubDeclarationContract.js`) | hub kit role, 2026-08 (Phase 2c) |
+| `hubBridgingModule=` | the hub's HALF of every bridge toward it (`lib/bridge-framework/hubBridgingContract.js`), a file the hub kit never requires | deCeds R2 |
+| `anchorPrefixDeclaration=` | the prefix table `kit.hubAnchorValue({ hubToken, kind, rawValue })` uses to canonicalise a source's anchors to this hub (it was `kit.cedsAnchorValue`) | deCeds R5 S2 |
+| `fidelityGateModule=` | the R-1 fidelity gate a build runs for this standard (it was the CEDS-only `runCedsFidelityGate`) | deCeds R5 S4 |
+| `roundTripVerbModule=` | the bodies of `graphBuilder -roundTripCompile` / `-roundTripGates --standard=<token>` (they were `-cedsRoundTrip` / `-cedsGates`) | deCeds R5 S9 |
+| `edgeDefinitionDeclaration=` | the authored definitions of the hub's `HAS_<HUB>_*` edges, read by the schema view | deCeds R5 S7 |
+
+Also renamed: the forge declaration's `cedsAnchorAbsentSentinelList` is `hubAnchorAbsentSentinelList`; the build's
+two hub reports are `proseDivergence.<hubToken>.json` and `hubSkipReport.<hubToken>.json`. **Not renamed, on purpose:**
+the `mappingInstruction` key names `cedsOriginalAnchorPropertyName` and `cedsOptionOriginalAnchorPropertyName`, and
+`impliedTargets`, are written into every standard's root node, so renaming them would move every standard base block
+id. They wait for a controlled re-key batched with P9 (`DEFERRED-rekey-102126.md` rows D1, D3); write them exactly as
+the existing declarations do.
 
 Audience: a competent JS programmer who has never seen this codebase. Every factual claim below is
 grounded in code read in the working tree of `educoreForge/system/code/educoreForge` (branch
@@ -77,10 +109,15 @@ tested and diffed byte-for-byte.
 
 ## 2. Anatomy of a forge bundle
 
-A forge bundle is a directory under `forges/<token>/`. The tree currently carries eighteen of them
-(`case`, `ceds`, `cip`, `clr`, `ctdl`, `ctdlasn`, `ctdlqdata`, `dctap`, `edfi`, `eduapi`, `jedx`,
-`lif`, `medbiquitous`, `openbadges`, `pesc`, `sedm`, `sif`, `soc`). `forges/lif/` is small and
-complete, and is the worked example here:
+A forge bundle is a directory under `forges/<token>/`. ⟪Re-measured 2026-10-22, deCeds R7: the tree carries
+sixteen: `ceds`, `ctdl`, `ctdlasn`, `ctdlqdata`, `edfi`, `pesc260805`, the eight PESC releases
+(`pescacademiceportfolio1v0v0`, `pesccollegetranscript1v7v0`, `pesccollegetranscript1v8v0`,
+`pescdocumentrequest1v0v0`, `pescdocumentresponse1v0v0`, `peschighschooltranscript1v6v0`,
+`pesclearningrecord1v0v0`, `pesctestscorereport1v1v0`), `sif` and `sif260928`. There is no `pesc`, no `lif` and none
+of the other 2026-07-30 bundles; the example below is kept as history.⟫ As written on 2026-07-30: the tree carried
+eighteen (`case`, `ceds`, `cip`, `clr`, `ctdl`, `ctdlasn`, `ctdlqdata`, `dctap`, `edfi`, `eduapi`, `jedx`,
+`lif`, `medbiquitous`, `openbadges`, `pesc`, `sedm`, `sif`, `soc`), and `forges/lif/` was small and
+complete, and was the worked example here:
 
 ```
 forges/lif/
@@ -765,5 +802,6 @@ author you will only ever see `DEV_*` containers.
 11. **Run with real embeddings.** `--vectorize=true` once the structural shape is right — confirms
     your `searchText` builder never throws across your real dataset.
 12. **`npm test`** before calling it done.
-13. **Then cross to the mapping side.** Pairing your standard with CEDS — zero-code or custom — is
-    the [bridge guide](./README_bridgeProgrammingGuide.md)'s whole subject.
+13. **Then cross to the mapping side.** Pairing your standard with a hub — a bridging file for your
+    standard and a recipe entry `{ source, hubs }` — is the [bridge guide](./README_bridgeProgrammingGuide.md)'s
+    subject.

@@ -42,7 +42,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // POLYMORPHIC SEAM: the forger no longer knows which module it is calling, only that a kit named one
 // in hubModule=. A seam whose contract is enforced but never DECLARED is a seam nobody can implement
 // against, so it is written out here, in the contract's own home, beside the descriptor keys that
-// select it. (The CEDS implementation's matching @interface CedsHubForge block lives in
+// select it. (The matching @interface HubForge block, which every hub kit implements, lives in
 // lib/hub-framework/hub-framework.js, where Phase 2c moved it.)
 //
 // @typedef {Object} HubDescriptorDeclaration — the [parserDescriptor] hub keys.
