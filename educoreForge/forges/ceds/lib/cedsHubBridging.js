@@ -25,6 +25,8 @@ const hubBridging = Object.freeze({
 		identifierListPath: 'lib/cedsHubIdentifierList.json',
 	},
 	// the names a source forge stamps when it carries CEDS anchors, in the order the plugins blind them
+	// the CEDS hub's card prose cites no CEDS identifier, so nothing is rewritten (zeroBacklog B2)
+	renderedProseIdentifierRule: null,
 	sourceAnchorBlindingNameList: ['cedsId', 'cedsOriginalAnchorPropertyName', 'cedsOptionCode', 'cedsOptionOriginalAnchorPropertyName'],
 	judgeWording: { toolCandidateNoun: 'CEDS candidate' },
 	// a declared ceds: CURIE expands to the CEDS term IRI (today's ctdlCedsDeclaredCorrespondence rules)
