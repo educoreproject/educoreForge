@@ -200,8 +200,11 @@ const standardBridging = Object.freeze({
 				},
 				// ⟪R3 P-c FIXTURE ONLY — never shipped⟫ the edfi→ctdl pairing nobody has ruled to ship (TQ decision pending). A bridge
 				// created after the refactor: the union blinding over every hub edfi pairs with, and the CTDL hub's own identifier scan.
+				// Retrieval is cosineTopK-v1 over the hub's card vectors, NOT the ceds pair's embedTextVote-v1: that method searches the
+				// hub's embed-text nodes and the CTDL forge makes none (measured, P-c green attempt 2, 2026-10-21: "readEmbedTextVectors
+				// ({ standardName: 'CTDL' }) matched no text node"). A real edfi→ctdl bridge would face the same choice.
 				ctdl: {
-					candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 20, minScore: 0.3, k: 15, neighbourVote: { method: 'neighbourVote-v1', owner: { kind: 'propertyValue', property: 'parentId' }, siblings: { kind: 'sameOwner' }, referencedObject: { kind: 'edgeTarget', edgeTypeList: ['REFERENCES'] }, earnRule: 'topShare' } },
+					candidateRetrieval: { method: 'cosineTopK-v1', k: 15, floor: 0.3 },
 					candidateRenderingAllowList: null,
 					promptIdentifierScan: 'fromHub',
 					blindingOrder: { standardBlindingNameList: ['crossRefs'], pairedHubAnchors: 'union' },
