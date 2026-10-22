@@ -43,7 +43,7 @@ const ctdlForgeDeclaration = Object.freeze({
 	nonEmbeddableRoleList: Object.freeze([]),
 	// ⟪zeroBacklog B1, R3-F1⟫ the CTDL hub's search population for embedTextVote-v1 (R-BR-9: the hub's texts of classes,
 	// properties and option sets). P1/P2 declared none (ruling Q3, the oracle's node set); the text nodes are framework nodes
-	// outside the round trip, as CEDS's are. name + description only: description already IS the July fallback chain
+	// outside the round trip, as every embed-text forge's are. name + description only: description already IS the July fallback chain
 	// (dct:description, else rdfs:comment, else skos:definition — descriptionSource above), so rdfsComment would re-embed a
 	// secondary text and usageNote is carried on too few nodes to be a search text. DmeOptionValue is left out: embedTextVote-v1
 	// searches classes, properties and option sets only, so value texts would be embedded and never searched.
