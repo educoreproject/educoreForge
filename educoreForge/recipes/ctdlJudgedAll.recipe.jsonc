@@ -1,0 +1,53 @@
+{
+  // ctdlJudgedAll — zeroBacklog lane B3 (SILENT_TRAIL for BRONZE_CROWN, 2026-10-22): goldCtdlHub's standards, hubs and layers BYTE FOR BYTE,
+  // and its bridges with each of the ten DERIVED entries paired with BOTH hubs (hubs ["ceds", "ctdl"], dependencies gaining "ctdl"):
+  // the CTDL hub bridged from Ed-Fi, SIF 260928 and all eight PESC releases (TQ: "Without CTDL being bridged to everyone, I don't care
+  // about the demo"). The expansion keeps each pairing's own hub in its dependencies, so every ceds pairing expands exactly as in
+  // goldCtdlHub and materialises its frozen block. The three declared/structural entries are unchanged. Build it with the PAIR-scoped
+  // rebridge (--rebridge=edfi:ctdl,sif260928:ctdl,...) over COPIES of the gold's stores: only the ten new pairings are judged.
+  // kind 'dev': lane F assembles the gold recipe (goldZeroBacklog) from this one.
+  "schemaVersion": "1.0.0",
+  "recipeName": "ctdlJudgedAll",
+  "kind": "dev",
+  "description": "goldCtdlHub (CEDS and CTDL hubs, CEDS layers, Ed-Fi, SIF 260928, eight PESC releases, the CTDL family and its declared bridges) with the ten derived bridges paired with BOTH hubs: the CTDL hub judged from Ed-Fi, SIF 260928 and every PESC release, beside the unchanged CEDS bridges.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sif260928", "version": "current" },
+    { "token": "pesccollegetranscript1v8v0", "version": "current" },
+    { "token": "pesccollegetranscript1v7v0", "version": "current" },
+    { "token": "peschighschooltranscript1v6v0", "version": "current" },
+    { "token": "pesctestscorereport1v1v0", "version": "current" },
+    { "token": "pesclearningrecord1v0v0", "version": "current" },
+    { "token": "pescdocumentrequest1v0v0", "version": "current" },
+    { "token": "pescdocumentresponse1v0v0", "version": "current" },
+    { "token": "pescacademiceportfolio1v0v0", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "ctdlasn", "version": "current" },
+    { "token": "ctdlqdata", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "layers": [
+    { "standard": "ceds", "layer": "guide" },
+    { "standard": "ceds", "layer": "textRepair" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hubs": ["ceds", "ctdl"], "dependencies": ["edfi", "ceds", "ctdl"] },
+    { "source": "sif260928", "hubs": ["ceds", "ctdl"], "dependencies": ["sif260928", "ceds", "ctdl"] },
+    { "source": "pesccollegetranscript1v8v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesccollegetranscript1v8v0", "ceds", "ctdl"] },
+    { "source": "pesccollegetranscript1v7v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesccollegetranscript1v7v0", "ceds", "ctdl"] },
+    { "source": "peschighschooltranscript1v6v0", "hubs": ["ceds", "ctdl"], "dependencies": ["peschighschooltranscript1v6v0", "ceds", "ctdl"] },
+    { "source": "pesctestscorereport1v1v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesctestscorereport1v1v0", "ceds", "ctdl"] },
+    { "source": "pesclearningrecord1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesclearningrecord1v0v0", "ceds", "ctdl"] },
+    { "source": "pescdocumentrequest1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescdocumentrequest1v0v0", "ceds", "ctdl"] },
+    { "source": "pescdocumentresponse1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescdocumentresponse1v0v0", "ceds", "ctdl"] },
+    { "source": "pescacademiceportfolio1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescacademiceportfolio1v0v0", "ceds", "ctdl"] },
+    { "source": "ctdl", "hubs": ["ceds"], "dependencies": ["ctdl", "ceds"] },
+    { "source": "ctdlasn", "hubs": ["ctdl"], "dependencies": ["ctdlasn", "ctdl"] },
+    { "source": "ctdl", "familyStandards": ["ctdl", "ctdlasn", "ctdlqdata"], "bridge": "ctdlFamilyStructure", "dependencies": ["ctdl", "ctdlasn", "ctdlqdata"] }
+  ],
+  "roundTripStage": true
+}
