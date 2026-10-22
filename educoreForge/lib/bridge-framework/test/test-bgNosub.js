@@ -217,7 +217,13 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // 2/5 (the five hub decomposition-edge definitions left for the hub's own bundle declaration, R5 S7; graph-only, the schema view proven
 // byte-identical on the DEV gold) and test/testSupport/pureProxyFingerprintProbe.js 1/1 (passes the forger's hub anchor map). Allowed-path
 // list NOT widened.
-const POST_D1_BASE_TAG = 'postSharedSurfacesR5OnR2VocabularyIi-102126'; // re-anchored by VELVET_CHORUS (R5 shared forge and build surfaces; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, D0 the graph-contract commit c15baaca; ruled by BRONZE_CROWN) ═══ (ii)
+// postSharedSurfacesR5OnR2VocabularyIi-102126 -> postZeroBacklogD0VocabularyIi-102226, tag cut ON this commit. CENSUS (lib/vocabulary/,
+// numstat from the R5 tag): graph-contract.js 14/1 (three CTDL *List exemptions; passport structuralVersion + its grammar; StandardDefinition
+// nativeIdentifierPropertyName reserved), vocabulary.js 3/1 (STANDARD_FAMILY.PESCLD), test/test-graphContract.js 4/1, test/test-sifEdgeVocabulary.js
+// 4/1 (schema view 341 -> 343, the two new contract fields, declared; this commit). graph-contract.js is
+// outside (ii)'s allowed vocabulary.js+tests, as P5's and P2b's rows were; contract sha 6e452d62 -> 1e2d39d7. Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postZeroBacklogD0VocabularyIi-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D0; census in the block above); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -482,7 +488,11 @@ const POST_D1_BASE_TAG = 'postSharedSurfacesR5OnR2VocabularyIi-102126'; // re-an
 // ═══ RE-ANCHOR, 2026-10-22 (CRYSTAL_RIVER; R7 sweep; mandate of BRONZE_CROWN's R7 brief) ═══ (iii) postSharedSurfacesR5FixForgeFrameworkIii-102126
 // -> postHubNeutralR7SweepForgeFrameworkIii-102226, tag cut ON this commit. CENSUS (lib/forge-framework/): test/test-gSeamUntouched.js ONLY
 // (its own re-anchor, this commit: the coupling). No forge-framework source.
-const PHASE0_ANCHOR_TAG = 'postHubNeutralR7SweepForgeFrameworkIii-102226'; // re-anchored by TWILIGHT_HAVEN (R5 full-suite reds; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, D0 the graph-contract commit c15baaca; ruled by BRONZE_CROWN) ═══ (iii)
+// postHubNeutralR7SweepForgeFrameworkIii-102226 -> postZeroBacklogD0ForgeFrameworkIii-102226, tag cut ON this commit. CENSUS
+// (lib/forge-framework/): test/test-gStandardMetadata.js 7/0 (conjunct (o): the PESCLD family admitted, with its twin) and
+// test/test-gSeamUntouched.js (its own re-anchor, this commit: the coupling). No forge-framework source.
+const PHASE0_ANCHOR_TAG = 'postZeroBacklogD0ForgeFrameworkIii-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D0; census in the block above); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -997,7 +1007,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postSharedSurfacesR5FixSeamDiffEmpty-102126 -> postHubNeutralR7SweepSeamDiffEmpty-102226, tag cut ON this commit. CENSUS from the R5 tag over
 // this gate's path list (R7's only): build.js 1/1 (as G-SEAM); forges/edfi/lib/forgeEdfiContractGraph.js 1/1 and forges/sif/lib/
 // forgeSifContractGraph.js 1/1 (comments naming kit.hubAnchorValue, commit 8ec5c662); lib/forge-framework/ as (iii). (i-live): no shape moved.
-const PHASE3_ANCHOR_TAG = 'postHubNeutralR7SweepSeamDiffEmpty-102226'; // re-anchored by TWILIGHT_HAVEN (R5 full-suite reds; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, D0 the graph-contract commit c15baaca; ruled by BRONZE_CROWN) ═══ BG-SEAM-UNTOUCHED seamDiffEmpty and (i-live)
+// postHubNeutralR7SweepSeamDiffEmpty-102226 -> postZeroBacklogD0SeamDiffEmpty-102226, tag cut ON this commit. CENSUS from the R7 tag over
+// this gate's path list: replay-manager/replayManager.js 19/2 (as G-SEAM), replay-manager/lib/finishing/passport-writer.js 14/2 (writes and
+// refuses structuralVersion), its tests test-passportContract.js 10/3 and test-replay-manager.js 18/0; lib/replay/test/
+// test-listValuedProperties.js 15/3 and its new frozen census fixture 10/0 (the CTDL *List names); lib/forge-framework/ as (iii).
+// (i-live): no shape moved.
+const PHASE3_ANCHOR_TAG = 'postZeroBacklogD0SeamDiffEmpty-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D0; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

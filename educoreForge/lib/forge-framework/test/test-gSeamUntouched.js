@@ -242,7 +242,11 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // postSharedSurfacesR5OnR2GSeamUntouched-102126 -> postHubNeutralR7SweepGSeamUntouched-102226, tag cut ON this commit. CENSUS over the seam
 // file list (numstat from the R5 tag; R7's only, commit 8ec5c662): apps/graph-builder/lib/build.js 1/1 (REPLAY_FIDELITY_DETAIL says
 // "standard", not "CEDS": the -replay BuildAttestation row's text, graph-only). The other six UNTOUCHED.
-const PRE_MIGRATION_REF = 'postHubNeutralR7SweepGSeamUntouched-102226'; // re-anchored by VELVET_CHORUS (R5 shared forge and build surfaces; census REANCHOR-CENSUS-R5-102126.md; brief-authorised for footprint paths); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, D0 the graph-contract commit c15baaca; ruled by BRONZE_CROWN) ═══ G-SEAM-UNTOUCHED
+// postHubNeutralR7SweepGSeamUntouched-102226 -> postZeroBacklogD0GSeamUntouched-102226, tag cut ON this commit. CENSUS over the seam file
+// list (numstat from the R7 tag): apps/graph-builder/apps/replay-manager/replayManager.js 19/2 (resolveSettings reads and refuses
+// [replay-manager] structuralVersion; finish hands it to the passport writer). The other six UNTOUCHED.
+const PRE_MIGRATION_REF = 'postZeroBacklogD0GSeamUntouched-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D0; census in the block above); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
