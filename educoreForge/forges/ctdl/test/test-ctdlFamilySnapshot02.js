@@ -39,6 +39,10 @@ const TREE_ROOT = path.join(__dirname, '..', '..', '..');
 require(path.join(TREE_ROOT, 'test', 'testLib', 'testAppStartup'))({ moduleName, helpText });
 const harness = require(path.join(TREE_ROOT, 'test', 'testLib', 'harness'))(moduleName);
 const roundTripHarness = require(path.join(TREE_ROOT, 'lib', 'forge-framework', 'roundTripHarness', 'roundTripHarness'))();
+// ⟪P10 merge onto R3⟫ the declared bridges are COMPOSED now (forges/<std>/bridges/<std>Bridging.js), so a declaration is read
+// from the registry a build uses, by bridgeName, never by requiring a plugin file
+const pluginRegistryLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'pluginRegistry'));
+const bridgeRegistry = pluginRegistryLib.buildRegistryFromDirectory({ forgesDirPath: path.join(TREE_ROOT, 'forges') });
 const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus'))();
 
 const SNAPSHOT_KEY = '02';
@@ -61,7 +65,7 @@ const EXPECTATION_LIST = Object.freeze([
 		hasValueCountByScheme: { 'ceterms:Format': 1, 'ceterms:PathwayType': 4 },
 		// 140 source references: 139 from native terms (carried here), 1 from the foreign elm:additionalNote (carried on the root)
 		undefinedNativeCrossRefCountByLocator: { 'schema:domainIncludes': 101, 'schema:rangeIncludes': 38 },
-		declaredBridgeList: [{ bridgeModulePath: 'forges/ctdl/bridges/ctdlCedsDeclaredCorrespondence.js', releaseText: 'Release 20260927' }],
+		declaredBridgeList: [{ bridgeName: 'ctdlCedsDeclaredCorrespondence', releaseText: 'Release 20260927' }],
 	},
 	{
 		bundleToken: 'ctdlasn',
@@ -76,7 +80,7 @@ const EXPECTATION_LIST = Object.freeze([
 		twinEdgeType: 'HAS_PROPERTY',
 		hasValueCountByScheme: {},
 		undefinedNativeCrossRefCountByLocator: {},
-		declaredBridgeList: [{ bridgeModulePath: 'forges/ctdlasn/bridges/ctdlasnCtdlDeclaredCorrespondence.js', releaseText: '20260626' }],
+		declaredBridgeList: [{ bridgeName: 'ctdlasnCtdlDeclaredCorrespondence', releaseText: '20260626' }],
 	},
 	{
 		bundleToken: 'ctdlqdata',
@@ -134,8 +138,13 @@ EXPECTATION_LIST.forEach((expected) => {
 		harness.equal(`${expected.bundleToken}: source bytes sha256`, crypto.createHash('sha256').update(fs.readFileSync(sourceFilePath)).digest('hex'), expected.sourceSha256);
 		harness.ok(`${expected.bundleToken}: README_PROVENANCE.md is beside the bytes`, fs.existsSync(path.join(snapshotDirPath, 'README_PROVENANCE.md')));
 		expected.declaredBridgeList.forEach((oneBridge) => {
-			const assertedBy = require(path.join(TREE_ROOT, oneBridge.bridgeModulePath)).bridgeDeclaration.predicateSource.assertedBy;
-			harness.ok(`${oneBridge.bridgeModulePath}: assertedBy names the snapshot it reads (${oneBridge.releaseText}, standardSourceData/${SNAPSHOT_KEY}/)`, assertedBy.documentName.indexOf(oneBridge.releaseText) !== -1 && assertedBy.documentName.indexOf(`standardSourceData/${SNAPSHOT_KEY}/`) !== -1, assertedBy.documentName);
+			const registryEntry = bridgeRegistry.entryByBridgeName[oneBridge.bridgeName];
+			if (registryEntry === undefined) {
+				harness.ok(`${oneBridge.bridgeName}: registered`, false, 'not in the registry');
+				return;
+			}
+			const assertedBy = registryEntry.bridgeDeclaration.predicateSource.assertedBy;
+			harness.ok(`${oneBridge.bridgeName}: assertedBy names the snapshot it reads (${oneBridge.releaseText}, standardSourceData/${SNAPSHOT_KEY}/)`, assertedBy.documentName.indexOf(oneBridge.releaseText) !== -1 && assertedBy.documentName.indexOf(`standardSourceData/${SNAPSHOT_KEY}/`) !== -1, assertedBy.documentName);
 		});
 		next('', args);
 	});
