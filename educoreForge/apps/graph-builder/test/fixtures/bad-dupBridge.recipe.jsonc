@@ -3,17 +3,19 @@
   // Two DIFFERENT bridges on one pair is now legal (design_bridgeResolution_072526 §3a) — the
   // referential key is source::hub::<bridgeName>, so only a repeated bridge NAME collides. This
   // fixture is the same-name collision; good-twoBridgesOnePair is its legal twin.
+  // ⟪zeroBacklog lane D, D2-1, 2026-10-22⟫ the SAME derived bridge twice on one pair, in the new form. Uses edfi, a REAL standard
+  // with a bridging file, because test-cli runs this through the real CLI (real forges/): edfiCedsDerivedPlugin twice on edfi::ceds.
   "schemaVersion": "1.0.0",
   "recipeName": "badDupBridge",
   "kind": "dev",
   "description": "test fixture bad-dupBridge (single-cause: description present since campaign P2, W-C-10)",
   "standards": [
     { "token": "ceds", "version": "current" },
-    { "token": "lif", "version": "current" }
+    { "token": "edfi", "version": "current" }
   ],
   "hubs": [{ "standard": "ceds" }],
   "bridges": [
-    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] },
-    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] }
+    { "source": "edfi", "hubs": ["ceds"], "dependencies": ["edfi", "ceds"] },
+    { "source": "edfi", "hubs": ["ceds"], "dependencies": ["edfi", "ceds"] }
   ]
 }

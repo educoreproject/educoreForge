@@ -6,10 +6,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // A recipe names a standard and the hubs it bridges to; it no longer names a bridge, because a bridge is now a COMPOSITION
 // (standard bridging file × hub bridging file, lib/bridge-framework/bridgeComposer.js) whose name is derived by rule:
 //
-//   new  { source, hubs: [<hub>, ...], dependencies, facet?, params? }
-//   old  { source, hub, bridge, dependencies, params? }          (and the structural pairWith / familyStandards forms, untouched)
+//   new  { source, hubs: [<hub>, ...], dependencies, facet?, params? }        (and the structural pairWith / familyStandards forms, untouched)
+//   old  { source, hub, bridge, dependencies, params? }   REFUSED BY NAME in recipe text (zeroBacklog lane D, D2-1 = deCeds R7-1,
+//        2026-10-22): every recipe of record was converted at R3, so a recipe naming a bridge by hand is now an error, not a form.
+//        The old SHAPE survives as the EXPANDED entry the downstream reads; only recipe TEXT may no longer be written in it.
 //
-// Expansion turns each new-form entry into one OLD-form entry per hub, in the recipe's order, so everything downstream (the
+// Expansion turns each new-form entry into one expanded entry per hub, in the recipe's order, so everything downstream (the
 // schema, the referential layer, build.js, the frozen-block rule, the proof kit) reads exactly the entries it always read and a
 // converted recipe builds the same pairs with the same names. Only the recipe TEXT changes, so its recipeHash changes: that is
 // the one expected manifest difference (work order, R7 records it).
@@ -32,7 +34,19 @@ const bridgeComposerLib = require(path.join(__dirname, '..', '..', '..', 'lib', 
 const NEW_FORM_MARKER_NAME = 'hubs';
 const NEW_FORM_KEY_LIST = Object.freeze(['source', 'hubs', 'dependencies', 'facet', 'params']);
 
+const OLD_FORM_MARKER_NAME = 'hub';
+
 const isNewFormEntry = (bridgeEntry) => bridgeEntry !== null && typeof bridgeEntry === 'object' && Object.prototype.hasOwnProperty.call(bridgeEntry, NEW_FORM_MARKER_NAME);
+// an old-form entry names a hub by hand (and, in its full shape, the bridge); a new-form entry naming hub is refused by its own rule
+const isOldFormEntry = (bridgeEntry) => bridgeEntry !== null && typeof bridgeEntry === 'object' && !isNewFormEntry(bridgeEntry) && Object.prototype.hasOwnProperty.call(bridgeEntry, OLD_FORM_MARKER_NAME);
+
+// oldFormRefusalText — one line per old-form entry: where it is, what it names, and the new-form entry to write instead
+const oldFormRefusalText = ({ bridgeEntry, entryIndex }) =>
+	refuse.byName({
+		moduleName,
+		what: `bridges[${entryIndex}] (source '${bridgeEntry.source}') uses the RETIRED recipe bridge form { source, hub, bridge } (hub '${bridgeEntry.hub}', bridge '${bridgeEntry.bridge}')`,
+		where: `write { source: '${bridgeEntry.source}', hubs: ['${bridgeEntry.hub}'] }: the bridge name is derived from the standard's bridging file (zeroBacklog D2-1, deCeds R7-1)`,
+	}).message;
 
 // expandedEntryListFor — one new-form entry → its old-form entries, or { error }
 const expandedEntryListFor = ({ bridgeEntry, entryIndex, standardBridgingFor }) => {
@@ -92,6 +106,10 @@ const expandedEntryListFor = ({ bridgeEntry, entryIndex, standardBridgingFor }) 
 };
 
 const expandRecipeBridges = ({ recipe, standardBridgingFor }) => {
+	const oldFormRefusalList = (Array.isArray(recipe.bridges) ? recipe.bridges : []).map((bridgeEntry, entryIndex) => (isOldFormEntry(bridgeEntry) ? oldFormRefusalText({ bridgeEntry, entryIndex }) : '')).filter((oneText) => oneText !== '');
+	if (oldFormRefusalList.length) {
+		return { error: new Error(oldFormRefusalList.join('\n')) };
+	}
 	if (!Array.isArray(recipe.bridges) || !recipe.bridges.some(isNewFormEntry)) {
 		return { recipe, expandedEntryCount: 0 };
 	}
@@ -120,4 +138,4 @@ const expandRecipeBridges = ({ recipe, standardBridgingFor }) => {
 	return { recipe: Object.assign({}, recipe, { bridges: bridgeList }), expandedEntryCount };
 };
 
-module.exports = { expandRecipeBridges, isNewFormEntry, NEW_FORM_KEY_LIST, moduleName };
+module.exports = { expandRecipeBridges, isNewFormEntry, isOldFormEntry, NEW_FORM_KEY_LIST, moduleName };

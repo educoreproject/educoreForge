@@ -570,7 +570,7 @@ harness.ok(
 // are legal now).
 const buildDupBridge = runCli(['-build', '--recipePath=' + fixture('bad-dupBridge')]);
 harness.equal('the same bridge named twice on a pair blocks the build', buildDupBridge.status, 1);
-harness.match('  naming the duplicate bridge', buildDupBridge.stderr, /duplicate bridge 'semanticBridge' for pairing 'lif::ceds'/);
+harness.match('  naming the duplicate bridge', buildDupBridge.stderr, /duplicate bridge 'edfiCedsDerivedPlugin' for pairing 'edfi::ceds'/);
 
 // =====================================================================
 harness.section('--vectorize — a real operator off-switch, refused invalid, honored both ways');

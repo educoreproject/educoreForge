@@ -3,6 +3,8 @@
   // the case the old source::hub uniqueness key wrongly refused; the source::hub::<bridgeName>
   // key (design_bridgeResolution_072526 §3a) accepts it because the bridge NAMES differ. Its
   // same-name twin (bad-dupBridge) is still refused. Structurally and referentially clean.
+  // ⟪zeroBacklog lane D, D2-1, 2026-10-22⟫ new form: two FACETS of lif pair with ceds, so two different derived bridges
+  // (lifCodesCedsDeclaredCorrespondence, lifCedsDerivedPlugin) on one pairing; loaded with forgesDirPath = lifFixtureForges.
   "schemaVersion": "1.0.0",
   "recipeName": "goodTwoBridgesOnePair",
   "kind": "dev",
@@ -13,7 +15,7 @@
   ],
   "hubs": [{ "standard": "ceds" }],
   "bridges": [
-    { "source": "lif", "bridge": "ctdlAuthoredBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] },
-    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"] }
+    { "source": "lif", "hubs": ["ceds"], "facet": "Codes", "dependencies": ["lif", "ceds"] },
+    { "source": "lif", "hubs": ["ceds"], "facet": "", "dependencies": ["lif", "ceds"] }
   ]
 }

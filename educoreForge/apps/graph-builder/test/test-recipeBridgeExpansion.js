@@ -10,7 +10,11 @@
 //       bridge the registry holds, for that standard and that hub, and together they name EVERY registered bridge
 //   (b) every recipe of record loads to the bridges its build captured at R0 (baseline capture.json: source, hub, bridge name)
 //   (c) the expansion's own rules on a toy standard: one entry per hub in order, a pair's dependencies drop the OTHER hubs,
-//       params carried, old-form and structural entries untouched and in place
+//       params carried, structural entries untouched and in place
+//   (f) ⟪zeroBacklog lane D, D2-1 (deCeds R7-1), 2026-10-22⟫ the OLD recipe bridge form { source, hub, bridge } is REFUSED by
+//       name in recipe TEXT (expandRecipeBridges, the loadRecipe boundary), every offending entry named, with the new form to
+//       write; the expanded entries keep that shape INTERNALLY (schema, referential layer, build.js read them), so the
+//       refusal sits at the text boundary only. Observed red before the refusal existed (DEVLOG-D)
 //   (d) refusals by name: hubs mixed with hub/bridge; hubs empty or repeated; facet omitted for a many-facet standard; a facet
 //       or hub the standard does not declare; a new-form recipe loaded with no forgesDirPath or a relative one
 //   (e) the bridging overlay (pluginRegistry's P-c test seam) reaches the expansion: a pairing only the overlay declares expands
@@ -95,17 +99,32 @@ const toyStandardBridgingFor = (sourceToken) => (sourceToken === 'toy' ? { stand
 const toyExpand = (bridgeList) => recipeBridgeExpansionLib.expandRecipeBridges({ recipe: { recipeName: 'toyRecipe', bridges: bridgeList }, standardBridgingFor: toyStandardBridgingFor });
 const OLD_ENTRY = { source: 'other', hub: 'hubx', bridge: 'otherHubxDerivedPlugin', dependencies: ['other', 'hubx'] };
 const STRUCTURAL_ENTRY = { source: 'toy', pairWith: 'toy2', bridge: 'toyStructure', dependencies: ['toy', 'toy2'] };
-const expandedToy = toyExpand([OLD_ENTRY, { source: 'toy', hubs: ['huby', 'hubx'], facet: '', dependencies: ['toy', 'hubx', 'huby', 'toyHelper'], params: { specifiedMatchPropertyNames: ['refId'] } }, STRUCTURAL_ENTRY]);
+const expandedToy = toyExpand([STRUCTURAL_ENTRY, { source: 'toy', hubs: ['huby', 'hubx'], facet: '', dependencies: ['toy', 'hubx', 'huby', 'toyHelper'], params: { specifiedMatchPropertyNames: ['refId'] } }, STRUCTURAL_ENTRY]);
 harness.equal('one entry per hub, in the hubs order, between the untouched neighbours', JSON.stringify(expandedToy.recipe && expandedToy.recipe.bridges), JSON.stringify([
-	OLD_ENTRY,
+	STRUCTURAL_ENTRY,
 	{ source: 'toy', hub: 'huby', bridge: 'toyHubyDerivedPlugin', dependencies: ['toy', 'huby', 'toyHelper'], params: { specifiedMatchPropertyNames: ['refId'] } },
 	{ source: 'toy', hub: 'hubx', bridge: 'toyHubxDerivedPlugin', dependencies: ['toy', 'hubx', 'toyHelper'], params: { specifiedMatchPropertyNames: ['refId'] } },
 	STRUCTURAL_ENTRY,
 ]));
 harness.equal('expandedEntryCount counts new-form entries', expandedToy.expandedEntryCount, 1);
 harness.equal('a facet with a different basis derives its own name', toyExpand([{ source: 'toy', hubs: ['hubx'], facet: 'Codes', dependencies: ['toy'] }]).recipe.bridges[0].bridge, 'toyCodesHubxDeclaredCorrespondence');
-const oldOnlyRecipe = { recipeName: 'oldOnly', bridges: [OLD_ENTRY] };
-harness.ok('a recipe with no new-form entry is returned as it came, no bridging file read', recipeBridgeExpansionLib.expandRecipeBridges({ recipe: oldOnlyRecipe, standardBridgingFor: undefined }).recipe === oldOnlyRecipe);
+const structuralOnlyRecipe = { recipeName: 'structuralOnly', bridges: [STRUCTURAL_ENTRY] };
+harness.ok('a recipe with no new-form entry is returned as it came, no bridging file read', recipeBridgeExpansionLib.expandRecipeBridges({ recipe: structuralOnlyRecipe, standardBridgingFor: undefined }).recipe === structuralOnlyRecipe);
+
+harness.section('(f) the OLD form { source, hub, bridge } is refused by name in recipe text (zeroBacklog D2-1)');
+const oldFormRefusalText = (bridgeList) => {
+	const expanded = recipeBridgeExpansionLib.expandRecipeBridges({ recipe: { recipeName: 'oldForm', bridges: bridgeList }, standardBridgingFor: undefined });
+	return expanded.error ? expanded.error.message : '';
+};
+harness.ok('an old-form entry alone is refused, naming its index, source, hub, bridge and the form to write', /bridges\[0\] \(source 'other'\) uses the RETIRED recipe bridge form \{ source, hub, bridge \} \(hub 'hubx', bridge 'otherHubxDerivedPlugin'\).*\{ source: 'other', hubs: \['hubx'\] \}/s.test(oldFormRefusalText([OLD_ENTRY])), oldFormRefusalText([OLD_ENTRY]));
+harness.ok('an old-form entry beside new-form and structural entries is refused, every old one named', oldFormRefusalText([STRUCTURAL_ENTRY, OLD_ENTRY, { source: 'toy', hubs: ['hubx'], facet: '', dependencies: ['toy'] }, { ...OLD_ENTRY, source: 'other2' }]).split('\n').length === 2);
+harness.ok('a hub-only entry with no bridge name is refused as the old form too', /bridges\[0\] \(source 'other'\) uses the RETIRED recipe bridge form/.test(oldFormRefusalText([{ source: 'other', hub: 'hubx', dependencies: ['other', 'hubx'] }])));
+harness.ok('loadRecipe refuses an old-form recipe file by name', (() => {
+	const oldFormScratchPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), `${moduleName}-old-`)), 'oldForm.recipe.jsonc');
+	fs.writeFileSync(oldFormScratchPath, JSON.stringify({ recipeName: 'oldForm', bridges: [{ source: 'edfi', hub: 'ceds', bridge: 'edfiCedsDerivedPlugin', dependencies: ['edfi', 'ceds'] }] }));
+	return /recipe bridges\[\] do not expand: .*uses the RETIRED recipe bridge form/s.test(recipeLib.loadRecipe(oldFormScratchPath, { forgesDirPath: FORGES_DIR_PATH }).error || '');
+})());
+harness.equal('the structural forms (pairWith, familyStandards) still load untouched', JSON.stringify(recipeBridgeExpansionLib.expandRecipeBridges({ recipe: { bridges: [STRUCTURAL_ENTRY, { source: 'toy', familyStandards: ['toy', 'toy2'], bridge: 'toyFamily', dependencies: ['toy', 'toy2'] }] }, standardBridgingFor: undefined }).recipe.bridges), JSON.stringify([STRUCTURAL_ENTRY, { source: 'toy', familyStandards: ['toy', 'toy2'], bridge: 'toyFamily', dependencies: ['toy', 'toy2'] }]));
 
 harness.section('(d) refusals by name');
 const refusalText = (bridgeList) => {

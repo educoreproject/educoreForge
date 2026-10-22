@@ -10,6 +10,6 @@
   ],
   "hubs": [{ "standard": "ceds" }],
   "bridges": [
-    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "sif"] }
+    { "source": "lif", "hubs": ["ceds"], "facet": "", "dependencies": ["lif", "sif"] }
   ]
 }

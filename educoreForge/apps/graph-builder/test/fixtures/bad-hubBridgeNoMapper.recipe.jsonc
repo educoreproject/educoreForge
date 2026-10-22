@@ -2,6 +2,8 @@
   // ISOLATED FAULT: a HUB bridge (hub declared) that fails to name its mapper.
   // The structural-bridge case has always been refused; the hub case used to be ACCEPTED and
   // then silently handed 'defaultSemantic' by build.js. Every bridge names its mapper now.
+  // ⟪zeroBacklog lane D, D2-1, 2026-10-22⟫ RETIRED as a schema fixture and KEPT as the old-form refusal fixture: a hub entry
+  // without a bridge name is the old recipe bridge form, refused by name at load (test-recipe asserts the refusal).
   "schemaVersion": "1.0.0",
   "recipeName": "badHubBridgeNoMapper",
   "kind": "dev",

@@ -104,7 +104,9 @@ const sourceOf = (filePath) =>
 		.join('\n');
 
 const loadOrDie = (filePath) => {
-	const loaded = recipeLib.loadRecipe(filePath, { forgesDirPath: path.join(__dirname, '..', '..', '..', 'forges') });
+	// ⟪zeroBacklog lane D, D2-1⟫ the lif fixtures are new-form; lif has no forge, so their bridge names derive from the fixture
+	// bridging file in fixtures/lifFixtureForges (lifCedsDerivedPlugin)
+	const loaded = recipeLib.loadRecipe(filePath, { forgesDirPath: path.join(__dirname, 'fixtures', 'lifFixtureForges') });
 	if (loaded.error) {
 		console.error(`test setup failure: could not load ${filePath} -- ${loaded.error}`);
 		process.exit(1);
@@ -881,11 +883,12 @@ const stageCedsLif = () => {
 		// THE POSITIVE CONTROL. `bridge.bridge || 'defaultSemantic'` also satisfied the assertion
 		// above, which is exactly why it survived: "names A bridge" and "names THE RECIPE'S
 		// bridge" are different claims. cedsLif names its bridge now, and this insists the
-		// build ran that one.
+		// build ran that one. ⟪zeroBacklog D2-1⟫ in the new form the recipe names it through its
+		// standard's bridging file: lif facet '' into ceds derives lifCedsDerivedPlugin.
 		harness.match(
 			'the bridge it ran is the one THE RECIPE named, not one the code chose',
 			xLog.text(),
-			/\[C\] bridge lif::ceds \(bridge=semanticBridge\)/,
+			/\[C\] bridge lif::ceds \(bridge=lifCedsDerivedPlugin\)/,
 		);
 		harness.ok(
 			'no in-code bridge name survives in build.js to stand behind the recipe key',

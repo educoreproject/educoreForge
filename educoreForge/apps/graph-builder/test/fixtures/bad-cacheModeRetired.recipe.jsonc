@@ -2,6 +2,8 @@
   // ISOLATED FAULT: a bridge entry still carrying the RETIRED cacheMode key (SPEC-bridgeFramework-v1 BR-073).
   // Which block a pair materialises is not a recipe choice (plain build replays the frozen block; --rebridge
   // freezes a new one). The schema's additionalProperties:false REFUSES it by name — never silently ignores it.
+  // ⟪zeroBacklog lane D, D2-1, 2026-10-22⟫ the retired cacheMode key now rides a STRUCTURAL entry: a new-form entry is refused
+  // at load for any key outside its list, so only the structural form still reaches the schema this fixture tests.
   "schemaVersion": "1.0.0",
   "recipeName": "badCacheModeRetired",
   "kind": "dev",
@@ -12,6 +14,6 @@
   ],
   "hubs": [{ "standard": "ceds" }],
   "bridges": [
-    { "source": "lif", "bridge": "semanticBridge", "hub": "ceds", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
+    { "source": "lif", "pairWith": "ceds", "bridge": "lifStructure", "dependencies": ["lif", "ceds"], "cacheMode": "reuse" }
   ]
 }

@@ -73,7 +73,8 @@ const treeRoot = path.join(__dirname, '..', '..', '..');
 const executable = path.join(treeRoot, 'apps', 'graph-builder', 'graphBuilder.js');
 
 const loadOrDie = (filePath) => {
-	const loaded = recipeLib.loadRecipe(filePath, { forgesDirPath: path.join(__dirname, '..', '..', '..', 'forges') });
+	// ⟪zeroBacklog lane D, D2-1⟫ cedsLif is new-form; lif's bridging file is the fixture in fixtures/lifFixtureForges
+	const loaded = recipeLib.loadRecipe(filePath, { forgesDirPath: path.join(__dirname, 'fixtures', 'lifFixtureForges') });
 	if (loaded.error) {
 		console.error(`test setup failure: could not load ${filePath} -- ${loaded.error}`);
 		process.exit(1);

@@ -45,8 +45,12 @@ const fixture = (name) => path.join(__dirname, 'fixtures', `${name}.recipe.jsonc
 const goodRecipe = (name) =>
 	path.join(__dirname, '..', '..', '..', 'recipes', `${name}.recipe.jsonc`);
 
-const loadOrDie = (filePath) => {
-	const loaded = recipeLib.loadRecipe(filePath, { forgesDirPath: path.join(__dirname, '..', '..', '..', 'forges') });
+// ⟪zeroBacklog lane D, D2-1, 2026-10-22⟫ the lif fixtures are new-form now, and lif has no forge: their bridge names derive from
+// the fixture bridging file in fixtures/lifFixtureForges. A fixture naming a REAL standard (bad-dupBridge: edfi) reads the tree.
+const TREE_FORGES_DIR_PATH = path.join(__dirname, '..', '..', '..', 'forges');
+const LIF_FIXTURE_FORGES_DIR_PATH = path.join(__dirname, 'fixtures', 'lifFixtureForges');
+const loadOrDie = (filePath, forgesDirPath = LIF_FIXTURE_FORGES_DIR_PATH) => {
+	const loaded = recipeLib.loadRecipe(filePath, { forgesDirPath });
 	if (loaded.error) {
 		console.error(`test setup failure: could not load ${filePath} -- ${loaded.error}`);
 		process.exit(1);
@@ -91,8 +95,16 @@ harness.match(
 
 harness.ok(
 	'a good recipe loads with no error',
-	!recipeLib.loadRecipe(fixture('cedsLif')).error,
-	recipeLib.loadRecipe(fixture('cedsLif')).error,
+	!recipeLib.loadRecipe(fixture('cedsLif'), { forgesDirPath: LIF_FIXTURE_FORGES_DIR_PATH }).error,
+	recipeLib.loadRecipe(fixture('cedsLif'), { forgesDirPath: LIF_FIXTURE_FORGES_DIR_PATH }).error,
+);
+
+// ⟪zeroBacklog lane D, D2-1⟫ the OLD recipe bridge form is refused BY NAME at load: a hub entry naming no bridge (and, in its
+// full shape, one naming its bridge by hand) is the retired { source, hub, bridge } form, whatever the schema would have said
+harness.rejects(
+	'the OLD recipe bridge form { source, hub, bridge } is refused by name at load (bad-hubBridgeNoMapper)',
+	[recipeLib.loadRecipe(fixture('bad-hubBridgeNoMapper'), { forgesDirPath: LIF_FIXTURE_FORGES_DIR_PATH }).error || ''],
+	/bridges\[0\] \(source 'lif'\) uses the RETIRED recipe bridge form \{ source, hub, bridge \}.*\{ source: 'lif', hubs: \['ceds'\] \}/s,
 );
 
 harness.ok(
@@ -149,10 +161,7 @@ const structuralCases = [
 	['malformed schemaVersion', 'bad-schemaVersion', /schemaVersion.*pattern/],
 	['bridge entry carrying the RETIRED cacheMode key (BR-073)', 'bad-cacheModeRetired', /cacheMode|must NOT have additional properties/],
 	['structural bridge without a bridge name', 'bad-structuralBridgeNoMapper', /bridge/],
-	// EVERY bridge entry names its bridge — the hub case used to be accepted here and silently
-	// handed 'defaultSemantic' by build.js, so a recipe author who never chose a bridge got one
-	// anyway and nothing said so (polyArch2 §6).
-	['hub bridge without a bridge name', 'bad-hubBridgeNoMapper', /bridge/],
+	// (the hub case, bad-hubBridgeNoMapper, moved to LOAD in zeroBacklog D2-1: a hub entry is the old form, refused there)
 	['bridge with a BLANK bridge name', 'bad-bridgeBlankMapper', /bridge.*fewer than 1 characters|minLength/i],
 ];
 
@@ -188,11 +197,11 @@ const referentialCases = [
 	// The uniqueness key is source::hub::<bridgeName> (design §3a): two DIFFERENT bridges on one
 	// pair are legal (accepted below); only the SAME bridge NAME twice on a pair collides, and it
 	// is refused BY NAME — not by bare pairing.
-	['same bridge named twice on one pair', 'bad-dupBridge', /duplicate bridge 'semanticBridge' for pairing 'lif::ceds'/],
+	['same bridge named twice on one pair', 'bad-dupBridge', /duplicate bridge 'edfiCedsDerivedPlugin' for pairing 'edfi::ceds'/],
 ];
 
 referentialCases.forEach(([label, name, pattern]) => {
-	const recipe = loadOrDie(fixture(name));
+	const recipe = loadOrDie(fixture(name), name === 'bad-dupBridge' ? TREE_FORGES_DIR_PATH : LIF_FIXTURE_FORGES_DIR_PATH);
 	// the twin assertion: Layer 1 must be CLEAN, or the fixture is not isolating what we claim
 	harness.accepts(
 		`  (fixture ${name} is structurally clean — the fault is purely referential)`,
@@ -346,7 +355,7 @@ harness.match(
 );
 harness.ok(
 	'the stage-ON proof recipe (pesc260805OnlyRoundTrip) validates end to end',
-	validateFully(loadOrDie(goodRecipe('pesc260805OnlyRoundTrip')), ['pesc260805']).valid === true,
+	validateFully(loadOrDie(goodRecipe('pesc260805OnlyRoundTrip'), TREE_FORGES_DIR_PATH), ['pesc260805']).valid === true,
 );
 
 harness.report();
