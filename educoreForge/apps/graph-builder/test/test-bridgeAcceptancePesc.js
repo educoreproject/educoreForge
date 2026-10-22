@@ -1025,7 +1025,9 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // (numstat from the D3 tag): lib/vocabulary/vocabulary-definitions.js 3/1 (D3-7), lib/bridge-framework/test/test-bridgeComposer.js 4/2,
 // test-hubBridging.js 4/1, test-bgSubjectDiscriminator.js 1/1 (sifCedsStandardPlugin retired by name), and test/test-bgNosub.js (its two
 // re-anchors, this commit). No bridge-framework or bridge-maker source: frameworkFingerprint does not move.
-const P1_BASELINE_COMMIT = 'postZeroBacklogD3bPescCompose-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-7 and followers; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (PEARL_CIPHER; zeroBacklog lane A, P9, BRONZE_CROWN go) ═══ P1_BASELINE_COMMIT postZeroBacklogD3bPescCompose-102226 ->
+// postZbATermTierPescCompose-102226, tag cut ON this commit. CENSUS over this gate's paths (numstat from that tag): lib/bridge-framework/test/test-bgNosub.js ONLY (lane A's own seamDiffEmpty re-anchor, the same commit). No bridge-framework or bridge-maker source.
+const P1_BASELINE_COMMIT = 'postZbATermTierPescCompose-102226'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A, P9; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

@@ -1035,7 +1035,9 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postZeroBacklogD3SeamDiffEmpty-102226 -> postZeroBacklogD3bSeamDiffEmpty-102226, tag cut ON this commit. CENSUS from the D3 tag over this
 // gate's path list: replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 3/1 (its (e) twin stays red on the CTDL families
 // now that no declaration mints a Sif* label). (i-live): no shape moved.
-const PHASE3_ANCHOR_TAG = 'postZeroBacklogD3bSeamDiffEmpty-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-6 followers; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (PEARL_CIPHER; zeroBacklog lane A, P9, BRONZE_CROWN go) ═══ PHASE3_ANCHOR_TAG postZeroBacklogD3bSeamDiffEmpty-102226 ->
+// postZbATermTierSeamDiffEmpty-102226, tag cut ON this commit. CENSUS over this gate's paths (numstat from that tag): forges/ceds/lib/cedsHubDeclaration.js 8/4 (the term-tier flip: tierList and the term embedText template). Nothing else.
+const PHASE3_ANCHOR_TAG = 'postZbATermTierSeamDiffEmpty-102226'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A, P9; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
