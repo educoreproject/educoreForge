@@ -63,9 +63,11 @@ const hubDeclaration = {
 
 	// ---- ⟪ctdlHub P3⟫ EXPLICIT DECLARATIONS OF TODAY'S BEHAVIOUR. Each key below is required by the framework and has no
 	// default; each value is what the framework did implicitly before P3, so the CEDS block id does not move
-	// (baseline 45a83bae294ad5efcc9be1136f3831a579c0a2aa3a1c2bc3248b418539b28ac3, ctdlHub P0). CEDS's term tier is OFF until
-	// P9, its own controlled re-key: adding 'term' here moves the block id by design and must not happen in passing.
-	tierList: ['property', 'value'],
+	// (baseline 45a83bae294ad5efcc9be1136f3831a579c0a2aa3a1c2bc3248b418539b28ac3, ctdlHub P0). ⟪P9, zeroBacklog lane A⟫ the term
+	// tier is ON: one term card per class, property, option set and value IRI, so a declared-identity bridge has a card to land
+	// on. It was turned on as its own controlled re-key (TQ ruling 2026-10-20): it MOVED the CEDS block id by design, and
+	// forges/ceds/test/test-termTierStability.js proves it re-keyed no property or value card. Removing it moves the id back.
+	tierList: ['term', 'property', 'value'],
 	// one range per card (option set XOR class XOR datatype), hashed into the address slot 'range'
 	rangeAddressing: 'singleRangeSlot',
 	// ⟪ctdlHub P4⟫ a property's domains are the fields the CEDS forge lifts onto it (allDomainIds, else domainId): the pre-P4 read
@@ -82,8 +84,10 @@ const hubDeclaration = {
 	},
 	// embedText, slot by slot, exactly as the framework composed it before P3: a slot's fields are joined ' · ', empty
 	// slots drop out, slots are joined ' · '. The value tier's context is its option set because, for CEDS, the range of
-	// an enumerated property IS an option set.
+	// an enumerated property IS an option set. The term tier's template is the one every hub declaring a term tier uses
+	// (BRONZE_CROWN ruling 2026-10-22: hubs as peers share the shape).
 	embedTextTemplateByTier: {
+		term: [['termName'], ['termDefinition']],
 		property: [['domainName'], ['propertyName'], ['propertyDefinition'], ['domainDefinition'], ['qualifierNames']],
 		value: [['domainName', 'propertyName', 'rangeOptionSetName'], ['valueName'], ['valueDefinition'], ['rangeOptionSetDefinition']],
 	},
