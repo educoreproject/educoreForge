@@ -1,0 +1,15 @@
+{
+  // pescldOnly — PESC_LD alone (stage off): the forge's base block, no hub, no bridge (zeroBacklog lane C1).
+  "schemaVersion": "1.0.0",
+  "recipeName": "pescldOnly",
+  "kind": "dev",
+  "description": "Forge the PESC_LD standard base only - proves the new PESC_LD bundle forges.",
+  "standards": [
+    {
+      "token": "pescld",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

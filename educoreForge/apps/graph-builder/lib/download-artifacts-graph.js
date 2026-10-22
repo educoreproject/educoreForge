@@ -74,6 +74,33 @@ const sif260928ListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
 	});
 };
 
+// ⟪zeroBacklog lane C1, 2026-10-22⟫ PESC_LD reads a snapshot DIRECTORY (no sourceFile), so its pair needs no file name
+const pescldListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
+	const bundleDirPath = path.join(treeRootPath, 'forges', 'pescld');
+	const forgeDeclaration = require(path.join(bundleDirPath, 'lib', 'pescldForgeDeclaration'));
+	const roundTripPair = require(path.join(bundleDirPath, 'lib', 'pescldRoundTripPair'))({ ruleModulePath: 'forges/pescld/lib/pescldRoundTripPair.js' });
+	const { openGraphReader } = require(path.join(treeRootPath, 'lib', 'forge-framework', 'roundTripHarness', 'graphReader'));
+	openGraphReader({ boltUrl: boltTriple.boltUrl, user: boltTriple.user, password: boltTriple.password, standardSource: forgeDeclaration.standardSource }, (openError, reader) => {
+		if (openError) {
+			callback(`pescld listing: ${openError}`);
+			return;
+		}
+		roundTripPair.emitFromGraph({ reader }, (emitError, emitted) => {
+			reader.close((closeError) => {
+				if (emitError || (emitted && emitted.fault !== undefined)) {
+					callback(`pescld listing: ${emitError || JSON.stringify(emitted.fault)}`);
+					return;
+				}
+				if (closeError) {
+					callback(`pescld listing: ${closeError}`);
+					return;
+				}
+				callback('', { statementMap: emitted.statements });
+			});
+		});
+	});
+};
+
 const edfiListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
 	const edfiLibDirPath = path.join(treeRootPath, 'forges', 'edfi', 'lib');
 	const roundTripEdfiCompiler = require(path.join(edfiLibDirPath, 'roundTripEdfiCompiler'))();
@@ -98,6 +125,7 @@ const edfiListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
 const statementListingEmitterByBundleToken = Object.freeze({
 	sif260928: sif260928ListingEmitter,
 	edfi: edfiListingEmitter,
+	pescld: pescldListingEmitter,
 });
 
 module.exports = { installReadOnlyDriverGuard, statementListingEmitterByBundleToken };

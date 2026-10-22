@@ -1,0 +1,7 @@
+{
+	"name": "forge-pescld",
+	"version": "1.0.0",
+	"main": "forgePescld.js",
+	"description": "PESC_LD forge bundle — the PESC College Transcript JSON-LD application profile (v0.0.2) from its TAP CSVs: shapes, profile rows, picklists; borrowed terms carried verbatim. It does no bridging.",
+	"private": true
+}

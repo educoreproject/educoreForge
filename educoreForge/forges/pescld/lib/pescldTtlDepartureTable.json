@@ -1,0 +1,29 @@
+{
+	"comment": "The PESC_LD SECOND ORACLE's declared departure table (zeroBacklog lane C1; ruling Q-Z8: the CSV snapshot is the source, the publisher's merged SHACL TTL a second oracle). lib/pescldTtlOracle.js translates the TTL into the round trip's statement vocabulary and diffs it against the graph's emission. Every statement on one side only must match exactly ONE row below, and each row's count must equal expectedCount (measured over snapshot 01, 2026-10-22). Anything else is an UNEXPLAINED departure and fails the gate. The translation rules (not departures) are listed in translationRuleList for the reader.",
+	"tableVersion": "pescldTtlDepartureTable-1",
+	"translationRuleList": [
+		"sh:minCount 1 is mandatory TRUE; no sh:minCount is mandatory FALSE",
+		"sh:maxCount 1 is repeatable FALSE; no sh:maxCount is repeatable TRUE",
+		"sh:nodeKind spellings: sh:Literal Literal, sh:IRI IRI, sh:BlankNode BNODE, sh:BlankNodeOrIRI 'IRI BNODE'",
+		"sh:in ( … ) is a picklist: valueConstraintType picklist and one picklist value per item",
+		"sh:minLength a with sh:maxLength b is lengthRange 'a..b'; sh:maxLength alone is maxLength",
+		"sh:pattern is pattern; sh:hasValue is the valueConstraint of a row with no constraint type",
+		"sh:node <S> is valueShape S; sh:class and each sh:or ( [ sh:class … ] ) member is a valueClass line",
+		"sh:name is propertyLabel, rdfs:label is a shape's label, rdfs:comment is note, sh:severity sh:X is Severity / severity X",
+		"sh:targetClass c is target c and targetType class; sh:closed false is Closed FALSE",
+		"a CURIE is expanded with the TTL's OWN @prefix table (an expansion independent of namespaces.csv)"
+	],
+	"departureList": [
+		{ "departureKind": "languageTag", "side": "ttlOnly", "statementPatternSource": "^ttl\\|languageTag\\|", "expectedCount": 353, "reason": "TTL-only, not carried: the @en / @en-US / @eng tags on labels, names and comments (the CSV states no language)" },
+		{ "departureKind": "propertyShapeIri", "side": "ttlOnly", "statementPatternSource": "^ttl\\|propertyShapeIri\\|", "expectedCount": 266, "reason": "TTL-only, not carried: the PropertyShape IRIs the publisher's converter derives from shape and label (unstable by construction; identity is (shapeID, propertyID))" },
+		{ "departureKind": "closedFalseDefault", "side": "ttlOnly", "statementPatternSource": "^shape\\|[^|]+\\|Closed\\|FALSE$", "expectedCount": 37, "reason": "TTL-only, not carried: sh:closed false on every NodeShape; the CSV states Closed FALSE on 2 of 39 shapes and leaves 37 blank" },
+		{ "departureKind": "repeatableBlank", "side": "ttlOnly", "statementPatternSource": "^row\\|[^|]+\\|[^|]+\\|repeatable\\|TRUE$", "expectedCount": 2, "reason": "TTL-only: the CSV leaves repeatable BLANK on two rdf:type rows (AdditionalStudentAchievementShape, LicensureAchievementShape); the TTL's missing sh:maxCount reads as repeatable TRUE" },
+		{ "departureKind": "recUsage", "side": "graphOnly", "statementPatternSource": "^row\\|[^|]+\\|[^|]+\\|Rec Usage\\|", "expectedCount": 202, "reason": "CSV-only, carried: the Rec Usage column (Required / Recommended / Optional / Not Recommended); the TTL has no such statement. 205 non-empty cells over 270 records, 202 over the 266 distinct rows (3 of the 4 duplicate records carry it)" },
+		{ "departureKind": "sourceTab", "side": "graphOnly", "statementPatternSource": "^row\\|[^|]+\\|[^|]+\\|sourceTab\\|", "expectedCount": 270, "reason": "CSV-only, carried: the TAP file each record appears in (the TTL is the publisher's merge of the seven)" },
+		{ "departureKind": "conflictSourceValue", "side": "graphOnly", "statementPatternSource": "^row\\|PersonShape\\|pesc:hasSummary\\|mandatory\\|FALSE$", "expectedCount": 1, "reason": "CSV-only, carried: person-tap.csv's mandatory FALSE for PersonShape pesc:hasSummary, which the publisher's merge overrode with TRUE (both source values are on the node)" },
+		{ "departureKind": "conflictResolution", "side": "graphOnly", "statementPatternSource": "^resolved\\|", "expectedCount": 1, "reason": "graph-only by construction: the declared resolution of the one conflict (it equals the TTL's own TRUE)" },
+		{ "departureKind": "declaredEmptyConstraint", "side": "graphOnly", "statementPatternSource": "^row\\|[^|]+\\|[^|]+\\|valueConstraint\\|<declared empty>$", "expectedCount": 4, "reason": "CSV-only, carried: a constraint type stated with an empty constraint cell (3 empty picklists, 1 empty maxLength); the TTL emits nothing for them" },
+		{ "departureKind": "declaredEmptyConstraintType", "side": "graphOnly", "statementPatternSource": "^row\\|[^|]+\\|[^|]+\\|valueConstraintType\\|(picklist|maxLength)$", "expectedCount": 4, "reason": "CSV-only, carried: the constraint TYPE of those same four rows, which the TTL cannot state without a constraint" },
+		{ "departureKind": "picklistRepeat", "side": "graphOnly", "statementPatternSource": "^picklistRepeat\\|", "expectedCount": 3, "reason": "CSV-only, carried: pescCreditLevels:Undergraduate listed twice in 3 academicSummaryLevel picklists; the TTL's sh:in lists it once" }
+	]
+}

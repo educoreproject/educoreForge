@@ -1,0 +1,7 @@
+standard: forge-pescld-csv
+publishedVersion: 0.0.2
+publishedVersionEvidence: the package directory is named "JSON-LD College Transcript_v0.0.2" (TQ naming ruling 2026-10-20: "PESC_LD v0.0.2" means this package). The files INSIDE still say v0.0.1 (PESC Transcript TAP CSVs_v0.0.1.zip, CollegeTranscriptContext_v0.0.1.jsonld) and about.csv carries a date (2026-06-25) and no version; the inner v0.0.1 is recorded in README_PROVENANCE.md. A HUMAN-SUPPLIED fact, which is what versionSource 'provenance-file' records.
+upstreamUrl: https://docs.google.com/spreadsheets/d/18HzS4phUl7olmUEjh0deA3vgVPdque4_iGzK7_zTWLE/ (about.csv's own 'url': the TAP spreadsheet the CSVs were exported from; publisher contact Phil Barker per about.csv)
+copiedFrom: /Users/tqwhite/Downloads/JSON-LD College Transcript_v0.0.2/ (the CSVs extracted byte for byte from "Application Profile/PESC Transcript TAP CSVs_v0.0.1.zip", sha256 294c3bc1150fa5594ba2ca1fa379d51f3def963c6d17b567d058edc068adc414; the TTL and the context file copied byte for byte)
+copiedDate: 2026-10-22
+note: EDITING WARNING. deriveVersionStamp (lib/snapshot-provenance) takes THE ENTIRE REST OF the publishedVersion line as the version, so keep that line bare; citations belong on publishedVersionEvidence.

@@ -1,0 +1,2519 @@
+# Combined SHACL shapes for PESC College Transcript
+# Merged from: shacl.ttl, person-shacl.ttl, organization-shacl.ttl, contact-shacl.ttl, course-related-shacl.ttl, achieve-related-shacl.ttl, summary-related-shacl.ttl
+@base <http://example.org/> .
+@prefix ceds: <https://w3id.org/CEDStandards/terms/> .
+@prefix ceterms: <https://purl.org/ctdl/terms/> .
+@prefix elm: <http://data.europa.eu/snb/model/elm/> .
+@prefix ex: <http://example.org/> .
+@prefix pesc: <https://pesc.org/terms/> .
+@prefix pescAcademicProgramTypes: <https://pesc.org/vocabs/AcademicProgramTypes#> .
+@prefix pescAcademicSummaryTypes: <https://pesc.org/vocabs/AcademicSummaryTypes#> .
+@prefix pescAccreditationBodyCodes: <https://pesc.org/vocabs/AccreditationBodyCodes#> .
+@prefix pescConditionsMetCodes: <https://pesc.org/vocabs/ConditionsMetCodes#> .
+@prefix pescCreditBasis: <https://pesc.org/vocabs/CreditBasis#> .
+@prefix pescCreditLevels: <https://pesc.org/vocabs/CreditLevels#> .
+@prefix pescDelinquencyCodes: <https://pesc.org/vocabs/DelinquencyCodes#> .
+@prefix pescDocumentCompleteCodes: <https://pesc.org/vocabs/DocumentCompleteCodes#> .
+@prefix pescDocumentOfficialCodes: <https://pesc.org/vocabs/DocumentOfficialCodes#> .
+@prefix pescDocumentProcessCodes: <https://pesc.org/vocabs/DocumentProcessCodes#> .
+@prefix pescDocumentTypeCodes: <https://pesc.org/vocabs/DocumentTypeCodes#> .
+@prefix pescGenderCodes: <https://pesc.org/vocabs/Gender#> .
+@prefix pescGradeStatusCodes: <https://pesc.org/vocabs/GradeStatusCodes#> .
+@prefix pescHonorsLevels: <https://pesc.org/vocabs/HonorsLevels#> .
+@prefix pescIdentifierTypes: <https://pesc.org/vocabs/IdentifierTypes#> .
+@prefix pescLanguageProficiencyCodes: <https://pesc.org/vocabs/LanguageProficiencyCodes#> .
+@prefix pescLanguageUsageCodes: <https://pesc.org/vocabs/LanguageUsageCodes#> .
+@prefix pescNameCodes: <https://pesc.org/vocabs/NameCodes#> .
+@prefix pescResidencyStatusCodes: <https://pesc.org/vocabs/ResidencyStatusCodes#> .
+@prefix pescSchoolLevels: <https://pesc.org/vocabs/SchoolLevels#> .
+@prefix pescSessionTypes: <https://pesc.org/vocabs/SessionTypes#> .
+@prefix pescStudentLevelCodes: <https://pesc.org/vocabs/StudentLevelCodes#> .
+@prefix pescSupplementalGradeCodes: <https://pesc.org/vocabs/SupplementalGradeCodes#> .
+@prefix pescTestScoreMethods: <https://pesc.org/vocabs/TestScoreMethods#> .
+@prefix pescTransmissionTypes: <https://pesc.org/vocabs/TransmissionTypes#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<AcademicAwardShape> a sh:NodeShape ;
+    rdfs:label "Postsecondary Student Academic Award"@en ;
+    sh:closed false ;
+    sh:property <academicawardshapeAcademicAwardDate>,
+        <academicawardshapeAcademicAwardLevelType>,
+        <academicawardshapeAcademicAwardProgram>,
+        <academicawardshapeAcademicAwardTitle>,
+        <academicawardshapeAcademicCompletionDate>,
+        <academicawardshapeAcademicCompletionIndicator>,
+        <academicawardshapeAcademicDegreeRequirement>,
+        <academicawardshapeAcademicHonors>,
+        <academicawardshapeType> ;
+    sh:targetClass ceds:C200335 .
+
+<AcademicDegreeRequirementShape> a sh:NodeShape ;
+    rdfs:label "Academic Degree Requirement"@en ;
+    sh:closed false ;
+    sh:property <academicdegreerequirementshapeThesisDissertationAdvisor>,
+        <academicdegreerequirementshapeThesisDissertationTitle>,
+        <academicdegreerequirementshapeType>,
+        <academicdegreerequirementshapeURLAddress> ;
+    sh:targetClass pesc:AcademicDegreeRequirement .
+
+<AcademicHonorsShape> a sh:NodeShape ;
+    rdfs:label "Academic Honors"@en ;
+    sh:closed false ;
+    sh:property <academichonorsshapeHonorsLevel>,
+        <academichonorsshapeHonorsTitle>,
+        <academichonorsshapeType> ;
+    sh:targetClass pesc:AcademicHonors .
+
+<AcademicProgramShape> a sh:NodeShape ;
+    rdfs:label "Academic Program"@en ;
+    sh:closed false ;
+    sh:property <academicprogramshapeAcademicProgramName>,
+        <academicprogramshapeAcademicProgramType>,
+        <academicprogramshapeHasClassificationofInstructionalProgramCode>,
+        <academicprogramshapeHasPart>,
+        <academicprogramshapeOfferedBy>,
+        <academicprogramshapeProgramHEGISCode>,
+        <academicprogramshapeType> ;
+    sh:targetClass ceds:C200331 .
+
+<AcademicSessionShape> a sh:NodeShape ;
+    rdfs:label "Academic Session"@en ;
+    sh:closed false ;
+    sh:property <academicsessionshapeHasSessionType>,
+        <academicsessionshapeSessionBeginDate>,
+        <academicsessionshapeSessionDesignator>,
+        <academicsessionshapeSessionDesignatorSuffix>,
+        <academicsessionshapeSessionEndDate>,
+        <academicsessionshapeSessionName>,
+        <academicsessionshapeSessionSchoolYear>,
+        <academicsessionshapeType> ;
+    sh:targetClass ceds:C200245 .
+
+<AcademicSummaryShape> a sh:NodeShape ;
+    rdfs:label "Academic Summary"@en ;
+    sh:closed false ;
+    sh:property <academicsummaryshapeAcademicHonors>,
+        <academicsummaryshapeAcademicSummaryLevel>,
+        <academicsummaryshapeAcademicSummaryType>,
+        <academicsummaryshapeAdditionalNote>,
+        <academicsummaryshapeDelinquencies>,
+        <academicsummaryshapeEntryDate>,
+        <academicsummaryshapeExitDate>,
+        <academicsummaryshapeGPASummary>,
+        <academicsummaryshapeIsSummaryForProgram>,
+        <academicsummaryshapeSource>,
+        <academicsummaryshapeType> ;
+    sh:targetClass pesc:AcademicSummary .
+
+<AccreditationShape> a sh:NodeShape ;
+    rdfs:label "Accreditation"@en ;
+    sh:closed false ;
+    sh:property <accreditationshapeAccrediationBodyCode>,
+        <accreditationshapeAccreditationAgencyName>,
+        <accreditationshapeAdditionalNote>,
+        <accreditationshapeType> ;
+    sh:targetClass ceds:C200240 .
+
+<AdditionalStudentAchievementShape> a sh:NodeShape ;
+    rdfs:label "Additional Student Achievement"@en ;
+    sh:closed false ;
+    sh:property <additionalstudentachievementshapeAttributeAchieved>,
+        <additionalstudentachievementshapeConditionsMetCode>,
+        <additionalstudentachievementshapeConditionsMetDate>,
+        <additionalstudentachievementshapeInCourse>,
+        <additionalstudentachievementshapeLanguageAchieved>,
+        <additionalstudentachievementshapeProficiencyAchieved>,
+        <additionalstudentachievementshapeRequirementAchieved>,
+        <additionalstudentachievementshapeType> ;
+    sh:targetClass pesc:AdditionalStudentAchievement .
+
+<AgencyIdentifierShape> a sh:NodeShape ;
+    rdfs:label "Agency Identifier"@en ;
+    sh:closed false ;
+    sh:targetClass pesc:AgencyIdentifier .
+
+<AwardSummaryShape> a sh:NodeShape ;
+    rdfs:label "Award Summary"@en ;
+    sh:closed false ;
+    sh:property <awardsummaryshapeAcademicHonors>,
+        <awardsummaryshapeAcademicSummaryLevel>,
+        <awardsummaryshapeAcademicSummaryType>,
+        <awardsummaryshapeAdditionalNote>,
+        <awardsummaryshapeGPASummary>,
+        <awardsummaryshapeIsSummaryForAward>,
+        <awardsummaryshapeIsSummaryForProgram>,
+        <awardsummaryshapeSource>,
+        <awardsummaryshapeType> ;
+    sh:targetClass pesc:AwardSummary .
+
+<CollegeTranscriptShape> a sh:NodeShape ;
+    rdfs:label "College Transcript"@en ;
+    sh:closed false ;
+    sh:property <collegetranscriptshapeAdditionalNote>,
+        <collegetranscriptshapeCreatedDateTime>,
+        <collegetranscriptshapeDescribesAchievement>,
+        <collegetranscriptshapeDestination>,
+        <collegetranscriptshapeDocumentCompleteCode>,
+        <collegetranscriptshapeDocumentID>,
+        <collegetranscriptshapeDocumentOfficialCode>,
+        <collegetranscriptshapeDocumentProcessCode>,
+        <collegetranscriptshapeDocumenttypeCode>,
+        <collegetranscriptshapeHaspart>,
+        <collegetranscriptshapeRequestTrackingID>,
+        <collegetranscriptshapeSource>,
+        <collegetranscriptshapeStudent>,
+        <collegetranscriptshapeTransmissionType>,
+        <collegetranscriptshapeType> ;
+    sh:targetClass pesc:CollegeTranscript .
+
+<ConceptShape> a sh:NodeShape ;
+    rdfs:label "SKOS Concept"@en ;
+    sh:closed false ;
+    sh:targetClass skos:Concept .
+
+<ContactShape> a sh:NodeShape ;
+    rdfs:label "Contact"@en ;
+    sh:closed false ;
+    sh:property <contactshapeAdditionalNote>,
+        <contactshapeAddress>,
+        <contactshapeAttentionLine>,
+        <contactshapeContactType>,
+        <contactshapeEmailAddress>,
+        <contactshapeFAXPhone>,
+        <contactshapePhone>,
+        <contactshapeType>,
+        <contactshapeURL> ;
+    sh:targetClass ceterms:ContactPoint .
+
+<CourseAchievementShape> a sh:NodeShape ;
+    rdfs:label "Course Achievement"@en ;
+    sh:closed false ;
+    sh:property <courseachievementshapeCourseAddDate>,
+        <courseachievementshapeCourseDropDate>,
+        <courseachievementshapeCourseEquivalentGrade>,
+        <courseachievementshapeCourseGrade>,
+        <courseachievementshapeCourseQualityPointsEarned>,
+        <courseachievementshapeCourseSupplementalGrade>,
+        <courseachievementshapeHasCourseRepeatCode>,
+        <courseachievementshapeInCourse>,
+        <courseachievementshapeInSection>,
+        <courseachievementshapeInSession>,
+        <courseachievementshapeNumberofCreditsEarned>,
+        <courseachievementshapeType> ;
+    sh:targetClass ceds:C200346 .
+
+<CourseShape> a sh:NodeShape ;
+    rdfs:label "Post Secondary Course"@en ;
+    sh:closed false ;
+    sh:property <courseshapeAgencyCourseID>,
+        <courseshapeAttribute>,
+        <courseshapeCourseAcademicGradeScaleCode>,
+        <courseshapeCourseCreditValue>,
+        <courseshapeCourseFiveDigitSCEDCode>,
+        <courseshapeCourseNumber>,
+        <courseshapeCourseOverrideSchool>,
+        <courseshapeCourseSubjectAbbreviation>,
+        <courseshapeCourseTitle>,
+        <courseshapeHasClassificationofInstructionalProgramCode>,
+        <courseshapeHasCourseCreditBasisType>,
+        <courseshapeHasCourseCreditLevelType>,
+        <courseshapeHasCourseCreditUnits>,
+        <courseshapeHasCourseGradePointAverageApplicability>,
+        <courseshapeHasCourseLevelType>,
+        <courseshapeHasInstructionLanguage>,
+        <courseshapeHasPostsecondarySection>,
+        <courseshapeLicensure>,
+        <courseshapeOfferedBy>,
+        <courseshapeOriginalCourseIdentifier>,
+        <courseshapeOverrideSchoolCourseNumber>,
+        <courseshapeProficiency>,
+        <courseshapeRequirement>,
+        <courseshapeType> ;
+    sh:targetClass ceds:C200328 .
+
+<CourseSupplementalGradeShape> a sh:NodeShape ;
+    rdfs:label "Course Supplemental Grade"@en ;
+    sh:closed false ;
+    sh:property <coursesupplementalgradeshapeCourseAcademicSupplementalGradeStatusCode>,
+        <coursesupplementalgradeshapeSupplementalGrade>,
+        <coursesupplementalgradeshapeSupplementalGradeCode>,
+        <coursesupplementalgradeshapeSupplementalGradeSubSession>,
+        <coursesupplementalgradeshapeType> ;
+    sh:targetClass pesc:CourseSupplementalGrade .
+
+<GPAShape> a sh:NodeShape ;
+    rdfs:label "GPA"@en ;
+    sh:closed false ;
+    sh:property <gpashapeCreditHoursAttempted>,
+        <gpashapeCreditHoursEarned>,
+        <gpashapeCreditHoursGPA>,
+        <gpashapeGPARangeMaximum>,
+        <gpashapeGPARangeMinimum>,
+        <gpashapeGradePointAverage>,
+        <gpashapeHasCourseCreditUnits>,
+        <gpashapeTotalQualityPoints>,
+        <gpashapeType> ;
+    sh:targetClass pesc:GPA .
+
+<GradeShape> a sh:NodeShape ;
+    rdfs:label "Grade"@en ;
+    sh:closed false ;
+    sh:property <gradeshapeCourseAcademicGrade>,
+        <gradeshapeCourseAcademicGradeScaleCode>,
+        <gradeshapeHasCourseAcademicGradeStatusCode>,
+        <gradeshapeType> ;
+    sh:targetClass pesc:Grade .
+
+<LanguageShape> a sh:NodeShape ;
+    rdfs:label "Person Language"@en ;
+    sh:closed false ;
+    sh:property <languageshapeHasISO669-2LanguageCode>,
+        <languageshapeLanguageProficiency>,
+        <languageshapeLanguageUsage>,
+        <languageshapeType> ;
+    sh:targetClass ceds:C200293 .
+
+<LicensureAchievementShape> a sh:NodeShape ;
+    rdfs:label "Licensure Achievement"@en ;
+    sh:closed false ;
+    sh:property <licensureachievementshapeInCourse>,
+        <licensureachievementshapeLicensureAchieved>,
+        <licensureachievementshapeLicensurePassageDate>,
+        <licensureachievementshapeType> ;
+    sh:targetClass pesc:LicensureAchievement .
+
+<LicensureShape> a sh:NodeShape ;
+    rdfs:label "Licensure"@en ;
+    sh:closed false ;
+    sh:property <licensureshapeLicensureName>,
+        <licensureshapeType> ;
+    sh:targetClass pesc:Licensure .
+
+<NoteShape> a sh:NodeShape ;
+    rdfs:label "Note"@en ;
+    sh:closed false ;
+    sh:property <noteshapeNoteliteral>,
+        <noteshapeType> ;
+    sh:targetClass elm:Note .
+
+<OrganizationIdentificationShape> a sh:NodeShape ;
+    rdfs:label "Organization Identification"@en ;
+    sh:closed false ;
+    sh:property <organizationidentificationshapeHasOrganizationIdentificationSystem>,
+        <organizationidentificationshapeOrganizationIdentifier>,
+        <organizationidentificationshapeType> ;
+    sh:severity sh:Info ;
+    sh:targetClass ceds:C200252 .
+
+<OrganizationShape> a sh:NodeShape ;
+    rdfs:label "Organization"@en ;
+    sh:closed false ;
+    sh:property <organizationshapeAdditionalNote>,
+        <organizationshapeContact>,
+        <organizationshapeHasOrganizationAccreditation>,
+        <organizationshapeHasOrganizationIdentification>,
+        <organizationshapeOrganizationName>,
+        <organizationshapeSchoolLevel>,
+        <organizationshapeType> ;
+    sh:targetClass ceds:C200239 .
+
+<PersonIdentificationShape> a sh:NodeShape ;
+    rdfs:label "Person Identification"@en ;
+    sh:closed false ;
+    sh:property <personidentificationshapeHasStudentIdentificationSystem>,
+        <personidentificationshapePersonIdentifier>,
+        <personidentificationshapeType> ;
+    sh:targetClass ceds:C200291 .
+
+<PersonNameShape> a sh:NodeShape ;
+    rdfs:label "Name"@en ;
+    sh:closed false ;
+    sh:property <personnameshapeCompositeName>,
+        <personnameshapeFirstName>,
+        <personnameshapeLastName>,
+        <personnameshapeMiddleName>,
+        <personnameshapeNameCode>,
+        <personnameshapeNamePrefix>,
+        <personnameshapeNameSuffix>,
+        <personnameshapeType> ;
+    sh:targetClass ceds:C200377 .
+
+<PersonShape> a sh:NodeShape ;
+    rdfs:label "Person"@en ;
+    sh:closed false ;
+    sh:property <personshapeAdditionalNote>,
+        <personshapeBirthCity>,
+        <personshapeBirthCountry>,
+        <personshapeBirthDate>,
+        <personshapeBirthStateProvinceCode>,
+        <personshapeBirthYear>,
+        <personshapeBirthday>,
+        <personshapeCohortGraduationYear>,
+        <personshapeContact>,
+        <personshapeDeceasedIndicator>,
+        <personshapeGenderCode>,
+        <personshapeHasAchievement>,
+        <personshapeHasOtherPersonName>,
+        <personshapeHasPersonIdentification>,
+        <personshapeHasPersonLanguage>,
+        <personshapeHasPersonName>,
+        <personshapeHasSummary>,
+        <personshapeHighSchoolAttended>,
+        <personshapeResidency>,
+        <personshapeStudentLevel>,
+        <personshapeType> ;
+    sh:targetClass ceds:C200275 .
+
+<PhoneShape> a sh:NodeShape ;
+    rdfs:label "Phone"@en ;
+    sh:closed false ;
+    sh:property <phoneshapeCountryPrefixCode>,
+        <phoneshapePhoneNumber>,
+        <phoneshapePhoneNumberExtension>,
+        <phoneshapeType> ;
+    sh:targetClass pesc:Phone .
+
+<PostalAddressShape> a sh:NodeShape ;
+    rdfs:label "Postal Address"@en ;
+    sh:closed false ;
+    sh:property <postaladdressshapeAddressLocality>,
+        <postaladdressshapeAddressRegion>,
+        <postaladdressshapeCountryCode>,
+        <postaladdressshapePostalCode>,
+        <postaladdressshapeStreetAddress>,
+        <postaladdressshapeType> ;
+    sh:targetClass ceterms:PostalAddress .
+
+<PostsecondarySectionLocationShape> a sh:NodeShape ;
+    rdfs:label "Postsecondary Section Location"@en ;
+    sh:closed false ;
+    sh:property <postsecondarysectionlocationshapeCourseInstructionSiteName>,
+        <postsecondarysectionlocationshapeHasCourseInstructionSiteType>,
+        <postsecondarysectionlocationshapeType> ;
+    sh:targetClass ceds:C200333 .
+
+<PostsecondarySectionShape> a sh:NodeShape ;
+    rdfs:label "Postsecondary Location"@en ;
+    sh:closed false ;
+    sh:property <postsecondarysectionshapeCourseBeginDate>,
+        <postsecondarysectionshapeCourseEndDate>,
+        <postsecondarysectionshapeCourseSectionNumber>,
+        <postsecondarysectionshapeHasPostsecondarySectionLocation>,
+        <postsecondarysectionshapeType> ;
+    sh:targetClass ceds:C200332 .
+
+<ProgramSummaryShape> a sh:NodeShape ;
+    rdfs:label "Program Summary"@en ;
+    sh:closed false ;
+    sh:property <programsummaryshapeAcademicHonors>,
+        <programsummaryshapeAcademicSummaryLevel>,
+        <programsummaryshapeAcademicSummaryType>,
+        <programsummaryshapeAdditionalNote>,
+        <programsummaryshapeDelinquencies>,
+        <programsummaryshapeExitDate>,
+        <programsummaryshapeGPASummary>,
+        <programsummaryshapeIsSummaryForProgram>,
+        <programsummaryshapeSource>,
+        <programsummaryshapeType> ;
+    sh:targetClass pesc:ProgramSummary .
+
+<RAPShape> a sh:NodeShape ;
+    rdfs:label "Requirement, Attribute or Proficiency"@en ;
+    sh:closed false ;
+    sh:property <rapshapeRAPCode>,
+        <rapshapeRAPName>,
+        <rapshapeRAPSubName>,
+        <rapshapeType> ;
+    sh:targetClass ceds:C200065 .
+
+<ResidencyShape> a sh:NodeShape ;
+    rdfs:label "Residency"@en ;
+    sh:closed false ;
+    sh:property <residencyshapeCountry>,
+        <residencyshapeCountryCode>,
+        <residencyshapeCounty>,
+        <residencyshapeCountyCode>,
+        <residencyshapeResidencyStatusCode>,
+        <residencyshapeStateProvince>,
+        <residencyshapeStateProvinceCode>,
+        <residencyshapeType> ;
+    sh:targetClass pesc:Residency .
+
+<SessionSummaryShape> a sh:NodeShape ;
+    rdfs:label "Session Summary"@en ;
+    sh:closed false ;
+    sh:property <sessionsummaryshapeAcademicHonors>,
+        <sessionsummaryshapeAcademicSummaryLevel>,
+        <sessionsummaryshapeAcademicSummaryType>,
+        <sessionsummaryshapeAdditionalNote>,
+        <sessionsummaryshapeDelinquencies>,
+        <sessionsummaryshapeEntryDate>,
+        <sessionsummaryshapeExitDate>,
+        <sessionsummaryshapeGPASummary>,
+        <sessionsummaryshapeIsSummaryForProgram>,
+        <sessionsummaryshapeIsSummaryForSession>,
+        <sessionsummaryshapeSource>,
+        <sessionsummaryshapeType> ;
+    sh:targetClass pesc:SessionSummary .
+
+<SubtestShape> a sh:NodeShape ;
+    rdfs:label "Subtest"@en ;
+    sh:closed false ;
+    sh:property <subtestshapeSubtestIdentifier>,
+        <subtestshapeSubtestTitle>,
+        <subtestshapeType> ;
+    sh:targetClass ceds:C200051 .
+
+<SummaryShape> a sh:NodeShape ;
+    rdfs:label "Summary"@en ;
+    sh:closed false ;
+    sh:targetClass pesc:Summary .
+
+<TestScoreShape> a sh:NodeShape ;
+    rdfs:label "Test Scores"@en ;
+    sh:closed false ;
+    sh:property <testscoreshapeAssessmentScoreMetricType>,
+        <testscoreshapeInSubtest>,
+        <testscoreshapeInTest>,
+        <testscoreshapeScoreInvalidatedIndicator>,
+        <testscoreshapeScoreRevisedIndicator>,
+        <testscoreshapeScoreSelfReportedIndicator>,
+        <testscoreshapeScoreValue>,
+        <testscoreshapeStudentLevel>,
+        <testscoreshapeTestDate>,
+        <testscoreshapeTestYear>,
+        <testscoreshapeTestYearMonth>,
+        <testscoreshapeType> ;
+    sh:targetClass ceds:C200047 .
+
+<TestShape> a sh:NodeShape ;
+    rdfs:label "Test"@en ;
+    sh:closed false ;
+    sh:property <testshapeAssessmentIdentifier>,
+        <testshapeAssessmentTitle>,
+        <testshapeHasSubtest>,
+        <testshapeType> ;
+    sh:targetClass ceds:C200010 .
+
+<academicawardshapeAcademicAwardDate> a sh:PropertyShape ;
+    rdfs:comment "ccyy-mm-dd"@eng ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Academic Award Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000001 .
+
+<academicawardshapeAcademicAwardLevelType> a sh:PropertyShape ;
+    sh:in ( ceds:NI001668151655 ceds:NI001668151657 ceds:NI001668151658 ceds:NI001668151659 ceds:NI001668151660 ceds:NI001668151661 ceds:NI001668151662 ceds:NI001668151663 ceds:NI001668151664 ceds:NI001668151665 ceds:NI001668151666 ceds:NI001668151667 ceds:NI001668151668 ceds:NI001668151669 ceds:NI001668151670 ceds:NI001668151671 ceds:NI001668151687 ceds:NI001668151686 ) ;
+    sh:maxCount 1 ;
+    sh:name "Academic Award Level Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P001668 .
+
+<academicawardshapeAcademicAwardProgram> a sh:PropertyShape ;
+    sh:class ceds:C200331 ;
+    sh:minCount 1 ;
+    sh:name "Academic Award Program"@en-US ;
+    sh:node <AcademicProgramShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:inProgram .
+
+<academicawardshapeAcademicAwardTitle> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 400 ;
+    sh:name "Academic Award Title"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000003 .
+
+<academicawardshapeAcademicCompletionDate> a sh:PropertyShape ;
+    rdfs:comment "ccyy-mm-dd"@eng ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Academic Completion Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:academicCompletionDate .
+
+<academicawardshapeAcademicCompletionIndicator> a sh:PropertyShape ;
+    rdfs:comment "true/false"@eng ;
+    sh:datatype xsd:boolean ;
+    sh:maxCount 1 ;
+    sh:name "Academic Completion Indicator"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:academicCompletionIndicator .
+
+<academicawardshapeAcademicDegreeRequirement> a sh:PropertyShape ;
+    sh:class pesc:AcademicDegreeRequirement ;
+    sh:name "Academic Degree Requirement"@en-US ;
+    sh:node <AcademicDegreeRequirementShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:academicDegreeRequirement .
+
+<academicawardshapeAcademicHonors> a sh:PropertyShape ;
+    sh:class pesc:AcademicHonors ;
+    sh:name "Academic Honors"@en-US ;
+    sh:node <AcademicHonorsShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:academicHonors .
+
+<academicawardshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200335 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<academicdegreerequirementshapeThesisDissertationAdvisor> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 45 ;
+    sh:name "Thesis Dissertation Advisor"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:thesisDissertationAdvisor .
+
+<academicdegreerequirementshapeThesisDissertationTitle> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 400 ;
+    sh:name "Thesis Dissertation Title"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:thesisDIssertationTitle .
+
+<academicdegreerequirementshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:AcademicDegreeRequirement ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<academicdegreerequirementshapeURLAddress> a sh:PropertyShape ;
+    rdfs:comment "URL of thesis / dissertation. Consider renaming this class"@eng ;
+    sh:datatype xsd:anyURI ;
+    sh:maxCount 1 ;
+    sh:maxLength 512 ;
+    sh:name "URL Address"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:urlAddress .
+
+<academichonorsshapeHonorsLevel> a sh:PropertyShape ;
+    sh:in ( pescHonorsLevels:FirstHighest pescHonorsLevels:SecondHighest pescHonorsLevels:ThirdHighest ) ;
+    sh:maxCount 1 ;
+    sh:name "Honors Level"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:honorsLevel .
+
+<academichonorsshapeHonorsTitle> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 30 ;
+    sh:name "Honors Title"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:honorsTitle .
+
+<academichonorsshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:AcademicHonors ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<academicprogramshapeAcademicProgramName> a sh:PropertyShape ;
+    sh:datatype rdf:langString ;
+    sh:maxCount 1 ;
+    sh:maxLength 60 ;
+    sh:name "Academic Program Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceterms:name .
+
+<academicprogramshapeAcademicProgramType> a sh:PropertyShape ;
+    sh:in ( pescAcademicProgramTypes:Concentration pescAcademicProgramTypes:Focus pescAcademicProgramTypes:Major pescAcademicProgramTypes:Minor pescAcademicProgramTypes:SecondMajor pescAcademicProgramTypes:Specialization ) ;
+    sh:maxCount 1 ;
+    sh:name "Academic Program Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:academicProgramType .
+
+<academicprogramshapeHasClassificationofInstructionalProgramCode> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Has Classification of Instructional Program Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000043 ;
+    sh:pattern "^\\d{2}\\.\\d{4}$" .
+
+<academicprogramshapeHasPart> a sh:PropertyShape ;
+    sh:class ceds:C200328 ;
+    sh:name "Has Part"@en-US ;
+    sh:node <CourseShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path ceterms:hasPart .
+
+<academicprogramshapeOfferedBy> a sh:PropertyShape ;
+    sh:class ceds:C200239 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Offered By"@en-US ;
+    sh:node <OrganizationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path ceterms:offeredBy .
+
+<academicprogramshapeProgramHEGISCode> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 20 ;
+    sh:minLength 6 ;
+    sh:name "Program HEGIS Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:programHEGISCode .
+
+<academicprogramshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200331 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<academicsessionshapeHasSessionType> a sh:PropertyShape ;
+    sh:in ( ceds:NI000254115787 ceds:NI000254116843 ceds:NI000254117085 ceds:NI000254116671 ceds:NI000254116676 ceds:NI000254116125 ceds:NI000254116976 ceds:NI000254115964 ceds:NI000254116047 pescSessionTypes:FallSession pescSessionTypes:FourOneFourPlan pescSessionTypes:Continuous pescSessionTypes:DiffersByProgram pescSessionTypes:Other ceds:NI000254117090 ) ;
+    sh:maxCount 1 ;
+    sh:name "Has Session Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P000254 .
+
+<academicsessionshapeSessionBeginDate> a sh:PropertyShape ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Session Begin Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000251 .
+
+<academicsessionshapeSessionDesignator> a sh:PropertyShape ;
+    sh:datatype xsd:gYearMonth ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Session Designator"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000252 .
+
+<academicsessionshapeSessionDesignatorSuffix> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 10 ;
+    sh:name "Session Designator Suffix"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:sessionDesignatorSuffix .
+
+<academicsessionshapeSessionEndDate> a sh:PropertyShape ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Session End Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000253 .
+
+<academicsessionshapeSessionName> a sh:PropertyShape ;
+    sh:datatype rdf:langString ;
+    sh:maxCount 1 ;
+    sh:maxLength 30 ;
+    sh:name "Session Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceterms:name .
+
+<academicsessionshapeSessionSchoolYear> a sh:PropertyShape ;
+    rdfs:comment "ccyy-ccyy"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Session School Year"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:sessionSchoolYear ;
+    sh:pattern "\\d{4}-\\d{4}" .
+
+<academicsessionshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200245 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<academicsummaryshapeAcademicHonors> a sh:PropertyShape ;
+    sh:class pesc:AcademicHonors ;
+    sh:maxCount 1 ;
+    sh:name "Academic Honors"@en-US ;
+    sh:node <AcademicHonorsShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:academicHonors .
+
+<academicsummaryshapeAcademicSummaryLevel> a sh:PropertyShape ;
+    sh:in ( pescCreditLevels:Dual pescCreditLevels:DualGraduate pescCreditLevels:Undergraduate pescCreditLevels:Grade13 pescCreditLevels:Ungraded pescCreditLevels:DualHighSchoolCollege pescCreditLevels:Graduate pescCreditLevels:GraduateProfessional pescCreditLevels:LowerDivision pescCreditLevels:Professional pescCreditLevels:Secondary pescCreditLevels:TechnicalPreparatory pescCreditLevels:UpperDivision pescCreditLevels:Vocational ) ;
+    sh:maxCount 1 ;
+    sh:name "Academic Summary Level"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:academicSummaryLevel .
+
+<academicsummaryshapeAcademicSummaryType> a sh:PropertyShape ;
+    sh:in ( pescAcademicSummaryTypes:All pescAcademicSummaryTypes:SenderOnly pescAcademicSummaryTypes:TransferOnly pescAcademicSummaryTypes:AllNotRepeated pescAcademicSummaryTypes:SenderNotRepeated pescAcademicSummaryTypes:TransferNotRepeated pescAcademicSummaryTypes:AcademicRenewal pescAcademicSummaryTypes:CarryoverCredit pescAcademicSummaryTypes:DegreeApplicable pescAcademicSummaryTypes:NonDegreeApplicable pescAcademicSummaryTypes:ConvertedFrom pescAcademicSummaryTypes:ConvertedTo pescAcademicSummaryTypes:UserDefined pescAcademicSummaryTypes:Weighted pescAcademicSummaryTypes:NonWeighted pescAcademicSummaryTypes:Cumulative ) ;
+    sh:maxCount 1 ;
+    sh:name "Academic Summary Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:academicSummaryType .
+
+<academicsummaryshapeAdditionalNote> a sh:PropertyShape ;
+    sh:class elm:Note ;
+    sh:name "Additional Note"@en-US ;
+    sh:node <NoteShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path elm:additionalNote .
+
+<academicsummaryshapeDelinquencies> a sh:PropertyShape ;
+    rdfs:comment "It is recommended that probation not be included on the transcript since there is no universally accepted definition of probation, and that other Delinquencies be included at the Session level."@eng ;
+    sh:in ( pescDelinquencyCodes:ExclusionAcademic pescDelinquencyCodes:ExclusionDiscipline pescDelinquencyCodes:GoodStanding pescDelinquencyCodes:ProbationGPA pescDelinquencyCodes:ProbationHours pescDelinquencyCodes:SuspensionGPA pescDelinquencyCodes:SuspensionHours pescDelinquencyCodes:ProbationDiscipline pescDelinquencyCodes:SuspensionDiscipline pescDelinquencyCodes:Unknown pescDelinquencyCodes:Other ) ;
+    sh:name "Delinquencies"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:delinquencies .
+
+<academicsummaryshapeEntryDate> a sh:PropertyShape ;
+    rdfs:comment "It would be unusual to find this date on a College Transcript. The date format is ccyy-mm-dd."@eng ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Entry Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:entryDate .
+
+<academicsummaryshapeExitDate> a sh:PropertyShape ;
+    rdfs:comment "This date would typically be the date of graduation for students who did graduate. If the student did not graduate, it would be the last date of known attendance unless the school has a policy on withdrawal from the school. It would be unusual to find this data element on a College Transcript. The date format is ccyy-mm-dd."@eng ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Exit Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:exitDate .
+
+<academicsummaryshapeGPASummary> a sh:PropertyShape ;
+    sh:class pesc:GPA ;
+    sh:maxCount 1 ;
+    sh:name "GPA Summary"@en-US ;
+    sh:node <GPAShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:gpaSummary .
+
+<academicsummaryshapeIsSummaryForProgram> a sh:PropertyShape ;
+    rdfs:comment "This would not normally be used at this point in the schema, to give detailed data about the academic program in which an award was earned."@eng ;
+    sh:class ceds:C200331 ;
+    sh:maxCount 1 ;
+    sh:name "Is Summary For Program"@en-US ;
+    sh:node <AcademicProgramShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:isSummaryForProgram .
+
+<academicsummaryshapeSource> a sh:PropertyShape ;
+    sh:class ceds:C200239 ;
+    sh:maxCount 1 ;
+    sh:name "Source"@en-US ;
+    sh:node <OrganizationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:source .
+
+<academicsummaryshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:AcademicSummary ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<accreditationshapeAccrediationBodyCode> a sh:PropertyShape ;
+    sh:in ( pescAccreditationBodyCodes:MSA pescAccreditationBodyCodes:NCA-HLC pescAccreditationBodyCodes:NCA-CASI pescAccreditationBodyCodes:NEASC-CIHE pescAccreditationBodyCodes:NEASC-CTCI pescAccreditationBodyCodes:NWCCU pescAccreditationBodyCodes:SACS pescAccreditationBodyCodes:WASC-ACCJC pescAccreditationBodyCodes:WASC-ACSCU pescAccreditationBodyCodes:Other ) ;
+    sh:maxCount 1 ;
+    sh:name "Accrediation Body Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:accreditationBodyCode .
+
+<accreditationshapeAccreditationAgencyName> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 80 ;
+    sh:name "Accreditation Agency Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001526 .
+
+<accreditationshapeAdditionalNote> a sh:PropertyShape ;
+    sh:class elm:Note ;
+    sh:name "Additional Note"@en-US ;
+    sh:node <NoteShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path elm:additionalNote .
+
+<accreditationshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200240 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<additionalstudentachievementshapeAttributeAchieved> a sh:PropertyShape ;
+    sh:class ceds:C200065 ;
+    sh:name "Attribute Achieved"@en-US ;
+    sh:node <RAPShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:attributeAchieved .
+
+<additionalstudentachievementshapeConditionsMetCode> a sh:PropertyShape ;
+    sh:in ( pescConditionsMetCodes:Yes pescConditionsMetCodes:No pescConditionsMetCodes:Conditional pescConditionsMetCodes:MutuallyDefined ) ;
+    sh:name "Conditions Met Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:conditionsMetCode .
+
+<additionalstudentachievementshapeConditionsMetDate> a sh:PropertyShape ;
+    sh:datatype xsd:date ;
+    sh:name "Conditions Met Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:conditionsMetDate .
+
+<additionalstudentachievementshapeInCourse> a sh:PropertyShape ;
+    sh:class ceds:C200328 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "In Course"@en-US ;
+    sh:node <CourseShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:inCourse .
+
+<additionalstudentachievementshapeLanguageAchieved> a sh:PropertyShape ;
+    sh:class ceds:C200293 ;
+    sh:name "Language Achieved"@en-US ;
+    sh:node <LanguageShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:languageAchieved .
+
+<additionalstudentachievementshapeProficiencyAchieved> a sh:PropertyShape ;
+    sh:class ceds:C200065 ;
+    sh:name "Proficiency Achieved"@en-US ;
+    sh:node <RAPShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:proficiencyAchieved .
+
+<additionalstudentachievementshapeRequirementAchieved> a sh:PropertyShape ;
+    sh:class ceds:C200065 ;
+    sh:name "Requirement Achieved"@en-US ;
+    sh:node <RAPShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:requirementAchieved .
+
+<additionalstudentachievementshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:AdditionalStudentAchievement ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<awardsummaryshapeAcademicHonors> a sh:PropertyShape ;
+    sh:class pesc:AcademicHonors ;
+    sh:name "Academic Honors"@en-US ;
+    sh:node <AcademicHonorsShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:academicHonors .
+
+<awardsummaryshapeAcademicSummaryLevel> a sh:PropertyShape ;
+    sh:in ( pescCreditLevels:Dual pescCreditLevels:DualGraduate pescCreditLevels:Undergraduate pescCreditLevels:Grade13 pescCreditLevels:Ungraded pescCreditLevels:DualHighSchoolCollege pescCreditLevels:Graduate pescCreditLevels:GraduateProfessional pescCreditLevels:LowerDivision pescCreditLevels:Professional pescCreditLevels:Secondary pescCreditLevels:TechnicalPreparatory pescCreditLevels:UpperDivision pescCreditLevels:Vocational ) ;
+    sh:maxCount 1 ;
+    sh:name "Academic Summary Level"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:academicSummaryLevel .
+
+<awardsummaryshapeAcademicSummaryType> a sh:PropertyShape ;
+    sh:in ( pescAcademicSummaryTypes:All pescAcademicSummaryTypes:SenderOnly pescAcademicSummaryTypes:TransferOnly pescAcademicSummaryTypes:AllNotRepeated pescAcademicSummaryTypes:SenderNotRepeated pescAcademicSummaryTypes:TransferNotRepeated pescAcademicSummaryTypes:AcademicRenewal pescAcademicSummaryTypes:CarryoverCredit pescAcademicSummaryTypes:DegreeApplicable pescAcademicSummaryTypes:NonDegreeApplicable pescAcademicSummaryTypes:ConvertedFrom pescAcademicSummaryTypes:ConvertedTo pescAcademicSummaryTypes:UserDefined pescAcademicSummaryTypes:Weighted pescAcademicSummaryTypes:NonWeighted pescAcademicSummaryTypes:Cumulative ) ;
+    sh:maxCount 1 ;
+    sh:name "Academic Summary Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:academicSummaryType .
+
+<awardsummaryshapeAdditionalNote> a sh:PropertyShape ;
+    sh:class elm:Note ;
+    sh:name "Additional Note"@en-US ;
+    sh:node <NoteShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path elm:additionalNote .
+
+<awardsummaryshapeGPASummary> a sh:PropertyShape ;
+    sh:class pesc:GPA ;
+    sh:maxCount 1 ;
+    sh:name "GPA Summary"@en-US ;
+    sh:node <GPAShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:gpaSummary .
+
+<awardsummaryshapeIsSummaryForAward> a sh:PropertyShape ;
+    sh:class ceds:C200335 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Is Summary For Award"@en-US ;
+    sh:node <AcademicAwardShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:isSummaryForAward .
+
+<awardsummaryshapeIsSummaryForProgram> a sh:PropertyShape ;
+    rdfs:comment "This would not normally be used at this point in the schema, to give detailed data about the academic program in which an award was earned."@eng ;
+    sh:class ceds:C200331 ;
+    sh:maxCount 1 ;
+    sh:name "Is Summary For Program"@en-US ;
+    sh:node <AcademicProgramShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:isSummaryForProgram .
+
+<awardsummaryshapeSource> a sh:PropertyShape ;
+    sh:class ceds:C200239 ;
+    sh:maxCount 1 ;
+    sh:name "Source"@en-US ;
+    sh:node <OrganizationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:source .
+
+<awardsummaryshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:AwardSummary ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<collegetranscriptshapeAdditionalNote> a sh:PropertyShape ;
+    sh:class elm:Note ;
+    sh:name "Additional Note"@en-US ;
+    sh:node <NoteShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path elm:additionalNote .
+
+<collegetranscriptshapeCreatedDateTime> a sh:PropertyShape ;
+    sh:datatype xsd:dateTime ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Created Date Time"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:createdDateTime .
+
+<collegetranscriptshapeDescribesAchievement> a sh:PropertyShape ;
+    sh:name "Describes Achievement"@en-US ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:or ( [ sh:class pesc:AdditionalStudentAchievement ] [ sh:class ceds:C200335 ] [ sh:class ceds:C200346 ] [ sh:class pesc:LicensureAchievement ] [ sh:class ceds:C200047 ] ) ;
+    sh:path pesc:describesAchievement .
+
+<collegetranscriptshapeDestination> a sh:PropertyShape ;
+    sh:class ceds:C200239 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Destination"@en-US ;
+    sh:node <OrganizationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:destination .
+
+<collegetranscriptshapeDocumentCompleteCode> a sh:PropertyShape ;
+    sh:in ( pescDocumentCompleteCodes:Partial pescDocumentCompleteCodes:Complete ) ;
+    sh:maxCount 1 ;
+    sh:name "Document Complete Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:documentCompleteCode .
+
+<collegetranscriptshapeDocumentID> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 35 ;
+    sh:minCount 1 ;
+    sh:minLength 1 ;
+    sh:name "Document ID"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:documentID .
+
+<collegetranscriptshapeDocumentOfficialCode> a sh:PropertyShape ;
+    sh:in ( pescDocumentOfficialCodes:Official pescDocumentOfficialCodes:Unofficial ) ;
+    sh:maxCount 1 ;
+    sh:name "Document Official Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:documentOfficialCode .
+
+<collegetranscriptshapeDocumentProcessCode> a sh:PropertyShape ;
+    sh:in ( pescDocumentProcessCodes:TEST pescDocumentProcessCodes:PRODUCTION ) ;
+    sh:maxCount 1 ;
+    sh:name "Document Process Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:documentProcessCode .
+
+<collegetranscriptshapeDocumenttypeCode> a sh:PropertyShape ;
+    sh:in ( pescDocumentTypeCodes:Cancel pescDocumentTypeCodes:Change pescDocumentTypeCodes:InstitutionRequest pescDocumentTypeCodes:RequestedRecord pescDocumentTypeCodes:Response pescDocumentTypeCodes:StudentRequest pescDocumentTypeCodes:TermEnroll pescDocumentTypeCodes:TermGrade pescDocumentTypeCodes:ThirdPartyRequest ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Document type Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:documentTypeCode .
+
+<collegetranscriptshapeHaspart> a sh:PropertyShape ;
+    sh:name "Has part"@en-US ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:or ( [ sh:class pesc:AcademicSummary ] [ sh:class pesc:AwardSummary ] [ sh:class pesc:ProgramSummary ] [ sh:class pesc:SessionSummary ] ) ;
+    sh:path ceterms:hasPart .
+
+<collegetranscriptshapeRequestTrackingID> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 35 ;
+    sh:name "Request Tracking ID"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:requestTrackingID .
+
+<collegetranscriptshapeSource> a sh:PropertyShape ;
+    sh:class ceds:C200239 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Source"@en-US ;
+    sh:node <OrganizationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:source .
+
+<collegetranscriptshapeStudent> a sh:PropertyShape ;
+    sh:class ceds:C200275 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "student"@en-US ;
+    sh:node <PersonShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:student .
+
+<collegetranscriptshapeTransmissionType> a sh:PropertyShape ;
+    sh:in ( pescTransmissionTypes:Original pescTransmissionTypes:Replace pescTransmissionTypes:Duplicate pescTransmissionTypes:Resubmission pescTransmissionTypes:Reissue pescTransmissionTypes:MutuallyDefined ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Transmission Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:transmissionType .
+
+<collegetranscriptshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:CollegeTranscript ;
+    sh:maxCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<contactshapeAdditionalNote> a sh:PropertyShape ;
+    sh:class elm:Note ;
+    sh:name "Additional Note"@en-US ;
+    sh:node <NoteShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path elm:additionalNote .
+
+<contactshapeAddress> a sh:PropertyShape ;
+    sh:class ceterms:PostalAddress ;
+    sh:name "Address"@en-US ;
+    sh:node <PostalAddressShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path ceterms:address .
+
+<contactshapeAttentionLine> a sh:PropertyShape ;
+    sh:datatype rdf:langString ;
+    sh:maxLength 45 ;
+    sh:name "Attention Line"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:attentionLine .
+
+<contactshapeContactType> a sh:PropertyShape ;
+    sh:datatype rdf:langString ;
+    sh:maxLength 80 ;
+    sh:minLength 1 ;
+    sh:name "Contact Type"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceterms:contactType .
+
+<contactshapeEmailAddress> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:name "Email Address"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:email .
+
+<contactshapeFAXPhone> a sh:PropertyShape ;
+    sh:class pesc:Phone ;
+    sh:name "FAX Phone"@en-US ;
+    sh:node <PhoneShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:faxPhone .
+
+<contactshapePhone> a sh:PropertyShape ;
+    sh:class pesc:Phone ;
+    sh:name "Phone"@en-US ;
+    sh:node <PhoneShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:phone .
+
+<contactshapeType> a sh:PropertyShape ;
+    sh:hasValue ceterms:ContactPoint ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<contactshapeURL> a sh:PropertyShape ;
+    sh:datatype xsd:anyURI ;
+    sh:name "URL"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:url .
+
+<courseachievementshapeCourseAddDate> a sh:PropertyShape ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Course Add Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001300 .
+
+<courseachievementshapeCourseDropDate> a sh:PropertyShape ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Course DropDate"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001305 .
+
+<courseachievementshapeCourseEquivalentGrade> a sh:PropertyShape ;
+    sh:class pesc:Grade ;
+    sh:maxCount 1 ;
+    sh:name "Course Equivalent Grade"@en-US ;
+    sh:node <GradeShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:courseEquivalentGrade .
+
+<courseachievementshapeCourseGrade> a sh:PropertyShape ;
+    sh:class pesc:Grade ;
+    sh:maxCount 1 ;
+    sh:name "Course Grade"@en-US ;
+    sh:node <GradeShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:courseGrade .
+
+<courseachievementshapeCourseQualityPointsEarned> a sh:PropertyShape ;
+    rdfs:comment "decimal"@eng ;
+    sh:datatype xsd:float ;
+    sh:maxCount 1 ;
+    sh:name "Course Quality Points Earned"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000064 .
+
+<courseachievementshapeCourseSupplementalGrade> a sh:PropertyShape ;
+    sh:class pesc:CourseSupplementalGrade ;
+    sh:maxCount 1 ;
+    sh:name "Course Supplemental Grade"@en-US ;
+    sh:node <CourseSupplementalGradeShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:courseSupplementalGrade .
+
+<courseachievementshapeHasCourseRepeatCode> a sh:PropertyShape ;
+    sh:in ( ceds:NI000065116744 ceds:NI000065116745 ceds:NI000065116748 ceds:NI000065116747 ceds:NI000065116746 ceds:NI000065116260 ) ;
+    sh:maxCount 1 ;
+    sh:name "Has Course Repeat Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P000065 .
+
+<courseachievementshapeInCourse> a sh:PropertyShape ;
+    sh:class ceds:C200328 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "In Course"@en-US ;
+    sh:node <CourseShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:inCourse .
+
+<courseachievementshapeInSection> a sh:PropertyShape ;
+    sh:class ceds:C200332 ;
+    sh:maxCount 1 ;
+    sh:name "In Section"@en-US ;
+    sh:node <PostsecondarySectionShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:inSection .
+
+<courseachievementshapeInSession> a sh:PropertyShape ;
+    sh:class ceds:C200245 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "In Session"@en-US ;
+    sh:node <AcademicSessionShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:inSession .
+
+<courseachievementshapeNumberofCreditsEarned> a sh:PropertyShape ;
+    rdfs:comment "decimal"@eng ;
+    sh:datatype xsd:float ;
+    sh:maxCount 1 ;
+    sh:name "Number of Credits Earned"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000200 .
+
+<courseachievementshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200346 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<courseshapeAgencyCourseID> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 30 ;
+    sh:name "Agency Course ID"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:agencyCourseID .
+
+<courseshapeAttribute> a sh:PropertyShape ;
+    sh:class ceds:C200065 ;
+    sh:name "Attribute"@en-US ;
+    sh:node <RAPShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:attribute .
+
+<courseshapeCourseAcademicGradeScaleCode> a sh:PropertyShape ;
+    rdfs:comment "pesc:Appendix H Very long list. Need to handle out of spreadsheet, maybe use regular expression for valid codes"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Course Academic Grade Scale Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001298 .
+
+<courseshapeCourseCreditValue> a sh:PropertyShape ;
+    rdfs:comment "decimal"@eng ;
+    sh:datatype xsd:float ;
+    sh:maxCount 1 ;
+    sh:name "Course Credit Value"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000058 .
+
+<courseshapeCourseFiveDigitSCEDCode> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Course Five Digit SCED Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001517 ;
+    sh:pattern "^[\\dPKG]{5}$" .
+
+<courseshapeCourseNumber> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 15 ;
+    sh:name "Course Number"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001314 .
+
+<courseshapeCourseOverrideSchool> a sh:PropertyShape ;
+    sh:class ceds:C200239 ;
+    sh:maxCount 1 ;
+    sh:name "Course Override School"@en-US ;
+    sh:node <OrganizationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:courseOverrideSchool .
+
+<courseshapeCourseSubjectAbbreviation> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 10 ;
+    sh:name "Course Subject Abbreviation"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000066 .
+
+<courseshapeCourseTitle> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 60 ;
+    sh:name "Course Title"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000068 .
+
+<courseshapeHasClassificationofInstructionalProgramCode> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Has Classification of Instructional Program Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000043 ;
+    sh:pattern "^\\d{2}\\.\\d{4}$" .
+
+<courseshapeHasCourseCreditBasisType> a sh:PropertyShape ;
+    sh:in ( ceds:NI001303116728 ceds:NI001303115164 ceds:NI001303115209 ceds:NI001303115213 ceds:NI001303115491 ceds:NI001303115507 ceds:NI001303115675 ceds:NI001303115664 ceds:NI001303115957 pescCreditBasis:LifeExperience ceds:NI001303116120 ceds:NI001303116736 ceds:NI001303115519 ceds:NI001303115860 ceds:NI001303115857 ceds:NI001303115859 ceds:NI001303115979 ceds:NI001303116065 ceds:NI001303115203 ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Has Course Credit Basis Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P001303 .
+
+<courseshapeHasCourseCreditLevelType> a sh:PropertyShape ;
+    sh:in ( ceds:NI001304117105 ceds:NI001304116050 ceds:NI001304117129 ceds:NI001304117161 ceds:NI001304117014 ceds:NI001304115808 ceds:NI001304116619 ceds:NI001304115600 ceds:NI001304115810 pescCreditLevels:Grade13 pescCreditLevels:DualGraduateUndergraduate ) ;
+    sh:maxCount 1 ;
+    sh:name "Has Course Credit Level Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P001304 .
+
+<courseshapeHasCourseCreditUnits> a sh:PropertyShape ;
+    sh:in ( ceds:NI000057116219 ceds:NI000057116669 ceds:NI000057116841 ceds:NI000057117114 ceds:NI000057115440 ceds:NI000057115402 ceds:NI000057115492 ceds:NI000057117127 ceds:NI000057116368 ) ;
+    sh:maxCount 1 ;
+    sh:name "Has Course Credit Units"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P000057 .
+
+<courseshapeHasCourseGradePointAverageApplicability> a sh:PropertyShape ;
+    sh:in ( ceds:NI000060115254 ceds:NI000060116257 ceds:NI000060117182 ) ;
+    sh:maxCount 1 ;
+    sh:name "Has Course Grade Point Average Applicability"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P000060 .
+
+<courseshapeHasCourseLevelType> a sh:PropertyShape ;
+    sh:in ( ceds:NI001312127883 ceds:NI001312127884 ceds:NI001312127885 ceds:NI001312127886 ceds:NI001312127893 ceds:NI001312127887 ceds:NI001312127888 ceds:NI001312127889 ceds:NI001312127890 ceds:NI001312127891 ceds:NI001312127892 ceds:NI001312127894 ceds:NI001312127895 ceds:NI001312127896 ceds:NI001312127897 ceds:NI001312127898 ceds:NI001312127899 ceds:NI001312127900 ceds:NI001312127901 ) ;
+    sh:maxCount 1 ;
+    sh:name "Has Course Level Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P001312 .
+
+<courseshapeHasInstructionLanguage> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 3 ;
+    sh:minLength 3 ;
+    sh:name "Has Instruction Language"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000448 .
+
+<courseshapeHasPostsecondarySection> a sh:PropertyShape ;
+    sh:class ceds:C200332 ;
+    sh:name "Has Postsecondary Section"@en-US ;
+    sh:node <PostsecondarySectionShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path ceds:P600267 .
+
+<courseshapeLicensure> a sh:PropertyShape ;
+    sh:class pesc:Licensure ;
+    sh:name "Licensure"@en-US ;
+    sh:node <LicensureShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:licensure .
+
+<courseshapeOfferedBy> a sh:PropertyShape ;
+    sh:class ceds:C200239 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Offered By"@en-US ;
+    sh:node <OrganizationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path ceterms:offeredBy .
+
+<courseshapeOriginalCourseIdentifier> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 30 ;
+    sh:name "Original Course Identifier"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001420 .
+
+<courseshapeOverrideSchoolCourseNumber> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 35 ;
+    sh:name "Override School Course Number"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:overrideSchoolCourseNumber .
+
+<courseshapeProficiency> a sh:PropertyShape ;
+    sh:class ceds:C200065 ;
+    sh:name "Proficiency"@en-US ;
+    sh:node <RAPShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:proficiency .
+
+<courseshapeRequirement> a sh:PropertyShape ;
+    sh:class ceds:C200065 ;
+    sh:name "Requirement"@en-US ;
+    sh:node <RAPShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:requirement .
+
+<courseshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200328 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<coursesupplementalgradeshapeCourseAcademicSupplementalGradeStatusCode> a sh:PropertyShape ;
+    sh:in ( pescGradeStatusCodes:AuditedCourse pescGradeStatusCodes:HonorsGrade pescGradeStatusCodes:Incomplete pescGradeStatusCodes:IncompleteNotResolvedFail pescGradeStatusCodes:InProgress pescGradeStatusCodes:NotYetReported pescGradeStatusCodes:OtherFail pescGradeStatusCodes:OtherPass pescGradeStatusCodes:PassFailFail pescGradeStatusCodes:PassFailPass pescGradeStatusCodes:TransferNoGrade pescGradeStatusCodes:Withdrew pescGradeStatusCodes:WithdrewFailing pescGradeStatusCodes:WithdrewNoPenalty pescGradeStatusCodes:WithdrewPassing ) ;
+    sh:maxCount 1 ;
+    sh:name "Course Academic Supplemental Grade Status Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:courseAcademicSupplementalGradeStatusCode .
+
+<coursesupplementalgradeshapeSupplementalGrade> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 3 ;
+    sh:name "Supplemental Grade"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:supplementalGrade .
+
+<coursesupplementalgradeshapeSupplementalGradeCode> a sh:PropertyShape ;
+    sh:in ( pescSupplementalGradeCodes:BiCourseGrade pescSupplementalGradeCodes:BlendedFinalGrade pescSupplementalGradeCodes:ExamGrade pescSupplementalGradeCodes:InstructorAssignedGrade pescSupplementalGradeCodes:SubSessionGrade pescSupplementalGradeCodes:TriCourseGrade ) ;
+    sh:maxCount 1 ;
+    sh:name "Supplemental Grade Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:supplementalGradeCode .
+
+<coursesupplementalgradeshapeSupplementalGradeSubSession> a sh:PropertyShape ;
+    rdfs:comment "numeric count of the subsession of a course"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 3 ;
+    sh:name "Supplemental Grade Sub Session"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:supplementalGradeSubSession .
+
+<coursesupplementalgradeshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:CourseSupplementalGrade ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<gpashapeCreditHoursAttempted> a sh:PropertyShape ;
+    rdfs:comment "decimal"@eng ;
+    sh:datatype xsd:float ;
+    sh:maxCount 1 ;
+    sh:name "Credit Hours Attempted"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:creditHoursAttempted .
+
+<gpashapeCreditHoursEarned> a sh:PropertyShape ;
+    rdfs:comment "decimal"@eng ;
+    sh:datatype xsd:float ;
+    sh:maxCount 1 ;
+    sh:name "Credit Hours Earned"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:creditHoursEarned .
+
+<gpashapeCreditHoursGPA> a sh:PropertyShape ;
+    rdfs:comment "decimal"@eng ;
+    sh:datatype xsd:float ;
+    sh:maxCount 1 ;
+    sh:name "Credit Hours GPA"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:creditHoursForGPA .
+
+<gpashapeGPARangeMaximum> a sh:PropertyShape ;
+    rdfs:comment "decimal"@eng ;
+    sh:datatype xsd:float ;
+    sh:maxCount 1 ;
+    sh:name "GPA Range Maximum"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:gpaRangeMaximum .
+
+<gpashapeGPARangeMinimum> a sh:PropertyShape ;
+    rdfs:comment "decimal"@eng ;
+    sh:datatype xsd:float ;
+    sh:maxCount 1 ;
+    sh:name "GPA Range Minimum"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:gpaRangeMinimum .
+
+<gpashapeGradePointAverage> a sh:PropertyShape ;
+    rdfs:comment "decimal"@eng ;
+    sh:datatype xsd:float ;
+    sh:maxCount 1 ;
+    sh:name "Grade Point Average"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:gradePointAverage .
+
+<gpashapeHasCourseCreditUnits> a sh:PropertyShape ;
+    sh:in ( ceds:NI000057116219 ceds:NI000057116669 ceds:NI000057116841 ceds:NI000057117114 ceds:NI000057115440 ceds:NI000057115402 ceds:NI000057115492 ceds:NI000057117127 ceds:NI000057116368 ) ;
+    sh:maxCount 1 ;
+    sh:name "Has Course Credit Units"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P000057 .
+
+<gpashapeTotalQualityPoints> a sh:PropertyShape ;
+    rdfs:comment "decimal"@eng ;
+    sh:datatype xsd:float ;
+    sh:maxCount 1 ;
+    sh:name "Total Quality Points"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:totalQualityPoints .
+
+<gpashapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:GPA ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<gradeshapeCourseAcademicGrade> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 10 ;
+    sh:name "Course Academic Grade"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000053 .
+
+<gradeshapeCourseAcademicGradeScaleCode> a sh:PropertyShape ;
+    rdfs:comment "pesc:Appendix H Very long list. Need to handle out of spreadsheet, maybe use regular expression for valid codes"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Course Academic Grade Scale Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001298 .
+
+<gradeshapeHasCourseAcademicGradeStatusCode> a sh:PropertyShape ;
+    sh:in ( pescGradeStatusCodes:Completed pescGradeStatusCodes:PlanningToTake ceds:NI001299115324 ceds:NI001299115877 ceds:NI001299115916 ceds:NI001299115918 ceds:NI001299115931 ceds:NI001299116290 ceds:NI001299116438 ceds:NI001299116457 ceds:NI001299116507 ceds:NI001299116508 ceds:NI001299117075 ceds:NI001299117192 ceds:NI001299117194 ceds:NI001299117195 ceds:NI001299117196 ) ;
+    sh:maxCount 1 ;
+    sh:name "Has Course Academic Grade Status Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P001299 .
+
+<gradeshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:Grade ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<languageshapeHasISO669-2LanguageCode> a sh:PropertyShape ;
+    rdfs:comment "pesc:appendix C1 or pesc:appendix C2"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 3 ;
+    sh:minLength 3 ;
+    sh:name "Has ISO 669-2 Language Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000317 .
+
+<languageshapeLanguageProficiency> a sh:PropertyShape ;
+    sh:in ( pescLanguageProficiencyCodes:EnglishOnly pescLanguageProficiencyCodes:FullyEnglishProficient pescLanguageProficiencyCodes:LimitedEnglishProficiency pescLanguageProficiencyCodes:NonEnglishSpeaking pescLanguageProficiencyCodes:RedesignatedFluentEnglishProficient pescLanguageProficiencyCodes:Excellent pescLanguageProficiencyCodes:Good pescLanguageProficiencyCodes:Fair pescLanguageProficiencyCodes:Poor pescLanguageProficiencyCodes:Unacceptable pescLanguageProficiencyCodes:Unknown ) ;
+    sh:maxCount 1 ;
+    sh:name "Language Proficiency"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:languageProficiency .
+
+<languageshapeLanguageUsage> a sh:PropertyShape ;
+    sh:in ( ceds:NI000316151876 ceds:NI000316151874 pescLanguageUsageCodes:Reading ceds:NI000316151877 ceds:NI000316151875 pescLanguageUsageCodes:Writing ceds:NI000316151878 ) ;
+    sh:name "Language Usage"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P000316 .
+
+<languageshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200293 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<licensureachievementshapeInCourse> a sh:PropertyShape ;
+    sh:class ceds:C200328 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "In Course"@en-US ;
+    sh:node <CourseShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:inCourse .
+
+<licensureachievementshapeLicensureAchieved> a sh:PropertyShape ;
+    sh:class pesc:Licensure ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Licensure Achieved"@en-US ;
+    sh:node <LicensureShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:licensureAchieved .
+
+<licensureachievementshapeLicensurePassageDate> a sh:PropertyShape ;
+    sh:datatype xsd:date ;
+    sh:name "Licensure Passage Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:licensurePassageDate .
+
+<licensureachievementshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:LicensureAchievement ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<licensureshapeLicensureName> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxLength 60 ;
+    sh:name "Licensure Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:licensureName .
+
+<licensureshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:Licensure ;
+    sh:minCount 1 ;
+    sh:name "type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<noteshapeNoteliteral> a sh:PropertyShape ;
+    sh:minCount 1 ;
+    sh:name "Note literal"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path elm:noteLiteral .
+
+<noteshapeType> a sh:PropertyShape ;
+    sh:hasValue elm:Note ;
+    sh:maxCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<organizationidentificationshapeHasOrganizationIdentificationSystem> a sh:PropertyShape ;
+    sh:in ( ceds:NI000827151968 pescIdentifierTypes:OPEid pescIdentifierTypes:PSISid pescIdentifierTypes:GEOCode pescIdentifierTypes:ACT pescIdentifierTypes:MutuallyDefined ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Has Organization Identification System"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P000827 .
+
+<organizationidentificationshapeOrganizationIdentifier> a sh:PropertyShape ;
+    sh:datatype xsd:token ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Organization Identifier"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000826 .
+
+<organizationidentificationshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200252 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<organizationshapeAdditionalNote> a sh:PropertyShape ;
+    sh:class elm:Note ;
+    sh:name "Additional Note"@en-US ;
+    sh:node <NoteShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path elm:additionalNote .
+
+<organizationshapeContact> a sh:PropertyShape ;
+    sh:class ceterms:ContactPoint ;
+    sh:name "Contact"@en-US ;
+    sh:node <ContactShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path ceterms:targetContactPoint .
+
+<organizationshapeHasOrganizationAccreditation> a sh:PropertyShape ;
+    sh:class ceds:C200240 ;
+    sh:maxCount 1 ;
+    sh:name "Has Organization Accreditation"@en-US ;
+    sh:node <AccreditationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path ceds:P600472 .
+
+<organizationshapeHasOrganizationIdentification> a sh:PropertyShape ;
+    sh:class ceds:C200252 ;
+    sh:name "Has Organization Identification"@en-US ;
+    sh:node <OrganizationIdentificationShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path ceds:P600502 .
+
+<organizationshapeOrganizationName> a sh:PropertyShape ;
+    sh:datatype rdf:langString ;
+    sh:maxLength 60 ;
+    sh:name "Organization Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceterms:name .
+
+<organizationshapeSchoolLevel> a sh:PropertyShape ;
+    sh:in ( pescSchoolLevels:Elementary pescSchoolLevels:HighSchool pescSchoolLevels:JuniorHigh pescSchoolLevels:Middle pescSchoolLevels:Other pescSchoolLevels:Postsecondary pescSchoolLevels:Secondary ) ;
+    sh:maxCount 1 ;
+    sh:name "School Level"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:schoolLevel .
+
+<organizationshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200239 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<personidentificationshapeHasStudentIdentificationSystem> a sh:PropertyShape ;
+    sh:in ( ceds:NI001075173041 ceds:NI001075173046 ceds:NI001075173047 ceds:NI001075173048 ) ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "hasStudentIdentificationSystem"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P001075 .
+
+<personidentificationshapePersonIdentifier> a sh:PropertyShape ;
+    sh:datatype xsd:token ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Person Identifier"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001572 .
+
+<personidentificationshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200291 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<personnameshapeCompositeName> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 45 ;
+    sh:name "Composite Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:compositeName .
+
+<personnameshapeFirstName> a sh:PropertyShape ;
+    sh:datatype xsd:token ;
+    sh:maxCount 1 ;
+    sh:maxLength 35 ;
+    sh:name "First Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000115 .
+
+<personnameshapeLastName> a sh:PropertyShape ;
+    sh:datatype xsd:token ;
+    sh:maxCount 1 ;
+    sh:maxLength 35 ;
+    sh:name "Last Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000172 .
+
+<personnameshapeMiddleName> a sh:PropertyShape ;
+    sh:datatype xsd:token ;
+    sh:maxLength 35 ;
+    sh:name "Middle Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000184 .
+
+<personnameshapeNameCode> a sh:PropertyShape ;
+    sh:in ( pescNameCodes:Casual pescNameCodes:Formal pescNameCodes:Former pescNameCodes:LawSchoolApplicationSource pescNameCodes:Legal pescNameCodes:MedicalSchoolApplicationSource pescNameCodes:Nickname pescNameCodes:Other ) ;
+    sh:maxCount 1 ;
+    sh:name "Name Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:nameCode .
+
+<personnameshapeNamePrefix> a sh:PropertyShape ;
+    sh:datatype xsd:token ;
+    sh:maxCount 1 ;
+    sh:maxLength 30 ;
+    sh:name "Name Prefix"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000212 .
+
+<personnameshapeNameSuffix> a sh:PropertyShape ;
+    sh:in ( "JR" "SR" "I" "II" "III" "IV" "V" "VI" "VII" "VIII" "IX" "X" ) ;
+    sh:maxCount 1 ;
+    sh:name "Name Suffix"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000121 .
+
+<personnameshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200377 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<personshapeAdditionalNote> a sh:PropertyShape ;
+    sh:class elm:Note ;
+    sh:name "Additional Note"@en-US ;
+    sh:node <NoteShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path elm:additionalNote .
+
+<personshapeBirthCity> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 25 ;
+    sh:name "Birth City"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:birthCity .
+
+<personshapeBirthCountry> a sh:PropertyShape ;
+    rdfs:comment "pesc.AppendixB1 or pesc.AppendixB2 Keep as string for now"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Birth Country"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:birthCountry .
+
+<personshapeBirthDate> a sh:PropertyShape ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Birth Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000033 .
+
+<personshapeBirthday> a sh:PropertyShape ;
+    sh:datatype xsd:gMonthDay ;
+    sh:maxCount 1 ;
+    sh:name "Birthday"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:birthday .
+
+<personshapeBirthStateProvinceCode> a sh:PropertyShape ;
+    rdfs:comment "pesc.appendixA Keep as string for now"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Birth State Province Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:birthStateProvinceCode .
+
+<personshapeBirthYear> a sh:PropertyShape ;
+    sh:datatype xsd:gYear ;
+    sh:maxCount 1 ;
+    sh:name "Birth Year"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:birthYear .
+
+<personshapeCohortGraduationYear> a sh:PropertyShape ;
+    rdfs:comment "ccyy"@eng ;
+    sh:datatype xsd:gYear ;
+    sh:maxCount 1 ;
+    sh:name "Cohort Graduation Year"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:cohortGraduationYear .
+
+<personshapeContact> a sh:PropertyShape ;
+    sh:class ceterms:ContactPoint ;
+    sh:name "Contact"@en-US ;
+    sh:node <ContactShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path ceterms:targetContactPoint .
+
+<personshapeDeceasedIndicator> a sh:PropertyShape ;
+    rdfs:comment "true/false"@eng ;
+    sh:datatype xsd:boolean ;
+    sh:maxCount 1 ;
+    sh:name "Deceased Indicator"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:deceasedIndicator .
+
+<personshapeGenderCode> a sh:PropertyShape ;
+    sh:in ( pescGenderCodes:Female pescGenderCodes:Male pescGenderCodes:Unreported ) ;
+    sh:maxCount 1 ;
+    sh:name "Gender Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:genderCode .
+
+<personshapeHasAchievement> a sh:PropertyShape ;
+    sh:name "Has Achievement"@en-US ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:or ( [ sh:class pesc:AdditionalStudentAchievement ] [ sh:class ceds:C200335 ] [ sh:class ceds:C200346 ] [ sh:class pesc:GPA ] [ sh:class pesc:AcademicSummary ] [ sh:class pesc:ProgramSummary ] [ sh:class pesc:LicensureAchievement ] [ sh:class ceds:C200047 ] ) ;
+    sh:path pesc:hasAchievement .
+
+<personshapeHasOtherPersonName> a sh:PropertyShape ;
+    sh:class ceds:C200377 ;
+    sh:name "Has Other Person Name"@en-US ;
+    sh:node <PersonNameShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path ceds:P600101 .
+
+<personshapeHasPersonIdentification> a sh:PropertyShape ;
+    sh:class ceds:C200291 ;
+    sh:name "hasPersonIdentification"@en-US ;
+    sh:node <PersonIdentificationShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path ceds:P600049 .
+
+<personshapeHasPersonLanguage> a sh:PropertyShape ;
+    sh:class ceds:C200293 ;
+    sh:name "Has Person Language"@en-US ;
+    sh:node <LanguageShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path ceds:P600052 .
+
+<personshapeHasPersonName> a sh:PropertyShape ;
+    sh:class ceds:C200377 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Has Person Name"@en-US ;
+    sh:node <PersonNameShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path ceds:P600336 .
+
+<personshapeHasSummary> a sh:PropertyShape ;
+    sh:minCount 1 ;
+    sh:name "Has Summary"@en-US ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:or ( [ sh:class pesc:AcademicSummary ] [ sh:class pesc:AwardSummary ] [ sh:class pesc:ProgramSummary ] [ sh:class pesc:SessionSummary ] ) ;
+    sh:path pesc:hasSummary ;
+    sh:severity sh:Warning .
+
+<personshapeHighSchoolAttended> a sh:PropertyShape ;
+    sh:class ceds:C200239 ;
+    sh:name "High School Attended"@en-US ;
+    sh:node <OrganizationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:highSchoolAttended .
+
+<personshapeResidency> a sh:PropertyShape ;
+    sh:class pesc:Residency ;
+    sh:maxCount 1 ;
+    sh:name "Residency"@en-US ;
+    sh:node <ResidencyShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:hasResidency .
+
+<personshapeStudentLevel> a sh:PropertyShape ;
+    sh:in ( pescStudentLevelCodes:Postsecondary pescStudentLevelCodes:PostsecondaryBachelorPreliminaryYear pescStudentLevelCodes:NonDegree pescStudentLevelCodes:Grade13 pescStudentLevelCodes:Ungraded pescStudentLevelCodes:CollegeFirstYear pescStudentLevelCodes:CollegeFirstYearAttendedBefore pescStudentLevelCodes:CollegeSophomore pescStudentLevelCodes:CollegeJunior pescStudentLevelCodes:CollegeSenior pescStudentLevelCodes:CollegeFifthYear pescStudentLevelCodes:PostBaccalaureate pescStudentLevelCodes:GraduateNonDegree pescStudentLevelCodes:GraduateFirstYear pescStudentLevelCodes:GraduateSecondYear pescStudentLevelCodes:GraduateThirdYear pescStudentLevelCodes:GraduateBeyondThirdYear pescStudentLevelCodes:Professional pescStudentLevelCodes:ProfessionalFirstYear pescStudentLevelCodes:ProfessionalSecondYear pescStudentLevelCodes:ProfessionalThirdYear pescStudentLevelCodes:ProfessionalBeyondThirdYear pescStudentLevelCodes:MastersQualifying pescStudentLevelCodes:Masters pescStudentLevelCodes:Doctoral pescStudentLevelCodes:Postdoctoral ) ;
+    sh:maxCount 1 ;
+    sh:name "Student Level"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:studentLevel .
+
+<personshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200275 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<phoneshapeCountryPrefixCode> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 3 ;
+    sh:name "Country Prefix Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:countryPrefixCode .
+
+<phoneshapePhoneNumber> a sh:PropertyShape ;
+    rdfs:comment "Including the area code, no spaces or other delimiters."@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 11 ;
+    sh:minCount 1 ;
+    sh:name "Phone Number"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:phoneNumber .
+
+<phoneshapePhoneNumberExtension> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 5 ;
+    sh:name "Phone Number Extension"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:phoneNumberExtension .
+
+<phoneshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:Phone ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<postaladdressshapeAddressLocality> a sh:PropertyShape ;
+    rdfs:comment "pesc:core:CommonAddressDetailsGroup"@eng ;
+    sh:datatype rdf:langString ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Address Locality"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceterms:addressLocality .
+
+<postaladdressshapeAddressRegion> a sh:PropertyShape ;
+    rdfs:comment """pesc:core:DomesticAddressDetailsGroup
+pesc:core:InternationalAddressDetailsGroup"""@eng ;
+    sh:datatype xsd:token ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Address Region"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceterms:addressRegion .
+
+<postaladdressshapeCountryCode> a sh:PropertyShape ;
+    rdfs:comment "pesc:core:InternationalAddressDetailsGroup"@eng ;
+    sh:datatype xsd:token ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Country Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceterms:addressCountry .
+
+<postaladdressshapePostalCode> a sh:PropertyShape ;
+    rdfs:comment """pesc:core:DomesticAddressDetailsGroup
+pesc:core:InternationalAddressDetailsGroup"""@eng ;
+    sh:datatype xsd:token ;
+    sh:maxCount 1 ;
+    sh:name "Postal Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceterms:postalCode .
+
+<postaladdressshapeStreetAddress> a sh:PropertyShape ;
+    rdfs:comment "pesc:core:CommonAddressDetailsGroup"@eng ;
+    sh:datatype rdf:langString ;
+    sh:minCount 1 ;
+    sh:name "Street Address"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceterms:streetAddress .
+
+<postaladdressshapeType> a sh:PropertyShape ;
+    sh:hasValue ceterms:PostalAddress ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<postsecondarysectionlocationshapeCourseInstructionSiteName> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:name "Course Instruction Site Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001309 .
+
+<postsecondarysectionlocationshapeHasCourseInstructionSiteType> a sh:PropertyShape ;
+    sh:in ( ceds:NI001310116323 ceds:NI001310116309 ceds:NI001310115690 ceds:NI001310116965 ceds:NI001310115501 ceds:NI001310116118 ceds:NI001310117017 ceds:NI001310115328 ceds:NI001310115439 ) ;
+    sh:maxCount 1 ;
+    sh:name "Has Course Instruction Site Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P001310 .
+
+<postsecondarysectionlocationshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200333 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<postsecondarysectionshapeCourseBeginDate> a sh:PropertyShape ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Course Begin Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000054 .
+
+<postsecondarysectionshapeCourseEndDate> a sh:PropertyShape ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Course End Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000059 .
+
+<postsecondarysectionshapeCourseSectionNumber> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 10 ;
+    sh:name "Course Section Number"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001315 .
+
+<postsecondarysectionshapeHasPostsecondarySectionLocation> a sh:PropertyShape ;
+    sh:class ceds:C200333 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Has Postsecondary Section Location"@en-US ;
+    sh:node <PostsecondarySectionLocationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path ceds:P600108 .
+
+<postsecondarysectionshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200332 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<programsummaryshapeAcademicHonors> a sh:PropertyShape ;
+    sh:class pesc:AcademicHonors ;
+    sh:name "Academic Honors"@en-US ;
+    sh:node <AcademicHonorsShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:academicHonors .
+
+<programsummaryshapeAcademicSummaryLevel> a sh:PropertyShape ;
+    sh:in ( pescCreditLevels:Dual pescCreditLevels:DualGraduateUndergraduate pescCreditLevels:Grade13 pescCreditLevels:Ungraded pescCreditLevels:DualHighSchoolCollege pescCreditLevels:Graduate pescCreditLevels:GraduateProfessional pescCreditLevels:LowerDivision pescCreditLevels:Professional pescCreditLevels:Secondary pescCreditLevels:TechnicalPreparatory pescCreditLevels:Undergraduate pescCreditLevels:UpperDivision pescCreditLevels:Vocational ) ;
+    sh:maxCount 1 ;
+    sh:name "Academic Summary Level"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:academicSummaryLevel .
+
+<programsummaryshapeAcademicSummaryType> a sh:PropertyShape ;
+    rdfs:comment "Since this part of the schema deals only with the academic awards earned, the only recommended value would probably be “DegreeApplicable”."@eng ;
+    sh:in ( pescAcademicSummaryTypes:All pescAcademicSummaryTypes:SenderOnly pescAcademicSummaryTypes:TransferOnly pescAcademicSummaryTypes:AllNotRepeated pescAcademicSummaryTypes:SenderNotRepeated pescAcademicSummaryTypes:TransferNotRepeated pescAcademicSummaryTypes:AcademicRenewal pescAcademicSummaryTypes:CarryoverCredit pescAcademicSummaryTypes:DegreeApplicable pescAcademicSummaryTypes:NonDegreeApplicable pescAcademicSummaryTypes:ConvertedFrom pescAcademicSummaryTypes:ConvertedTo pescAcademicSummaryTypes:UserDefined pescAcademicSummaryTypes:Weighted pescAcademicSummaryTypes:NonWeighted pescAcademicSummaryTypes:Cumulative ) ;
+    sh:maxCount 1 ;
+    sh:name "Academic Summary Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:academicSummaryType .
+
+<programsummaryshapeAdditionalNote> a sh:PropertyShape ;
+    sh:class elm:Note ;
+    sh:name "Additional Note"@en-US ;
+    sh:node <NoteShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path elm:additionalNote .
+
+<programsummaryshapeDelinquencies> a sh:PropertyShape ;
+    sh:in ( pescDelinquencyCodes:ExclusionAcademic pescDelinquencyCodes:ExclusionDiscipline pescDelinquencyCodes:GoodStanding pescDelinquencyCodes:ProbationGPA pescDelinquencyCodes:ProbationHours pescDelinquencyCodes:SuspensionGPA pescDelinquencyCodes:SuspensionHours pescDelinquencyCodes:ProbationDiscipline pescDelinquencyCodes:SuspensionDiscipline pescDelinquencyCodes:Unknown pescDelinquencyCodes:Other ) ;
+    sh:name "Delinquencies"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:delinquencies .
+
+<programsummaryshapeExitDate> a sh:PropertyShape ;
+    rdfs:comment "The format for the date is ccyy-mm-dd. This would not be the appropriate place in the schema to transmit these data."@eng ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Exit Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:exitDate .
+
+<programsummaryshapeGPASummary> a sh:PropertyShape ;
+    rdfs:comment "Would not typically be included on a College Transcript."@eng ;
+    sh:class pesc:GPA ;
+    sh:maxCount 1 ;
+    sh:name "GPA Summary"@en-US ;
+    sh:node <GPAShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:gpaSummary .
+
+<programsummaryshapeIsSummaryForProgram> a sh:PropertyShape ;
+    sh:class ceds:C200331 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Is Summary For Program"@en-US ;
+    sh:node <AcademicProgramShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:isSummaryForProgram .
+
+<programsummaryshapeSource> a sh:PropertyShape ;
+    sh:class ceds:C200239 ;
+    sh:maxCount 1 ;
+    sh:name "Source"@en-US ;
+    sh:node <OrganizationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:source .
+
+<programsummaryshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:ProgramSummary ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<rapshapeRAPCode> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxLength 3 ;
+    sh:name "RAP Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:rapCode .
+
+<rapshapeRAPName> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxLength 60 ;
+    sh:name "RAP Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:rapName .
+
+<rapshapeRAPSubName> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxLength 60 ;
+    sh:name "RAP Sub Name"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:rapSubName .
+
+<rapshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200065 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<residencyshapeCountry> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 30 ;
+    sh:name "Country"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:country .
+
+<residencyshapeCountryCode> a sh:PropertyShape ;
+    rdfs:comment "pesc.AppendixB1 or pesc.AppendixB2 Keep as string for now"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Country Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:countryCode .
+
+<residencyshapeCounty> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 30 ;
+    sh:name "County"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:county .
+
+<residencyshapeCountyCode> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 3 ;
+    sh:minLength 3 ;
+    sh:name "County Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:countyCode .
+
+<residencyshapeResidencyStatusCode> a sh:PropertyShape ;
+    sh:in ( pescResidencyStatusCodes:InCity pescResidencyStatusCodes:InCounty pescResidencyStatusCodes:InDistrict pescResidencyStatusCodes:InState pescResidencyStatusCodes:NonResident pescResidencyStatusCodes:NotReported pescResidencyStatusCodes:OtherResident pescResidencyStatusCodes:Resident ) ;
+    sh:maxCount 1 ;
+    sh:name "Residency Status Code"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:residencyStatusCode .
+
+<residencyshapeStateProvince> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 30 ;
+    sh:name "State Province"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:stateProvince .
+
+<residencyshapeStateProvinceCode> a sh:PropertyShape ;
+    rdfs:comment "pesc:appendixA Keep as string for now"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "State Province Code"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:stateProvinceCode .
+
+<residencyshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:Residency ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<sessionsummaryshapeAcademicHonors> a sh:PropertyShape ;
+    sh:class pesc:AcademicHonors ;
+    sh:name "Academic Honors"@en-US ;
+    sh:node <AcademicHonorsShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:academicHonors .
+
+<sessionsummaryshapeAcademicSummaryLevel> a sh:PropertyShape ;
+    sh:in ( pescCreditLevels:Dual pescCreditLevels:DualGraduate pescCreditLevels:Undergraduate pescCreditLevels:Grade13 pescCreditLevels:Ungraded pescCreditLevels:DualHighSchoolCollege pescCreditLevels:Graduate pescCreditLevels:GraduateProfessional pescCreditLevels:LowerDivision pescCreditLevels:Professional pescCreditLevels:Secondary pescCreditLevels:TechnicalPreparatory pescCreditLevels:UpperDivision pescCreditLevels:Vocational ) ;
+    sh:maxCount 1 ;
+    sh:name "Academic Summary Level"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:academicSummaryLevel .
+
+<sessionsummaryshapeAcademicSummaryType> a sh:PropertyShape ;
+    sh:in ( pescAcademicSummaryTypes:All pescAcademicSummaryTypes:SenderOnly pescAcademicSummaryTypes:TransferOnly pescAcademicSummaryTypes:AllNotRepeated pescAcademicSummaryTypes:SenderNotRepeated pescAcademicSummaryTypes:TransferNotRepeated pescAcademicSummaryTypes:AcademicRenewal pescAcademicSummaryTypes:CarryoverCredit pescAcademicSummaryTypes:DegreeApplicable pescAcademicSummaryTypes:NonDegreeApplicable pescAcademicSummaryTypes:ConvertedFrom pescAcademicSummaryTypes:ConvertedTo pescAcademicSummaryTypes:UserDefined pescAcademicSummaryTypes:Weighted pescAcademicSummaryTypes:NonWeighted pescAcademicSummaryTypes:Cumulative ) ;
+    sh:maxCount 1 ;
+    sh:name "Academic Summary Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:academicSummaryType .
+
+<sessionsummaryshapeAdditionalNote> a sh:PropertyShape ;
+    sh:class elm:Note ;
+    sh:name "Additional Note"@en-US ;
+    sh:node <NoteShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path elm:additionalNote .
+
+<sessionsummaryshapeDelinquencies> a sh:PropertyShape ;
+    sh:in ( pescDelinquencyCodes:ExclusionAcademic pescDelinquencyCodes:ExclusionDiscipline pescDelinquencyCodes:GoodStanding pescDelinquencyCodes:ProbationGPA pescDelinquencyCodes:ProbationHours pescDelinquencyCodes:SuspensionGPA pescDelinquencyCodes:SuspensionHours pescDelinquencyCodes:ProbationDiscipline pescDelinquencyCodes:SuspensionDiscipline pescDelinquencyCodes:Unknown pescDelinquencyCodes:Other ) ;
+    sh:name "Delinquencies"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:delinquencies .
+
+<sessionsummaryshapeEntryDate> a sh:PropertyShape ;
+    rdfs:comment "This data element would rarely be seen on a College Transcript."@eng ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Entry Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:entryDate .
+
+<sessionsummaryshapeExitDate> a sh:PropertyShape ;
+    rdfs:comment "This date would typically be the date of graduation for students who did graduate this session. If the student did not graduate, it would be the last date of known enrollment. The date format is ccyy-mm-dd. It would not typically be included on a postsecondary transcript. In rare cases, it might be included for the final session the student attended at that school."@eng ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Exit Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:exitDate .
+
+<sessionsummaryshapeGPASummary> a sh:PropertyShape ;
+    rdfs:comment "This would typically be where items like Dean’s List at the end of a session are listed."@eng ;
+    sh:class pesc:GPA ;
+    sh:maxCount 1 ;
+    sh:name "GPA Summary"@en-US ;
+    sh:node <GPAShape> ;
+    sh:nodeKind sh:BlankNode ;
+    sh:path pesc:gpaSummary .
+
+<sessionsummaryshapeIsSummaryForProgram> a sh:PropertyShape ;
+    rdfs:comment "It would be quite unusual to see this included on a college transcript at this point in the schema."@eng ;
+    sh:class ceds:C200331 ;
+    sh:maxCount 1 ;
+    sh:name "Is Summary For Program"@en-US ;
+    sh:node <AcademicProgramShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:isSummaryForProgram .
+
+<sessionsummaryshapeIsSummaryForSession> a sh:PropertyShape ;
+    sh:class ceds:C200245 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Is Summary For Session"@en-US ;
+    sh:node <AcademicSessionShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:isSummaryForSession .
+
+<sessionsummaryshapeSource> a sh:PropertyShape ;
+    sh:class ceds:C200239 ;
+    sh:maxCount 1 ;
+    sh:name "Source"@en-US ;
+    sh:node <OrganizationShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:source .
+
+<sessionsummaryshapeType> a sh:PropertyShape ;
+    sh:hasValue pesc:SessionSummary ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<subtestshapeSubtestIdentifier> a sh:PropertyShape ;
+    rdfs:comment "pesc:Appendix F or pesc:Appendix G"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Subtest Identifier"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000367 .
+
+<subtestshapeSubtestTitle> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Subtest Title"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000275 .
+
+<subtestshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200051 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<testscoreshapeAssessmentScoreMetricType> a sh:PropertyShape ;
+    sh:in ( ceds:NI000027162378 ceds:NI000027162361 ceds:NI000027162379 ceds:NI000027162377 ceds:NI000027162366 ceds:NI000027162380 ceds:NI000027162371 ceds:NI000027162367 ceds:NI000027162355 pescTestScoreMethods:Equated pescTestScoreMethods:Percent ) ;
+    sh:maxCount 1 ;
+    sh:name "Assessment Score Metric Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path ceds:P000369 .
+
+<testscoreshapeInSubtest> a sh:PropertyShape ;
+    sh:class ceds:C200051 ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "In Subtest"@en-US ;
+    sh:node <SubtestShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:inSubtest .
+
+<testscoreshapeInTest> a sh:PropertyShape ;
+    sh:class ceds:C200010 ;
+    sh:maxCount 1 ;
+    sh:name "In Test"@en-US ;
+    sh:node <TestShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:inTest .
+
+<testscoreshapeScoreInvalidatedIndicator> a sh:PropertyShape ;
+    rdfs:comment "true/false"@eng ;
+    sh:datatype xsd:boolean ;
+    sh:maxCount 1 ;
+    sh:name "Score Invalidated Indicator"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:scoreInvalidatedIndicator .
+
+<testscoreshapeScoreRevisedIndicator> a sh:PropertyShape ;
+    rdfs:comment "true/false"@eng ;
+    sh:datatype xsd:boolean ;
+    sh:maxCount 1 ;
+    sh:name "Score Revised Indicator"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:scoreRevisedIndicator .
+
+<testscoreshapeScoreSelfReportedIndicator> a sh:PropertyShape ;
+    rdfs:comment "true/false"@eng ;
+    sh:datatype xsd:boolean ;
+    sh:maxCount 1 ;
+    sh:name "Score Self Reported Indicator"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:scoreSelfRportedIndicator .
+
+<testscoreshapeScoreValue> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:maxLength 80 ;
+    sh:minCount 1 ;
+    sh:name "Score Value"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:scoreValue .
+
+<testscoreshapeStudentLevel> a sh:PropertyShape ;
+    sh:in ( pescStudentLevelCodes:Postsecondary pescStudentLevelCodes:PostsecondaryBachelorPreliminaryYear pescStudentLevelCodes:NonDegree pescStudentLevelCodes:Grade13 pescStudentLevelCodes:Ungraded pescStudentLevelCodes:CollegeFirstYear pescStudentLevelCodes:CollegeFirstYearAttendedBefore pescStudentLevelCodes:CollegeSophomore pescStudentLevelCodes:CollegeJunior pescStudentLevelCodes:CollegeSenior pescStudentLevelCodes:CollegeFifthYear pescStudentLevelCodes:PostBaccalaureate pescStudentLevelCodes:GraduateNonDegree pescStudentLevelCodes:GraduateFirstYear pescStudentLevelCodes:GraduateSecondYear pescStudentLevelCodes:GraduateThirdYear pescStudentLevelCodes:GraduateBeyondThirdYear pescStudentLevelCodes:Professional pescStudentLevelCodes:ProfessionalFirstYear pescStudentLevelCodes:ProfessionalSecondYear pescStudentLevelCodes:ProfessionalThirdYear pescStudentLevelCodes:ProfessionalBeyondThirdYear pescStudentLevelCodes:MastersQualifying pescStudentLevelCodes:Masters pescStudentLevelCodes:Doctoral pescStudentLevelCodes:Postdoctoral ) ;
+    sh:maxCount 1 ;
+    sh:name "Student Level"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path pesc:studentLevel .
+
+<testscoreshapeTestDate> a sh:PropertyShape ;
+    sh:datatype xsd:date ;
+    sh:maxCount 1 ;
+    sh:name "Test Date"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:testDate .
+
+<testscoreshapeTestYear> a sh:PropertyShape ;
+    sh:datatype xsd:gYear ;
+    sh:maxCount 1 ;
+    sh:name "Test Year"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:testYear .
+
+<testscoreshapeTestYearMonth> a sh:PropertyShape ;
+    sh:datatype xsd:gYearMonth ;
+    sh:maxCount 1 ;
+    sh:name "Test Year Month"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path pesc:testYearMonth .
+
+<testscoreshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200047 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+
+<testshapeAssessmentIdentifier> a sh:PropertyShape ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:minCount 1 ;
+    sh:name "Assessment Identifier"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P001067 .
+
+<testshapeAssessmentTitle> a sh:PropertyShape ;
+    rdfs:comment "pesc:Appendix D or pesc:Appendix E"@eng ;
+    sh:datatype xsd:string ;
+    sh:maxCount 1 ;
+    sh:name "Assessment Title"@en-US ;
+    sh:nodeKind sh:Literal ;
+    sh:path ceds:P000028 .
+
+<testshapeHasSubtest> a sh:PropertyShape ;
+    sh:class ceds:C200051 ;
+    sh:name "Has Subtest"@en-US ;
+    sh:node <SubtestShape> ;
+    sh:nodeKind sh:BlankNodeOrIRI ;
+    sh:path pesc:hasSubtest .
+
+<testshapeType> a sh:PropertyShape ;
+    sh:hasValue ceds:C200010 ;
+    sh:minCount 1 ;
+    sh:name "Type"@en-US ;
+    sh:nodeKind sh:IRI ;
+    sh:path rdf:type .
+

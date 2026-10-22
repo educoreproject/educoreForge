@@ -1,0 +1,53 @@
+{
+	"comment": "pescldSourceProfile.json: what the PESC_LD v0.0.2 CSV snapshot holds and how each column is carried, as DATA (zeroBacklog lane C1, 2026-10-22). The loader refuses a header that departs from these tables; the walk reads its carriage from them. Measured over snapshot 01: shapes.csv 39 records, seven TAP files 270 records (266 distinct shape/property pairs), namespaces.csv 47 prefixes. The round-trip pair reads ONLY the file names and the column names from here; its graph-side readings are its own.",
+	"profileVersion": "pescldSourceProfile-1",
+	"shapeFileName": "shapes.csv",
+	"namespaceFileName": "namespaces.csv",
+	"packageMetadataFileName": "about.csv",
+	"tapFileNameListComment": "the publisher's own merge order (the combined TTL's header: shacl.ttl, person, organization, contact, course-related, achieve-related, summary-related)",
+	"tapFileNameList": ["tap.csv", "person-tap.csv", "organization-tap.csv", "contact-tap.csv", "course-related-tap.csv", "achieve-related-tap.csv", "summary-related-tap.csv"],
+	"namespaceColumnNameList": ["prefix", "URI", "Note"],
+	"packageMetadataColumnCount": 2,
+	"curiePatternSource": "^([A-Za-z][A-Za-z0-9]*):([A-Za-z0-9_.-]+)$",
+	"shapeColumnList": [
+		{ "columnName": "shapeID", "carriage": "identity" },
+		{ "columnName": "label", "carriage": "name" },
+		{ "columnName": "comment", "carriage": "text", "propertyName": "shapeComment" },
+		{ "columnName": "target", "carriage": "termCurie" },
+		{ "columnName": "targetType", "carriage": "text", "propertyName": "targetType" },
+		{ "columnName": "Closed", "carriage": "boolean", "propertyName": "shapeClosed" },
+		{ "columnName": "mandatory", "carriage": "boolean", "propertyName": "shapeMandatory" },
+		{ "columnName": "severity", "carriage": "text", "propertyName": "shapeSeverity" },
+		{ "columnName": "Note", "carriage": "text", "propertyName": "shapeNote" }
+	],
+	"tapColumnList": [
+		{ "columnName": "0", "carriage": "notCarried", "omittedKind": "spreadsheetRowNumber", "reason": "a spreadsheet row number, filled on 167 of 270 records; not an identity and not a statement about the profile" },
+		{ "columnName": "shapeID", "carriage": "ownerIdentity" },
+		{ "columnName": "propertyID", "carriage": "identityAndTermCurie" },
+		{ "columnName": "propertyLabel", "carriage": "name" },
+		{ "columnName": "mandatory", "carriage": "boolean", "propertyName": "mandatory" },
+		{ "columnName": "repeatable", "carriage": "boolean", "propertyName": "repeatable" },
+		{ "columnName": "valueNodeType", "carriage": "text", "propertyName": "valueNodeType" },
+		{ "columnName": "valueDataType", "carriage": "text", "propertyName": "valueDataType" },
+		{ "columnName": "valueConstraint", "carriage": "byConstraintType" },
+		{ "columnName": "valueConstraintType", "carriage": "text", "propertyName": "valueConstraintType" },
+		{ "columnName": "valueShape", "carriage": "shapeReference" },
+		{ "columnName": "valueClass", "carriage": "crossRefLines" },
+		{ "columnName": "Severity", "carriage": "text", "propertyName": "severity", "isOptionalColumn": true },
+		{ "columnName": "Rec Usage", "carriage": "text", "propertyName": "recUsage" },
+		{ "columnName": "note", "carriage": "text", "propertyName": "usageNote" }
+	],
+	"constraintCarriageByType": {
+		"": "scalar",
+		"maxLength": "scalar",
+		"lengthRange": "scalar",
+		"pattern": "scalar",
+		"picklist": "picklist"
+	},
+	"constraintScalarPropertyName": "valueConstraint",
+	"booleanByCellText": { "TRUE": true, "FALSE": false },
+	"conflictResolutionListComment": "a (shape, property) pair the source states twice with DIFFERENT cell text in one column is refused unless listed here. Measured 2026-10-21/22: exactly one such pair. The resolution follows the publisher's own merge (the combined TTL emits sh:minCount 1 with sh:severity sh:Warning); both source values are carried on the node.",
+	"conflictResolutionList": [
+		{ "shapeID": "PersonShape", "propertyID": "pesc:hasSummary", "columnName": "mandatory", "resolvedCellText": "TRUE", "rule": "the publisher's merged TTL takes TRUE (sh:minCount 1, sh:severity sh:Warning); person-tap.csv says FALSE, summary-related-tap.csv says TRUE" }
+	]
+}

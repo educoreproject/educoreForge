@@ -1,0 +1,214 @@
+0,shapeID,propertyID,propertyLabel,mandatory,repeatable,valueNodeType,valueDataType,valueConstraint,valueConstraintType,valueShape,valueClass,Severity,Rec Usage,note
+,AwardSummaryShape,elm:additionalNote,Additional Note,FALSE,TRUE,IRI BNODE,,,,NoteShape,elm:Note,,Not Recommended,
+,ProgramSummaryShape,elm:additionalNote,Additional Note,FALSE,TRUE,IRI BNODE,,,,NoteShape,elm:Note,,Not Recommended,
+,SessionSummaryShape,elm:additionalNote,Additional Note,FALSE,TRUE,IRI BNODE,,,,NoteShape,elm:Note,,Not Recommended,
+,AcademicSummaryShape,elm:additionalNote,Additional Note,FALSE,TRUE,IRI BNODE,,,,NoteShape,elm:Note,,Optional,
+,AwardSummaryShape,pesc:academicHonors,Academic Honors,FALSE,TRUE,BNODE,,,,AcademicHonorsShape,pesc:AcademicHonors,,Recommended,
+,ProgramSummaryShape,pesc:academicHonors,Academic Honors,FALSE,TRUE,BNODE,,,,AcademicHonorsShape,pesc:AcademicHonors,,Recommended,
+,SessionSummaryShape,pesc:academicHonors,Academic Honors,FALSE,TRUE,BNODE,,,,AcademicHonorsShape,pesc:AcademicHonors,,Optional,
+229,AcademicSummaryShape,pesc:academicHonors,Academic Honors,FALSE,FALSE,BNODE,,,,AcademicHonorsShape,pesc:AcademicHonors,,Recommended,
+,AwardSummaryShape,pesc:academicSummaryLevel,Academic Summary Level,FALSE,FALSE,IRI,,"pescCreditLevels:Dual
+pescCreditLevels:DualGraduate
+pescCreditLevels:Undergraduate
+pescCreditLevels:Grade13
+pescCreditLevels:Ungraded
+pescCreditLevels:DualHighSchoolCollege
+pescCreditLevels:Graduate
+pescCreditLevels:GraduateProfessional
+pescCreditLevels:LowerDivision
+pescCreditLevels:Professional
+pescCreditLevels:Secondary
+pescCreditLevels:TechnicalPreparatory
+pescCreditLevels:Undergraduate
+pescCreditLevels:UpperDivision
+pescCreditLevels:Vocational",picklist,,,,Recommended,
+,ProgramSummaryShape,pesc:academicSummaryLevel,Academic Summary Level,FALSE,FALSE,IRI,,"pescCreditLevels:Dual
+pescCreditLevels:DualGraduateUndergraduate
+pescCreditLevels:Grade13
+pescCreditLevels:Ungraded
+pescCreditLevels:DualHighSchoolCollege
+pescCreditLevels:Graduate
+pescCreditLevels:GraduateProfessional
+pescCreditLevels:LowerDivision
+pescCreditLevels:Professional
+pescCreditLevels:Secondary
+pescCreditLevels:TechnicalPreparatory
+pescCreditLevels:Undergraduate
+pescCreditLevels:UpperDivision
+pescCreditLevels:Vocational",picklist,,,,Not Recommended,
+,SessionSummaryShape,pesc:academicSummaryLevel,Academic Summary Level,FALSE,FALSE,IRI,,"pescCreditLevels:Dual
+pescCreditLevels:DualGraduate
+pescCreditLevels:Undergraduate
+pescCreditLevels:Grade13
+pescCreditLevels:Ungraded
+pescCreditLevels:DualHighSchoolCollege
+pescCreditLevels:Graduate
+pescCreditLevels:GraduateProfessional
+pescCreditLevels:LowerDivision
+pescCreditLevels:Professional
+pescCreditLevels:Secondary
+pescCreditLevels:TechnicalPreparatory
+pescCreditLevels:Undergraduate
+pescCreditLevels:UpperDivision
+pescCreditLevels:Vocational",picklist,,,,Optional,
+257,AcademicSummaryShape,pesc:academicSummaryLevel,Academic Summary Level,FALSE,FALSE,IRI,,"pescCreditLevels:Dual
+pescCreditLevels:DualGraduate
+pescCreditLevels:Undergraduate
+pescCreditLevels:Grade13
+pescCreditLevels:Ungraded
+pescCreditLevels:DualHighSchoolCollege
+pescCreditLevels:Graduate
+pescCreditLevels:GraduateProfessional
+pescCreditLevels:LowerDivision
+pescCreditLevels:Professional
+pescCreditLevels:Secondary
+pescCreditLevels:TechnicalPreparatory
+pescCreditLevels:Undergraduate
+pescCreditLevels:UpperDivision
+pescCreditLevels:Vocational",picklist,,,,Recommended,
+,AwardSummaryShape,pesc:academicSummaryType,Academic Summary Type,FALSE,FALSE,IRI,,"pescAcademicSummaryTypes:All
+pescAcademicSummaryTypes:SenderOnly
+pescAcademicSummaryTypes:TransferOnly
+pescAcademicSummaryTypes:AllNotRepeated
+pescAcademicSummaryTypes:SenderNotRepeated
+pescAcademicSummaryTypes:TransferNotRepeated
+pescAcademicSummaryTypes:AcademicRenewal
+pescAcademicSummaryTypes:CarryoverCredit
+pescAcademicSummaryTypes:DegreeApplicable
+pescAcademicSummaryTypes:NonDegreeApplicable
+pescAcademicSummaryTypes:ConvertedFrom
+pescAcademicSummaryTypes:ConvertedTo
+pescAcademicSummaryTypes:UserDefined
+pescAcademicSummaryTypes:Weighted
+pescAcademicSummaryTypes:NonWeighted
+pescAcademicSummaryTypes:Cumulative",picklist,,,,Recommended,
+,ProgramSummaryShape,pesc:academicSummaryType,Academic Summary Type,FALSE,FALSE,IRI,,"pescAcademicSummaryTypes:All
+pescAcademicSummaryTypes:SenderOnly
+pescAcademicSummaryTypes:TransferOnly
+pescAcademicSummaryTypes:AllNotRepeated
+pescAcademicSummaryTypes:SenderNotRepeated
+pescAcademicSummaryTypes:TransferNotRepeated
+pescAcademicSummaryTypes:AcademicRenewal
+pescAcademicSummaryTypes:CarryoverCredit
+pescAcademicSummaryTypes:DegreeApplicable
+pescAcademicSummaryTypes:NonDegreeApplicable
+pescAcademicSummaryTypes:ConvertedFrom
+pescAcademicSummaryTypes:ConvertedTo
+pescAcademicSummaryTypes:UserDefined
+pescAcademicSummaryTypes:Weighted
+pescAcademicSummaryTypes:NonWeighted
+pescAcademicSummaryTypes:Cumulative",picklist,,,,Recommended,"Since this part of the schema deals only with the academic awards earned, the only recommended value would probably be “DegreeApplicable”."
+,SessionSummaryShape,pesc:academicSummaryType,Academic Summary Type,FALSE,FALSE,IRI,,"pescAcademicSummaryTypes:All
+pescAcademicSummaryTypes:SenderOnly
+pescAcademicSummaryTypes:TransferOnly
+pescAcademicSummaryTypes:AllNotRepeated
+pescAcademicSummaryTypes:SenderNotRepeated
+pescAcademicSummaryTypes:TransferNotRepeated
+pescAcademicSummaryTypes:AcademicRenewal
+pescAcademicSummaryTypes:CarryoverCredit
+pescAcademicSummaryTypes:DegreeApplicable
+pescAcademicSummaryTypes:NonDegreeApplicable
+pescAcademicSummaryTypes:ConvertedFrom
+pescAcademicSummaryTypes:ConvertedTo
+pescAcademicSummaryTypes:UserDefined
+pescAcademicSummaryTypes:Weighted
+pescAcademicSummaryTypes:NonWeighted
+pescAcademicSummaryTypes:Cumulative",picklist,,,,Recommended,
+255,AcademicSummaryShape,pesc:academicSummaryType,Academic Summary Type,FALSE,FALSE,IRI,,"pescAcademicSummaryTypes:All
+pescAcademicSummaryTypes:SenderOnly
+pescAcademicSummaryTypes:TransferOnly
+pescAcademicSummaryTypes:AllNotRepeated
+pescAcademicSummaryTypes:SenderNotRepeated
+pescAcademicSummaryTypes:TransferNotRepeated
+pescAcademicSummaryTypes:AcademicRenewal
+pescAcademicSummaryTypes:CarryoverCredit
+pescAcademicSummaryTypes:DegreeApplicable
+pescAcademicSummaryTypes:NonDegreeApplicable
+pescAcademicSummaryTypes:ConvertedFrom
+pescAcademicSummaryTypes:ConvertedTo
+pescAcademicSummaryTypes:UserDefined
+pescAcademicSummaryTypes:Weighted
+pescAcademicSummaryTypes:NonWeighted
+pescAcademicSummaryTypes:Cumulative",picklist,,,,Recommended,
+267,GPAShape,pesc:creditHoursAttempted,Credit Hours Attempted,FALSE,FALSE,Literal,xsd:float,,,,,,Recommended,decimal
+268,GPAShape,pesc:creditHoursEarned,Credit Hours Earned,FALSE,FALSE,Literal,xsd:float,,,,,,Recommended,decimal
+274,GPAShape,pesc:creditHoursForGPA,Credit Hours GPA,FALSE,FALSE,Literal,xsd:float,,,,,,Recommended,decimal
+271,GPAShape,ceds:P000057,Has Course Credit Units,FALSE,FALSE,IRI,,"ceds:NI000057116219
+ceds:NI000057116669
+ceds:NI000057116841 
+ceds:NI000057117114
+ceds:NI000057115440
+ceds:NI000057115402
+ceds:NI000057115492
+ceds:NI000057117127
+ceds:NI000057116368",picklist,,,,,
+,ProgramSummaryShape,pesc:delinquencies,Delinquencies,FALSE,TRUE,IRI,,"pescDelinquencyCodes:ExclusionAcademic
+pescDelinquencyCodes:ExclusionDiscipline
+pescDelinquencyCodes:GoodStanding
+pescDelinquencyCodes:ProbationGPA
+pescDelinquencyCodes:ProbationHours
+pescDelinquencyCodes:SuspensionGPA
+pescDelinquencyCodes:SuspensionHours
+pescDelinquencyCodes:ProbationDiscipline
+pescDelinquencyCodes:SuspensionDiscipline
+pescDelinquencyCodes:Unknown
+pescDelinquencyCodes:Other",picklist,,,,Not Recommended,
+,SessionSummaryShape,pesc:delinquencies,Delinquencies,FALSE,TRUE,IRI,,"pescDelinquencyCodes:ExclusionAcademic
+pescDelinquencyCodes:ExclusionDiscipline
+pescDelinquencyCodes:GoodStanding
+pescDelinquencyCodes:ProbationGPA
+pescDelinquencyCodes:ProbationHours
+pescDelinquencyCodes:SuspensionGPA
+pescDelinquencyCodes:SuspensionHours
+pescDelinquencyCodes:ProbationDiscipline
+pescDelinquencyCodes:SuspensionDiscipline
+pescDelinquencyCodes:Unknown
+pescDelinquencyCodes:Other",picklist,,,,Optional,
+,AcademicSummaryShape,pesc:delinquencies,Delinquencies,FALSE,TRUE,IRI,,"pescDelinquencyCodes:ExclusionAcademic
+pescDelinquencyCodes:ExclusionDiscipline
+pescDelinquencyCodes:GoodStanding
+pescDelinquencyCodes:ProbationGPA
+pescDelinquencyCodes:ProbationHours
+pescDelinquencyCodes:SuspensionGPA
+pescDelinquencyCodes:SuspensionHours
+pescDelinquencyCodes:ProbationDiscipline
+pescDelinquencyCodes:SuspensionDiscipline
+pescDelinquencyCodes:Unknown
+pescDelinquencyCodes:Other",picklist,,,,Not Recommended,"It is recommended that probation not be included on the transcript since there is no universally accepted definition of probation, and that other Delinquencies be included at the Session level."
+,SessionSummaryShape,pesc:entryDate,Entry Date,FALSE,FALSE,Literal,xsd:date,,,,,,Optional,This data element would rarely be seen on a College Transcript.
+352,AcademicSummaryShape,pesc:entryDate,Entry Date,FALSE,FALSE,Literal,xsd:date,,,,,,Optional,It would be unusual to find this date on a College Transcript. The date format is ccyy-mm-dd.
+,ProgramSummaryShape,pesc:exitDate,Exit Date,FALSE,FALSE,Literal,xsd:date,,,,,,Not Recommended,The format for the date is ccyy-mm-dd. This would not be the appropriate place in the schema to transmit these data.
+,SessionSummaryShape,pesc:exitDate,Exit Date,FALSE,FALSE,Literal,xsd:date,,,,,,Optional,"This date would typically be the date of graduation for students who did graduate this session. If the student did not graduate, it would be the last date of known enrollment. The date format is ccyy-mm-dd. It would not typically be included on a postsecondary transcript. In rare cases, it might be included for the final session the student attended at that school."
+353,AcademicSummaryShape,pesc:exitDate,Exit Date,FALSE,FALSE,Literal,xsd:date,,,,,,Optional,"This date would typically be the date of graduation for students who did graduate. If the student did not graduate, it would be the last date of known attendance unless the school has a policy on withdrawal from the school. It would be unusual to find this data element on a College Transcript. The date format is ccyy-mm-dd."
+276,GPAShape,pesc:gpaRangeMaximum,GPA Range Maximum,FALSE,FALSE,Literal,xsd:float,,,,,,Recommended,decimal
+275,GPAShape,pesc:gpaRangeMinimum,GPA Range Minimum,FALSE,FALSE,Literal,xsd:float,,,,,,Recommended,decimal
+,AwardSummaryShape,pesc:gpaSummary,GPA Summary,FALSE,FALSE,BNODE,,,,GPAShape,pesc:GPA,,Recommended,
+,ProgramSummaryShape,pesc:gpaSummary,GPA Summary,FALSE,FALSE,BNODE,,,,GPAShape,pesc:GPA,,Optional,Would not typically be included on a College Transcript.
+,SessionSummaryShape,pesc:gpaSummary,GPA Summary,FALSE,FALSE,BNODE,,,,GPAShape,pesc:GPA,,Recommended,This would typically be where items like Dean’s List at the end of a session are listed.
+266,AcademicSummaryShape,pesc:gpaSummary,GPA Summary,FALSE,FALSE,BNODE,,,,GPAShape,pesc:GPA,,Recommended,
+272,GPAShape,pesc:gradePointAverage,Grade Point Average,FALSE,FALSE,Literal,xsd:float,,,,,,Recommended,decimal
+,PersonShape,pesc:hasSummary,Has Summary,TRUE,TRUE,IRI BNODE,,,,,"pesc:AcademicSummary
+pesc:AwardSummary
+pesc:ProgramSummary
+pesc:SessionSummary",Warning,Required,
+231,AcademicHonorsShape,pesc:honorsLevel,Honors Level,FALSE,FALSE,IRI,,"pescHonorsLevels:FirstHighest
+pescHonorsLevels:SecondHighest
+pescHonorsLevels:ThirdHighest",picklist,,,,Recommended,
+230,AcademicHonorsShape,pesc:honorsTitle,Honors Title,FALSE,FALSE,Literal,xsd:string,30,maxLength,,,,Recommended,
+,AwardSummaryShape,pesc:isSummaryForAward,Is Summary For Award,TRUE,FALSE,IRI BNODE,,,,AcademicAwardShape,ceds:C200335,,Required,
+,AwardSummaryShape,pesc:isSummaryForProgram,Is Summary For Program,FALSE,FALSE,IRI BNODE,,,,AcademicProgramShape,ceds:C200331,,Not Recommended,"This would not normally be used at this point in the schema, to give detailed data about the academic program in which an award was earned."
+,ProgramSummaryShape,pesc:isSummaryForProgram,Is Summary For Program,TRUE,FALSE,IRI BNODE,,,,AcademicProgramShape,ceds:C200331,,Recommended,
+,SessionSummaryShape,pesc:isSummaryForProgram,Is Summary For Program,FALSE,FALSE,IRI BNODE,,,,AcademicProgramShape,ceds:C200331,,Not Recommended,It would be quite unusual to see this included on a college transcript at this point in the schema.
+,AcademicSummaryShape,pesc:isSummaryForProgram,Is Summary For Program,FALSE,FALSE,IRI BNODE,,,,AcademicProgramShape,ceds:C200331,,Optional,"This would not normally be used at this point in the schema, to give detailed data about the academic program in which an award was earned."
+,SessionSummaryShape,pesc:isSummaryForSession,Is Summary For Session,TRUE,FALSE,IRI BNODE,,,,AcademicSessionShape,ceds:C200245,,Required,
+,AwardSummaryShape,pesc:source,Source,FALSE,FALSE,IRI BNODE,,,,OrganizationShape,ceds:C200239,,Optional,
+,ProgramSummaryShape,pesc:source,Source,FALSE,FALSE,IRI BNODE,,,,OrganizationShape,ceds:C200239,,Optional,
+,SessionSummaryShape,pesc:source,Source,FALSE,FALSE,IRI BNODE,,,,OrganizationShape,ceds:C200239,,Optional,
+,AcademicSummaryShape,pesc:source,Source,FALSE,FALSE,IRI BNODE,,,,OrganizationShape,ceds:C200239,,Optional,
+273,GPAShape,pesc:totalQualityPoints,Total Quality Points,FALSE,FALSE,Literal,xsd:float,,,,,,Recommended,decimal
+,AwardSummaryShape,rdf:type,Type,TRUE,TRUE,IRI,,pesc:AwardSummary,,,,,,
+,ProgramSummaryShape,rdf:type,Type,TRUE,TRUE,IRI,,pesc:ProgramSummary,,,,,,
+,SessionSummaryShape,rdf:type,Type,TRUE,TRUE,IRI,,pesc:SessionSummary,,,,,,
+,AcademicSummaryShape,rdf:type,Type,TRUE,TRUE,IRI,,pesc:AcademicSummary,,,,,,
+,GPAShape,rdf:type,Type,TRUE,TRUE,IRI,,pesc:GPA,,,,,,
+,AcademicHonorsShape,rdf:type,Type,TRUE,TRUE,IRI,,pesc:AcademicHonors,,,,,,
