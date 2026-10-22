@@ -1013,7 +1013,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // lib/bridge-framework/test/test-judgeWording.js 31/0 (D2-6: Jev's missing-noun refusal, twinned). No logic: frameworkFingerprint MOVES
 // (bridgePluginContract.js is in its scope); declarationDigest and every cache key do not. The D2 range moved no other seam: G-SEAM,
 // bgNosub (ii), (iii) and seamDiffEmpty read EMPTY from their D0 tags (measured), so their constants stay.
-const P1_BASELINE_COMMIT = 'postZeroBacklogD2PescCompose-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D2 range; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, D3-6 the old SIF forge retired 2b4580bb; ruled by BRONZE_CROWN) ═══ BG-COMPOSE-PESC
+// postZeroBacklogD2PescCompose-102226 -> postZeroBacklogD3PescCompose-102226, tag cut ON this commit. CENSUS over this gate's paths
+// (numstat from the D2 tag): apps/graph-builder/interfaces.js 2/2 (JSDoc: the bundle factory's retired dep), lib/bridge-framework/test/
+// test-bgJudgeSlot.js 20/17 (sifCedsStandardPlugin off the shipped list; the (f) twin moved to the 'declared' row; each row's label
+// now names the bridging file that composes it, IVORY_SPIRE's note, this commit), lib/vocabulary/test/
+// test-sifVocabularyInvariance.js 2/1 and testSupport/pureProxyFingerprintProbe.js 1/1; test/test-bgNosub.js (its two re-anchors, this
+// commit). No bridge-framework or bridge-maker source: frameworkFingerprint does not move.
+const P1_BASELINE_COMMIT = 'postZeroBacklogD3PescCompose-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-6; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

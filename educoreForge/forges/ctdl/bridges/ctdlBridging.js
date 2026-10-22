@@ -1,6 +1,6 @@
 'use strict';
 
-// ctdlCedsDeclaredCorrespondence.js — ⟪ctdlHub-101926 P6 step 5; rulings R6, R-2, R-7⟫ the DECLARED SEAM from CTDL to CEDS: every
+// ctdlBridging.js (composes ctdlCedsDeclaredCorrespondence; named so until deCeds R3; header corrected zeroBacklog lane D) — ⟪ctdlHub-101926 P6 step 5; rulings R6, R-2, R-7⟫ the DECLARED SEAM from CTDL to CEDS: every
 // assertion CTDL publishes about a CEDS term, carried by the CTDL forge VERBATIM as declaredCorrespondenceList [{ predicate,
 // target }] on its own concept nodes (53 entries on 52 nodes in Release 20260327 and again in Release 20260927, P10: owl:equivalentClass 26, skos:narrowMatch 22,
 // skos:relatedMatch 5), becomes ONE DECLARED_CORRESPONDENCE edge to the CEDS BASE node it names, with the predicate verbatim. It is

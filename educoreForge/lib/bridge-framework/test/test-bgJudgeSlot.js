@@ -78,37 +78,39 @@ const X0_CHOICE_ENUM_FIXTURE = Object.freeze(['1', '2', '3', 'NONE']);
 const JUDGE_SLOT_PREDICATE_ENUM_LITERAL = Object.freeze(['exactMatch', 'closeMatch', 'broadMatch', 'narrowMatch', 'none']);
 
 // every bridge plugin shipped under forges/ on 2026-09-28, with the variant and renderer version each resolves to
+// ⟪zeroBacklog lane D, 2026-10-22 (IVORY_SPIRE's note)⟫ since deCeds R3 a plugin is COMPOSED from its standard's bridging file, so each row
+// names that file (composedFromBridgingFilePath, a label read by nothing); the per-plugin files the old pluginPath named are gone.
 const SHIPPED_PLUGIN_LIST = [
 	// RETIRED 2026-10-22 (zeroBacklog lane D, D3-6; TQ ruling Q-Z4 under the mandate): sifCedsStandardPlugin left with the old SIF forge
 	// (codeAttic/forges/sif). It was the one shipped 'standard'-basis plugin; that registry row is now exercised by no shipped plugin.
 	// ADDED 2026-10-21 (STERLING_PORTAL, ctdlHub P6, rulings R-2/R-5): the two DECLARED-correspondence plugins. A declared basis judges
 	// nothing; its variant row is the documentary 'crosswalk' (registration resolves one), and nothing is ever rendered under it.
-	{ bridgeName: 'ctdlCedsDeclaredCorrespondence', pluginPath: 'forges/ctdl/bridges/ctdlCedsDeclaredCorrespondence.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
-	{ bridgeName: 'ctdlasnCtdlDeclaredCorrespondence', pluginPath: 'forges/ctdlasn/bridges/ctdlasnCtdlDeclaredCorrespondence.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'ctdlCedsDeclaredCorrespondence', composedFromBridgingFilePath: 'forges/ctdl/bridges/ctdlBridging.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'ctdlasnCtdlDeclaredCorrespondence', composedFromBridgingFilePath: 'forges/ctdlasn/bridges/ctdlasnBridging.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
 	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded, "known to be garbage"): edfiCedsCrosswalkPlugin moved to forges/edfi/retiredBridges/, out of the roster
 	// MOVED 2026-09-30 (IVORY_ECHO, WORKORDER-jevRelations-093026 R2, TQ ruling "every bridge uses judge-named relations"):
 	// Ed-Fi derived now declares predicateRule judgeSlot-v1, so it resolves to derivedJudgeSlot. Was: 'derived' / derived-v12.
-	{ bridgeName: 'edfiCedsDerivedPlugin', pluginPath: 'forges/edfi/bridges/edfiCedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
-	{ bridgeName: 'pescCedsDerivedPlugin', pluginPath: 'forges/pesc260805/bridges/pescCedsDerivedPlugin.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
-	{ bridgeName: 'pescOptionSetCedsDerivedPlugin', pluginPath: 'forges/pesc260805/bridges/pescOptionSetCedsDerivedPlugin.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
-	{ bridgeName: 'sif260928CedsDerivedPlugin', pluginPath: 'forges/sif260928/bridges/sif260928CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'edfiCedsDerivedPlugin', composedFromBridgingFilePath: 'forges/edfi/bridges/edfiBridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescCedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pesc260805/bridges/pescBridging.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescOptionSetCedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pesc260805/bridges/pescBridging.js', judgePromptVariant: 'derived', rendererVersion: DERIVED_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'sif260928CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/sif260928/bridges/sif260928Bridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
 	// ADDED 2026-10-01 (COPPER_MARBLE, PESC B1, QUIET_ORBIT-authorised): the PESC College Transcript 1.8.0 derived plugin,
 	// judgeSlot-v1 like SIF 260928, so it resolves to derivedJudgeSlot.
-	{ bridgeName: 'pescCollegeTranscript1v8v0CedsDerivedPlugin', pluginPath: 'forges/pesccollegetranscript1v8v0/bridges/pescCollegeTranscript1v8v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescCollegeTranscript1v8v0CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pesccollegetranscript1v8v0/bridges/pescCollegeTranscript1v8v0Bridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
 	// ADDED 2026-10-09 (ONYX_DANCE, forgeClean lane CT17): the PESC College Transcript 1.7.0 derived plugin, judgeSlot-v1 like 1.8.0.
-	{ bridgeName: 'pescCollegeTranscript1v7v0CedsDerivedPlugin', pluginPath: 'forges/pesccollegetranscript1v7v0/bridges/pescCollegeTranscript1v7v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescCollegeTranscript1v7v0CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pesccollegetranscript1v7v0/bridges/pescCollegeTranscript1v7v0Bridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
 	// ADDED 2026-10-01 (SCARLET_RIVER, PESC lane B2x, roster literals pre-authorised): the PESC Document Request 1.0.0 and
 	// Document Response 1.0.0 derived plugins, judgeSlot-v1 like College Transcript, so each resolves to derivedJudgeSlot.
-	{ bridgeName: 'pescDocumentRequest1v0v0CedsDerivedPlugin', pluginPath: 'forges/pescdocumentrequest1v0v0/bridges/pescDocumentRequest1v0v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
-	{ bridgeName: 'pescDocumentResponse1v0v0CedsDerivedPlugin', pluginPath: 'forges/pescdocumentresponse1v0v0/bridges/pescDocumentResponse1v0v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescDocumentRequest1v0v0CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pescdocumentrequest1v0v0/bridges/pescDocumentRequest1v0v0Bridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescDocumentResponse1v0v0CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pescdocumentresponse1v0v0/bridges/pescDocumentResponse1v0v0Bridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
 	// ADDED 2026-10-01 (DAWN_CHORUS, PESC lane E, roster literals pre-authorised): the PESC Academic ePortfolio 1.0.0 derived
 	// plugin, judgeSlot-v1 like College Transcript, so it resolves to derivedJudgeSlot.
-	{ bridgeName: 'pescAcademicEportfolio1v0v0CedsDerivedPlugin', pluginPath: 'forges/pescacademiceportfolio1v0v0/bridges/pescAcademicEportfolio1v0v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescAcademicEportfolio1v0v0CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pescacademiceportfolio1v0v0/bridges/pescAcademicEportfolio1v0v0Bridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
 	// ADDED 2026-10-01 (NOBLE_DREAM, PESC lane B1x, NOTES-supervisor item 21 pre-authorised): the PESC High School Transcript
 	// 1.6.0, Test Score Report 1.1.0 and Learning Record 1.0.0 derived plugins, judgeSlot-v1 like College Transcript 1.8.0.
-	{ bridgeName: 'pescHighSchoolTranscript1v6v0CedsDerivedPlugin', pluginPath: 'forges/peschighschooltranscript1v6v0/bridges/pescHighSchoolTranscript1v6v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
-	{ bridgeName: 'pescTestScoreReport1v1v0CedsDerivedPlugin', pluginPath: 'forges/pesctestscorereport1v1v0/bridges/pescTestScoreReport1v1v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
-	{ bridgeName: 'pescLearningRecord1v0v0CedsDerivedPlugin', pluginPath: 'forges/pesclearningrecord1v0v0/bridges/pescLearningRecord1v0v0CedsDerivedPlugin.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescHighSchoolTranscript1v6v0CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/peschighschooltranscript1v6v0/bridges/pescHighSchoolTranscript1v6v0Bridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescTestScoreReport1v1v0CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pesctestscorereport1v1v0/bridges/pescTestScoreReport1v1v0Bridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescLearningRecord1v0v0CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pesclearningrecord1v0v0/bridges/pescLearningRecord1v0v0Bridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
 ];
 
 // ---------------------------------------------------------------------

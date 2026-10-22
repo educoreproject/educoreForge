@@ -246,7 +246,11 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // postHubNeutralR7SweepGSeamUntouched-102226 -> postZeroBacklogD0GSeamUntouched-102226, tag cut ON this commit. CENSUS over the seam file
 // list (numstat from the R7 tag): apps/graph-builder/apps/replay-manager/replayManager.js 19/2 (resolveSettings reads and refuses
 // [replay-manager] structuralVersion; finish hands it to the passport writer). The other six UNTOUCHED.
-const PRE_MIGRATION_REF = 'postZeroBacklogD0GSeamUntouched-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, D3-6 the old SIF forge retired 2b4580bb; ruled by BRONZE_CROWN) ═══ G-SEAM-UNTOUCHED
+// postZeroBacklogD0GSeamUntouched-102226 -> postZeroBacklogD3GSeamUntouched-102226, tag cut ON this commit. CENSUS over the seam file
+// list (numstat from the D0 tag): apps/graph-builder/apps/forger/forger.js 3/40 (hubAnchorPrefixByHubTokenFor, the descriptor's
+// anchorPrefixDeclarationPath and the factory's hubAnchorPrefixByHubToken dep removed with the kit's hubAnchorValue). The other six UNTOUCHED.
+const PRE_MIGRATION_REF = 'postZeroBacklogD3GSeamUntouched-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-6; census in the block above); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

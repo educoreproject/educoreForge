@@ -492,7 +492,13 @@ const POST_D1_BASE_TAG = 'postZeroBacklogD0VocabularyIi-102226'; // re-anchored 
 // postHubNeutralR7SweepForgeFrameworkIii-102226 -> postZeroBacklogD0ForgeFrameworkIii-102226, tag cut ON this commit. CENSUS
 // (lib/forge-framework/): test/test-gStandardMetadata.js 7/0 (conjunct (o): the PESCLD family admitted, with its twin) and
 // test/test-gSeamUntouched.js (its own re-anchor, this commit: the coupling). No forge-framework source.
-const PHASE0_ANCHOR_TAG = 'postZeroBacklogD0ForgeFrameworkIii-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, D3-6 the old SIF forge retired 2b4580bb; ruled by BRONZE_CROWN) ═══ (iii)
+// postZeroBacklogD0ForgeFrameworkIii-102226 -> postZeroBacklogD3ForgeFrameworkIii-102226, tag cut ON this commit. CENSUS
+// (lib/forge-framework/, numstat from the D0 tag): contractGraphKit.js 4/35 (hubAnchorValue, its surface row, its digit pattern and the
+// kit's hubAnchorPrefixByHubToken parameter removed), forge-framework.js 4/5 (the dep name left DEP_NAME_LIST), test/test-gDet.js 2/2 and
+// test/test-gSeam.js 1/1 (their twins' find-texts follow), test/test-labelCensus.js 3/3 (sif off the roster), test/
+// test-hubAnchorValueRetired.js 83/0 (new gate), and test/test-gSeamUntouched.js (its re-anchor, this commit). No block moves (P-a1 16/16).
+const PHASE0_ANCHOR_TAG = 'postZeroBacklogD3ForgeFrameworkIii-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-6; census in the block above); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -1013,7 +1019,14 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // refuses structuralVersion), its tests test-passportContract.js 10/3 and test-replay-manager.js 18/0; lib/replay/test/
 // test-listValuedProperties.js 15/3 and its new frozen census fixture 10/0 (the CTDL *List names); lib/forge-framework/ as (iii).
 // (i-live): no shape moved.
-const PHASE3_ANCHOR_TAG = 'postZeroBacklogD0SeamDiffEmpty-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, D3-6 the old SIF forge retired 2b4580bb; ruled by BRONZE_CROWN) ═══ BG-SEAM-UNTOUCHED seamDiffEmpty and (i-live)
+// postZeroBacklogD0SeamDiffEmpty-102226 -> postZeroBacklogD3SeamDiffEmpty-102226, tag cut ON this commit. CENSUS from the D0 tag over this
+// gate's path list: forger/forger.js 3/40 (as G-SEAM), forger/test/test-forger.js 7/6 (sif260928 as the hubless kit) and capture-baseline.js
+// 1/1, replay-manager/test/integration-{harvest,init,restore}.js 1/1 each (the retired dep); forges/sif/{forgeSif.js 0/71, lib/
+// forgeSifContractGraph.js 0/602, lib/sifForgeDeclaration.js 0/173, lib/sifHooks.js 0/134} (the bundle moved to codeAttic/forges/sif);
+// forges/ceds/lib/cedsAnchorPrefixDeclaration.js 0/21 (deleted, granted); lib/forge-framework/ as (iii). (i-live): no shape moved
+// (interfaces.js 2/2 is its JSDoc for the bundle factory's deps, no COMPONENT_SHAPES member).
+const PHASE3_ANCHOR_TAG = 'postZeroBacklogD3SeamDiffEmpty-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-6; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

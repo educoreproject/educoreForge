@@ -1,6 +1,6 @@
 'use strict';
 
-// ctdlasnCtdlDeclaredCorrespondence.js — ⟪ctdlHub-101926 P6 step 5; rulings R6, R-2, R-5⟫ CTDL-ASN's published correspondences to
+// ctdlasnBridging.js (composes ctdlasnCtdlDeclaredCorrespondence; named so until deCeds R3; header corrected zeroBacklog lane D) — ⟪ctdlHub-101926 P6 step 5; rulings R6, R-2, R-5⟫ CTDL-ASN's published correspondences to
 // CTDL terms: an ASN NATIVE term's crossRef whose locator is a CORRESPONDENCE locator of the family locator table and whose target is
 // a ceterms: IRI becomes ONE DECLARED_CORRESPONDENCE edge to the CTDL BASE node, the predicate (the locator) verbatim. Measured
 // 2026-10-21 (P0 declaredCorrespondenceCounts.json, and by owner over the forged crossRefs): exactly 4, all owl:equivalentProperty
