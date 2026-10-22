@@ -498,7 +498,7 @@ const workingManifestEditor = (overrides) => ({ standardsDatabase } = {}) =>
 	);
 
 // ⟪R-P2-1, 2026-08-03⟫ the SELF-ANNOUNCING hermetic double for the R-1 in-build fidelity gate.
-// The REAL gate (build.js runCedsFidelityGate, the production default) reaches a LIVE graph over
+// The REAL gate (build.js runDeclaredFidelityGate running the CEDS bundle's declared gate, the production default) reaches a LIVE graph over
 // bolt via `docker inspect`, which no hermetic double provides — so from R-1's in-build landing
 // (92aecda) until this seam existed, every ceds-recipe stage here died at materialize. The stub
 // ANNOUNCES ITSELF in the captured xLog (asserted below), because a gate that quietly does not
@@ -686,7 +686,7 @@ const runBuildWith = (recipe, componentOverrides, callback) => {
 			xLog,
 			standardsDatabase: standardsDatabase,
 			components,
-			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
+			fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 		},
 		(err, result) => callback({ err, result, xLog, standardsDatabase }),
 	);
@@ -939,7 +939,7 @@ const stageSpendLedger = (whenDone) => {
 	const debugJudgeSpend = [debugUnit, debugUnit, debugUnit].reduce((judgeSpend, spendRecord) => spendRecordLib.judgeSpendTotalsWith({ judgeSpend, spendRecord }), { asked: 3, servedFromCache: 0, abstained: 1, rationaleReaskCount: 0, ...spendRecordLib.JUDGE_SPEND_TOTAL_SEED });
 	const embeddingRecord = { provider: 'voyage', model: 'voyage-4-large', texts: 10, distinctMisses: 4, servedFromCache: 6, tokens: 2000000, latencyMs: 50 };
 	const spendingForger = () => workingForger({
-		forge: ({ standard, version }, cb) => cb('', { standard, version, snapshotKey: '01', publishedVersion: version, versionSource: 'spec', nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, layerReportList: [], embedCallCount: 1, embeddingSpendRecordList: standard === 'probesource' ? [embeddingRecord] : [] }),
+		forge: ({ standard, version }, cb) => cb('', { standard, version, snapshotKey: '01', publishedVersion: version, versionSource: 'spec', nodeEdges: { nodes: [], edges: [], embeddingDims: null }, nodeCount: 0, edgeCount: 0, layerReportList: [], embedCallCount: 1, embeddingSpendRecordList: standard === 'probesource' ? [embeddingRecord] : [], ...(standard === 'probehub' ? { hubDivergenceReport: [{ row: 'divergence' }], hubSkipReport: [] } : {}) }),
 	});
 	const judgingBridgeMaker = (bridgeError) => withDescribeBridge(() => ({ run: (spec, cb) => (bridgeError ? cb(bridgeError) : cb('', { ...spec, harvestEdgeTypeList: DOUBLE_HARVEST_EDGE_TYPE_LIST, edgesWritten: 0, decisionBlock: null, counts: { judgeSpend: debugJudgeSpend } })) }));
 	// a hub-and-source recipe naming no real standard: the spend path is the same for every hub, and this suite adds no hub
@@ -948,7 +948,7 @@ const stageSpendLedger = (whenDone) => {
 	const spendBuild = ({ buildLogsDirPath, spendPricingFilePath, components }, cb) =>
 		buildLib.build(
 			spendProbeRecipe,
-			{ xLog: capturingXLog(), standardsDatabase: standardsDatabaseDouble(), components: { forger: spendingForger(), replayManager: workingReplayManager(), bridgeMaker: judgingBridgeMaker(), manifestEditor: workingManifestEditor(), ...components }, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub, buildLogsDirPath, spendPricingFilePath, lifetimeLedgerFilePath },
+			{ xLog: capturingXLog(), standardsDatabase: standardsDatabaseDouble(), components: { forger: spendingForger(), replayManager: workingReplayManager(), bridgeMaker: judgingBridgeMaker(), manifestEditor: workingManifestEditor(), ...components }, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub, fidelityGateRunner: announcedFidelityGateStub, buildLogsDirPath, spendPricingFilePath, lifetimeLedgerFilePath },
 			(err, result) => cb({ err, result }),
 		);
 	const ledgerIn = (buildLogsDirPath) => {
@@ -967,6 +967,10 @@ const stageSpendLedger = (whenDone) => {
 		harness.ok('  totals: $0.20, and the prices used ride in the ledger with their sources', goodLedger && near(goodLedger.totals.usd, 0.2) && goodLedger.priceRowList.every((onePriceRow) => typeof onePriceRow.priceSource === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(onePriceRow.priceAsOf)), JSON.stringify(goodLedger && goodLedger.totals));
 		const lifetimeLineList = fs.existsSync(lifetimeLedgerFilePath) ? fs.readFileSync(lifetimeLedgerFilePath, 'utf8').split('\n').filter((lineText) => lineText !== '') : [];
 		harness.equal('one line is appended to the lifetime ledger', lifetimeLineList.length, 1);
+		// ⟪R5 S5⟫ the hub fold's two reports are named for their hub
+		const goldRunDirList = fs.readdirSync(goodLogsDirPath);
+		const hubReportNameList = goldRunDirList.length === 1 ? fs.readdirSync(path.join(goodLogsDirPath, goldRunDirList[0])).filter((oneName) => /Divergence|SkipReport/.test(oneName)).sort() : [];
+		harness.equal('the hub reports are named for the hub that produced them (R5 S5)', hubReportNameList.join(','), 'hubSkipReport.probehub.json,proseDivergence.probehub.json');
 		const failedLogsDirPath = path.join(scratchDir, 'failedBuildLogs');
 		spendBuild({ buildLogsDirPath: failedLogsDirPath, spendPricingFilePath: fixturePricingFilePath, components: { bridgeMaker: judgingBridgeMaker('the bridge double failed on purpose') } }, ({ err: failedErr }) => {
 			harness.match('a build whose bridge FAILS still fails, naming the bridge fault', failedErr || '', /the bridge double failed on purpose/);
@@ -1236,7 +1240,7 @@ const stageRebridgeWiring = () => {
 		const xLog = capturingXLog();
 		const standardsDatabase = standardsDatabaseDouble();
 		const components = { forger: workingForger(), replayManager: workingReplayManager(), bridgeMaker: captureBridgeMaker, manifestEditor: workingManifestEditor() };
-		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub, ...extraDeps }, (err, result) => cb({ err, result }));
+		buildLib.build(cedsCtdlRecipe, { xLog, standardsDatabase, components, fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub, ...extraDeps }, (err, result) => cb({ err, result }));
 	};
 
 	// scoped --rebridge WITH a stub llmClient injected: the build runs the (doubled) pre-pass path hermetically.
@@ -1480,7 +1484,7 @@ const stageRealManifestEditor = () => {
 		{
 			xLog,
 			standardsDatabase: standardsDatabase,
-			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
+			fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 			components: {
 				forger: workingForger(),
 				replayManager: workingReplayManager(),
@@ -1765,7 +1769,7 @@ const stageHubFoldedIntoBase = () => {
 		{
 			xLog,
 			standardsDatabase,
-			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
+			fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 			components: {
 				forger: hubFoldingForger(syntheticCedsBaseNodeEdges),
 				replayManager: retainingReplayManager(),
@@ -2054,7 +2058,7 @@ const stageStoreReaderRefusal = () => {
 				bridgeMaker: workingBridgeMaker(),
 				manifestEditor: workingManifestEditor(),
 			},
-			cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub,
+			fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub,
 			roundTripStageRunner: announcedRoundTripStageStub,
 		},
 		(err, result) => {
@@ -2146,9 +2150,11 @@ const buildCapturingVectorize = (vectorizeDep, done) => {
 	const deps = {
 		xLog,
 		standardsDatabase,
-		// hermetic: the real R-1 gate no-ops here (no ceds token) but the real RT-13 runner
-		// would write its stage summary into the canonical buildLogs home — stubbed, announced.
+		// hermetic: the real RT-13 runner would write its stage summary into the canonical buildLogs home — stubbed, announced.
+		// ⟪R5 S4⟫ the real R-1 runner resolves each recipe standard's bundle to find a declared gate, and this fixture's
+		// standards have no bundle on disk (refused by name, test-fidelityAttestation (i)) — stubbed, announced.
 		roundTripStageRunner: announcedRoundTripStageStub,
+		fidelityGateRunner: announcedFidelityGateStub,
 		embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, // campaign P2 (W-A-11): no live graph to count
 		components: {
 			forger: capturingForger,
@@ -2321,7 +2327,7 @@ const stageManifestPersistedToStore = () => {
 				{
 					xLog: capturingXLog(),
 					standardsDatabase,
-					cedsFidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
+					fidelityGateRunner: announcedFidelityGateStub, embeddingCoverageGateRunner: announcedEmbeddingCoverageStub, roundTripStageRunner: announcedRoundTripStageStub,
 					components: {
 						forger: workingForger(),
 						replayManager: workingReplayManager(),

@@ -6,7 +6,7 @@
 // tell apart, so no row was supplied and the row read notRun on every build, even when the gate ran. Now the runner reports
 // a row and the materialize tail hands it to finish. Hermetic: the judgment module, build.js's runner (skip branch) and
 // materialize tail over doubles, and the real attestation finisher.
-//   (a) SKIPPED (CEDS not in the build) → the runner reports notRun, naming the skip
+//   (a) SKIPPED (no standard of the build declares a fidelity gate; R5 S4) → the runner reports notRun, naming the skip
 //   (b) GENUINE PASS (zero lost) → pass
 //   (c) LOSS ALLOWED (lost > 0 within --allowFidelityLoss) → passWithAllowedLoss, naming the lost count
 //   (d) an allowance NAMED but not needed (zero lost) → pass, never passWithAllowedLoss
@@ -14,11 +14,12 @@
 //   (f) a runner that succeeds WITHOUT a row is REFUSED by name (the row would otherwise be a guess)
 //   (g) the finisher REFUSES a verdict outside vocabulary.BUILD_ATTESTATION_VERDICT_LIST by name
 //   (h) the REPLAY runner (campaign P2, R1 finding) reports notRun saying replay, a row the tail accepts — never the real
-//       gate's 'CEDS is not among this build's standards' on a graph that holds CEDS (test-replay proves -replay uses it)
+//       runner's skip text on a graph whose standards were never consulted (test-replay proves -replay uses it)
+//   (i) ⟪R5 S4⟫ a recipe standard whose bundle does not resolve is REFUSED by name, never read as "declares no gate"
 // RED TWINS, each observed in memory, by message: (a) the runner's skip calls back with nothing (the pre-lane-R code);
 // (b) every pass reported as allowed loss; (c) every pass reported as plain pass (the derived pass FINDING 5-A forbade);
 // (d) the allowance rule (allowance > 0) instead of the loss rule; (e) the tail dropping the fidelity row; (f) the
-// tail's refusal removed; (g) the finisher's vocabulary check removed; (h) the replay runner given the real gate's skip text.
+// tail's refusal removed; (g) the finisher's vocabulary check removed; (h) the replay runner given the real gate's skip text; (i) the unresolved check removed.
 //
 // Run: node apps/graph-builder/test/test-fidelityAttestation.js [-verbose]
 
@@ -40,7 +41,7 @@ const moduleDouble = require('../../../lib/forge-framework/test/testSupport/modu
 const { loadBuildJsDouble } = require('../../../lib/bridge-framework/test/testSupport/bridgeTwinFactories');
 
 const BUILD_JS_PATH = path.join(__dirname, '..', 'lib', 'build.js');
-const JUDGMENT_PATH = path.join(__dirname, '..', '..', '..', 'lib', 'ceds-fidelity-judgment', 'ceds-fidelity-judgment.js');
+const JUDGMENT_PATH = path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'fidelityJudgment.js');
 const FINISHER_PATH = path.join(__dirname, '..', 'apps', 'replay-manager', 'lib', 'finishing', 'lib', 'build-attestation-finisher.js');
 const { BUILD_ATTESTATION_VERDICT } = vocabulary;
 
@@ -99,8 +100,8 @@ const allowedLossRunner = (runnerArguments, callback) =>
 
 const conjunctJudgeByRefId = {
 	a_skippedIsNotRun: ({ buildJsMutationList }, done) => {
-		buildLibFor(buildJsMutationList).runCedsFidelityGate({ xLog: silentXLog, graphName: 'G', standardTokens: ['edfi', 'sif260928'], commandLineParameters: {} }, (gateError, attestation) => {
-			const pass = !gateError && !!attestation && attestation.verdict === BUILD_ATTESTATION_VERDICT.NOT_RUN && /skipped: CEDS is not among this build's standards/.test(attestation.detail);
+		buildLibFor(buildJsMutationList).runDeclaredFidelityGate({ xLog: silentXLog, graphName: 'G', standardTokens: ['edfi', 'sif260928'], commandLineParameters: {} }, (gateError, attestation) => {
+			const pass = !gateError && !!attestation && attestation.verdict === BUILD_ATTESTATION_VERDICT.NOT_RUN && /skipped: no standard in this build declares a fidelity gate/.test(attestation.detail);
 			done({ pass, detail: gateError || `reported ${JSON.stringify(attestation)}` });
 		});
 	},
@@ -147,21 +148,28 @@ const conjunctJudgeByRefId = {
 		const buildLib = buildLibFor(buildJsMutationList);
 		buildLib.runReplayFidelityGate({ xLog: silentXLog, graphName: 'G', commandLineParameters: {} }, (gateError, attestation) => {
 			const fault = buildLib.fidelityAttestationFaultFor(attestation);
-			const pass = !gateError && !fault && attestation.verdict === BUILD_ATTESTATION_VERDICT.NOT_RUN && /^replay: /.test(attestation.detail || '') && !/is not among this build's standards/.test(attestation.detail || '');
+			const pass = !gateError && !fault && attestation.verdict === BUILD_ATTESTATION_VERDICT.NOT_RUN && /^replay: /.test(attestation.detail || '') && !/^skipped: /.test(attestation.detail || '');
 			done({ pass, detail: gateError || fault || `reported ${JSON.stringify(attestation)}` });
+		});
+	},
+	i_unresolvedStandardRefused: ({ buildJsMutationList }, done) => {
+		buildLibFor(buildJsMutationList).runDeclaredFidelityGate({ xLog: silentXLog, graphName: 'G', standardTokens: ['edfi', 'noSuchStandard'], commandLineParameters: {} }, (gateError, attestation) => {
+			const pass = /the fidelity gate cannot tell which standard declares it -- 'nosuchstandard'/.test(String(gateError)) && !attestation;
+			done({ pass, detail: gateError || `reported ${JSON.stringify(attestation)}` });
 		});
 	},
 };
 
 const TWIN_LIST = [
-	{ conjunctRefId: 'a_skippedIsNotRun', twinName: 'skipCallsBackWithNothing', target: 'buildJs', find: "callback('', judgmentLib.skippedAttestation({ standardTokens }));", replace: "callback('');" },
+	{ conjunctRefId: 'a_skippedIsNotRun', twinName: 'skipCallsBackWithNothing', target: 'buildJs', find: "\tif (declarerList.length === 0) {\n\t\tcallback('', {", replace: "\tif (declarerList.length === 0) {\n\t\tcallback(''); return; callback('', {" },
 	{ conjunctRefId: 'b_genuinePassIsPass', twinName: 'everyPassAllowedLoss', target: 'judgment', find: 'const lossWasAllowed = headline.lost > 0;', replace: 'const lossWasAllowed = true;' },
 	{ conjunctRefId: 'c_allowedLossIsPassWithAllowedLoss', twinName: 'derivedPlainPass', target: 'judgment', find: 'const lossWasAllowed = headline.lost > 0;', replace: 'const lossWasAllowed = false;' },
 	{ conjunctRefId: 'd_allowanceNotNeededIsPass', twinName: 'allowanceRuleNotLossRule', target: 'judgment', find: 'const lossWasAllowed = headline.lost > 0;', replace: 'const lossWasAllowed = allowance > 0;' },
 	{ conjunctRefId: 'e_runnerRowReachesTheGraph', twinName: 'tailDropsFidelityRow', target: 'buildJs', find: 'gateResults: [fidelityAttestation, roundTripRow, embeddingCoverageRow, forgeCensusRow],', replace: 'gateResults: [roundTripRow, embeddingCoverageRow, forgeCensusRow],' },
 	{ conjunctRefId: 'f_silentRunnerRefused', twinName: 'tailRefusalRemoved', target: 'buildJs', find: '\t\t\t\t\tif (fidelityAttestationFault) {', replace: '\t\t\t\t\tif (false) {' },
 	{ conjunctRefId: 'g_unknownVerdictRefusedByFinisher', twinName: 'finisherVocabularyCheckRemoved', target: 'finisher', find: '\t\t\tif (unknownVerdictList.length) {', replace: '\t\t\tif (false) {' },
-	{ conjunctRefId: 'h_replayRunnerSaysReplay', twinName: 'replayRunnerClaimsCedsAbsent', target: 'buildJs', find: "detail: REPLAY_FIDELITY_DETAIL });", replace: "detail: 'skipped: CEDS is not among this build\\'s standards ([])' });" },
+	{ conjunctRefId: 'i_unresolvedStandardRefused', twinName: 'unresolvedReadAsNoDeclarer', target: 'buildJs', find: '\tif (unresolvedList.length) {', replace: '\tif (false) {' },
+	{ conjunctRefId: 'h_replayRunnerSaysReplay', twinName: 'replayRunnerClaimsCedsAbsent', target: 'buildJs', find: "detail: REPLAY_FIDELITY_DETAIL });", replace: "detail: 'skipped: no standard in this build declares a fidelity gate ([])' });" },
 ];
 const TARGET_PATH_BY_NAME = { buildJs: BUILD_JS_PATH, judgment: JUDGMENT_PATH, finisher: FINISHER_PATH };
 const mutationListsFor = (oneTwin) => {

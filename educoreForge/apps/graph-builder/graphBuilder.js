@@ -70,10 +70,10 @@ const run = () => {
 			? actions.replay
 			: switches.retrievalMetrics
 			? actions.retrievalMetrics
-			: switches.cedsRoundTrip
-			? actions.cedsRoundTrip
-			: switches.cedsGates
-			? actions.cedsGates
+			: switches.roundTripCompile
+			? actions.roundTripCompile
+			: switches.roundTripGates
+			? actions.roundTripGates
 			: switches.goldEvalCheck
 			? actions.goldEvalCheck
 			: switches.truncateStore

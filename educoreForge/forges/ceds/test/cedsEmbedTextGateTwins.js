@@ -4,7 +4,7 @@
 // gates/cedsEmbedTextGates.jsonc BITES (PHASE P5, embedText-091426).
 //
 // WHY A SEPARATE REGISTRY (R-ET-34): the E-1 declaration lives outside cedsFidelityGates.jsonc so
-// the live -cedsGates action never reads it, and lib/roundTripGateTwins.js is audited for orphans
+// the live -roundTripGates --standard=ceds action never reads it, and lib/roundTripGateTwins.js is audited for orphans
 // against the fidelity file alone (test-cedsGates.js). A twin for E-1 added there would read as an
 // orphan. So E-1's twin lives beside the only test that reads E-1.
 //

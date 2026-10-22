@@ -99,11 +99,8 @@ const TERM_DEFINITIONS = {
 		HAS_HUB_QUALIFIER: 'Hub-parameterized decomposition: HubReference to a qualifier slot node.',
 		IN_HUB: 'HubReference to the HubDefinition it belongs to (hub-independent membership edge).',
 		HAS_TERM_REFERENCE: 'Property-tier HubReference to the term-tier HubReference of its own property IRI, in the same hub. Minted by the hub framework inside the hub\'s block only when the hub mints both tiers; one edge per property card, so a property with three domains gives three edges into one term card. HubReference to HubReference, never to a base node, and never a match: matches landing on a term are found in one hop by following it backwards.',
-		HAS_CEDS_DOMAIN: 'CEDS instantiation of the domain decomposition slot: HubReference to the CEDS class it addresses.',
-		HAS_CEDS_PROPERTY: 'CEDS instantiation of the property decomposition slot: HubReference to the CEDS property it addresses.',
-		HAS_CEDS_RANGE: 'CEDS instantiation of the range decomposition slot: HubReference to the CEDS option set or class forming its range.',
-		HAS_CEDS_VALUE: 'CEDS instantiation of the value decomposition slot: HubReference to the CEDS option value it addresses (value tier).',
-		HAS_CEDS_QUALIFIER: 'CEDS instantiation of the qualifier decomposition slot.',
+		// ⟪R5 S7, 2026-10-21⟫ a hub's own decomposition edges (HAS_<HUB>_<SLOT>) are defined by the hub: its bundle declares
+		// edgeDefinitionDeclaration= and the schema-view finisher reads it (the five texts kept here by RULING FJ-P2-1 moved there).
 		HAS_SCHEMA_TERM: 'SchemaView root to one schema-view member term (the self-describing catalog edge).',
 		BUILT_FROM: 'GraphProvenance passport to the ManifestRecipe this graph was replayed from.',
 		HAS_BLOCK: 'ManifestRecipe to one RecipeBlock member (the in-graph manifest membership).',

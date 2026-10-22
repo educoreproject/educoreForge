@@ -45,7 +45,8 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const bundle = require('../forgeSif')({ embedder: null });
+// R5 S2: the bundle is handed the forger's map of hub anchor declarations, as the forger hands it (the old SIF forge normalizes its 'CEDS ID' column through it)
+const bundle = require('../forgeSif')({ embedder: null, hubAnchorPrefixByHubToken: require('../../../apps/graph-builder/apps/forger/forger').hubAnchorPrefixByHubTokenFor().hubAnchorPrefixByHubToken });
 
 // =====================================================================
 harness.section("SECTION 1 — synthetic native parse: a nested 'Name' group + a root-level group");

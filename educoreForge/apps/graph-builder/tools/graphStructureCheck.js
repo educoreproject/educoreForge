@@ -47,7 +47,7 @@ const neo4j = require('neo4j-driver');
 const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus'))();
 const structureCheck = require(path.join(__dirname, '..', 'lib', 'graph-structure-check'));
 // the CEDS round-trip compiler's resolver, as -stampPromotion uses it (its module export is a factory)
-const { resolveContainerBolt } = require(path.join(TREE_ROOT, 'forges', 'ceds', 'lib', 'roundTripCompiler'))();
+const { resolveContainerBolt } = require(path.join(TREE_ROOT, 'lib', 'graph-connection', 'containerBolt')); // R5 S6: names no standard
 
 const CHECK_NAME_LIST = Object.freeze(['instanceStructure', 'codeListStructure', 'rootOwnership', 'dmeTextField', 'fulltextIndex']);
 const TRANSACTION_TIMEOUT_MS = 120000;

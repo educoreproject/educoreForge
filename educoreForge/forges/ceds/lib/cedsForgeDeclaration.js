@@ -117,7 +117,7 @@ const cedsForgeDeclaration = Object.freeze({
 	}),
 	// CEDS has no "no mapping" sentinel: it is the hub, so an unnormalizable anchor is a REFUSAL
 	// (R3, forgeCeds.js:139-153), never an absence. Empty is the honest declaration.
-	cedsAnchorAbsentSentinelList: Object.freeze([]),
+	hubAnchorAbsentSentinelList: Object.freeze([]),
 	// the parser is FILE-bound on one file (parserDescriptor.ini sourceFile=CEDS-Ontology.rdf) and
 	// consumes nothing beside it.
 	additionalSourceInputList: Object.freeze([]),

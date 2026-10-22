@@ -10,7 +10,7 @@
 //   actions.validate(callback)          -> callback(errString, { exitCode, resultText })
 //   actions.deps(callback)              -> callback(errString, { exitCode, resultText })
 //   actions.retrievalMetrics(callback)  -> callback(errString, { exitCode, resultText })
-//   actions.cedsRoundTrip(callback)     -> callback(errString, { exitCode, resultText })
+//   actions.roundTripCompile(callback)  -> callback(errString, { exitCode, resultText })   (and roundTripGates; --standard=<token>)
 //
 // NO ACTION CALLS process.exit. Each RETURNS its outcome and the entry file owns exiting. A
 // function that kills the process cannot be called by a test, and an action that cannot be
@@ -777,403 +777,45 @@ const retrievalMetricsAction = (callback) => {
 };
 
 // ---------------------------------------------------------------------
-// -cedsRoundTrip
+// -roundTripCompile / -roundTripGates --standard=<token>
 // ---------------------------------------------------------------------
-// ⟪TQ RULING, 2026-08-02⟫ "the CEDS OWL source describes a graph. We want to represent it as a
-// graph. We should be able to write a graph that we could extract and compile back into the OWL."
-// ROUND-TRIP FIDELITY is the acceptance criterion for hub completeness, and this verb is the
-// MEASURING STICK: it compiles the materialized CEDS graph back into RDF/XML, diffs that emission
-// against the source ontology as canonical statement SETS, and reports the loss.
-//
-// READ-ONLY EVERYWHERE. It opens the named container over bolt and issues MATCH/RETURN only; it
-// never writes to a graph, never forges, never spends a cent of LLM or Voyage credit. The only
-// things it writes are its own three artifacts (the emitted RDF, the readable report, the JSON
-// sidecar).
-//
-// IT DOES NOT FIX ANYTHING. The loss it reports is expected to be enormous — the source carries
-// roughly 240,000 statements and the graph today carries a fraction. A large HONEST diff IS the
-// deliverable: it is the baseline every future enrichment gets scored against, and the
-// per-predicate loss table is the enrichment work order.
-//
-// --containerName is REQUIRED and has no default: a fidelity measurement is always OF one
-// materialized graph, and there is no meaningful "whichever graph happens to be running".
-
-const CEDS_ROUND_TRIP_DEFAULT_DIR_PATH =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/cedsRoundTrip';
-
-const requireCedsRoundTripCompiler = () =>
-	require(path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripCompiler'));
-const requireCedsRoundTripDiff = () =>
-	require(path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripDiff'));
-
-// The CEDS source ontology's documented home in this tree: the snapshot the CEDS forge bundle
-// itself reads (forges/ceds/parserDescriptor.ini names snapshot 01 and CEDS-Ontology.rdf). The
-// default is DOCUMENTED rather than discovered so a measurement always names the file it measured.
-const CEDS_SOURCE_DEFAULT_PATH = path.join(
-	__dirname,
-	'..',
-	'..',
-	'..',
-	'forges',
-	'ceds',
-	'assets',
-	'standardSourceData',
-	'01',
-	'CEDS-Ontology.rdf',
-);
-
-const cedsRoundTripAction = (callback) => {
+// ⟪R5 S9, 2026-10-21⟫ the operator's round-trip verbs over ONE materialized graph, generic over the standard: graphBuilder
+// names none. The standard's bundle DECLARES its verbs (parserDescriptor.ini roundTripVerbModule=, a module exporting the
+// functions this table names) and carries their bodies (CEDS: forges/ceds/lib/cedsRoundTripVerbs.js, the former
+// -cedsRoundTrip and -cedsGates, byte-unchanged but for their names). --standard is REQUIRED and has no default; a standard
+// whose bundle declares no verbs is refused by name rather than read as "nothing to do".
+const ROUND_TRIP_VERB_FUNCTION_NAME_BY_ACTION = Object.freeze({
+	roundTripCompile: 'runRoundTripCompile',
+	roundTripGates: 'runRoundTripGates',
+});
+const roundTripVerbActionFor = (actionName) => (callback) => {
 	const { xLog, commandLineParameters } = process.global;
-
-	const containerName = firstValue(commandLineParameters, 'containerName');
-	if (!containerName) {
-		callback(
-			`graphBuilder -cedsRoundTrip: --containerName=<name> is REQUIRED and has no default. A ` +
-				`fidelity measurement is always OF one materialized graph; there is no meaningful ` +
-				`"whichever graph happens to be running". The bolt port and credential are read from ` +
-				`that container with 'docker inspect', never restated here where they could drift.`,
-		);
+	const functionName = ROUND_TRIP_VERB_FUNCTION_NAME_BY_ACTION[actionName];
+	const standardToken = firstValue(commandLineParameters, 'standard');
+	if (typeof standardToken !== 'string' || standardToken.trim() === '') {
+		callback(`graphBuilder -${actionName}: --standard=<token> is REQUIRED and has no default; it names the standard whose bundle declares this verb (e.g. --standard=ceds)`);
 		return;
 	}
-
-	// Each optional path follows the same discipline the P9 stores established: a blank value is
-	// REFUSED BY NAME rather than silently taken as "use the default".
-	const optionalPath = ({ parameterName, defaultPath }) => {
-		const explicitValue = firstValue(commandLineParameters, parameterName);
-		if (typeof explicitValue === 'string' && explicitValue.trim() === '') {
-			return {
-				error:
-					`graphBuilder -cedsRoundTrip: --${parameterName} was given but blank. Pass a path, or ` +
-					`omit it to take the documented default (${defaultPath}). A blank is refused rather ` +
-					`than guessed at.`,
-			};
-		}
-		return { filePath: explicitValue || defaultPath };
-	};
-
-	const sourceResolution = optionalPath({
-		parameterName: 'sourcePath',
-		defaultPath: CEDS_SOURCE_DEFAULT_PATH,
-	});
-	if (sourceResolution.error) {
-		callback(sourceResolution.error);
+	const { resolveBundle } = require(path.join(__dirname, '..', 'apps', 'forger', 'forger'));
+	const bundle = resolveBundle({ standard: standardToken });
+	if (bundle.error) {
+		callback(`graphBuilder -${actionName} --standard=${standardToken}: ${bundle.error}`);
 		return;
 	}
-	if (!fs.existsSync(sourceResolution.filePath)) {
-		callback(
-			`graphBuilder -cedsRoundTrip: the CEDS source ontology '${sourceResolution.filePath}' does ` +
-				`not exist. There is nothing to measure the graph AGAINST, and a measurement without a ` +
-				`source is not a smaller measurement — it is no measurement at all.`,
-		);
+	if (bundle.roundTripVerbModulePath === undefined) {
+		callback(`graphBuilder -${actionName} --standard=${standardToken}: this standard's bundle declares no roundTripVerbModule= in ${path.join(bundle.bundleDir, 'parserDescriptor.ini')}, so it has no -${actionName} verb`);
 		return;
 	}
-
-	const outResolution = optionalPath({
-		parameterName: 'outPath',
-		defaultPath: path.join(CEDS_ROUND_TRIP_DEFAULT_DIR_PATH, `${containerName}.emitted.rdf`),
-	});
-	if (outResolution.error) {
-		callback(outResolution.error);
+	if (!fs.existsSync(bundle.roundTripVerbModulePath)) {
+		callback(`graphBuilder -${actionName} --standard=${standardToken}: roundTripVerbModule ${bundle.roundTripVerbModulePath} is not on disk`);
 		return;
 	}
-	const reportResolution = optionalPath({
-		parameterName: 'reportPath',
-		defaultPath: path.join(CEDS_ROUND_TRIP_DEFAULT_DIR_PATH, `${containerName}.roundTrip.txt`),
-	});
-	if (reportResolution.error) {
-		callback(reportResolution.error);
+	const verbModule = require(bundle.roundTripVerbModulePath);
+	if (typeof verbModule[functionName] !== 'function') {
+		callback(`graphBuilder -${actionName} --standard=${standardToken}: ${bundle.roundTripVerbModulePath} exports no ${functionName}({ xLog, commandLineParameters }, callback)`);
 		return;
 	}
-	const emittedFilePath = outResolution.filePath;
-	const reportFilePath = reportResolution.filePath;
-	const sidecarFilePath = `${reportFilePath.replace(/\.txt$/, '')}.json`;
-
-	const compilerLib = requireCedsRoundTripCompiler()();
-	const diffRoundTripLib = requireCedsRoundTripDiff()();
-
-	compilerLib.resolveContainerBolt({ containerName }, (resolveError, resolved) => {
-		if (resolveError) {
-			callback(`graphBuilder -cedsRoundTrip: ${resolveError}`);
-			return;
-		}
-		xLog.status(
-			`graphBuilder: -cedsRoundTrip reading '${containerName}' at ${resolved.boltUrl} ` +
-				`(MATCH/RETURN only — this verb never writes to a graph)`,
-		);
-
-		const reader = compilerLib.makeNeo4jCedsReader({
-			boltUrl: resolved.boltUrl,
-			user: resolved.user,
-			password: resolved.password,
-		});
-
-		compilerLib.compileToFile({ reader, outPath: emittedFilePath }, (compileError, compiled) => {
-			reader.close((closeError) => {
-				if (closeError) {
-					xLog.error(`graphBuilder -cedsRoundTrip: ${closeError}`);
-				}
-				if (compileError) {
-					callback(`graphBuilder -cedsRoundTrip: ${compileError}`);
-					return;
-				}
-				xLog.status(
-					`graphBuilder: -cedsRoundTrip emitted ${compiled.counts.class} class(es), ` +
-						`${compiled.counts.property} propert(ies), ${compiled.counts.optionSet} option set(s), ` +
-						`${compiled.counts.optionValue} option value(s) to ${emittedFilePath}`,
-				);
-				(compiled.readerNotes.unresolvedDomainIds || []).forEach((oneNote) =>
-					xLog.error(`graphBuilder -cedsRoundTrip: UNRESOLVABLE REFERENCE — ${oneNote}`),
-				);
-
-				diffRoundTripLib.compareRdfFiles(
-					{
-						sourcePath: sourceResolution.filePath,
-						emittedPath: emittedFilePath,
-						context: {
-							containerName,
-							boltUrl: resolved.boltUrl,
-							sourcePath: sourceResolution.filePath,
-							emittedPath: emittedFilePath,
-							emittedCounts: JSON.stringify(compiled.counts),
-						},
-					},
-					(compareError, compared) => {
-						if (compareError) {
-							callback(`graphBuilder -cedsRoundTrip: ${compareError}`);
-							return;
-						}
-						diffRoundTripLib.renderReportText(
-							{ report: compared.report },
-							(renderError, rendered) => {
-								if (renderError) {
-									callback(`graphBuilder -cedsRoundTrip: ${renderError}`);
-									return;
-								}
-								// BOTH artifacts are written BEFORE the report is returned, and a write
-								// failure is a FAULT named through the callback. A run that printed numbers
-								// and silently failed to persist them is a measurement nobody can go back
-								// and check — the same discipline -retrievalMetrics applies to its sidecar.
-								let writeFault = '';
-								try {
-									fs.mkdirSync(path.dirname(reportFilePath), { recursive: true });
-									fs.writeFileSync(reportFilePath, rendered.reportText, 'utf8');
-									fs.mkdirSync(path.dirname(sidecarFilePath), { recursive: true });
-									fs.writeFileSync(
-										sidecarFilePath,
-										`${JSON.stringify(compared.report, null, 2)}\n`,
-										'utf8',
-									);
-								} catch (writeError) {
-									writeFault = writeError.message;
-								}
-								if (writeFault) {
-									callback(
-										`graphBuilder -cedsRoundTrip: writing the report artifacts failed: ${writeFault}`,
-									);
-									return;
-								}
-								xLog.status(`graphBuilder: -cedsRoundTrip report written to ${reportFilePath}`);
-								xLog.status(`graphBuilder: -cedsRoundTrip JSON sidecar written to ${sidecarFilePath}`);
-								callback('', { exitCode: 0, resultText: rendered.reportText });
-							},
-						);
-					},
-				);
-			});
-		});
-	});
-};
-
-// ---------------------------------------------------------------------
-// -cedsGates
-// ---------------------------------------------------------------------
-// ⟪TQ, 2026-08-02⟫ "Please enhance the spec with very thorough gates."
-//
-// Runs the CEDS fidelity gate suite: 46 gates declared as DATA in
-// forges/ceds/gates/cedsFidelityGates.jsonc, evaluated by roundTripGates, measured by
-// roundTripGateMeasures, and proven by roundTripGateTwins.
-//
-// THE VERDICT IS A WORD, NEVER A PERCENTAGE. Acceptance is zero FAIL, zero UNMEASURED and
-// zero UNPROVEN. A tampered emission carrying four fabricated statements still reported
-// 71.936% -- proven live during the audit -- so a percentage cannot be trusted to decide
-// anything, and none participates here.
-//
-// A RED SUITE DURING ENRICHMENT IS CORRECT. Its redness is the work order. There is
-// deliberately no expected-to-fail state; that is masking with a lanyard (gate M-2).
-//
-// READ-ONLY. Every measure is MATCH/RETURN and refuseIfWriteClause enforces it mechanically
-// before any statement is issued.
-
-const requireGatesLib = () =>
-	require(path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripGates'));
-const requireGateMeasuresLib = () =>
-	require(path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripGateMeasures'));
-const requireGateTwinsLib = () =>
-	require(path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripGateTwins'));
-
-const cedsGatesAction = (callback) => {
-	const { xLog, commandLineParameters } = process.global;
-
-	const containerName = firstValue(commandLineParameters, 'containerName');
-	if (!containerName) {
-		callback(
-			`graphBuilder -cedsGates: --containerName=<name> is REQUIRED and has no default. Gates ` +
-				`are always measured AGAINST one materialized graph; there is no "whichever graph ` +
-				`happens to be running".`,
-		);
-		return;
-	}
-	const reportJsonPath = firstValue(commandLineParameters, 'reportJsonPath');
-
-	const gatesLib = requireGatesLib()();
-	const measuresLib = requireGateMeasuresLib()();
-	const twinsLib = requireGateTwinsLib()();
-
-	gatesLib.loadGateDeclarations({}, (loadError, loadResult) => {
-		if (loadError) {
-			callback(`graphBuilder -cedsGates: ${loadError}`);
-			return;
-		}
-		const { declarations } = loadResult;
-
-		measuresLib.loadSuiteFacts({}, (factsError, factsResult) => {
-			if (factsError) {
-				callback(`graphBuilder -cedsGates: ${factsError}`);
-				return;
-			}
-
-			// The round-trip report is OPTIONAL input. Without it every report-derived gate goes
-			// UNMEASURED, which is a failure and says so -- rather than a silent pass.
-			let report = null;
-			if (reportJsonPath) {
-				if (!fs.existsSync(reportJsonPath)) {
-					callback(
-						`graphBuilder -cedsGates: --reportJsonPath '${reportJsonPath}' does not exist. ` +
-							`Run -cedsRoundTrip first, or omit the flag and accept UNMEASURED report gates.`,
-					);
-					return;
-				}
-				report = JSON.parse(fs.readFileSync(reportJsonPath, 'utf8'));
-			} else {
-				measuresLib.record(
-					'report:*',
-					'no --reportJsonPath was given, so no round-trip report was supplied',
-				);
-			}
-
-			xLog.status(`graphBuilder: -cedsGates measuring '${containerName}' (read-only)`);
-
-			measuresLib.measureGraph({ containerName }, (graphError, graphResult) => {
-				if (graphError) {
-					callback(`graphBuilder -cedsGates: ${graphError}`);
-					return;
-				}
-				measuresLib.deriveCanonicalProbes((canonicalError, canonicalProbes) => {
-					if (canonicalError) {
-						callback(`graphBuilder -cedsGates: ${canonicalError}`);
-						return;
-					}
-					measuresLib.deriveDiffProbes((diffProbeError, diffProbes) => {
-						if (diffProbeError) {
-							callback(`graphBuilder -cedsGates: ${diffProbeError}`);
-							return;
-						}
-						// C-3: the OUTSIDE opinion. Runs only when both documents are named --
-						// --sourcePath and --emittedPath -- because a comparison is always OF two
-						// specific files. Omitted, the gate reads UNMEASURED with that reason,
-						// which is the honest state and never a pass.
-						const independentSourcePath = firstValue(commandLineParameters, 'sourcePath');
-						const independentEmittedPath = firstValue(commandLineParameters, 'emittedPath');
-						if (independentSourcePath && independentEmittedPath) {
-							xLog.status(
-								`graphBuilder: -cedsGates running the INDEPENDENT rdflib comparison ` +
-									`(parses 19MB twice; ~90s)`,
-							);
-						}
-						measuresLib.deriveIndependentRdfProbe(
-							{ sourcePath: independentSourcePath, emittedPath: independentEmittedPath },
-							(independentError, independentProbes) => {
-						if (independentError) {
-							callback(`graphBuilder -cedsGates: ${independentError}`);
-							return;
-						}
-						measuresLib.recordDeferredMeasures();
-
-						const measurements = {
-							report: { ...(report || {}), ...measuresLib.deriveReportMeasures({ report }) },
-							graph: graphResult.graphMeasures,
-							probe: {
-								...measuresLib.deriveStaticProbes(),
-								...canonicalProbes,
-								...diffProbes,
-								...independentProbes,
-							},
-							suite: {},
-						};
-
-						// Twins run FIRST: a gate can only be PASS once its twin has been watched
-						// turning it RED, so the observation set is an input to the evaluation.
-						gatesLib.runTwins(
-							{ declarations, measurements, twinRegistry: twinsLib.twinRegistry },
-							(twinError, twinResult) => {
-								if (twinError) {
-									callback(`graphBuilder -cedsGates: ${twinError}`);
-									return;
-								}
-								measurements.suite = measuresLib.deriveSuiteMeasures({
-									declarations,
-									suiteFacts: factsResult.suiteFacts,
-									observedTwins: twinResult.observedTwins,
-								});
-
-								gatesLib.evaluateSuite(
-									{ declarations, measurements, observedTwins: twinResult.observedTwins },
-									(evaluateError, evaluateResult) => {
-										if (evaluateError) {
-											callback(`graphBuilder -cedsGates: ${evaluateError}`);
-											return;
-										}
-										gatesLib.renderSuiteText(
-											{
-												suiteResult: evaluateResult.suiteResult,
-												twinReports: twinResult.twinReports,
-											},
-											(renderError, rendered) => {
-												if (renderError) {
-													callback(`graphBuilder -cedsGates: ${renderError}`);
-													return;
-												}
-												const unsuppliedLines = measuresLib.unsupplied.length
-													? [
-															'',
-															'-'.repeat(96),
-															'UNSUPPLIED MEASURES — why these gates read UNMEASURED',
-															'-'.repeat(96),
-														].concat(
-															measuresLib.unsupplied.map(
-																(one) => `  ${one.name}\n      ${one.reason}`,
-															),
-														)
-													: [];
-												callback('', {
-													exitCode: evaluateResult.suiteResult.accepted ? 0 : 1,
-													resultText: [rendered.text]
-														.concat(unsuppliedLines)
-														.join('\n'),
-												});
-											},
-										);
-									},
-								);
-							},
-						);
-							},
-						);
-					});
-				});
-			});
-		});
-	});
+	verbModule[functionName]({ xLog, commandLineParameters }, callback);
 };
 
 // =====================================================================
@@ -1546,7 +1188,7 @@ const goldEvalCheckAction = (callback) => {
 		const neo4j = require('neo4j-driver');
 		// the candidate and every live predecessor are opened READ-ONLY, bolt port and credential read from the container
 		const openGraphReader = ({ containerName }, openCallback) => {
-			requireCedsRoundTripCompiler()().resolveContainerBolt({ containerName }, (resolveError, resolved) => {
+			require(path.join(__dirname, '..', '..', '..', 'lib', 'graph-connection', 'containerBolt')).resolveContainerBolt({ containerName }, (resolveError, resolved) => {
 				if (resolveError) {
 					openCallback(resolveError);
 					return;
@@ -1799,9 +1441,9 @@ const stampPromotionAction = (callback) => {
 	const neo4j = require('neo4j-driver');
 	const taskList = new taskListPlus();
 
-	// the bolt port and credential are read from the container, as -cedsRoundTrip reads them
+	// the bolt port and credential are read from the container, as -roundTripCompile reads them
 	taskList.push((args, next) => {
-		requireCedsRoundTripCompiler()().resolveContainerBolt({ containerName }, (resolveError, resolved) => {
+		require(path.join(__dirname, '..', '..', '..', 'lib', 'graph-connection', 'containerBolt')).resolveContainerBolt({ containerName }, (resolveError, resolved) => {
 			if (resolveError) {
 				next(`graphBuilder -stampPromotion: ${resolveError}`);
 				return;
@@ -2130,8 +1772,8 @@ return {
 	deps,
 	replay,
 	retrievalMetrics: retrievalMetricsAction,
-	cedsRoundTrip: cedsRoundTripAction,
-	cedsGates: cedsGatesAction,
+	roundTripCompile: roundTripVerbActionFor('roundTripCompile'),
+	roundTripGates: roundTripVerbActionFor('roundTripGates'),
 	goldEvalCheck: goldEvalCheckAction,
 	truncateStore: truncateStoreAction,
 	stampPromotion: stampPromotionAction,

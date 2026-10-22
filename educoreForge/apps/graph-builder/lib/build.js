@@ -27,9 +27,9 @@
 // a test can inject a component that FAILS — without it the orchestrator's error paths could never
 // be observed firing, and a path never observed is a path unproven.
 //
-// FIDELITY-GATE SEAM (⟪R-P2-1⟫): `deps.cedsFidelityGateRunner` may override the R-1 in-build
+// FIDELITY-GATE SEAM (⟪R-P2-1⟫): `deps.fidelityGateRunner` may override the R-1 in-build
 // fidelity gate with a function of the same signature; the documented default is the REAL
-// runCedsFidelityGate (byte-unchanged production behavior). The hermetic suites inject a
+// runDeclaredFidelityGate (byte-unchanged production behavior). The hermetic suites inject a
 // SELF-ANNOUNCING stub — the real gate reaches a LIVE graph over bolt (docker inspect), which
 // no hermetic double provides. A silent skip is not offered.
 //
@@ -42,7 +42,7 @@
 //      into the nodeEdges it returns. So the ordinary [StandardBase] init (which stamps StandardBase
 //      on every loaded node, hub nodes included, keeping their intrinsic HubReference/HubDefinition
 //      labels) and the ordinary [StandardBase] harvest mint ONE block carrying base + hub, with the
-//      hub's HAS_CEDS_*/IN_HUB edges resolving WITHIN it. There is NO separate hub block, NO separate
+//      hub's HAS_<HUB>_*/IN_HUB edges resolving WITHIN it. There is NO separate hub block, NO separate
 //      hub harvest, and NO replay-engine change — build.js never learns hub construction at all.
 //   C  per bridge: create -> bridgeMaker.run (labels edges) -> harvest(:BridgedRelation)
 //                        -> manifest.add({...}) -> delete
@@ -419,7 +419,7 @@ const eachSeries = (items, iterator, done) => {
 // DISPOSE-ON-FAILURE (Item 4): the eval graph is created here and is the product ONLY on success; an
 // init failure disposes it rather than stranding a live DEV_* container. No forger, no bridge.
 // =====================================================================================
-// runCedsFidelityGate — R-1: the round trip FAILS THE BUILD, it does not merely report
+// R-1, the fidelity gate: the round trip FAILS THE BUILD, it does not merely report
 // =====================================================================================
 // ⟪TQ, 2026-08-02: "yes, R1 please"⟫
 //
@@ -428,8 +428,8 @@ const eachSeries = (items, iterator, done) => {
 // Everything proven about the graph rested on someone CHOOSING to look. That is the whole
 // distance between "we proved it" and "it stays proven".
 //
-// RUNS ONLY WHEN CEDS IS IN THE GRAPH. A recipe without CEDS has nothing to check, and a
-// gate that fires on irrelevant builds gets disabled by the first person it inconveniences.
+// RUNS ONLY WHEN A STANDARD OF THE BUILD DECLARES IT (R5 S4: the gate lives in the declaring bundle). A recipe with no
+// declarer has nothing to check, and a gate that fires on irrelevant builds gets disabled by the first person it inconveniences.
 //
 // THE ESCAPE HATCH REQUIRES YOU TO NAME THE NUMBER. `--allowFidelityLoss=<n>` accepts up to
 // n lost statements and NOTHING ELSE -- any loss above n still fails, and INVENTION always
@@ -438,7 +438,7 @@ const eachSeries = (items, iterator, done) => {
 // the expectFail masking gate M-2 forbids, and it is deliberately not offered.
 //
 // ⟪lane R, 2026-10-05; FINDING 5-A⟫ ON SUCCESS IT REPORTS WHICH SUCCESS: callback('', fidelityAttestation), the
-// BuildAttestation row { gate: 'fidelity', verdict, detail, inventedTotal } — notRun when CEDS is not in the graph (skipped),
+// BuildAttestation row { gate: 'fidelity', verdict, detail, inventedTotal } — notRun when no standard declares a gate (skipped),
 // pass on a genuine pass, passWithAllowedLoss when the loss it found was allowed under --allowFidelityLoss. Until then it
 // called back with nothing, the three were indistinguishable, and the row read notRun on every build.
 // runReplayFidelityGate — the fidelity runner a -replay hands materialize (campaign P2, R1 finding). A replay forges nothing:
@@ -448,99 +448,45 @@ const eachSeries = (items, iterator, done) => {
 const REPLAY_FIDELITY_DETAIL = 'replay: no forge ran in this materialize, so R-1 has no freshly forged CEDS to round-trip; the stored blocks were gated when they were forged';
 const runReplayFidelityGate = (runnerArguments, callback) => callback('', { gate: 'fidelity', verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN, detail: REPLAY_FIDELITY_DETAIL });
 
-const runCedsFidelityGate = ({ xLog, graphName, standardTokens, commandLineParameters }, callback) => {
-	// THE DECISION LIVES IN ITS OWN MODULE so its failure branch can be negated in
-	// milliseconds instead of a five-minute forge. See
-	// lib/ceds-fidelity-judgment/test/test-cedsFidelityJudgment.js -- 26 assertions, every one
-	// a way this build must die. This function keeps only the I/O.
-	const judgmentLib = require(
-		path.join(__dirname, '..', '..', '..', 'lib', 'ceds-fidelity-judgment', 'ceds-fidelity-judgment'),
-	)();
-	const tokens = (standardTokens || []).map((one) => String(one).toLowerCase());
-	if (!tokens.includes('ceds')) {
-		callback('', judgmentLib.skippedAttestation({ standardTokens }));
+// runDeclaredFidelityGate — ⟪R5 S4, 2026-10-21⟫ the R-1 runner build() hands materialize: it runs the fidelity gate a
+// standard of this recipe DECLARES (parserDescriptor.ini fidelityGateModule=, a module exporting runFidelityGate) and names
+// no standard itself. No declarer → the notRun row, naming the skip. Two declarers → REFUSED (one fidelity row per build;
+// the day a second hub carries a gate, the row needs a design, not a guess). A recipe token whose bundle does not resolve
+// is REFUSED by name rather than read as "declares nothing". The gate body (the CEDS round trip and its refusals) lives in
+// the declaring bundle: forges/ceds/lib/cedsFidelityGate.js.
+const runDeclaredFidelityGate = ({ xLog, graphName, standardTokens, commandLineParameters }, callback) => {
+	const tokenList = (standardTokens || []).map((one) => String(one).toLowerCase());
+	const bundleList = tokenList.map((oneToken) => ({ standardToken: oneToken, bundle: resolveForgeBundle({ standard: oneToken }) }));
+	const unresolvedList = bundleList.filter((oneEntry) => oneEntry.bundle.error);
+	if (unresolvedList.length) {
+		callback(`graphBuilder build: the fidelity gate cannot tell which standard declares it -- ${unresolvedList.map((oneEntry) => `'${oneEntry.standardToken}': ${oneEntry.bundle.error}`).join('; ')}`);
 		return;
 	}
-
-	const allowance = judgmentLib.resolveAllowance({
-		rawValue: ((commandLineParameters || {}).values || {}).allowFidelityLoss,
-	});
-	if (allowance.error) {
-		callback(`graphBuilder build: ${allowance.error}`);
-		return;
-	}
-	const allowedLoss = allowance.allowedLoss;
-
-	const compilerLib = require(
-		path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripCompiler'),
-	)();
-	const canonicalLib = require(
-		path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripCanonical'),
-	)();
-	const diffLib = require(
-		path.join(__dirname, '..', '..', '..', 'forges', 'ceds', 'lib', 'roundTripDiff'),
-	)();
-
-	const sourcePath = path.join(
-		__dirname, '..', '..', '..',
-		'forges', 'ceds', 'assets', 'standardSourceData', '01', 'CEDS-Ontology.rdf',
-	);
-	if (!fs.existsSync(sourcePath)) {
-		callback(
-			`graphBuilder build: the CEDS fidelity gate cannot run -- the source ontology ` +
-				`'${sourcePath}' does not exist. REFUSED rather than skipped: a gate that quietly ` +
-				`does not run is indistinguishable from one that passed.`,
-		);
-		return;
-	}
-
-	xLog.status(`  [fidelity] round-tripping CEDS out of '${graphName}' (R-1)`);
-	const emittedPath = path.join(
-		os.tmpdir(),
-		`cedsFidelityGate-${process.pid}-${resolvedSchemaBlocksCounter()}.rdf`,
-	);
-
-	compilerLib.resolveContainerBolt({ containerName: graphName }, (resolveError, resolved) => {
-		if (resolveError) {
-			callback(`graphBuilder build: the CEDS fidelity gate could not reach the graph: ${resolveError}`);
-			return;
-		}
-		const reader = compilerLib.makeNeo4jCedsReader(resolved);
-		compilerLib.compileToFile({ reader, outPath: emittedPath }, (compileError) => {
-			reader.close(() => {});
-			if (compileError) {
-				callback(`graphBuilder build: the CEDS fidelity gate failed to compile: ${compileError}`);
-				return;
-			}
-			diffLib.compareRdfFiles(
-				{ sourcePath, emittedPath, context: { gate: 'R-1', graphName } },
-				(compareError, compared) => {
-					fs.unlink(emittedPath, () => {});
-					if (compareError) {
-						callback(`graphBuilder build: the CEDS fidelity gate failed to diff: ${compareError}`);
-						return;
-					}
-					const { headline } = compared.report;
-					xLog.status(
-						`  [fidelity] source ${headline.sourceStatements}, matched ${headline.matched}, ` +
-							`LOST ${headline.lost}, INVENTED ${headline.invented}`,
-					);
-					const verdict = judgmentLib.judgeFidelity({ headline, allowedLoss, graphName });
-					if (!verdict.passed) {
-						callback(`graphBuilder build: ${verdict.reason}`);
-						return;
-					}
-					xLog.status(`  [fidelity] ${verdict.reason}`);
-					const attestationRead = judgmentLib.attestationFor({ verdict, headline });
-					if (attestationRead.error) {
-						callback(`graphBuilder build: ${attestationRead.error}`);
-						return;
-					}
-					callback('', attestationRead.attestation);
-				},
-			);
+	const declarerList = bundleList.filter((oneEntry) => oneEntry.bundle.fidelityGateModulePath !== undefined);
+	if (declarerList.length === 0) {
+		callback('', {
+			gate: 'fidelity',
+			verdict: vocabulary.BUILD_ATTESTATION_VERDICT.NOT_RUN,
+			detail: `skipped: no standard in this build declares a fidelity gate (${JSON.stringify(tokenList)}), so R-1 has nothing to round-trip`,
+			inventedTotal: null,
 		});
-	});
+		return;
+	}
+	if (declarerList.length > 1) {
+		callback(`graphBuilder build: ${declarerList.map((oneEntry) => oneEntry.standardToken).join(' and ')} each declare a fidelity gate; a build records one fidelity row, so which one decides is a design question, REFUSED rather than guessed`);
+		return;
+	}
+	const declarer = declarerList[0];
+	if (!fs.existsSync(declarer.bundle.fidelityGateModulePath)) {
+		callback(`graphBuilder build: '${declarer.standardToken}' declares fidelityGateModule ${declarer.bundle.fidelityGateModulePath}, which is not on disk`);
+		return;
+	}
+	const gateModule = require(declarer.bundle.fidelityGateModulePath);
+	if (typeof gateModule.runFidelityGate !== 'function') {
+		callback(`graphBuilder build: ${declarer.bundle.fidelityGateModulePath} declares no runFidelityGate({ xLog, graphName, commandLineParameters, bundleDirPath }, callback)`);
+		return;
+	}
+	gateModule.runFidelityGate({ xLog, graphName, commandLineParameters, bundleDirPath: declarer.bundle.bundleDir }, callback);
 };
 
 // fidelityAttestationFaultFor(fidelityAttestation) → '' | the named fault. What a fidelity runner's success report must be:
@@ -684,8 +630,6 @@ const finishReportLogLinesFor = (finishReport) => {
 	return { lineList, pickedByPath };
 };
 
-let materializeCounter = 0;
-const resolvedSchemaBlocksCounter = () => (materializeCounter += 1);
 
 const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestId, memberCount, standardTokens, commandLineParameters, fidelityGateRunner, storeResolver, storeReader, roundTripStageRunner, roundTripStageSpec, frameworkFingerprintList, embeddingCoverageGateRunner, finishReportFilePath, forgeCensusGateRunner, forgeCensusSpec }, callback) => {
 	// ⟪campaign P2, W-C-21⟫ the forgeCensus gate (injected, real default in both callers) and its spec: the build's forge
@@ -726,7 +670,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 		);
 		return;
 	}
-	// ⟪R-P2-1⟫ the fidelity gate arrives INJECTED (a function with runCedsFidelityGate's
+	// ⟪R-P2-1⟫ the fidelity gate arrives INJECTED (a function with runDeclaredFidelityGate's
 	// signature). Both in-module callers resolve it from deps with the REAL gate as the
 	// documented default, so production is byte-unchanged; the hermetic suites inject a
 	// SELF-ANNOUNCING stub (the real gate spawns `docker inspect` against a live container,
@@ -736,7 +680,7 @@ const materializeSchemaBlocks = ({ xLog, replay, resolvedSchemaBlocks, manifestI
 	if (typeof fidelityGateRunner !== 'function') {
 		callback(
 			`materialize failed: a fidelityGateRunner is REQUIRED (the caller resolves ` +
-				`deps.cedsFidelityGateRunner with the real R-1 gate as its documented default) — ` +
+				`deps.fidelityGateRunner with the real R-1 gate as its documented default) — ` +
 				`an unstated gate would be indistinguishable from a passed one.`,
 		);
 		return;
@@ -1506,7 +1450,7 @@ const build = (recipe, deps, buildCallback) => {
 	// overrides); null disables. The hermetic suites inject their own or omit them.
 	const judgmentCache = deps.judgmentCache || null;
 	const matchForensics = deps.matchForensics || null;
-	// ⟪R-P2-1, 2026-08-03⟫ the R-1 fidelity-gate SEAM: injectable via deps.cedsFidelityGateRunner,
+	// ⟪R-P2-1, 2026-08-03⟫ the R-1 fidelity-gate SEAM: injectable via deps.fidelityGateRunner,
 	// with the REAL gate as the documented default — the production path is byte-unchanged (same
 	// function, same refusals: missing ontology refuses, invention always fails). The hermetic
 	// suites inject a SELF-ANNOUNCING stub that prints its own [fidelity] HERMETIC STUB line —
@@ -1514,7 +1458,7 @@ const build = (recipe, deps, buildCallback) => {
 	// indistinguishable from one that passed). This seam existed nowhere from R-1's in-build
 	// landing (92aecda) until now, so every hermetic ceds-recipe build died at materialize on a
 	// `docker inspect` of a double's fake container.
-	const cedsFidelityGateRunner = deps.cedsFidelityGateRunner || runCedsFidelityGate;
+	const fidelityGateRunner = deps.fidelityGateRunner || runDeclaredFidelityGate;
 	// ⟪campaign P2, W-A-11⟫ the real embeddingCoverage gate is the documented default; suites inject a stub
 	const embeddingCoverageGateRunner = deps.embeddingCoverageGateRunner || embeddingCoverageGateLib.runEmbeddingCoverageGate;
 	// ⟪campaign P2, W-C-21⟫ the real forgeCensus gate is the documented default
@@ -1971,11 +1915,11 @@ const build = (recipe, deps, buildCallback) => {
 						);
 						return;
 					}
-					const divergenceReportPath = path.join(
-						buildReportsDirPath,
-						'cedsProseDivergence.json',
-					);
-					const skipReportPath = path.join(buildReportsDirPath, 'cedsHubSkipReport.json');
+					// ⟪R5 S5, 2026-10-21⟫ named for the HUB whose fold produced them, so a two-hub build writes one pair per hub
+					// and no hub's reports carry another hub's name (no reader of the old names exists, measured: R5 DEVLOG)
+					const hubToken = String(std.token).toLowerCase();
+					const divergenceReportPath = path.join(buildReportsDirPath, `proseDivergence.${hubToken}.json`);
+					const skipReportPath = path.join(buildReportsDirPath, `hubSkipReport.${hubToken}.json`);
 					fs.writeFile(
 						divergenceReportPath,
 						JSON.stringify(args.forgeReport.hubDivergenceReport, null, '\t'),
@@ -2250,7 +2194,7 @@ const build = (recipe, deps, buildCallback) => {
 			// standard. The first Phase-3 attempt's second block (deserialize base -> forgeHub -> init ->
 			// harvest(:HubReference:HubDefinition) -> add({..._hub})) is deleted: the replay engine's
 			// conjunctive labelMatch could not union two hub node types and fetchEdgesWithinLabels dropped
-			// the hub's cross-boundary HAS_CEDS_* edges. Folding into the base dissolves both — the edges
+			// the hub's cross-boundary HAS_<HUB>_* edges. Folding into the base dissolves both — the edges
 			// live within one [StandardBase] block, both endpoints present. The '_hub' subject marker
 			// and kind:'hub' stay RESERVED in vocabulary, harmless and unused.
 
@@ -2325,8 +2269,8 @@ const build = (recipe, deps, buildCallback) => {
 			});
 
 			// RESTORE the bridge's dependency bases (source + hub) into the dependency graph, so the producer
-			// has real nodes to read: the source standard's elements, the CEDS HubReferences and the CEDS
-			// standard rows all live in these two base blocks (the hub is FOLDED into the CEDS base). A missing
+			// has real nodes to read: the source standard's elements, the hub's HubReferences and the hub
+			// standard's rows all live in these two base blocks (the hub is FOLDED into its own standard's base). A missing
 			// dependency base is a recipe/order fault, named — never a silent empty graph (polyArch2 §6).
 			taskList.push((args, next) => {
 				// RESTORE the pairing's two endpoints (source + hub-or-pairWith) AND the bridge's declared
@@ -2784,11 +2728,11 @@ const build = (recipe, deps, buildCallback) => {
 						resolvedSchemaBlocks,
 						manifestId,
 						memberCount,
-						// R-1 needs to know whether CEDS is in this graph at all.
+						// R-1 needs the recipe's standards: one of them may declare the fidelity gate.
 						standardTokens: (recipe.standards || []).map((one) => one.token),
 						commandLineParameters: process.global && process.global.commandLineParameters,
 						// ⟪R-P2-1⟫ the injected-or-real fidelity gate, resolved once at the top of build()
-						fidelityGateRunner: cedsFidelityGateRunner,
+						fidelityGateRunner,
 						embeddingCoverageGateRunner,
 						forgeCensusGateRunner,
 						forgeCensusSpec: { expectationList: forgeCensusExpectationList },
@@ -2969,7 +2913,7 @@ const replay = ({ manifestRefId } = {}, deps = {}, callback) => {
 					// ⟪R-P2-1⟫ same seam as build(): an injected runner, else the REPLAY runner — a replay forges
 					// nothing, so its row says replay (campaign P2, R1 finding; it used to hand the real gate no
 					// tokens and record that CEDS was absent from a graph that holds it)
-					fidelityGateRunner: deps.cedsFidelityGateRunner || runReplayFidelityGate,
+					fidelityGateRunner: deps.fidelityGateRunner || runReplayFidelityGate,
 					embeddingCoverageGateRunner: deps.embeddingCoverageGateRunner || embeddingCoverageGateLib.runEmbeddingCoverageGate,
 					forgeCensusGateRunner: deps.forgeCensusGateRunner || forgeCensusGateLib.runForgeCensusGate,
 					// a -replay forged nothing: no forge counts to compare
@@ -3058,7 +3002,7 @@ module.exports.refuseHublessReuseUnderDeriveHub = refuseHublessReuseUnderDeriveH
 module.exports.explicitVersionFrom = explicitVersionFrom;
 // ⟪lane R, 2026-10-05⟫ the fidelity row's producer and its wiring, exported as statics so the three states (skipped,
 // pass, passWithAllowedLoss) are gated through the real materialize tail with hermetic doubles (test-fidelityAttestation)
-module.exports.runCedsFidelityGate = runCedsFidelityGate;
+module.exports.runDeclaredFidelityGate = runDeclaredFidelityGate;
 module.exports.runReplayFidelityGate = runReplayFidelityGate;
 module.exports.materializeSchemaBlocks = materializeSchemaBlocks;
 // ⟪campaign P2, W-A-3⟫ the decision blocks' framework fingerprints for the passport, gated directly (test-frameworkFingerprintList)

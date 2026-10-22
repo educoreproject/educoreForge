@@ -60,7 +60,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execFile } = require('child_process');
 const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus')();
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -581,85 +580,9 @@ const moduleFunction =
 		// from the container (`docker inspect`) rather than restated on the command line where they
 		// could drift. runDockerCommand is injectable so a test can prove the parsing without Docker.
 
-		const defaultRunDockerCommand = (dockerArgs, callback) =>
-			execFile('docker', dockerArgs, { encoding: 'utf-8', maxBuffer: 8 * 1024 * 1024 }, callback);
-
-		const resolveContainerBolt = (
-			{ containerName, runDockerCommand = defaultRunDockerCommand } = {},
-			callback,
-		) => {
-			if (typeof containerName !== 'string' || containerName.trim() === '') {
-				callback(
-					`${moduleName}.resolveContainerBolt: containerName is REQUIRED and has no default.`,
-				);
-				return;
-			}
-			runDockerCommand(['inspect', containerName], (inspectError, stdout, stderr) => {
-				if (inspectError) {
-					callback(
-						`${moduleName}.resolveContainerBolt: 'docker inspect ${containerName}' failed: ` +
-							`${inspectError.message}${stderr ? `\n${stderr}` : ''}`,
-					);
-					return;
-				}
-				let inspected;
-				try {
-					inspected = JSON.parse(stdout);
-				} catch (parseError) {
-					callback(
-						`${moduleName}.resolveContainerBolt: 'docker inspect ${containerName}' returned ` +
-							`unparseable JSON: ${parseError.message}`,
-					);
-					return;
-				}
-				const record = Array.isArray(inspected) ? inspected[0] : inspected;
-				if (!record) {
-					callback(
-						`${moduleName}.resolveContainerBolt: 'docker inspect ${containerName}' returned no ` +
-							`record. The container does not exist under that name.`,
-					);
-					return;
-				}
-				const portBindings =
-					(record.NetworkSettings && record.NetworkSettings.Ports && record.NetworkSettings.Ports['7687/tcp']) ||
-					[];
-				const boltPort = (portBindings.find((oneBinding) => oneBinding && oneBinding.HostPort) || {})
-					.HostPort;
-				if (!boltPort) {
-					callback(
-						`${moduleName}.resolveContainerBolt: container '${containerName}' publishes no host ` +
-							`port for 7687/tcp. There is no bolt endpoint to read and one is not guessed at.`,
-					);
-					return;
-				}
-				const authEntry = ((record.Config && record.Config.Env) || []).find((oneEntry) =>
-					String(oneEntry).startsWith('NEO4J_AUTH='),
-				);
-				if (!authEntry) {
-					callback(
-						`${moduleName}.resolveContainerBolt: container '${containerName}' declares no ` +
-							`NEO4J_AUTH in its environment. The credential is read from the container, never ` +
-							`assumed.`,
-					);
-					return;
-				}
-				const authValue = authEntry.slice('NEO4J_AUTH='.length);
-				const slashAt = authValue.indexOf('/');
-				if (slashAt === -1) {
-					callback(
-						`${moduleName}.resolveContainerBolt: container '${containerName}' has NEO4J_AUTH ` +
-							`'${authValue}', which is not the '<user>/<password>' shape.`,
-					);
-					return;
-				}
-				callback('', {
-					containerName,
-					boltUrl: `bolt://localhost:${boltPort}`,
-					user: authValue.slice(0, slashAt),
-					password: authValue.slice(slashAt + 1),
-				});
-			});
-		};
+		// ⟪R5 S6⟫ resolveContainerBolt lives in lib/graph-connection/containerBolt.js (it names no standard); this module
+		// re-exports it for its own callers (roundTripValidator, roundTripGateMeasures, the suite)
+		const { resolveContainerBolt } = require(path.join(__dirname, '..', '..', '..', 'lib', 'graph-connection', 'containerBolt'));
 
 		// =====================================================================
 		// THE READER — a materialized graph -> cedsGraph

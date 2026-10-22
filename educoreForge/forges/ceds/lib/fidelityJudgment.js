@@ -1,7 +1,7 @@
 'use strict';
 
 // =====================================================================================
-// ceds-fidelity-judgment — the DECISION that kills a build, separated from the I/O
+// fidelityJudgment (forges/ceds; was lib/ceds-fidelity-judgment until R5 S4) — the DECISION that kills a build, separated from the I/O
 // =====================================================================================
 //
 // ⟪TQ, 2026-08-02⟫ "Are you saying that there is one test that you have not been able to
@@ -30,7 +30,7 @@
 // once. A hermetic test of a decision nobody invokes is a very tidy way to prove nothing.
 
 const path = require('path');
-const { BUILD_ATTESTATION_VERDICT } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
+const { BUILD_ATTESTATION_VERDICT } = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 
 const moduleName = path.basename(__filename).replace(/\.js$/, '');
 
@@ -105,7 +105,7 @@ const cedsFidelityJudgment = () => {
 					`FIDELITY GATE FAILED -- ${headline.lost} CEDS statement(s) do not round-trip` +
 					(allowance
 						? `, which exceeds the --allowFidelityLoss=${allowance} you named.`
-						: `. Run 'graphBuilder -cedsRoundTrip${graphName ? ` --containerName=${graphName}` : ''}' ` +
+						: `. Run 'graphBuilder -roundTripCompile --standard=ceds${graphName ? ` --containerName=${graphName}` : ''}' ` +
 							`for the per-predicate attribution, or name the gap you are accepting with ` +
 							`--allowFidelityLoss=${headline.lost}.`),
 			};
@@ -130,18 +130,11 @@ const cedsFidelityJudgment = () => {
 	// THE FIDELITY ATTESTATION ROW — what the gate REPORTS, so the BuildAttestation row says which of its three success
 	// states happened (lane R, 2026-10-05; FINDING 5-A of 2026-09-01: the runner's callback('') could not tell them apart,
 	// and the row read notRun on every build, even when the gate ran).
-	//   skippedAttestation  CEDS is not in this graph: the gate did not run           → notRun
+	//   (a build with no declared fidelity gate gets its notRun row from build.js, which runs whichever gate the recipe's
+	//   standards declare — R5 S4; this module is only ever asked about a graph that holds CEDS)
 	//   attestationFor      the gate ran and passed (judgeFidelity's verdict)          → pass | passWithAllowedLoss
 	// A failing gate reports nothing: it fails the build. Pure.
 	// -----------------------------------------------------------------
-	const skippedAttestation = ({ standardTokens } = {}) => ({
-		gate: FIDELITY_GATE_NAME,
-		verdict: BUILD_ATTESTATION_VERDICT.NOT_RUN,
-		detail:
-			`skipped: CEDS is not among this build's standards (${JSON.stringify(standardTokens || [])}), so R-1 has nothing ` +
-			`to round-trip`,
-		inventedTotal: null,
-	});
 	const attestationFor = ({ verdict, headline } = {}) => {
 		if (!verdict || verdict.passed !== true || !verdict.attestationVerdict || !headline) {
 			return {
@@ -163,7 +156,7 @@ const cedsFidelityJudgment = () => {
 		};
 	};
 
-	return { judgeFidelity, resolveAllowance, skippedAttestation, attestationFor, FIDELITY_GATE_NAME };
+	return { judgeFidelity, resolveAllowance, attestationFor, FIDELITY_GATE_NAME };
 };
 
 module.exports = cedsFidelityJudgment;

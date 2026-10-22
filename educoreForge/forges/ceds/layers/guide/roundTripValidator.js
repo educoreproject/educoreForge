@@ -100,9 +100,13 @@ const graphStatementsOfLayer = ({ layerGraph }) => {
 	return { graphStatements };
 };
 
+// the base-endpoint property this validator reads (cedsIdOf): CEDS's own anchor id, named here, where its meaning lives (R5 S3)
+const BASE_ENDPOINT_PROPERTY_NAME_LIST = Object.freeze(['cedsId']);
+
 const validatorApi = validatorFor({
 	standardSource: 'CEDS',
 	layerKey: 'guide',
+	baseEndpointPropertyNameList: BASE_ENDPOINT_PROPERTY_NAME_LIST,
 	verdictVersion: VERDICT_VERSION,
 	semanticValidationLimit: SEMANTIC_VALIDATION_LIMIT,
 	sourceFileList: GUIDE_TABLE_LIST.map((guideTable) => guideTable.fileName).concat(['CEDS_Ontology_Guide_Version_14.pdf']),
@@ -110,4 +114,4 @@ const validatorApi = validatorFor({
 	graphStatementsOf: ({ layerGraph }) => graphStatementsOfLayer({ layerGraph }),
 });
 
-module.exports = { validate: validatorApi.validate, validateWithLayerGraph: validatorApi.validateWithLayerGraph, graphStatementsOfLayer, VERDICT_VERSION };
+module.exports = { validate: validatorApi.validate, validateWithLayerGraph: validatorApi.validateWithLayerGraph, graphStatementsOfLayer, VERDICT_VERSION, BASE_ENDPOINT_PROPERTY_NAME_LIST };

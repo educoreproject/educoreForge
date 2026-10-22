@@ -188,7 +188,8 @@ const runOneStandard = (rosterIndex, whenDone) => {
 	}
 	const rosterEntry = MIGRATED_FORGE_ROSTER[rosterIndex];
 	const expectation = expectationFor({ expectationByStandardKey, standardKey: rosterEntry.standardKey });
-	const bundle = require(path.join(TREE_ROOT, rosterEntry.bundlePath))({ embedder: null });
+	// R5 S2: the bundle is handed the forger's map of hub anchor declarations, as the forger hands it (the old SIF forge normalizes its 'CEDS ID' column through it)
+	const bundle = require(path.join(TREE_ROOT, rosterEntry.bundlePath))({ embedder: null, hubAnchorPrefixByHubToken: require(path.join(TREE_ROOT, 'apps', 'graph-builder', 'apps', 'forger', 'forger')).hubAnchorPrefixByHubTokenFor().hubAnchorPrefixByHubToken });
 	bundle.forge(
 		{ sourcePath: path.join(TREE_ROOT, rosterEntry.snapshotPath), skipEmbedding: true },
 		(forgeError, forged) => {

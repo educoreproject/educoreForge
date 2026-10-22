@@ -80,7 +80,7 @@ const { resolveBundle } = require(path.join(__dirname, '..', 'apps', 'forger'));
 const layerFramework = require(path.join(TREE_ROOT, 'lib', 'layer-framework', 'layer-framework'))();
 const sourceVerificationLib = require(path.join(TREE_ROOT, 'lib', 'forge-framework', 'sourceVerification'));
 const { readSourceUrlRecord } = require(path.join(TREE_ROOT, 'lib', 'snapshot-provenance', 'source-url-record'));
-const { resolveContainerBolt } = require(path.join(TREE_ROOT, 'forges', 'ceds', 'lib', 'roundTripCompiler'))();
+const { resolveContainerBolt } = require(path.join(TREE_ROOT, 'lib', 'graph-connection', 'containerBolt')); // R5 S6: names no standard
 
 const RULES_FILE_PATH = path.join(__dirname, '..', 'lib', 'downloadArtifactsRules.json');
 const RUN_REPORT_FILE_NAME = 'downloadArtifactsRun.json';

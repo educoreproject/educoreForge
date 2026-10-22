@@ -133,10 +133,13 @@ const openGraphReader = ({ boltUrl, user, password, standardSource } = {}, callb
 // vectors. Same leaf discipline as openGraphReader: the driver's Promises resolve to the callback here and nowhere else.
 //
 //   reader.readLayer(callback(errString, { nodes, edges, baseEndpointByStableId, baseQueryRowListByName }))
+// baseEndpointPropertyNameList (optional, R5 S3) = the properties of a BASE endpoint a layer's validator reads (the CEDS guide
+// layer reads its anchor id); each lands on baseEndpointByStableId[stableId] under its own name beside stableId, role, labels.
+// The reader names no standard's property: the validator that owns the meaning declares it.
 // baseQueryList (optional) = [{ queryName, cypherText }]: further READ queries a layer's validator needs over the BASE (run in a
 // READ session, parameters $source and $layerKey bound), each answered as rows of plain objects under its queryName.
 //   reader.close(callback(errString))
-const openLayerGraphReader = ({ boltUrl, user, password, standardSource, layerKey, baseQueryList = [] } = {}, callback) => {
+const openLayerGraphReader = ({ boltUrl, user, password, standardSource, layerKey, baseQueryList = [], baseEndpointPropertyNameList = [] } = {}, callback) => {
 	if (typeof boltUrl !== 'string' || boltUrl.length === 0 || typeof standardSource !== 'string' || standardSource.length === 0 || typeof layerKey !== 'string' || layerKey.length === 0) {
 		callback(`${moduleName} REFUSED: boltUrl, standardSource and layerKey are required to open a layer reader`);
 		return;
@@ -149,6 +152,10 @@ const openLayerGraphReader = ({ boltUrl, user, password, standardSource, layerKe
 	const driver = neo4j.driver(boltUrl, neo4j.auth.basic(user, password));
 	const unwrapValue = (oneValue) => (neo4j.isInt(oneValue) ? oneValue.toNumber() : Array.isArray(oneValue) ? oneValue.map(unwrapValue) : oneValue);
 	const unwrapProperties = (rawProperties) => Object.keys(rawProperties || {}).reduce((soFar, oneName) => ({ ...soFar, [oneName]: unwrapValue(rawProperties[oneName]) }), {});
+	if (!Array.isArray(baseEndpointPropertyNameList) || baseEndpointPropertyNameList.some((oneName) => typeof oneName !== 'string' || oneName === '' || ['stableId', 'role', 'labels'].indexOf(oneName) !== -1)) {
+		callback(`${moduleName} REFUSED: baseEndpointPropertyNameList is ${JSON.stringify(baseEndpointPropertyNameList)}; a list of property names, none of them stableId, role or labels (already read)`);
+		return;
+	}
 	const parameterMap = { source: standardSource, layerKey };
 	const layerNodeMatch = '(n:StandardLayer {_source:$source, layerKey:$layerKey})';
 	const readLayer = (readCallback) => {
@@ -171,10 +178,10 @@ const openLayerGraphReader = ({ boltUrl, user, password, standardSource, layerKe
 						`MATCH (a)-[r]->(b)
 						 WHERE (a:StandardLayer AND a._source = $source AND a.layerKey = $layerKey) OR (b:StandardLayer AND b._source = $source AND b.layerKey = $layerKey)
 						 RETURN a.stableId AS fromStableId, type(r) AS type, b.stableId AS toStableId, properties(r) AS props,
-						        CASE WHEN a:StandardLayer THEN null ELSE { stableId: a.stableId, role: a.role, labels: labels(a), cedsId: a.cedsId } END AS fromBase,
-						        CASE WHEN b:StandardLayer THEN null ELSE { stableId: b.stableId, role: b.role, labels: labels(b), cedsId: b.cedsId } END AS toBase
+						        CASE WHEN a:StandardLayer THEN null ELSE { stableId: a.stableId, role: a.role, labels: labels(a), declaredValueList: [oneName IN $baseEndpointPropertyNameList | a[oneName]] } END AS fromBase,
+						        CASE WHEN b:StandardLayer THEN null ELSE { stableId: b.stableId, role: b.role, labels: labels(b), declaredValueList: [oneName IN $baseEndpointPropertyNameList | b[oneName]] } END AS toBase
 						 ORDER BY fromStableId, type, toStableId`,
-						parameterMap,
+						{ ...parameterMap, baseEndpointPropertyNameList },
 					)
 					.then((edgeResult) => {
 						const baseEndpointByStableId = {};
@@ -182,7 +189,9 @@ const openLayerGraphReader = ({ boltUrl, user, password, standardSource, layerKe
 							['fromBase', 'toBase'].forEach((endpointName) => {
 								const baseEndpoint = oneRecord.get(endpointName);
 								if (baseEndpoint) {
-									baseEndpointByStableId[baseEndpoint.stableId] = unwrapProperties(baseEndpoint);
+									// the declared properties, each under its own name (R5 S3)
+									const { declaredValueList, ...endpointCore } = unwrapProperties(baseEndpoint);
+									baseEndpointByStableId[baseEndpoint.stableId] = baseEndpointPropertyNameList.reduce((soFar, oneName, nameIndex) => ({ ...soFar, [oneName]: declaredValueList[nameIndex] }), endpointCore);
 								}
 							});
 							return { type: oneRecord.get('type'), fromStableId: oneRecord.get('fromStableId'), toStableId: oneRecord.get('toStableId'), properties: unwrapProperties(oneRecord.get('props')) };

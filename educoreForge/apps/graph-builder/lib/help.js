@@ -26,9 +26,9 @@ SYNOPSIS
      graphBuilder   -replay   --standardsDatabaseFilePath=<path> --manifestRefId=<refId>
      graphBuilder   -deps
      graphBuilder   -retrievalMetrics   (RETIRED: refuses by name)
-     graphBuilder   -cedsRoundTrip --containerName=<name> [--sourcePath=<path>]
+     graphBuilder   -roundTripCompile --standard=<token> --containerName=<name> [--sourcePath=<path>]
                                    [--outPath=<path>] [--reportPath=<path>]
-     graphBuilder   -cedsGates --containerName=<name> [--reportJsonPath=<path>]
+     graphBuilder   -roundTripGates --standard=<token> --containerName=<name> [--reportJsonPath=<path>]
      graphBuilder   -goldEvalCheck --buildLogDirPath=<the build's run directory>
                                    --manifestRefId=<the manifest -build printed> [--standardsDatabaseFilePath=<its store>]
                                    [--judgedBy=<toolId>[,<toolId>...]]   (COMMA-SEPARATED; one per judge present)
@@ -104,8 +104,11 @@ COMMANDS
                   that no bridge-framework judgment carries; the retrieval evidence now lives in each
                   decision record's retrievalVoteList (decision store). The verb refuses by name; its
                   code is kept in codeAttic/retrieval-metrics/.
-     -cedsGates
-                  RUN THE CEDS FIDELITY GATE SUITE -- 46 gates declared as DATA in
+     -roundTripGates --standard=<token>
+                  RUN THE FIDELITY GATE SUITE THE STANDARD'S BUNDLE DECLARES (parserDescriptor.ini
+                  roundTripVerbModule=; the switch was -cedsGates until R5 S9, 2026-10-21). A standard
+                  that declares none is refused by name. Today only ceds declares one:
+                  --standard=ceds runs the CEDS FIDELITY GATE SUITE -- 46 gates declared as DATA in
                   forges/ceds/gates/cedsFidelityGates.jsonc, evaluated against the named
                   container and against the round-trip report.
 
@@ -127,17 +130,24 @@ COMMANDS
                   READ-ONLY. Every measure is MATCH/RETURN, enforced mechanically before any
                   statement is issued. Exit status 0 only when the suite is ACCEPTED.
 
+     --standard=<token>
+                  REQUIRED for -roundTripCompile and -roundTripGates, no default: the standard whose
+                  bundle declares the verb (e.g. ceds).
+
      --containerName=<name>
-                  REQUIRED for -cedsGates, no default: gates are always measured AGAINST one
+                  REQUIRED for -roundTripGates, no default: gates are always measured AGAINST one
                   materialized graph.
 
      --reportJsonPath=<path>
-                  OPTIONAL for -cedsGates: the JSON sidecar from -cedsRoundTrip. Omitting it
+                  OPTIONAL for -roundTripGates: the JSON sidecar from -roundTripCompile. Omitting it
                   leaves every report-derived gate UNMEASURED, which the suite reports as a
                   failure rather than passing them by default.
 
-     -cedsRoundTrip
-                  MEASURE CEDS ROUND-TRIP FIDELITY -- compile a materialized CEDS graph back into
+     -roundTripCompile --standard=<token>
+                  RUN THE ROUND-TRIP COMPILER THE STANDARD'S BUNDLE DECLARES (parserDescriptor.ini
+                  roundTripVerbModule=; the switch was -cedsRoundTrip until R5 S9, 2026-10-21). A
+                  standard that declares none is refused by name. Today only ceds declares one:
+                  --standard=ceds MEASURES CEDS ROUND-TRIP FIDELITY -- compile a materialized CEDS graph back into
                   RDF/XML and diff that emission against the source ontology. The CEDS OWL source
                   describes a graph; if our graph represents it faithfully we must be able to
                   compile the graph back into the OWL, so round-trip fidelity is the acceptance
@@ -207,7 +217,7 @@ OPTIONS
                            Pass it to point a build at a canonical decisions database.
      --buildLogsDirPath=<dir>
                            The ROOT under which this build's RUN DIRECTORY (<recipeName>_<stamp>/,
-                           holding the CEDS hub reports and the round-trip stage verdicts +
+                           holding each hub's reports and the round-trip stage verdicts +
                            certification summary) is created. OPTIONAL, DEFAULTS TO the canonical
                            home system/dataStores/buildLogs. Name a scratch root to keep a test or
                            probe build out of the canonical home (the suite does). An empty value
@@ -375,7 +385,7 @@ OPTIONS
                            embedder obeys; it used to create a file named 'false').
      --containerName=<name>
                            Which MATERIALIZED graph to compile back into RDF/XML. REQUIRED for
-                           -cedsRoundTrip; there is NO default -- a fidelity measurement is always
+                           -roundTripCompile; there is NO default -- a fidelity measurement is always
                            OF one graph, and "whichever graph happens to be running" is exactly the
                            question a default would answer wrongly. The bolt port and the neo4j
                            credential are READ FROM THE CONTAINER ('docker inspect'), never
@@ -383,15 +393,15 @@ OPTIONS
                            name replayManager gives a graph (GraphHandle.containerName) -- ONE name
                            across both boundaries.
      --sourcePath=<path>   The CEDS source ontology the emission is measured AGAINST. OPTIONAL for
-                           -cedsRoundTrip: it DEFAULTS to the snapshot the CEDS forge bundle itself
+                           -roundTripCompile: it DEFAULTS to the snapshot the CEDS forge bundle itself
                            reads, forges/ceds/assets/standardSourceData/01/CEDS-Ontology.rdf. A
                            source that does not exist is refused by name -- a measurement without a
                            source is not a smaller measurement, it is no measurement at all.
-     --outPath=<path>      Where the compiled RDF/XML is written. OPTIONAL for -cedsRoundTrip:
+     --outPath=<path>      Where the compiled RDF/XML is written. OPTIONAL for -roundTripCompile:
                            DEFAULTS to system/dataStores/cedsRoundTrip/<containerName>.emitted.rdf.
                            The emission is kept, not thrown away, so a reported number can always
                            be traced back to the exact document that produced it.
-     --reportPath=<path>   Where the readable report is written. OPTIONAL for -cedsRoundTrip:
+     --reportPath=<path>   Where the readable report is written. OPTIONAL for -roundTripCompile:
                            DEFAULTS to system/dataStores/cedsRoundTrip/<containerName>.roundTrip.txt.
                            The JSON SIDECAR is written beside it with the same stem and a .json
                            extension. The report text and the sidecar are rendered from the SAME
@@ -560,7 +570,7 @@ OUTPUT
      -spendLedger:
                 JSON { lifetimeLedgerFilePath, totals, byDay, byRecipe, byProviderModel } on stdout;
                 the same spend as readable lines on stderr.
-     -cedsRoundTrip:
+     -roundTripCompile:
                 The readable fidelity report on stdout AND on disk at --reportPath, its JSON
                 sidecar beside it, and the compiled RDF/XML at --outPath (all three paths
                 announced on stderr). The report leads with the headline (statements in source /

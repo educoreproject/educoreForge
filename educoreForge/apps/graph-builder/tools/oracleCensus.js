@@ -55,7 +55,7 @@ require(path.join(TREE_ROOT, 'test', 'testLib', 'testAppStartup'))({ moduleName,
 const { xLog, commandLineParameters } = process.global;
 const neo4j = require('neo4j-driver');
 const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus'))();
-const { resolveContainerBolt } = require(path.join(TREE_ROOT, 'forges', 'ceds', 'lib', 'roundTripCompiler'))();
+const { resolveContainerBolt } = require(path.join(TREE_ROOT, 'lib', 'graph-connection', 'containerBolt')); // R5 S6: names no standard
 
 const TRANSACTION_TIMEOUT_MS = 120000;
 const EXCLUDED_PROPERTY_NAME_LIST = Object.freeze(['embedding']);

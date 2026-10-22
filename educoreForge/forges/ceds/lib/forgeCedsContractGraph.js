@@ -133,7 +133,7 @@ const moduleFunction =
 			// -----------------------------------------------------------------
 			// canonicalFor — resolve a raw entity's canonical cedsId; THROWS on a miss (R3, never
 			// silent). CEDS is the hub, so an unnormalizable anchor is a refusal, not an absence —
-			// which is why the declaration's cedsAnchorAbsentSentinelList is empty and why this uses
+			// which is why the declaration's hubAnchorAbsentSentinelList is empty and why this uses
 			// CEDS's own normalize rather than kit.cedsAnchorValue (whose contract returns
 			// { absent: true } for an empty value). forgeCeds.js:139-153, verbatim behaviour.
 			// -----------------------------------------------------------------

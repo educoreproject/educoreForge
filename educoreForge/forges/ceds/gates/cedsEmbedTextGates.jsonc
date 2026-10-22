@@ -5,7 +5,7 @@
 // PHASE P5 of the forge embed-text revision (embedText-091426; PLAN §8.1 R-ET-5, §8.3 R-ET-20).
 //
 // WHY THIS IS NOT IN cedsFidelityGates.jsonc (R-ET-34, RADIANT_QUEST 2026-09-14): that file is
-// also read by the LIVE `graphBuilder -cedsGates` action (apps/graph-builder/lib/actions.js),
+// also read by the LIVE `graphBuilder -roundTripGates --standard=ceds` action (apps/graph-builder/lib/actions.js),
 // whose measures come from roundTripGateMeasures.js. A conjunct measured only by a hermetic
 // test would read UNMEASURED there forever, and a gate that can never pass live teaches readers
 // to skip the live suite. This file is read ONLY by forges/ceds/test/test-cedsRoundTrip.js,

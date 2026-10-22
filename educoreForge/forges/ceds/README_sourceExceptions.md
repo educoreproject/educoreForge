@@ -200,5 +200,5 @@ back out and counting what did not come back.
 
 ---
 
-*Round-trip verb: `graphBuilder -cedsRoundTrip --containerName=<graph>`*
-*Gate suite: `graphBuilder -cedsGates --containerName=<graph> --reportJsonPath=<json>`*
+*Round-trip verb: `graphBuilder -roundTripCompile --standard=ceds --containerName=<graph>`*
+*Gate suite: `graphBuilder -roundTripGates --standard=ceds --containerName=<graph> --reportJsonPath=<json>`*

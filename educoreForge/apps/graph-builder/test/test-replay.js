@@ -376,7 +376,7 @@ standardsDatabaseModule.open({ databaseFilePath }, (openErr, standardsDatabase) 
 				xLog.status('  [embeddingCoverage] HERMETIC STUB — census NOT RUN (no live graph in this suite)');
 				gateDone('', { gate: 'embeddingCoverage', verdict: 'notRun', detail: 'HERMETIC STUB: census not run' });
 			},
-			cedsFidelityGateRunner: ({ xLog, graphName }, gateDone) => {
+			fidelityGateRunner: ({ xLog, graphName }, gateDone) => {
 				xLog.status(
 					`  [fidelity] HERMETIC STUB — R-1 NOT RUN for '${graphName}' (no live graph ` +
 						`in this suite; the production default is the real gate, byte-unchanged)`,

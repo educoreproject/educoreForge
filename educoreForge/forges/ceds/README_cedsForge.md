@@ -47,10 +47,10 @@ The last lines print the container name — that is your graph.
 
 ```bash
 # per-predicate attribution: what is missing and where
-node apps/graph-builder/graphBuilder.js -cedsRoundTrip --containerName=<name>
+node apps/graph-builder/graphBuilder.js -roundTripCompile --standard=ceds --containerName=<name>
 
 # the 46-gate suite (add --sourcePath/--emittedPath to include the independent rdflib check)
-node apps/graph-builder/graphBuilder.js -cedsGates --containerName=<name> \
+node apps/graph-builder/graphBuilder.js -roundTripGates --standard=ceds --containerName=<name> \
   --reportJsonPath=<the .json the round trip wrote>
 ```
 
@@ -118,7 +118,7 @@ domain. (The 2026-08-02 measurement of "roughly 400 declared contexts have no ca
 closed by the hubReimplementation campaign.)
 
 **The build-failure path end to end.** The fidelity gate's decision is proven 26 ways
-(`lib/ceds-fidelity-judgment/test/`), and its passing path has been observed on a real build.
+(`forges/ceds/test/test-cedsFidelityJudgment.js`), and its passing path has been observed on a real build.
 Nobody has yet watched a deliberately broken forge actually kill a build. Until someone has,
 treat the enforcement as implemented-but-unproven — that is this project's own standard
 applied to its own gate.

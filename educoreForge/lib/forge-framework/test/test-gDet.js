@@ -154,8 +154,8 @@ const detConjunctList = [
 
 frameworkMutationTwin({
 	registry: twinRegistry, gateId: DET_GATE_ID, conjunctId: 'twoForgeRunsOneInstanceIdentical', twinName: 'cacheKitOnFrameworkObject', fileName: FRAMEWORK_FILE,
-	find: '\t\t\t\tconst { kit, kitInternals } = contractGraphKitLib.contractGraphKit({ forgeDeclaration, metadata, activeAllowanceById });',
-	replace: '\t\t\t\tif (!module.exports.__cachedKit) { module.exports.__cachedKit = contractGraphKitLib.contractGraphKit({ forgeDeclaration, metadata, activeAllowanceById }); } const { kit, kitInternals } = module.exports.__cachedKit;',
+	find: '\t\t\t\tconst { kit, kitInternals } = contractGraphKitLib.contractGraphKit({ forgeDeclaration, metadata, activeAllowanceById, hubAnchorPrefixByHubToken: deps.hubAnchorPrefixByHubToken });',
+	replace: '\t\t\t\tif (!module.exports.__cachedKit) { module.exports.__cachedKit = contractGraphKitLib.contractGraphKit({ forgeDeclaration, metadata, activeAllowanceById, hubAnchorPrefixByHubToken: deps.hubAnchorPrefixByHubToken }); } const { kit, kitInternals } = module.exports.__cachedKit;',
 });
 scenarioTwin({
 	registry: twinRegistry, gateId: DET_GATE_ID, conjunctId: 'twoBuildContractGraphRunsIdentical', twinName: 'runCounterInStableId', leverKind: 'productionMutation',

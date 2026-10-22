@@ -44,9 +44,11 @@ const COVERAGE_PATH = path.join(__dirname, '..', 'lib', 'schema-view-coverage-fi
 const CONTRACT_PATH = path.join(__dirname, '..', '..', '..', '..', '..', '..', '..', 'lib', 'vocabulary', 'graph-contract.js');
 const CENSUS_DIR = path.join(__dirname, '..', '..', '..', '..', '..', '..', '..', 'lib', 'replay', 'test', 'fixtures', 'liveCensus');
 const KINDS = vocabulary.SCHEMA_VIEW.KINDS;
+// ⟪R5 S7⟫ the hubs' own edge definitions, as finishing.js hands them
+const hubEdgeDefinitionRead = require(path.join(__dirname, '..', '..', '..', '..', 'forger', 'forger')).hubEdgeDefinitionByHubNameFor();
 
 const projectionFaultListFor = (vocabularyInUse) => {
-	const { members } = require(VIEW_PATH)({ vocabulary: vocabularyInUse }).buildMembers();
+	const { members } = require(VIEW_PATH)({ vocabulary: vocabularyInUse, hubEdgeDefinitionRead }).buildMembers();
 	const memberByStableId = members.reduce((soFar, oneMember) => ({ ...soFar, [oneMember.stableId]: oneMember }), {});
 	const expectList = []
 		.concat(vocabulary.PASSPORT_FIELD_LIST.map((oneRow) => ({ kind: KINDS.PASSPORT_FIELD, value: oneRow.name, meaning: oneRow.meaning, fieldType: oneRow.type })))
@@ -65,12 +67,12 @@ const faultList = projectionFaultListFor(vocabulary);
 harness.ok('every declared field and name is a member with its meaning and type', faultList.length === 0, faultList.slice(0, 10).join(', '));
 const contractDouble = loadBuildJsDouble({ buildJsPath: CONTRACT_PATH, mutationList: [{ find: "	{ name: 'embeddingDims', type: 'integer', required: true, writer: 'finish', meaning: 'the one distinct vector width over embedding and textEmbedding; refused when ≠ 1' },\n", replace: '' }] });
 const twinFaultList = projectionFaultListFor({ ...vocabulary, PASSPORT_FIELD_LIST: contractDouble.PASSPORT_FIELD_LIST });
-const twinMemberIds = require(VIEW_PATH)({ vocabulary: { ...vocabulary, PASSPORT_FIELD_LIST: contractDouble.PASSPORT_FIELD_LIST } }).buildMembers().members.map((oneMember) => oneMember.stableId);
+const twinMemberIds = require(VIEW_PATH)({ vocabulary: { ...vocabulary, PASSPORT_FIELD_LIST: contractDouble.PASSPORT_FIELD_LIST }, hubEdgeDefinitionRead }).buildMembers().members.map((oneMember) => oneMember.stableId);
 harness.ok("(a) observed RED: with 'embeddingDims' undeclared the member vanishes (the W-A-3 cross-check)", twinMemberIds.indexOf('schemaView:passportField:embeddingDims') === -1 && twinFaultList.indexOf('passportField:embeddingDims') !== -1, `faults under the twin: ${twinFaultList.join(', ')}`);
 harness.note("RED-OBSERVED a twin='embeddingDimsUndeclared' → schemaView:passportField:embeddingDims absent from the projection");
 
 harness.section('(b) the hub edge types are generated for the hubs the graph holds');
-const hubTypeListFor = (viewModule, hubNameList) => viewModule({ vocabulary }).buildMembers({ hubNameList }).members.filter((oneMember) => oneMember.kind === KINDS.EDGE_TYPE && /^HAS_CEDS_/.test(oneMember.value)).map((oneMember) => oneMember.value).sort();
+const hubTypeListFor = (viewModule, hubNameList) => viewModule({ vocabulary, hubEdgeDefinitionRead }).buildMembers({ hubNameList }).members.filter((oneMember) => oneMember.kind === KINDS.EDGE_TYPE && /^HAS_CEDS_/.test(oneMember.value)).map((oneMember) => oneMember.value).sort();
 const realHubTypeList = hubTypeListFor(require(VIEW_PATH), ['CEDS']);
 harness.equal('five HAS_CEDS_* members for the CEDS hub', realHubTypeList.join(','), 'HAS_CEDS_DOMAIN,HAS_CEDS_PROPERTY,HAS_CEDS_QUALIFIER,HAS_CEDS_RANGE,HAS_CEDS_VALUE');
 let emittedHubTypeList = [];
@@ -78,7 +80,7 @@ let emittedHubTypeList = [];
 const slotProfileTextFor = ({ withTermTier }) => JSON.stringify({ ...(withTermTier ? { termAddressSignatureFieldOrder: ['hubName', 'termIri', 'hubVersion'] } : {}), fieldList: [{ fieldName: 'hubName', tierList: withTermTier ? ['property', 'value', 'term'] : ['property', 'value'] }] });
 const hubRecordOf = ({ hubName, slotProfile }) => ({ get: (fieldName) => ({ hubName, slotProfile })[fieldName] });
 const readQueryOver = (hubRecordList) => ({ cypher }, readCallback) => readCallback('', { records: /HubDefinition/.test(cypher) ? hubRecordList : [] });
-require(VIEW_PATH)({ vocabulary }).emit({ readQuery: readQueryOver([hubRecordOf({ hubName: 'CEDS', slotProfile: slotProfileTextFor({ withTermTier: false }) })]) }, (err, result) => {
+require(VIEW_PATH)({ vocabulary, hubEdgeDefinitionRead }).emit({ readQuery: readQueryOver([hubRecordOf({ hubName: 'CEDS', slotProfile: slotProfileTextFor({ withTermTier: false }) })]) }, (err, result) => {
 	emittedHubTypeList = ((result || {}).nodes || []).filter((oneNode) => /^HAS_CEDS_/.test(oneNode.properties.value)).map((oneNode) => oneNode.properties.value);
 });
 harness.equal('emit reads the hubs and emits the five', emittedHubTypeList.length, 5);
@@ -89,7 +91,7 @@ harness.note(`RED-OBSERVED b twin='hubGenerationDropped' → ${twinHubTypeList.l
 harness.section('(f) a term-tier hub\'s own edges are members; CEDS gains none');
 // what the TIER RECORDS add: the edge-type members of the build, less those of the same hubs with no tier record (the
 // catalogue's own edge types, HAS_SCHEMA_TERM among them, are in both)
-const edgeTypeValueListOf = (viewModule, buildInput) => viewModule({ vocabulary }).buildMembers(buildInput).members.filter((oneMember) => oneMember.kind === KINDS.EDGE_TYPE).map((oneMember) => oneMember.value);
+const edgeTypeValueListOf = (viewModule, buildInput) => viewModule({ vocabulary, hubEdgeDefinitionRead }).buildMembers(buildInput).members.filter((oneMember) => oneMember.kind === KINDS.EDGE_TYPE).map((oneMember) => oneMember.value);
 const termEdgeTypeListFor = (viewModule, buildInput) => {
 	const withoutTierList = edgeTypeValueListOf(viewModule, { hubNameList: buildInput.hubNameList });
 	return edgeTypeValueListOf(viewModule, buildInput).filter((oneValue) => withoutTierList.indexOf(oneValue) === -1).sort();
@@ -97,15 +99,15 @@ const termEdgeTypeListFor = (viewModule, buildInput) => {
 const ctdlAndCedsInput = { hubNameList: ['CEDS', 'CTDL'], hubTierListByName: { CEDS: ['property', 'value'], CTDL: ['property', 'value', 'term'] } };
 harness.equal('(f) CTDL (term tier) gains HAS_CTDL_TERM and HAS_TERM_REFERENCE; CEDS gains nothing', termEdgeTypeListFor(require(VIEW_PATH), ctdlAndCedsInput).join(','), 'HAS_CTDL_TERM,HAS_TERM_REFERENCE');
 harness.equal('(f) a term-only hub gets HAS_<HUB>_TERM but no HAS_TERM_REFERENCE (no property card to point from)', termEdgeTypeListFor(require(VIEW_PATH), { hubNameList: ['TERMONLY'], hubTierListByName: { TERMONLY: ['term'] } }).join(','), 'HAS_TERMONLY_TERM');
-const memberIdListOf = (buildInput) => require(VIEW_PATH)({ vocabulary }).buildMembers(buildInput).members.map((oneMember) => oneMember.stableId).join('|');
+const memberIdListOf = (buildInput) => require(VIEW_PATH)({ vocabulary, hubEdgeDefinitionRead }).buildMembers(buildInput).members.map((oneMember) => oneMember.stableId).join('|');
 harness.equal('(f) the CEDS view is byte-unchanged: with its tiers declared it equals the pre-P4 call', memberIdListOf({ hubNameList: ['CEDS'], hubTierListByName: { CEDS: ['property', 'value'] } }), memberIdListOf({ hubNameList: ['CEDS'] }));
 let emittedTermTypeList = [];
-require(VIEW_PATH)({ vocabulary }).emit({ readQuery: readQueryOver([hubRecordOf({ hubName: 'CTDL', slotProfile: slotProfileTextFor({ withTermTier: true }) })]) }, (err, result) => {
+require(VIEW_PATH)({ vocabulary, hubEdgeDefinitionRead }).emit({ readQuery: readQueryOver([hubRecordOf({ hubName: 'CTDL', slotProfile: slotProfileTextFor({ withTermTier: true }) })]) }, (err, result) => {
 	emittedTermTypeList = ((result || {}).nodes || []).map((oneNode) => oneNode.properties.value).filter((oneValue) => /^HAS_CTDL_TERM$|^HAS_TERM_REFERENCE$/.test(oneValue)).sort();
 });
 harness.equal('(f) emit reads the tiers from the slotProfile and emits both', emittedTermTypeList.join(','), 'HAS_CTDL_TERM,HAS_TERM_REFERENCE');
 let profilelessRefusal = '';
-require(VIEW_PATH)({ vocabulary }).emit({ readQuery: readQueryOver([hubRecordOf({ hubName: 'CTDL', slotProfile: null })]) }, (err) => { profilelessRefusal = String(err || ''); });
+require(VIEW_PATH)({ vocabulary, hubEdgeDefinitionRead }).emit({ readQuery: readQueryOver([hubRecordOf({ hubName: 'CTDL', slotProfile: null })]) }, (err) => { profilelessRefusal = String(err || ''); });
 harness.match('(f) a HubDefinition with no slotProfile is REFUSED by name', profilelessRefusal, /HubDefinition 'CTDL' carries no slotProfile/);
 const droppedTwinList = termEdgeTypeListFor(loadBuildJsDouble({ buildJsPath: VIEW_PATH, mutationList: [{ find: "			termTierHubNameList.forEach((oneHubName) =>", replace: "			[].forEach((oneHubName) =>" }] }), ctdlAndCedsInput);
 harness.ok("(f) observed RED under 'termEdgeGenerationDropped'", droppedTwinList.indexOf('HAS_CTDL_TERM') === -1, droppedTwinList.join(','));
@@ -116,7 +118,7 @@ harness.ok('(f) CONTROL: the real view does NOT announce HAS_CEDS_TERM', edgeTyp
 harness.note(`RED-OBSERVED f twin='termEdgeForEveryHub' → [${everyHubTwinList.filter((oneValue) => /_TERM$|TERM_REFERENCE/.test(oneValue)).join(', ')}]`);
 
 harness.section('(c) the DME role labels are node-label members');
-const nodeLabelValueList = require(VIEW_PATH)({ vocabulary }).buildMembers().members.filter((oneMember) => oneMember.kind === KINDS.NODE_LABEL).map((oneMember) => oneMember.value);
+const nodeLabelValueList = require(VIEW_PATH)({ vocabulary, hubEdgeDefinitionRead }).buildMembers().members.filter((oneMember) => oneMember.kind === KINDS.NODE_LABEL).map((oneMember) => oneMember.value);
 const missingRoleList = Object.keys(vocabulary.DME_ROLES).map((oneName) => vocabulary.DME_ROLES[oneName]).filter((oneRole) => nodeLabelValueList.indexOf(oneRole) === -1);
 harness.ok('every DME role is a nodeLabel member (DmeEditHistoryEntry, DmeRestriction, DmeVocabularyTerm included)', missingRoleList.length === 0, missingRoleList.join(', '));
 
@@ -127,8 +129,8 @@ const capturedCensus = JSON.parse(labelSetText);
 // Each must be ABSENT from the vocabulary, or the delta would hide a real residue (asserted below).
 const RETIRED_SINCE_CAPTURE_RELATIONSHIP_TYPE_LIST = Object.freeze(['CONSTRAINED_BY']); // W-C-2, TQ ruling S3: SIF's Field -> Codeset is HAS_OPTION_SET
 const census = { ...capturedCensus, relationshipTypeList: capturedCensus.relationshipTypeList.filter((oneType) => RETIRED_SINCE_CAPTURE_RELATIONSHIP_TYPE_LIST.indexOf(oneType) === -1) };
-const memberValueList = require(VIEW_PATH)({ vocabulary }).buildMembers({ hubNameList: ['CEDS'] }).members.filter((oneMember) => oneMember.kind === KINDS.NODE_LABEL || oneMember.kind === KINDS.EDGE_TYPE).map((oneMember) => oneMember.value);
-const coverage = require(COVERAGE_PATH)({ vocabulary });
+const memberValueList = require(VIEW_PATH)({ vocabulary, hubEdgeDefinitionRead }).buildMembers({ hubNameList: ['CEDS'] }).members.filter((oneMember) => oneMember.kind === KINDS.NODE_LABEL || oneMember.kind === KINDS.EDGE_TYPE).map((oneMember) => oneMember.value);
+const coverage = require(COVERAGE_PATH)({ vocabulary, hubEdgeDefinitionRead });
 const residue = coverage.residueFor({ labelList: census.labelList, relationshipTypeList: census.relationshipTypeList, memberValueList });
 harness.ok('every name the declared delta drops is truly retired: absent from EDGE_TYPES and from the captured census only by that delta', RETIRED_SINCE_CAPTURE_RELATIONSHIP_TYPE_LIST.every((oneType) => vocabulary.EDGE_TYPES[oneType] === undefined && capturedCensus.relationshipTypeList.indexOf(oneType) !== -1), RETIRED_SINCE_CAPTURE_RELATIONSHIP_TYPE_LIST.join(', '));
 harness.ok(`the frozen gold census (${census.labelList.length} labels, ${census.relationshipTypeList.length} types) leaves NO residue`, residue.length === 0, residue.join(', '));
@@ -137,7 +139,7 @@ harness.equal('a planted uncatalogued label is named', plantedResidue.join(','),
 let refusalText = '';
 coverage.apply({ runCypher: ({ cypher }, callback) => callback('', { records: [{ get: (fieldName) => ({ labelList: ['ForgedNode', 'UncataloguedProbe'], relationshipTypeList: [], memberValueList: ['ForgedNode'] })[fieldName] }] }) }, (err) => { refusalText = err; });
 harness.ok('the coverage finisher refuses a residue by name', /REFUSED: 1 live label\(s\)\/relationship type\(s\) .*UncataloguedProbe/.test(refusalText), refusalText);
-const twinCoverage = loadBuildJsDouble({ buildJsPath: COVERAGE_PATH, mutationList: [{ find: 'const producerLocalPatternList = PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST.map((oneSource) => new RegExp(oneSource));', replace: "const producerLocalPatternList = PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST.filter((oneSource) => oneSource !== '^StandardBase$').map((oneSource) => new RegExp(oneSource));" }] })({ vocabulary });
+const twinCoverage = loadBuildJsDouble({ buildJsPath: COVERAGE_PATH, mutationList: [{ find: 'const producerLocalPatternList = PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST.map((oneSource) => new RegExp(oneSource));', replace: "const producerLocalPatternList = PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST.filter((oneSource) => oneSource !== '^StandardBase$').map((oneSource) => new RegExp(oneSource));" }] })({ vocabulary, hubEdgeDefinitionRead });
 const twinResidue = twinCoverage.residueFor({ labelList: census.labelList, relationshipTypeList: census.relationshipTypeList, memberValueList });
 harness.ok("(d) observed RED with the StandardBase pattern removed", twinResidue.indexOf('StandardBase') !== -1, twinResidue.join(', '));
 harness.note(`RED-OBSERVED d twin='standardBasePatternRemoved' → residue [${twinResidue.join(', ')}]`);

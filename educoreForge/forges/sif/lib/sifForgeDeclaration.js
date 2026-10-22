@@ -96,7 +96,7 @@ const sifForgeDeclaration = Object.freeze({
 	// core or RETURNS AN ERROR (which the walk turns into a refusal, R3) — there is no third,
 	// absent-by-sentinel branch. An unannotated field simply carries no cedsId at all, which the
 	// framework handles as absence rather than as a sentinel. Empty is the honest declaration.
-	cedsAnchorAbsentSentinelList: Object.freeze([]),
+	hubAnchorAbsentSentinelList: Object.freeze([]),
 	// the parser is DIRECTORY-bound (parserDescriptor.ini declares no sourceFile). It resolves BOTH
 	// the Implementation-Specification TSV and refIdResolutionMap.tsv from inside that one snapshot
 	// directory itself (parser.js:496-512), verifying the directory's SHA256SUMS first. So there is

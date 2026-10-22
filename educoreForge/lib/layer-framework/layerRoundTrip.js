@@ -38,7 +38,8 @@ const valueKeyedMapOf = (statementMap) => {
 	return keyed;
 };
 
-const validatorFor = ({ standardSource, layerKey, verdictVersion, semanticValidationLimit, sourceStatementsOf, graphStatementsOf, sourceFileList, baseQueryList } = {}) => {
+// baseEndpointPropertyNameList (R5 S3): the base-endpoint properties this layer's validator reads, declared by the validator
+const validatorFor = ({ standardSource, layerKey, verdictVersion, semanticValidationLimit, sourceStatementsOf, graphStatementsOf, sourceFileList, baseQueryList, baseEndpointPropertyNameList } = {}) => {
 	const omissionDeclaration = { rule: `the '${layerKey}' layer roundTripValidator: nothing is omitted by declaration`, kindPropertyName: 'kind', kindList: [], textBearingKindList: [], textPropertyName: '', caveatText: '' };
 
 	// graphEndpoint ({ containerName, boltUrl }) is where a MATERIALIZED layer was read; it lands at verdict.graph, where
@@ -94,7 +95,7 @@ const validatorFor = ({ standardSource, layerKey, verdictVersion, semanticValida
 	};
 
 	const validate = ({ containerName, boltUrl, user, password, snapshotPath, outputPath } = {}, callback) => {
-		openLayerGraphReader({ boltUrl, user, password, standardSource, layerKey, baseQueryList: baseQueryList || [] }, (openError, reader) => {
+		openLayerGraphReader({ boltUrl, user, password, standardSource, layerKey, baseQueryList: baseQueryList || [], baseEndpointPropertyNameList: baseEndpointPropertyNameList || [] }, (openError, reader) => {
 			if (openError) {
 				callback(openError);
 				return;
@@ -118,7 +119,7 @@ const validatorFor = ({ standardSource, layerKey, verdictVersion, semanticValida
 
 // layerGraphOfStampedGraph — the Docker-free double: the layer framework's stamped output read back the way the bolt
 // reader returns a materialized layer (the suites' path; base endpoints carry what the reader would read of them)
-const layerGraphOfStampedGraph = ({ stampedGraph, baseNodeEdges }) => {
+const layerGraphOfStampedGraph = ({ stampedGraph, baseNodeEdges, baseEndpointPropertyNameList = [] }) => {
 	const unwrap = (propertyValue) => (Array.isArray(propertyValue) && propertyValue.length === 1 ? propertyValue[0] : propertyValue);
 	const baseByStableId = {};
 	(baseNodeEdges.nodes || []).forEach((oneNode) => {
@@ -129,7 +130,7 @@ const layerGraphOfStampedGraph = ({ stampedGraph, baseNodeEdges }) => {
 		[oneEdge.fromRef.id, oneEdge.toRef.id].forEach((oneStableId) => {
 			const baseNode = baseByStableId[oneStableId];
 			if (baseNode) {
-				baseEndpointByStableId[oneStableId] = { stableId: oneStableId, role: unwrap(baseNode.properties.role), labels: baseNode.labels, cedsId: unwrap(baseNode.properties.cedsId) };
+				baseEndpointByStableId[oneStableId] = baseEndpointPropertyNameList.reduce((soFar, oneName) => ({ ...soFar, [oneName]: unwrap(baseNode.properties[oneName]) }), { stableId: oneStableId, role: unwrap(baseNode.properties.role), labels: baseNode.labels });
 			}
 		});
 		return { type: oneEdge.type, fromStableId: oneEdge.fromRef.id, toStableId: oneEdge.toRef.id, properties: { ...oneEdge.properties } };

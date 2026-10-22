@@ -59,7 +59,8 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const harness = require('../../../test/testLib/harness')(moduleName);
 
-const bundle = require('../forgeSif')({ embedder: null });
+// R5 S2: the bundle is handed the forger's map of hub anchor declarations, as the forger hands it (the old SIF forge normalizes its 'CEDS ID' column through it)
+const bundle = require('../forgeSif')({ embedder: null, hubAnchorPrefixByHubToken: require('../../../apps/graph-builder/apps/forger/forger').hubAnchorPrefixByHubTokenFor().hubAnchorPrefixByHubToken });
 const canonicalLib = require('../lib/roundTripSifCanonical')();
 const compilerLib = require('../lib/roundTripSifCompiler')();
 const doubleLib = require('../lib/roundTripGraphDouble')();

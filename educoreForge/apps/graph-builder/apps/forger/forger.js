@@ -310,6 +310,18 @@ const resolveBundle = ({ standard }) => {
 		// ⟪lane DES, 2026-10-12⟫ the one declared root of every layer id this kit mints (layers/<layerKey>/); undefined on a kit
 		// that declares no layer. A recipe naming a layer of such a kit is refused by name in forgeLayersOf.
 		layerNamespace: descriptor.layerNamespace,
+		// ⟪R5 S2, 2026-10-21⟫ the bundle's anchor-prefix declaration (how its ids are written), when it declares one; read only by
+		// hubAnchorPrefixByHubTokenFor below. undefined on every bundle but a hub whose ids other standards carry.
+		anchorPrefixDeclarationPath: descriptor.anchorPrefixDeclaration === undefined ? undefined : path.join(bundleDir, `${descriptor.anchorPrefixDeclaration}`),
+		// ⟪R5 S4, 2026-10-21⟫ the bundle's in-build fidelity gate (a module exporting runFidelityGate), when it declares one; read
+		// only by build.js runDeclaredFidelityGate, which runs the gate a recipe's standard declares. Reaches no node.
+		fidelityGateModulePath: descriptor.fidelityGateModule === undefined ? undefined : path.join(bundleDir, `${descriptor.fidelityGateModule}`),
+		// ⟪R5 S7, 2026-10-21⟫ the hub's definitions of its own decomposition edges, when it declares them; read only by
+		// hubEdgeDefinitionByHubNameFor below. Graph-only (schema-view member descriptions, written at finish).
+		edgeDefinitionDeclarationPath: descriptor.edgeDefinitionDeclaration === undefined ? undefined : path.join(bundleDir, `${descriptor.edgeDefinitionDeclaration}`),
+		// ⟪R5 S9, 2026-10-21⟫ the bundle's operator round-trip verbs (-roundTripCompile / -roundTripGates --standard=<token>),
+		// when it declares them; read only by actions.js. Reaches no node.
+		roundTripVerbModulePath: descriptor.roundTripVerbModule === undefined ? undefined : path.join(bundleDir, `${descriptor.roundTripVerbModule}`),
 	};
 };
 
@@ -474,7 +486,7 @@ const resolveReportedVersion = ({ bundleVersion, requestedVersion } = {}) => {
 // a fact the kit already knows about itself. THE KIT IS ITS OWN REGISTRATION, exactly as it is for
 // entryModule and roundTripValidator: forges/<std>/parserDescriptor.ini now declares
 //
-//     hubModule=lib/cedsHubForge.js     the kit-relative hub module
+//     hubModule=hubCeds.js              the kit-relative hub module (the CEDS kit's line)
 //     hubNamespace=https://…/hub/       the ONE declared home of this hub's URI root (I8)
 //
 // and resolveBundle reads them the same declared-not-sniffed way it reads roundTripValidator.
@@ -508,6 +520,73 @@ const declaredHubStandardList = () =>
 			return !oneBundle.error && oneBundle.hubModuleFileName !== undefined;
 		})
 		.sort();
+
+// hubAnchorPrefixByHubTokenFor — ⟪R5 S2, 2026-10-21⟫ every bundle's anchorPrefixDeclaration, keyed by the hubToken it declares:
+// { hubAnchorPrefixByHubToken } | { error }. The forge kit's hubAnchorValue reads it, so a source forge normalizes a hub's ids
+// without the shared kit naming any hub. A declaration that does not load or is malformed, and two bundles declaring the
+// same hubToken, are refused by name. Discovered the same way resolveBundle discovers kits.
+const ANCHOR_PREFIX_DECLARATION_MEMBER_LIST = Object.freeze(['hubToken', 'anchorPrefixByKind', 'anchorDigitCount']);
+const hubAnchorPrefixByHubTokenFor = () => {
+	const bundleNameList = fs.existsSync(FORGES_DIR)
+		? fs.readdirSync(FORGES_DIR, { withFileTypes: true }).filter((oneEntry) => oneEntry.isDirectory()).map((oneEntry) => oneEntry.name).sort()
+		: [];
+	const hubAnchorPrefixByHubToken = {};
+	for (let bundleIndex = 0; bundleIndex < bundleNameList.length; bundleIndex += 1) {
+		const oneBundle = resolveBundle({ standard: bundleNameList[bundleIndex] });
+		if (!oneBundle.error && oneBundle.anchorPrefixDeclarationPath !== undefined) {
+			if (!fs.existsSync(oneBundle.anchorPrefixDeclarationPath)) {
+				return { error: `forger: ${bundleNameList[bundleIndex]} declares anchorPrefixDeclaration ${oneBundle.anchorPrefixDeclarationPath}, which is not on disk` };
+			}
+			const anchorDeclaration = require(oneBundle.anchorPrefixDeclarationPath);
+			const missingMemberList = ANCHOR_PREFIX_DECLARATION_MEMBER_LIST.filter((memberName) => anchorDeclaration[memberName] === undefined);
+			if (missingMemberList.length || typeof anchorDeclaration.hubToken !== 'string' || !Number.isInteger(anchorDeclaration.anchorDigitCount) || anchorDeclaration.anchorDigitCount < 1) {
+				return { error: `forger: ${oneBundle.anchorPrefixDeclarationPath} is not an anchor-prefix declaration { ${ANCHOR_PREFIX_DECLARATION_MEMBER_LIST.join(', ')} } (missing: ${missingMemberList.join(', ') || 'none'})` };
+			}
+			if (hubAnchorPrefixByHubToken[anchorDeclaration.hubToken] !== undefined) {
+				return { error: `forger: two bundles declare anchors for hub '${anchorDeclaration.hubToken}'; one hub, one declaration` };
+			}
+			hubAnchorPrefixByHubToken[anchorDeclaration.hubToken] = Object.freeze({ anchorPrefixByKind: Object.freeze({ ...anchorDeclaration.anchorPrefixByKind }), anchorDigitCount: anchorDeclaration.anchorDigitCount });
+		}
+	}
+	return { hubAnchorPrefixByHubToken: Object.freeze(hubAnchorPrefixByHubToken) };
+};
+
+// hubEdgeDefinitionByHubNameFor — ⟪R5 S7, 2026-10-21⟫ every bundle's edgeDefinitionDeclaration, keyed by the hubName it declares:
+// { hubEdgeDefinitionByHubName: { <hubName>: { <SLOT>: text } } } | { error }. The schema-view finisher reads it, so a hub's
+// account of its own HAS_<HUB>_<SLOT> edges lives with the hub, not in the shared vocabulary. A declaration that does not
+// load, is malformed, names a slot the vocabulary does not declare or carries an empty text, and two bundles declaring the
+// same hub, are refused by name. Discovered the same way resolveBundle discovers kits.
+const hubEdgeDefinitionByHubNameFor = () => {
+	const { HUB_DECOMPOSITION_SLOTS, HUB_TERM_DECOMPOSITION_SLOTS } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
+	const declaredSlotList = HUB_DECOMPOSITION_SLOTS.concat(HUB_TERM_DECOMPOSITION_SLOTS);
+	const bundleNameList = fs.existsSync(FORGES_DIR)
+		? fs.readdirSync(FORGES_DIR, { withFileTypes: true }).filter((oneEntry) => oneEntry.isDirectory()).map((oneEntry) => oneEntry.name).sort()
+		: [];
+	const hubEdgeDefinitionByHubName = {};
+	for (let bundleIndex = 0; bundleIndex < bundleNameList.length; bundleIndex += 1) {
+		const oneBundle = resolveBundle({ standard: bundleNameList[bundleIndex] });
+		if (!oneBundle.error && oneBundle.edgeDefinitionDeclarationPath !== undefined) {
+			const declarationPath = oneBundle.edgeDefinitionDeclarationPath;
+			if (!fs.existsSync(declarationPath)) {
+				return { error: `forger: ${bundleNameList[bundleIndex]} declares edgeDefinitionDeclaration ${declarationPath}, which is not on disk` };
+			}
+			const edgeDeclaration = require(declarationPath);
+			if (typeof edgeDeclaration.hubName !== 'string' || edgeDeclaration.hubName.trim() === '' || !edgeDeclaration.edgeDefinitionBySlot || typeof edgeDeclaration.edgeDefinitionBySlot !== 'object') {
+				return { error: `forger: ${declarationPath} is not an edge-definition declaration { hubName, edgeDefinitionBySlot }` };
+			}
+			const faultList = Object.keys(edgeDeclaration.edgeDefinitionBySlot)
+				.filter((oneSlot) => declaredSlotList.indexOf(oneSlot) === -1 || typeof edgeDeclaration.edgeDefinitionBySlot[oneSlot] !== 'string' || edgeDeclaration.edgeDefinitionBySlot[oneSlot].trim() === '');
+			if (faultList.length) {
+				return { error: `forger: ${declarationPath} defines slot(s) ${faultList.join(', ')} that are not declared slots (${declaredSlotList.join(', ')}) or carry no text` };
+			}
+			if (hubEdgeDefinitionByHubName[edgeDeclaration.hubName] !== undefined) {
+				return { error: `forger: two bundles declare edge definitions for hub '${edgeDeclaration.hubName}'; one hub, one declaration` };
+			}
+			hubEdgeDefinitionByHubName[edgeDeclaration.hubName] = Object.freeze({ ...edgeDeclaration.edgeDefinitionBySlot });
+		}
+	}
+	return { hubEdgeDefinitionByHubName: Object.freeze(hubEdgeDefinitionByHubName) };
+};
 
 // -----
 // HUB_EMBED_BATCH_SIZE — voyage batch ceiling headroom, the same bound the forge bundles use for
@@ -638,7 +717,7 @@ const embedHubReferenceCards = ({ hubNodes, embedder }, callback) => {
 // forgeHub returns the derived hub in PRODUCER shape ({labels, stableId, role, scalar properties});
 // shapeForgedGraph — the forger's OWN producer->engine translator — turns those into engine shape
 // ({ref, PG-JSON-array properties}, embedding lifted top-level and width-checked against
-// declaredEmbeddingDims) so they concatenate onto the base cleanly. The hub's HAS_CEDS_* edges
+// declaredEmbeddingDims) so they concatenate onto the base cleanly. The hub's HAS_<HUB>_* edges
 // reference base-node stableIds that are present in the same combined nodeEdges, so once build.js
 // loads this under [StandardBase] the edges resolve WITHIN one block.
 const foldHubIntoNodeEdges = (
@@ -769,7 +848,7 @@ const foldHubIntoNodeEdges = (
 						? baseEmbeddingDims
 						: hubEmbeddingDims;
 
-				// FOLD: concatenate the shaped hub onto the base. The hub's HAS_CEDS_* edges reference
+				// FOLD: concatenate the shaped hub onto the base. The hub's HAS_<HUB>_* edges reference
 				// base-node stableIds now sitting in the same nodeEdges, so once loaded under
 				// [StandardBase] they resolve within one block.
 				callback('', {
@@ -947,7 +1026,13 @@ const moduleFunction =
 			declaredEmbeddingModelVersion = embeddingIdentity.model;
 		}
 
-		const bundle = require(resolved.entryPath)({ embedder });
+		// ⟪R5 S2⟫ every hub's anchor prefixes, for a source forge whose data carries a hub's ids (the old SIF forge)
+		const anchorPrefixes = hubAnchorPrefixByHubTokenFor();
+		if (anchorPrefixes.error) {
+			callback(anchorPrefixes.error);
+			return;
+		}
+		const bundle = require(resolved.entryPath)({ embedder, hubAnchorPrefixByHubToken: anchorPrefixes.hubAnchorPrefixByHubToken });
 
 		const taskList = new taskListPlus();
 
@@ -1128,6 +1213,8 @@ const moduleFunction =
 module.exports = moduleFunction({ moduleName });
 module.exports.resolveBundle = resolveBundle;
 module.exports.resolveVoyageConfigPath = resolveVoyageConfigPath;
+module.exports.hubAnchorPrefixByHubTokenFor = hubAnchorPrefixByHubTokenFor;
+module.exports.hubEdgeDefinitionByHubNameFor = hubEdgeDefinitionByHubNameFor;
 module.exports.resolveReportedVersion = resolveReportedVersion;
 module.exports.getVersionStamp = getVersionStamp;
 // the hub-fold seam, exported so the fold logic is provable WITHOUT running a whole forge

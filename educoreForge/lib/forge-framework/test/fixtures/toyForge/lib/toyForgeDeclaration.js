@@ -37,7 +37,7 @@ const toyForgeDeclaration = Object.freeze({
 	}),
 	nonEmbeddableRoleList: Object.freeze([DME_ROLES.SUPPORT]),
 	embedTextDeclaration: null,
-	cedsAnchorAbsentSentinelList: Object.freeze([]),
+	hubAnchorAbsentSentinelList: Object.freeze([]),
 	additionalSourceInputList: Object.freeze([]),
 	compatibilityDeclarationList: Object.freeze([]),
 });

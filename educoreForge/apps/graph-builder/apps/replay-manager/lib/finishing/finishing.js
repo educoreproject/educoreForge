@@ -49,6 +49,7 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', '..', '..', 'lib');
 const vocabulary = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 const { FINISHER_MODULE_SHAPE } = require(path.join(__dirname, '..', '..', '..', '..', 'interfaces'));
+const forgerModule = require(path.join(__dirname, '..', '..', '..', 'forger', 'forger'));
 
 const MODE_EMIT = 'emit';
 const MODE_APPLY = 'apply';
@@ -66,7 +67,8 @@ const moduleFunction =
 		//   asymmetry is the point — an emitter that wanted runCypher would have to ask for it in writing.
 		// ⟪campaign P2, W-B-13⟫ strips the bridge pair-scoped scaffold labels before anything reads the graph's label set
 		const bridgeLabelFinisher = require('./lib/bridge-label-finisher')({ vocabulary });
-		const schemaViewFinisher = require('./lib/schema-view-finisher')({ vocabulary });
+		// ⟪R5 S7⟫ each hub's own HAS_<HUB>_<SLOT> definitions, declared by its bundle and collected by the forger
+		const schemaViewFinisher = require('./lib/schema-view-finisher')({ vocabulary, hubEdgeDefinitionRead: forgerModule.hubEdgeDefinitionByHubNameFor() });
 		const schemaConstraintFinisher = require('./lib/schema-constraint-finisher')({ vocabulary });
 		const manifestRecipeFinisher = require('./lib/manifest-recipe-finisher')({ vocabulary });
 		// ⟪lane R, 2026-10-05; TQ⟫ standardKind + standardUsageTips come from each standard's root, where its forge declaration

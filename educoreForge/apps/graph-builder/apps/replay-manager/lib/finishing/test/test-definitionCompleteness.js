@@ -60,7 +60,9 @@ const vocabulary = require('../../../../../../../lib/vocabulary/vocabulary');
 const { TERM_DEFINITIONS } = vocabulary;
 
 // THE ONE ENUMERATION. This gate builds no list; it asks the finisher what it emits.
-const schemaViewFinisher = require('../lib/schema-view-finisher')({ vocabulary });
+// ⟪R5 S7⟫ the hubs' own edge definitions, as finishing.js hands them: the forger's collector over every bundle's declaration
+const hubEdgeDefinitionRead = require('../../../../forger/forger').hubEdgeDefinitionByHubNameFor();
+const schemaViewFinisher = require('../lib/schema-view-finisher')({ vocabulary, hubEdgeDefinitionRead });
 
 const { members, missingDefinitions } = schemaViewFinisher.buildMembers();
 const refusal = schemaViewFinisher.definitionCompletenessRefusal();
@@ -137,7 +139,10 @@ harness.ok('CEDS_HUB_EDGE_TYPES is GONE from the registry (Phase 2c, RULING FJ-P
 const membersWithCedsHub = schemaViewFinisher.buildMembers({ hubNameList: ['CEDS'] }).members;
 CEDS_HUB_EDGE_NAMES.forEach((oneType) => {
 	harness.ok(`${oneType} is NOT enumerated without a hub (its constant was deleted)`, !hasMember(KINDS.EDGE_TYPE, oneType));
-	harness.ok(`${oneType} IS generated for the CEDS hub, carrying its kept definition (RULING FJ-P2-1)`, membersWithCedsHub.some((oneMember) => oneMember.kind === KINDS.EDGE_TYPE && oneMember.value === oneType && oneMember.description === TERM_DEFINITIONS.edgeType[oneType]));
+	// ⟪R5 S7⟫ the kept text now comes from the hub's own declaration (forges/ceds edgeDefinitionDeclaration), not the vocabulary
+	const declaredText = (hubEdgeDefinitionRead.hubEdgeDefinitionByHubName.CEDS || {})[oneType.replace(/^HAS_CEDS_/, '')];
+	harness.ok(`${oneType} IS generated for the CEDS hub, carrying the hub's declared definition (RULING FJ-P2-1, R5 S7)`, typeof declaredText === 'string' && declaredText.trim() !== '' && membersWithCedsHub.some((oneMember) => oneMember.kind === KINDS.EDGE_TYPE && oneMember.value === oneType && oneMember.description === declaredText));
+	harness.ok(`${oneType} is no longer defined in the shared vocabulary (R5 S7)`, (TERM_DEFINITIONS.edgeType || {})[oneType] === undefined);
 });
 harness.ok('the generator that replaced the constant still produces the same five names', CEDS_HUB_EDGE_NAMES.every((oneType, onePosition) => vocabulary.hubEdgeType('CEDS', vocabulary.HUB_DECOMPOSITION_SLOTS[onePosition]) === oneType));
 
@@ -147,6 +152,7 @@ harness.section('(f) the refusal NAMES what is missing, and is OWNED BY THE FINI
 // Proven against a deliberately incomplete definitions map so the message shape is verified WITHOUT
 // mutating the real file. The live RED twin (deleting a real definition) is recorded in the DEVLOG.
 const probeFinisher = require('../lib/schema-view-finisher')({
+	hubEdgeDefinitionRead,
 	vocabulary: { ...vocabulary, TERM_DEFINITIONS: { ...TERM_DEFINITIONS, provenanceTier: {} } },
 });
 const probeRefusal = probeFinisher.definitionCompletenessRefusal();
@@ -179,5 +185,25 @@ schemaViewFinisher.emit({ readQuery: ({ cypher }, readCallback) => readCallback(
 });
 harness.equal('emit() on the REAL registry succeeds', liveEmitError, '');
 harness.ok('and returns one node per member plus the root', liveEmitResult && liveEmitResult.nodes.length === members.length + 1);
+
+// =====================================================================
+harness.section('(h) ⟪R5 S7⟫ the hubs\' edge definitions are DECLARED by the hub and the finisher REFUSES to run without them');
+// =====================================================================
+const path = require('path');
+const { loadBuildJsDouble } = require('../../../../../../../lib/bridge-framework/test/testSupport/bridgeTwinFactories');
+const FORGER_PATH = path.join(__dirname, '..', '..', '..', '..', 'forger', 'forger.js');
+harness.equal('the forger collects exactly the CEDS hub\'s five decomposition slots, without error', `${hubEdgeDefinitionRead.error || ''}|${Object.keys(hubEdgeDefinitionRead.hubEdgeDefinitionByHubName || {}).join(',')}|${Object.keys((hubEdgeDefinitionRead.hubEdgeDefinitionByHubName || {}).CEDS || {}).join(',')}`, '|CEDS|DOMAIN,PROPERTY,RANGE,VALUE,QUALIFIER');
+// the collector's slot check, observed FIRING: with the declared roster narrowed to TERM, the real CEDS declaration names slots it does not declare
+const narrowedRead = loadBuildJsDouble({ buildJsPath: FORGER_PATH, mutationList: [{ find: 'const declaredSlotList = HUB_DECOMPOSITION_SLOTS.concat(HUB_TERM_DECOMPOSITION_SLOTS);', replace: "const declaredSlotList = ['TERM'];" }] }).hubEdgeDefinitionByHubNameFor();
+harness.match('a declaration naming an undeclared slot is REFUSED by name', String(narrowedRead.error), /cedsHubEdgeDefinitions\.js defines slot\(s\) DOMAIN, PROPERTY, RANGE, VALUE, QUALIFIER that are not declared slots \(TERM\)/);
+// the finisher with no definitions handed to it: emit refuses by name, and buildMembers records each hub edge as undefined
+let bareEmitError = 'NOT CALLED';
+const bareFinisher = require('../lib/schema-view-finisher')({ vocabulary });
+bareFinisher.emit({ readQuery: ({ cypher }, readCallback) => readCallback('', { records: [] }) }, (err) => {
+	bareEmitError = err;
+});
+harness.match('emit() with no hub edge definitions REFUSES by name', String(bareEmitError), /schema-view-finisher: REFUSED — no hub edge definitions were handed to it \(hubEdgeDefinitionRead absent\)/);
+harness.equal('buildMembers with a hub and no definitions records every generated hub edge as undefined (never the generated sentence)', bareFinisher.buildMembers({ hubNameList: ['CEDS'] }).missingDefinitions.filter((oneEntry) => /HAS_CEDS_/.test(oneEntry)).length, 5);
+harness.ok('CONTROL: CTDL (which declares no edge definitions) still gets the generated sentence when the map is present', schemaViewFinisher.buildMembers({ hubNameList: ['CTDL'] }).members.some((oneMember) => oneMember.value === 'HAS_CTDL_DOMAIN' && /generated by hubEdgeType\('CTDL', 'DOMAIN'\)/.test(oneMember.description || '')));
 
 harness.report();

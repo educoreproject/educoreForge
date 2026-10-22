@@ -60,7 +60,7 @@
  * @property {{nodes: Array, edges: Array, embeddingDims: number|null}} nodeEdges
  *                                    ENGINE-shaped, ready for ReplayManagerComponent.init. When the
  *                                    spec set deriveHub, this ALSO carries the standard's folded hub
- *                                    (HubReference + HubDefinition nodes and their HAS_CEDS_ and IN_HUB
+ *                                    (HubReference + HubDefinition nodes and their HAS_<HUB>_* and IN_HUB
  *                                    edges), so a single [StandardBase] load mints one block with both.
  * @property {number} nodeCount
  * @property {number} edgeCount
@@ -260,7 +260,8 @@
  * (standardName, entryModule, defaultSnapshot, sourceFile). Its entry module exports the
  * SECOND stage of `moduleFunction({moduleName})` — a factory taking the injected dependencies:
  *
- *   require(entryPath)({ embedder: Embedder|null }) -> bundle
+ *   require(entryPath)({ embedder: Embedder|null, hubAnchorPrefixByHubToken }) -> bundle
+ *   (hubAnchorPrefixByHubToken, R5 S2: the forger's hubAnchorPrefixByHubTokenFor() map, read by the kit's hubAnchorValue)
  *
  * @property {function({sourcePath: string, owner?: string, embedNodeLimit?: number,
  *           skipEmbedding?: boolean}, function(string, Object=): void): void} forge

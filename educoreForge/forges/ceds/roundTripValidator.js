@@ -14,10 +14,10 @@
 // nothing about how the diff decides what counts as the same statement.
 //
 // ⚠️ TWO OTHER CALLERS DRIVE THE SAME LIBS, AND A READER SHOULD KNOW BEFORE BEING SURPRISED:
-//   * `graphBuilder -cedsRoundTrip --containerName=<name>` (apps/graph-builder/lib/actions.js)
+//   * `graphBuilder -roundTripCompile --standard=ceds --containerName=<name>` (apps/graph-builder/lib/actions.js)
 //     — the operator's ad-hoc measuring stick. Writes a report + JSON sidecar under
 //     system/dataStores/cedsRoundTrip/. Produces no RT-6 verdict.
-//   * the R-1 in-build fidelity gate (apps/graph-builder/lib/build.js runCedsFidelityGate) —
+//   * the R-1 in-build fidelity gate (lib/cedsFidelityGate.js, declared in parserDescriptor.ini, run by build.js runDeclaredFidelityGate) —
 //     runs on EVERY build whose recipe contains ceds and FAILS THE BUILD on loss beyond the named
 //     `--allowFidelityLoss` allowance, invention always. It compiles to a temp file, prints the
 //     numbers, and unlinks. Produces no artifact either.
@@ -398,7 +398,7 @@ const moduleFunction =
 			});
 
 			// COMPILE THE GRAPH BACK OUT. The emission is written where a human can open it beside
-			// the source; the diff reads it from there, exactly as the -cedsRoundTrip verb does.
+			// the source; the diff reads it from there, exactly as the -roundTripCompile --standard=ceds verb does.
 			taskList.push((args, next) => {
 				const emittedDirPath = path.join(outputPath, 'emitted');
 				const emittedFilePath = path.join(emittedDirPath, EMITTED_FILE_NAME);
@@ -411,7 +411,7 @@ const moduleFunction =
 				});
 			});
 
-			// UNRESOLVABLE REFERENCES ARE FATAL HERE, not advisory. The -cedsRoundTrip verb logs them
+			// UNRESOLVABLE REFERENCES ARE FATAL HERE, not advisory. The -roundTripCompile --standard=ceds verb logs them
 			// and carries on because an operator is watching; a VERDICT nobody is watching must not
 			// be issued over a half-read graph. Same posture as sif's emission-fault refusal.
 			taskList.push((args, next) => {

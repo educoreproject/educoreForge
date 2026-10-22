@@ -132,7 +132,7 @@ const judgeDeclared = ({ forgeResult }) => {
 			pass: mappingInstruction.cedsOriginalAnchorPropertyName.length === 0 && mappingInstruction.cedsOptionOriginalAnchorPropertyName.length === 0 && mappingInstruction.includeInImplied === false && mappingInstruction.impliedTargets.length === 0,
 			detail: JSON.stringify(mappingInstruction),
 		},
-		{ label: 'DECLARED: no crosswalk no-mapping sentinel is declared', pass: edfiForgeDeclaration.cedsAnchorAbsentSentinelList.length === 0, detail: JSON.stringify(edfiForgeDeclaration.cedsAnchorAbsentSentinelList) },
+		{ label: 'DECLARED: no crosswalk no-mapping sentinel is declared', pass: edfiForgeDeclaration.hubAnchorAbsentSentinelList.length === 0, detail: JSON.stringify(edfiForgeDeclaration.hubAnchorAbsentSentinelList) },
 		{ label: 'DECLARED: allowance E8 lists no crosswalk logical source name', pass: allowanceE8 !== undefined && !allowanceE8.logicalSourceFileNameList.some((oneName) => /crosswalk/i.test(oneName)), detail: JSON.stringify(allowanceE8 && allowanceE8.logicalSourceFileNameList) },
 		{ label: "DECLARED: the root's sourceFiles do not name the crosswalk", pass: rootNode !== undefined && !rootSourceFileList.some((oneName) => /crosswalk/i.test(oneName)), detail: JSON.stringify(rootSourceFileList) },
 	];
