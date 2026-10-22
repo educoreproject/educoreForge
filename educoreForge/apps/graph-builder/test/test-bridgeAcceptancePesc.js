@@ -959,7 +959,17 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ═══ RE-ANCHOR, 2026-10-21 (TWILIGHT_HAVEN, successor of VELVET_CHORUS; R5 full-suite reds; GO BRONZE_CROWN) ═══ BG-COMPOSE-PESC
 // postSharedSurfacesR5OnR2PescCompose-102126 -> postSharedSurfacesR5FixPescCompose-102126, tag cut ON this commit. CENSUS over this gate's paths
 // (numstat from the OnR2 tag): test-bgNosub.js 8/2 ONLY (its seamDiffEmpty and (iii) re-anchors, this commit). No framework source, no PESC plugin.
-const P1_BASELINE_COMMIT = 'postSharedSurfacesR5FixPescCompose-102126'; // re-anchored by TWILIGHT_HAVEN (R5 full-suite reds; census REANCHOR-CENSUS-R5-102126.md; GO BRONZE_CROWN); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (DAWN_STREAM, successor of SCARLET_STREAM; R3 compose and migrate, on main R5 faf72944; PRE-AUTHORISED by
+// BRONZE_CROWN) ═══ BG-COMPOSE-PESC postSharedSurfacesR5FixPescCompose-102126 -> postHubNeutralR3ComposePescCompose-102126, tag cut ON
+// this commit. CENSUS over this gate's paths (numstat from R5's tag, measured after merge a06df1e8; every line R3's by git log):
+// bridge-maker bridgeMaker.js 5/1 (--bridgingOverlayDirPath), lib/evidenceContracts.js 12/6 (hub identifier names supplied); lib/bridge-
+// framework/ bridgeComposer.js 138/0 and standardBridgingContract.js 199/0 (new), pluginRegistry.js 163/15 (composed discovery, the
+// overlay seam), bridgePluginContract.js 15/8 and evidenceRenderer.js 15/9 (never-rendered = hub-neutral list + blinding), bridge-
+// framework.js 1/1; tests test-bridgeComposer.js 232/0 (new), testSupport/shippedBridge.js 25/0 (new), toyBridgeScenario.js 24/3,
+// test-bgDecl 12/10, bgJevQuestion 19/17, bgSubjectDiscriminator 8/6, bgReg 5/3, bgDerived 4/4, bgQualifier 2/1, bgJudgeSlot 2/1,
+// bgJudgeConfig 1/1, bgPromptScan 1/1, bgSiblingDeclarations 1/1. No build.js, interfaces.js or lib/vocabulary/ change. Every composed
+// declarationDigest equals the plugin's (test-bridgeComposer (a)); frameworkFingerprint MOVES (R3 edits framework source).
+const P1_BASELINE_COMMIT = 'postHubNeutralR3ComposePescCompose-102126'; // re-anchored by DAWN_STREAM (R3; census REANCHOR-CENSUS-R3-102126.md; pre-authorised by BRONZE_CROWN); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
