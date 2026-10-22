@@ -118,6 +118,7 @@ const ANTHROPIC_RENDERING_BASELINE_SHA256 =
 
 const canonicalSchema = selectCandidateSchemaLib.buildCanonicalSelectCandidateSchema({
 	choiceEnum: CHOICE_ENUM_FIXTURE,
+	toolCandidateNoun: 'CEDS candidate',
 });
 
 // =====================================================================
@@ -176,6 +177,7 @@ harness.ok(
 selectCandidateSchemaLib.SCHEMA_DIALECT_NAME_LIST.forEach((oneDialectName) => {
 	const renderedSchema = selectCandidateSchemaLib.renderSelectCandidateSchema(oneDialectName, {
 		choiceEnum: CHOICE_ENUM_FIXTURE,
+		toolCandidateNoun: 'CEDS candidate',
 	});
 	const renderedCategoryEnum = selectCandidateSchemaLib.categoryEnumOfRendering(oneDialectName, renderedSchema);
 	harness.equal(
@@ -191,6 +193,7 @@ harness.section('G2-a (second half) — THE ANTHROPIC RENDERING IS BYTE-IDENTICA
 
 const anthropicRendering = selectCandidateSchemaLib.renderSelectCandidateSchema('anthropic', {
 	choiceEnum: CHOICE_ENUM_FIXTURE,
+	toolCandidateNoun: 'CEDS candidate',
 });
 harness.equal(
 	'the anthropic rendering hashes to the baseline captured BEFORE any JOB 2 edit',
@@ -202,7 +205,7 @@ harness.equal(
 // rather than asserting about the module that feeds it.
 harness.equal(
 	'llmClient.buildTool — the function production calls — still emits the baseline object EXACTLY',
-	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1' }), null, 2)),
+	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' }), null, 2)),
 	ANTHROPIC_RENDERING_BASELINE_SHA256,
 );
 // …and the two are pinned TO EACH OTHER, not merely each to the same recorded constant. Added after the
@@ -214,7 +217,7 @@ harness.equal(
 // that day this assertion is the one that still says the client is consuming the rendering.
 harness.equal(
 	'llmClient.buildTool and the anthropic rendering are the SAME object, not two objects that agree today',
-	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1' }), null, 2)),
+	sha256(JSON.stringify(llmClientLib.buildTool({ choiceEnum: CHOICE_ENUM_FIXTURE, predicateRule: 'categoryTable-v1', toolCandidateNoun: 'CEDS candidate' }), null, 2)),
 	sha256(JSON.stringify(anthropicRendering, null, 2)),
 );
 harness.equal(
@@ -262,6 +265,7 @@ const scratchSchemaLib = require(path.join(scratchDirPath, 'selectCandidateSchem
 scratchSchemaLib.SCHEMA_DIALECT_NAME_LIST.forEach((oneDialectName) => {
 	const scratchRendering = scratchSchemaLib.renderSelectCandidateSchema(oneDialectName, {
 		choiceEnum: CHOICE_ENUM_FIXTURE,
+		toolCandidateNoun: 'CEDS candidate',
 	});
 	harness.ok(
 		`the '${oneDialectName}' rendering picked up the fifth category with NO provider file edited`,
@@ -352,6 +356,7 @@ harness.section('G3-e — THE FROZEN SCHEMA IS ACTUALLY FROZEN, INCLUDING THE CA
 const mutableChoiceEnum = ['1', '2', 'NONE'];
 const schemaFromMutableEnum = selectCandidateSchemaLib.buildCanonicalSelectCandidateSchema({
 	choiceEnum: mutableChoiceEnum,
+	toolCandidateNoun: 'CEDS candidate',
 });
 
 harness.ok(
@@ -404,6 +409,7 @@ harness.ok(
 selectCandidateSchemaLib.SCHEMA_DIALECT_NAME_LIST.forEach((oneDialectName) => {
 	const renderedSchema = selectCandidateSchemaLib.renderSelectCandidateSchema(oneDialectName, {
 		choiceEnum: ['1', '2', 'NONE'],
+		toolCandidateNoun: 'CEDS candidate',
 	});
 	// read the choice enum through the dialect's own shape rather than assuming where it sits
 	const choiceEnumOfRendering =
@@ -425,7 +431,7 @@ harness.equal(
 	'G3-e: the freeze fix moved NO BYTES — G2-a s recorded sha256 still holds',
 	sha256(
 		JSON.stringify(
-			selectCandidateSchemaLib.renderSelectCandidateSchema('anthropic', { choiceEnum: CHOICE_ENUM_FIXTURE }),
+			selectCandidateSchemaLib.renderSelectCandidateSchema('anthropic', { choiceEnum: CHOICE_ENUM_FIXTURE, toolCandidateNoun: 'CEDS candidate' }),
 			null,
 			2,
 		),
