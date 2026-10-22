@@ -1326,6 +1326,9 @@ const engineShapeCedsBase = (() => {
 			node('os:status', {
 				role: arr('DmeOptionSet'),
 				rangeOptionSetId: arr('OS-Status'),
+				// ⟪zeroBacklog lane A, P9⟫ named: with the hub's term tier on, every class, property, option set and value
+				// mints a term card, which is addressed by the node's uri and named by its name (the real base names all of them)
+				name: arr('Assessment Status'),
 				uri: arr('https://example.test/ceds/os/status'),
 			}),
 			node('ov:active', {
