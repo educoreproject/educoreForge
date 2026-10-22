@@ -21,6 +21,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 //   composePluginModuleList({ standardBridging, bridgeHooksByFacetName, hubBridgingByToken })
 //     → { pluginModuleList: [{ bridgeDeclaration, bridgeHooks, bridgeTarget }] } | { error }
+//     ⟪R4⟫ bridgeTarget = { targetHub: <hub token>, judgeWording: <a copy of the hub's judgeWording> }
 //   derivedBridgeNameFor({ bridgeNameStem, facetName, hubToken, matchBasis }) → name | undefined (an unregistered basis)
 //   BASIS_NAME_SUFFIX_BY_MATCH_BASIS
 

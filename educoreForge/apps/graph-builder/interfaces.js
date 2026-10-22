@@ -425,7 +425,7 @@ const FINISHER_MODULE_SHAPE = {
  * @property {string}   model           the NAMESPACED IDENTITY — 'anthropic:claude-opus-4-8'. The
  *                                      judgment-cache key, `judgeModel`, and the edge's mappingTool.
  * @property {number}   maxConcurrency  the provider's own ceiling on in-flight judgments
- * @property {function} rerank          ({systemPrompt, userPrompt, choiceEnum, predicateRule}, cb) ->
+ * @property {function} rerank          ({systemPrompt, userPrompt, choiceEnum, predicateRule, toolCandidateNoun}, cb) ->
  *                                      cb(err, {choice, category, rationale, model, attempts}), plus
  *                                      predicate under a predicateRule whose schema has the slot
  * @property {function} describe        () -> {provider, model, version}

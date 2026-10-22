@@ -5,7 +5,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // debugJudge.js — the DEBUG JUDGE REGISTER and its rule modules: free, flagged stand-ins for the
 // paid reranker. The sibling of lib/llmClient.js — the two are the only things in this tree that
 // answer `rerank`, satisfying the identical call contract
-//   rerank({ systemPrompt, userPrompt, choiceEnum, predicateRule }, cb) -> cb('', { choice, category, rationale, model, attempts })
+//   rerank({ systemPrompt, userPrompt, choiceEnum, predicateRule, toolCandidateNoun }, cb) -> cb('', { choice, category, rationale, model, attempts })
 // (plus `predicate` under a predicate rule whose schema has the slot; phase B3b, 2026-09-28)
 // so lib/bridge-framework/judgeComponent.js cannot tell them apart at the seam. ⟪JOB 1, 2026-09-07⟫ That
 // contract is no longer only a sentence in two headers: it is DECLARED AS DATA as JUDGE_PROVIDER_SHAPE in

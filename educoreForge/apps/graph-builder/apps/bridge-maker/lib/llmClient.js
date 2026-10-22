@@ -585,7 +585,7 @@ const moduleFunction =
 		// refuse on the same condition would be a second, differently-worded error for the identical
 		// fault, exactly the ambiguity the ruling asked to avoid.
 		//
-		// rerank — { systemPrompt, userPrompt, choiceEnum, predicateRule, maxRetries } -> callback(err, { choice,
+		// rerank — { systemPrompt, userPrompt, choiceEnum, predicateRule, toolCandidateNoun, maxRetries } -> callback(err, { choice,
 		//   model, attempts, category, rationale, usage, stopReason, retryReasons } plus, under a rule with a predicate
 		//   slot, predicate). predicateRule names the schema sent and is required (phase B3b, 2026-09-28). choiceEnum: e.g.
 		//   ['1','2',...,'15','NONE']. Retries (6) with backoff on 429/5xx/network AND on an incomplete

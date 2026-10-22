@@ -539,7 +539,7 @@ const moduleFunction =
 			};
 			const postOnce = componentOverrides.postOnce || realPostOnce;
 
-			// rerank — { systemPrompt, userPrompt, choiceEnum, predicateRule, maxRetries } -> callback(err, { choice,
+			// rerank — { systemPrompt, userPrompt, choiceEnum, predicateRule, toolCandidateNoun, maxRetries } -> callback(err, { choice,
 			// category, rationale, model, attempts, doneReason, retryReasons } plus, under a rule with a predicate slot,
 			// predicate). predicateRule names the schema sent and is required (phase B3b, 2026-09-28). judgeComponent.js is the sole
 			// production caller and reads choice, category, rationale and predicate.

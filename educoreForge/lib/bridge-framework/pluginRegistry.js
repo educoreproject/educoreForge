@@ -5,10 +5,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // pluginRegistry.js — the plugin registry: DATA, built by DISCOVERY (SPEC-bridgeFramework-v1.md §9; RULINGS
 // A2, D-S8; BR-003, BR-004). Built ONCE at seam-face construction over the convention
 // forges/<standardKey>/bridges/*.js and validated then — BEFORE any forge is spent. Each file exports
-// { bridgeDeclaration, bridgeHooks, bridgeTarget } (⟪ctdlHub P5⟫ bridgeTarget: the hub it maps toward, a sibling export kept
+// { bridgeDeclaration, bridgeHooks, bridgeTarget } (⟪ctdlHub P5⟫ bridgeTarget: the hub it maps toward and, ⟪R4⟫, that hub's
+// judgeWording, a sibling export kept
 // OUT of the content-addressed declaration); the registry KEY is bridgeDeclaration.bridgeName; the registry is frozen
 // data entryByBridgeName[bridgeName] = { bridgeName, standardKey, bundleDirPath, pluginFilePath, bridgeDeclaration,
-// bridgeHooks, targetHub, channelResolutionByKey, declarationDigest }.
+// bridgeHooks, targetHub, judgeWording, channelResolutionByKey, declarationDigest }.
 //
 // Refusals, all by name, all at construction: a duplicate bridgeName (both paths named); a plugin whose
 // standardKey ≠ its directory; a file under bridges/ that does not export the two names (a STRAY file is a
