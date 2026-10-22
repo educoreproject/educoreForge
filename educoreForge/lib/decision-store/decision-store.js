@@ -19,7 +19,7 @@
 //     G2 byte-identical-replay guarantee is exactly what verify-on-read protects).
 //
 // KEYED PER PAIR. getDecisionBlock({ pairKey }) is the retrieval door: a plain build asks "what is the
-// frozen block for CEDS::CTDL?" and materializes it. The store is APPEND-ONLY (nothing is ever updated — a
+// frozen block for this pair?" and materializes it. The store is APPEND-ONLY (nothing is ever updated — a
 // different decision set is a different row, standards-database's rule carried here); a genuine re-rebridge
 // of a pair appends a new block, and the read returns the LATEST for that pair (highest seq). Idempotent
 // re-save of the same frozen text is a no-op, so the only way a pair grows a second row is a genuinely

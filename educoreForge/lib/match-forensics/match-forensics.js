@@ -11,7 +11,8 @@
 // says which), so the forensic story is COMPLETE per source element, never just the live spend.
 //
 // ORGANIZED BY STANDARD: one file per pair+generation,
-//   <baseDirPath>/<pairKey>/<generation>.jsonl        (pairKey e.g. 'CEDS::SIF')
+//   <baseDirPath>/<pairKey>/<generation>.jsonl        (pairKey <hub>@<ver>::<source>@<ver>::<bridgeName>::<producerKind>; the
+//                                                     old two-token form 'CEDS::SIF' predates the bridge framework)
 // The directory-per-pair layout IS the organize-by-standard requirement: "what did the SIF run
 // judge, and why" is one directory; "what changed between generations" is two files side by side.
 //
