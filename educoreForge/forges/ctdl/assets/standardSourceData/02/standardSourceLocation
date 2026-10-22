@@ -1,0 +1,12 @@
+standard: CTDL — Credential Transparency Description Language
+publishedVersion: Release 20260927
+publishedVersionEvidence: stated by credreg, not by the file: https://credreg.net/ctdl/terms read 2026-10-21 says "Release 20260927", "This is the September 2026 CTDL release", "Release ID: 20260927 Release Date: 09/27/2026 Release Status: vs:stable". The JSON-LD carries no version. Page text kept at dataStores/ctdlHub_101926/p10Runs/sourceAcquisition-102126/ctdlTermsPage.txt
+upstreamUrl: https://credreg.net/ctdl/schema/encoding/json
+publisher: Credential Engine
+retrieved: 2026-10-21 (INDIGO_CASCADE, ctdlHub-101926 P10; real Chrome driven by Playwright, document.body.innerText of the JSON response; curl is refused by the Cloudflare challenge)
+version: Release 20260927
+sources:
+  - https://credreg.net/ctdl/schema/encoding/json   (ctdl-schema.json — JSON-LD)
+note: JSON-LD vocabulary. @graph holds rdfs:Class (140), rdf:Property (435),
+      skos:ConceptScheme (36), skos:Concept (457): 1,068 entries (snapshot 01: 1,013).
+      @ids are CURIEs and are the native stableIds (stableUriPropertyName = 'uri').

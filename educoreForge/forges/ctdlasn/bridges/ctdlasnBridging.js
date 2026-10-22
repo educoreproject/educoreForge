@@ -38,9 +38,9 @@ const declarationTemplate = Object.freeze({
 	mappingProvider: {
 		url: 'https://credreg.net/ctdlasn/terms',
 		verifiedBy: {
-			sessionName: 'STERLING_PORTAL',
+			sessionName: 'INDIGO_CASCADE',
 			date: '2026-10-21',
-			note: 'Credential Engine, publisher of CTDL-ASN. curl -L from this machine on 2026-10-21 returned HTTP 403 (the credreg.net Cloudflare challenge the CTDL-family snapshots record); the host answers, the page was not read by machine. The assertions are read from the CTDL-ASN forge snapshot 01 (ctdlasn.json, version 20230929).',
+			note: 'Credential Engine, publisher of CTDL-ASN. curl is refused by the credreg.net Cloudflare challenge; on 2026-10-21 (ctdlHub P10) the page was read through a real Chrome driven by Playwright and states "Release 20260626", "This is the June 2026 CTDL-ASN release". The assertions are read from the CTDL-ASN forge snapshot 02 (ctdlasn.json, version 20260626). Earlier verification (STERLING_PORTAL, 2026-10-21) was against snapshot 01, version 20230929.',
 		},
 	},
 	sourceCuriePrefix: { prefix: 'ceasn', iri: 'https://purl.org/ctdlasn/terms/' },
@@ -72,7 +72,7 @@ const declarationTemplate = Object.freeze({
 		kind: 'declaredPredicate',
 		predicateList: ['owl:equivalentClass', 'owl:equivalentProperty', 'owl:sameAs', 'rdfs:subPropertyOf', 'skos:exactMatch', 'skos:closeMatch', 'skos:broadMatch', 'skos:narrowMatch', 'skos:relatedMatch'],
 		assertedBy: {
-			documentName: 'CTDL-ASN schema, version 20230929 (forges/ctdlasn/assets/standardSourceData/01/ctdlasn.json)',
+			documentName: 'CTDL-ASN schema, version 20260626 (forges/ctdlasn/assets/standardSourceData/02/ctdlasn.json)',
 			citation: "Each ASN term's own JSON-LD entry states its correspondences (owl:equivalentProperty, …) to terms of other vocabularies; the CTDL-ASN forge carries every non-native reference verbatim as a crossRef { raw, locator } (allowance A1). The locator IS the source's predicate, written on the edge unchanged.",
 		},
 	},
