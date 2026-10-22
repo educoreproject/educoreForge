@@ -992,7 +992,10 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // pescLdFixtureCtdlDeclaredIdentityPlugin.js 6/0 (the CTDL rule) and test-bgDeclaredIdentity.js 106/5 (conjuncts h-k, twins h, i). No PESC
 // plugin, no build.js, interfaces.js, bridge-maker or lib/vocabulary/ change. declarationDigest unchanged (P-a1 16/16); frameworkFingerprint
 // moves; every CEDS cache key unchanged (P-b 0 re-keyed).
-const P1_BASELINE_COMMIT = 'zbCDeclaredIdentityPescCompose-102226'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C framework commit; BRONZE_CROWN authorised); the tag is cut ON this commit
+// ═══ RE-ANCHOR (2), 2026-10-22 (IVORY_TRAIL; same authorisation) ═══ BG-COMPOSE-PESC zbCDeclaredIdentityPescCompose-102226 ->
+// zbCDeclaredIdentityPescComposeB-102226, tag cut ON this commit. CENSUS (numstat from the first tag): lib/bridge-framework/bridge-framework.js
+// 2/1 ONLY (the self-audit's one-pass term-card index). No other framework path.
+const P1_BASELINE_COMMIT = 'zbCDeclaredIdentityPescComposeB-102226'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C framework commit; BRONZE_CROWN authorised); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
