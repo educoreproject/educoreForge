@@ -205,7 +205,12 @@ const standardBridging = Object.freeze({
 				// ({ standardName: 'CTDL' }) matched no text node"). A real edfi→ctdl bridge would face the same choice.
 				ctdl: {
 					candidateRetrieval: { method: 'cosineTopK-v1', k: 15, floor: 0.3 },
-					candidateRenderingAllowList: null,
+					// pair override: the CTDL hub's own list minus propertyDefinition and domainDefinition. CTDL's prose cites CTDL terms
+					// ('Subclasses of ceterms:Credential …'; measured on GOLD_EVAL_261021_ctdlHub: 402 cards' domainDefinition, 24 cards'
+					// propertyDefinition), and the CTDL hub's own scan (ctdlTermCurie) refuses any such CURIE in a prompt — P-c green
+					// attempt 3 refused on 'ceterms:Credential'. The shipped CTDL hub declaration is not self-consistent for a JUDGED bridge;
+					// that is reported (GATEREPORT-R3), not fixed here.
+					candidateRenderingAllowList: ['name', 'domainName', 'rangeClassNameList', 'componentIdeaList'],
 					promptIdentifierScan: 'fromHub',
 					blindingOrder: { standardBlindingNameList: ['crossRefs'], pairedHubAnchors: 'union' },
 					hubAnchorListLength: null,
