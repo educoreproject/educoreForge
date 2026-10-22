@@ -11,6 +11,7 @@
 //   (c) a multi-element list is a list whether declared or not
 //   (d) THE NAME RULE: every property name of the frozen gold census that ends in 'List' or 'Keys' is declared
 //       list-valued or named in LIST_NAME_RULE_EXEMPTION_BY_NAME (a JSON string or a literal by declaration)
+//   (d2) the same rule over the CTDL-hub gold's census (GOLD_EVAL_261021_ctdlHub; zeroBacklog lane D, D0-1)
 // RED TWINS (in memory, loadBuildJsDouble on replay-engine.js; the file on disk is never touched):
 //   keepAsListIgnored — the registry lookup forced false -> (a) red
 //   collapseEverything — the collapse no longer reads keepAsList -> (a) red
@@ -38,13 +39,14 @@ const harness = require('../../../test/testLib/harness')(moduleName);
 const { loadBuildJsDouble } = require('../../bridge-framework/test/testSupport/bridgeTwinFactories');
 const { LIST_VALUED_PROPERTY_NAME_LIST, LIST_NAME_RULE_EXEMPTION_BY_NAME } = require('../../vocabulary/vocabulary');
 const censusFixture = require('./fixtures/liveCensus/goldEval261005PropertyNameList.json');
+const ctdlHubCensusFixture = require('./fixtures/liveCensus/goldEval261021CtdlHubListNameList.json');
 
 const ENGINE_PATH = path.join(__dirname, '..', 'replay-engine.js');
 const engineFor = (mutationList) => (mutationList.length === 0 ? require(ENGINE_PATH) : loadBuildJsDouble({ buildJsPath: ENGINE_PATH, mutationList }))();
 
-const nameRuleOffenderListOf = (registeredNameList) =>
-	censusFixture.propertyNameList.filter(
-		(onePropertyName) => /(List|Keys)$/.test(onePropertyName) && registeredNameList.indexOf(onePropertyName) === -1 && !LIST_NAME_RULE_EXEMPTION_BY_NAME[onePropertyName],
+const nameRuleOffenderListOf = (registeredNameList, exemptionByName = LIST_NAME_RULE_EXEMPTION_BY_NAME, propertyNameList = censusFixture.propertyNameList) =>
+	propertyNameList.filter(
+		(onePropertyName) => /(List|Keys)$/.test(onePropertyName) && registeredNameList.indexOf(onePropertyName) === -1 && !exemptionByName[onePropertyName],
 	);
 
 const conjunctJudgeByRefId = {
@@ -80,6 +82,16 @@ harness.ok('every List/Keys name of the census is declared list-valued or exempt
 const twinOffenderList = nameRuleOffenderListOf(LIST_VALUED_PROPERTY_NAME_LIST.filter((oneName) => oneName !== 'propertyNameList'));
 harness.ok("(d) observed RED with 'propertyNameList' removed from the registry", twinOffenderList.indexOf('propertyNameList') !== -1, twinOffenderList.join(', '));
 harness.note(`RED-OBSERVED d_nameRule twin='registryWithoutPropertyNameList' → offenders [${twinOffenderList.join(', ')}]`);
+
+// ⟪zeroBacklog lane D, D0-1, 2026-10-22⟫ (d2) the same rule over the first gold carrying the CTDL family: its three JSON-string
+// *List properties (declaredCorrespondenceList, foreignTermEntryList, nativeDeclarationAnomalyList) are exempted BY NAME
+harness.section('(d2) THE NAME RULE over the CTDL-hub gold census');
+const ctdlHubOffenderList = nameRuleOffenderListOf(LIST_VALUED_PROPERTY_NAME_LIST, LIST_NAME_RULE_EXEMPTION_BY_NAME, ctdlHubCensusFixture.propertyNameList);
+harness.ok('every List/Keys name of the CTDL-hub census is declared list-valued or exempted by name', ctdlHubOffenderList.length === 0, ctdlHubOffenderList.join(', '));
+const exemptionWithoutCtdlByName = Object.keys(LIST_NAME_RULE_EXEMPTION_BY_NAME).filter((oneName) => ['declaredCorrespondenceList', 'foreignTermEntryList', 'nativeDeclarationAnomalyList'].indexOf(oneName) === -1).reduce((soFar, oneName) => ({ ...soFar, [oneName]: LIST_NAME_RULE_EXEMPTION_BY_NAME[oneName] }), {});
+const ctdlTwinOffenderList = nameRuleOffenderListOf(LIST_VALUED_PROPERTY_NAME_LIST, exemptionWithoutCtdlByName, ctdlHubCensusFixture.propertyNameList);
+harness.ok('(d2) observed RED with the three CTDL exemptions removed', ctdlTwinOffenderList.length === 3, ctdlTwinOffenderList.join(', '));
+harness.note(`RED-OBSERVED d2_nameRule twin='exemptionWithoutCtdl' → offenders [${ctdlTwinOffenderList.join(', ')}]`);
 
 harness.section('THE TWIN SWEEP — each twin OBSERVED RED under an engine double (in memory)');
 TWIN_LIST.forEach((oneTwin) => {

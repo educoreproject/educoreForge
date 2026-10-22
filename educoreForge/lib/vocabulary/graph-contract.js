@@ -68,6 +68,10 @@ const LIST_NAME_RULE_EXEMPTION_BY_NAME = Object.freeze({
 	fileAnnotationList: 'JSON string (pesc-release-forge walk.js)',
 	fileCommentList: 'JSON string (pesc-release-forge walk.js; forgeClean lane CLEAN, G20)',
 	standardsIncluded: 'a Cypher literal list on the passport, never through pgToStored',
+	// ⟪zeroBacklog lane D, D0-1, 2026-10-22⟫ the CTDL family's three JSON-string lists (P8 contract check read 35/36 for exactly these)
+	declaredCorrespondenceList: 'JSON string (ctdl-family-forge jsonLdVocabularyWalk.js; a concept\'s declared skos correspondences)',
+	foreignTermEntryList: 'JSON string (ctdl-family-forge jsonLdVocabularyHooks.js; on each CTDL-family root, the terms it imports)',
+	nativeDeclarationAnomalyList: 'JSON string (ctdl-family-forge jsonLdVocabularyWalk.js; what a node\'s own declaration says oddly)',
 });
 
 // §2 INTEGER_VALUED_PROPERTY_NAME_LIST — counts written as Neo4j INTEGER (W-A-2, V1-C04). The facets maxLength / minLength /
@@ -110,7 +114,12 @@ const PASSPORT_FIELD_LIST = Object.freeze([
 	{ name: 'graphContractSha256', type: 'string', required: true, writer: 'finish', meaning: 'sha256 of the canonical graphContract.json this build ran with' },
 	{ name: 'frameworkFingerprint', type: 'string', required: false, writer: 'finish', meaning: 'the one frameworkFingerprint every bridge run report carried; absent when none or when they disagree' },
 	{ name: 'frameworkFingerprintBasis', type: 'string', required: false, writer: 'finish', meaning: 'present iff frameworkFingerprint is absent: why' },
+	// ⟪zeroBacklog lane D, D0-2, 2026-10-22; census row 74⟫ a DECLARED input, never a count: graphBuilder.ini [replay-manager]
+	// structuralVersion, refused by name when absent; its grammar is STRUCTURAL_VERSION_PATTERN_SOURCE
+	{ name: 'structuralVersion', type: 'string', required: true, writer: 'finish', meaning: 'the graph\'s structural version (V.<number>), declared by the operator in graphBuilder.ini [replay-manager]; it moves when the graph\'s STRUCTURE moves (a new tier, a new edge kind), never with content' },
 ].map((oneRow) => Object.freeze(oneRow)));
+// the structural version's grammar (the DME parses it, so the contract declares it; a source, not a RegExp: the contract is JSON)
+const STRUCTURAL_VERSION_PATTERN_SOURCE = '^V\\.[0-9]+$';
 // the passport names a reader may still ask for, each with what replaced it, so the reader can be refused BY NAME
 const PASSPORT_RETIRED_FIELD_NAME_LIST = Object.freeze([
 	{ name: 'replayEngineVersion', replacedBy: 'engineVersions.replayEngine' }, { name: 'serializerVersion', replacedBy: 'engineVersions.serializer' },
@@ -224,9 +233,11 @@ const STANDARD_DEFINITION_FIELD_LIST = Object.freeze([
 	{ name: 'unkindedMappingEdgeCount', type: 'integer', required: false, meaning: 'match edges carrying no mappingKind' },
 	{ name: 'standardKind', type: 'string', required: true, meaning: 'what kind of standard it is, as its forge declares' },
 	{ name: 'standardUsageTips', type: 'string', required: false, meaning: 'how to read the standard in this graph, as its forge declares; absent when the forge declares null (forgeDeclarationContract allows it: sif, pesc260805)' },
-	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC, CTDL, CTDLASN, CTDLQData), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
+	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC, CTDL, CTDLASN, CTDLQData, PESCLD), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
 	{ name: 'releaseLabel', type: 'string', required: true, meaning: 'which member of its family the standard is, version-free (CollegeTranscript, not CollegeTranscript-1.8.0); a one-member family repeats the family name' },
 	{ name: 'descriptionSource', type: 'string', required: true, meaning: 'where in the standard\'s SOURCE its description text is read from (PESC xs:documentation, CEDS dc:description, ...), declared by its forge (lane FIX, Fix 3)' },
+	// ⟪zeroBacklog lane D, D0-4, 2026-10-22⟫ RESERVED for lane A2 (census row 10), which stamps it on every standard and makes it required
+	{ name: 'nativeIdentifierPropertyName', type: 'string', required: false, meaning: 'the property name carrying the standard\'s OWN native identifier on its content nodes, declared by its forge, so a reader never assumes one standard\'s identifier name for every standard' },
 ].map((oneRow) => Object.freeze(oneRow)));
 const USAGE_PATTERN_FIELD_LIST = Object.freeze([
 	{ name: 'patternName', type: 'string', required: true, meaning: 'the exemplar\'s name' },
@@ -379,6 +390,7 @@ const graphContractDocument = () => {
 		integerValuedPropertyNameList: INTEGER_VALUED_PROPERTY_NAME_LIST,
 		passportFieldList: PASSPORT_FIELD_LIST,
 		passportRetiredFieldNameList: PASSPORT_RETIRED_FIELD_NAME_LIST,
+		structuralVersionPatternSource: STRUCTURAL_VERSION_PATTERN_SOURCE,
 		engineVersionsNameList: ENGINE_VERSIONS_NAME_LIST,
 		meaningTierRowFieldListByShape: MEANING_TIER_ROW_FIELD_LIST_BY_SHAPE,
 		attestationFieldList: ATTESTATION_FIELD_LIST,
@@ -449,6 +461,7 @@ module.exports = Object.freeze({
 	INTEGER_VALUED_PROPERTY_NAME_LIST,
 	PASSPORT_FIELD_LIST,
 	PASSPORT_RETIRED_FIELD_NAME_LIST,
+	STRUCTURAL_VERSION_PATTERN_SOURCE,
 	ENGINE_VERSIONS_NAME_LIST,
 	MEANING_TIER_ROW_FIELD_LIST_BY_SHAPE,
 	ATTESTATION_FIELD_LIST,

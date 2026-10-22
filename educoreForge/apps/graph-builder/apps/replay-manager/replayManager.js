@@ -301,6 +301,21 @@ const requiredConfigNumber = (config, keyName) => {
 	return number;
 };
 
+// -----
+// requiredStructuralVersion — ⟪zeroBacklog lane D, D0-2, 2026-10-22; census row 74⟫ the passport's structuralVersion is
+// DECLARED data (TQ's V.08-or-V.09 answer is one line here, never a build or a code edit). The grammar is the contract's,
+// because the DME parses it; a value outside it is refused, never trimmed into shape.
+const requiredStructuralVersion = (config, keyName) => {
+	const value = requiredConfigText(config, keyName);
+	if (!new RegExp(vocabulary.STRUCTURAL_VERSION_PATTERN_SOURCE).test(value)) {
+		throw new Error(
+			`[replayManager] ${keyName}='${value}' does not match the graph contract's STRUCTURAL_VERSION_PATTERN_SOURCE ` +
+				`${vocabulary.STRUCTURAL_VERSION_PATTERN_SOURCE}. Fix it in the [${CONFIG_SECTION}] section of ${CONFIG_FILE}.`,
+		);
+	}
+	return value;
+};
+
 // resolve the effective settings at CALL time (process.global may not exist at require time).
 // getConfig is injectable for the test suite ONLY — production callers pass nothing and get the
 // frozen process.global one. Exported so the config->settings mapping is provable without a
@@ -316,6 +331,7 @@ const resolveSettings = (getConfig = process.global.getConfig) => {
 		portSearchStart: requiredConfigNumber(config, 'portSearchStart'),
 		portSearchSpan: requiredConfigNumber(config, 'portSearchSpan'),
 		readyTimeoutMs: requiredConfigNumber(config, 'readyTimeoutSeconds') * 1000,
+		structuralVersion: requiredStructuralVersion(config, 'structuralVersion'),
 	};
 };
 
@@ -1545,7 +1561,7 @@ const moduleFunction =
 		// 2 — CHANNEL B: the passport. It counts what the registry produced, so it cannot run earlier.
 		taskList.push((args, next) => {
 			passportWriter.write(
-				{ runCypher, manifestRefId, graphName, engineVersions: engineVersionsFor(), graphContractSha256: vocabulary.graphContractSha256(), frameworkFingerprintList: frameworkFingerprintList || [] },
+				{ runCypher, manifestRefId, graphName, engineVersions: engineVersionsFor(), graphContractSha256: vocabulary.graphContractSha256(), frameworkFingerprintList: frameworkFingerprintList || [], structuralVersion: args.structuralVersion },
 				(err, report) => {
 					if (err) {
 						next(err);
@@ -1614,7 +1630,8 @@ const moduleFunction =
 			);
 		});
 
-		pipeRunner(taskList.getList(), {}, (err, args) => {
+		// the structural version is the [replay-manager] section's, the same reading create made (a fault there already threw)
+		pipeRunner(taskList.getList(), { structuralVersion: resolveSettings().structuralVersion }, (err, args) => {
 			closeAll();
 			if (err) {
 				callback(`replayManager.finish '${graphName}': ${err}`);

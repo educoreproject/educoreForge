@@ -9,7 +9,8 @@
 //   (a) every required finish-written field appears as `p.<name> =` in the MERGE, with the census values
 //       (voyage-4-large x 1024, the judge identity, the recipe, both index names, the contract sha, the five engine versions)
 //   (b) refusals by name: no graphName; an engineVersions member missing; two embedding models; two vector widths;
-//       no ManifestRecipe row; a VECTOR index named off another graph; a contract sha that is not 64 hex
+//       no ManifestRecipe row; a VECTOR index named off another graph; a contract sha that is not 64 hex;
+//       ⟪zeroBacklog lane D, D0-2⟫ no structuralVersion, or one outside the declared grammar (and (a) sees it SET)
 //   (c) the round trip refuses when keys(p) comes back without a required name
 //   (d) a vector-less graph writes embeddingBasis and REMOVEs the model/width pair; no decision block writes
 //       frameworkFingerprintBasis and REMOVEs frameworkFingerprint
@@ -17,6 +18,7 @@
 //   setLineDropped — the generated SET line never pushed -> (a) red
 //   graphNameCheckRemoved — the graphName refusal gone -> (b) red
 //   modelCountUnchecked — two models admitted -> (b) red
+//   structuralVersionUnchecked — the structural version refusal gone -> (b) red
 //   roundTripUnchecked — the read-back filter emptied -> (c) red
 //   alternativeNotRemoved — the REMOVE clause dropped -> (d) red
 
@@ -44,6 +46,7 @@ const writerFor = (mutationList) => (mutationList.length === 0 ? require(WRITER_
 const GRAPH_NAME = 'DEV_gb_materialize_1_1';
 const MANIFEST_REF_ID = 'e'.repeat(64);
 const CONTRACT_SHA = vocabulary.graphContractSha256();
+const STRUCTURAL_VERSION = 'V.09';
 const ENGINE_VERSIONS = { replayManager: 'finish/1', replayEngine: 'a'.repeat(64), serializer: '1', forgeFramework: 'b'.repeat(64), bridgeFramework: 'c'.repeat(64) };
 const recordOf = (fieldValueByName) => ({ get: (fieldName) => fieldValueByName[fieldName] });
 
@@ -87,7 +90,7 @@ const runCypherDouble = (answerOverride = {}) => {
 const writeWith = ({ mutationList = [], answerOverride, writeOverride = {} }, done) => {
 	const cypherDouble = runCypherDouble(answerOverride);
 	writerFor(mutationList).write(
-		{ runCypher: cypherDouble.runCypher, manifestRefId: MANIFEST_REF_ID, graphName: GRAPH_NAME, engineVersions: ENGINE_VERSIONS, graphContractSha256: CONTRACT_SHA, frameworkFingerprintList: ['f'.repeat(64)], builtAt: '2026-10-06T00:00:00.000Z', ...writeOverride },
+		{ runCypher: cypherDouble.runCypher, manifestRefId: MANIFEST_REF_ID, graphName: GRAPH_NAME, engineVersions: ENGINE_VERSIONS, graphContractSha256: CONTRACT_SHA, frameworkFingerprintList: ['f'.repeat(64)], structuralVersion: STRUCTURAL_VERSION, builtAt: '2026-10-06T00:00:00.000Z', ...writeOverride },
 		(err, report) => done({ err: err || '', report, mergeText: cypherDouble.statementList.find((oneStatement) => /MERGE \(p:`GraphProvenance`/.test(oneStatement)) || '' }),
 	);
 };
@@ -100,6 +103,9 @@ const REFUSAL_CASE_LIST = [
 	{ caseName: 'noRecipe', answerOverride: { recipeRowList: [] }, pattern: /the ManifestRecipe for e+ is absent/ },
 	{ caseName: 'indexOffContract', answerOverride: { indexRowList: [{ name: 'replay_vector', labelsOrTypes: ['ForgedNode'], properties: ['embedding'] }] }, pattern: /'replay_vector' is not the name graph-contract §10 declares/ },
 	{ caseName: 'contractShaMalformed', writeOverride: { graphContractSha256: 'abc' }, pattern: /graphContractSha256 is REQUIRED as 64 hex/ },
+	// ⟪zeroBacklog lane D, D0-2⟫ the structural version is a declared input (graphBuilder.ini), never a default
+	{ caseName: 'noStructuralVersion', writeOverride: { structuralVersion: undefined }, pattern: /structuralVersion is REQUIRED/ },
+	{ caseName: 'structuralVersionMalformed', writeOverride: { structuralVersion: 'v9' }, pattern: /structuralVersion 'v9' does not match/ },
 ];
 
 const conjunctJudgeByRefId = {
@@ -107,7 +113,7 @@ const conjunctJudgeByRefId = {
 		writeWith({ mutationList }, ({ err, mergeText }) => {
 			const requiredNameList = vocabulary.PASSPORT_FIELD_LIST.filter((oneRow) => oneRow.required && oneRow.writer.split('+').indexOf('finish') !== -1).map((oneRow) => oneRow.name);
 			const unsetList = requiredNameList.filter((oneName) => mergeText.indexOf(`p.\`${oneName}\` = `) === -1);
-			const valuesLand = /p\.`embeddingModelVersion` = 'voyage-4-large'/.test(mergeText) && /p\.`embeddingDims` = 1024/.test(mergeText) && mergeText.indexOf(`p.\`graphContractSha256\` = '${CONTRACT_SHA}'`) !== -1 && /p\.`judgeIdentityList` = \['jev:jev-1\.13\.0:data:rel-04bab2bc4b28'\]/.test(mergeText) && mergeText.indexOf(`p.\`vectorIndexNameList\` = ['${GRAPH_NAME}_embedText_vector', '${GRAPH_NAME}_vector']`) !== -1;
+			const valuesLand = /p\.`embeddingModelVersion` = 'voyage-4-large'/.test(mergeText) && /p\.`embeddingDims` = 1024/.test(mergeText) && mergeText.indexOf(`p.\`graphContractSha256\` = '${CONTRACT_SHA}'`) !== -1 && /p\.`judgeIdentityList` = \['jev:jev-1\.13\.0:data:rel-04bab2bc4b28'\]/.test(mergeText) && mergeText.indexOf(`p.\`vectorIndexNameList\` = ['${GRAPH_NAME}_embedText_vector', '${GRAPH_NAME}_vector']`) !== -1 && mergeText.indexOf(`p.\`structuralVersion\` = '${STRUCTURAL_VERSION}'`) !== -1;
 			done({ pass: !err && unsetList.length === 0 && valuesLand, detail: err || (unsetList.length ? `unset: ${unsetList.join(', ')}` : `values land ${valuesLand}`) });
 		}),
 	b_unwritableFieldsRefusedByName: (mutationList, done) => {
@@ -139,6 +145,7 @@ const conjunctJudgeByRefId = {
 const TWIN_LIST = [
 	{ conjunctRefId: 'a_everyRequiredFieldIsSet', twinName: 'setLineDropped', find: '				setLineList.push(`p.\\`${oneRow.name}\\` = ${CYPHER_LITERAL_BY_TYPE[oneRow.type](oneValue)}`);', replace: '				void 0;' },
 	{ conjunctRefId: 'b_unwritableFieldsRefusedByName', twinName: 'graphNameCheckRemoved', find: "			if (typeof graphName !== 'string' || !graphName.trim()) {", replace: '			if (false) {' },
+	{ conjunctRefId: 'b_unwritableFieldsRefusedByName', twinName: 'structuralVersionUnchecked', find: '			if (structuralVersionRefusal) {', replace: '			if (false) {' },
 	{ conjunctRefId: 'b_unwritableFieldsRefusedByName', twinName: 'modelCountUnchecked', find: '			if (modelList.length !== 1) {', replace: '			if (false) {' },
 	{ conjunctRefId: 'c_readBackWithoutARequiredNameRefused', twinName: 'roundTripUnchecked', find: "const unwrittenNameList = setPlan.requiredNameList.filter((oneName) => writtenKeyList.indexOf(oneName) === -1);", replace: 'const unwrittenNameList = [];' },
 	{ conjunctRefId: 'd_alternativesWrittenAndTheirPairRemoved', twinName: 'alternativeNotRemoved', find: "				const removeClause = setPlan.removeNameList.length ?", replace: "				const removeClause = false ?" },

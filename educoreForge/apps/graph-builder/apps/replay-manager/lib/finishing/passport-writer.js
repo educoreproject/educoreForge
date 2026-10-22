@@ -73,7 +73,7 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({ vocabulary, debugMappingSource } = {}) => {
-		const { NODE_LABELS, SELF_DOC, SCHEMA_VIEW, GRAPH_META, PROVENANCE_TIER, PASSPORT_FIELD_LIST, ENGINE_VERSIONS_NAME_LIST, EMBED_TEXT_VECTOR, MAPPING_PROPERTIES, vectorIndexSlotTable, vectorIndexNameRefusal, vectorIndexNameFor } = vocabulary;
+		const { NODE_LABELS, SELF_DOC, SCHEMA_VIEW, GRAPH_META, PROVENANCE_TIER, PASSPORT_FIELD_LIST, STRUCTURAL_VERSION_PATTERN_SOURCE, ENGINE_VERSIONS_NAME_LIST, EMBED_TEXT_VECTOR, MAPPING_PROPERTIES, vectorIndexSlotTable, vectorIndexNameRefusal, vectorIndexNameFor } = vocabulary;
 		// ⟪lane P, 2026-10-04⟫ the debug judge's mappingSource ('bridge-debug'), INJECTED by the composition root from the
 		// bridge framework's certificationCheck, which composes it from the judge provider registry. This module does not
 		// reach into the bridge framework itself, and it has no default: without the value it cannot tell a debug graph.
@@ -371,7 +371,7 @@ const moduleFunction =
 		//   round-trip-or-refuse. `builtAt` is INJECTABLE so a gate can pin it; it defaults to the real
 		//   clock, and it is the ONLY clock this whole verb is permitted to read.
 		const write = (
-			{ runCypher, manifestRefId, engineVersions, graphName, builtAt, graphContractSha256, frameworkFingerprintList } = {},
+			{ runCypher, manifestRefId, engineVersions, graphName, builtAt, graphContractSha256, frameworkFingerprintList, structuralVersion } = {},
 			callback,
 		) => {
 			if (typeof runCypher !== 'function') {
@@ -400,6 +400,17 @@ const moduleFunction =
 			}
 			if (!/^[0-9a-f]{64}$/.test(`${graphContractSha256}`)) {
 				callback(`passport-writer: graphContractSha256 is REQUIRED as 64 hex (got ${JSON.stringify(graphContractSha256)}) — a reader refuses a graph whose contract sha it cannot compare`);
+				return;
+			}
+			// ⟪zeroBacklog lane D, D0-2⟫ the structural version is DECLARED by the operator (graphBuilder.ini), never counted or defaulted
+			const structuralVersionRefusal =
+				typeof structuralVersion !== 'string' || !structuralVersion.trim()
+					? `passport-writer: structuralVersion is REQUIRED (got ${JSON.stringify(structuralVersion)}) — declare it in graphBuilder.ini [replay-manager]; a graph without one cannot say which structure it has`
+					: !new RegExp(STRUCTURAL_VERSION_PATTERN_SOURCE).test(structuralVersion)
+						? `passport-writer: structuralVersion '${structuralVersion}' does not match the declared grammar ${STRUCTURAL_VERSION_PATTERN_SOURCE} (graph-contract STRUCTURAL_VERSION_PATTERN_SOURCE)`
+						: '';
+			if (structuralVersionRefusal) {
+				callback(structuralVersionRefusal);
 				return;
 			}
 			if (!Array.isArray(frameworkFingerprintList)) {
@@ -559,6 +570,7 @@ const moduleFunction =
 					recipeName: args.recipeName,
 					vectorIndexNameList: args.vectorIndexNameList,
 					graphContractSha256,
+					structuralVersion,
 					...frameworkFieldsFor(frameworkFingerprintList),
 				};
 				const setPlan = passportSetPlanFor(valueByFieldName);

@@ -62,7 +62,10 @@ FIELD_LIST_NAME_LIST.forEach((oneListName) => {
 	const nameList = (fieldList || []).map((oneRow) => oneRow.name);
 	harness.equal('  and its names are unique', nameList.length, new Set(nameList).size);
 });
-harness.equal('PASSPORT_FIELD_LIST declares the 27 rows of W-A-3', (graphContract.PASSPORT_FIELD_LIST || []).length, 27);
+harness.equal('PASSPORT_FIELD_LIST declares the 27 rows of W-A-3 plus structuralVersion (zeroBacklog D0-2)', (graphContract.PASSPORT_FIELD_LIST || []).length, 28);
+const structuralVersionPattern = new RegExp(graphContract.STRUCTURAL_VERSION_PATTERN_SOURCE);
+harness.ok('the structural version grammar admits V.09 and refuses v9 and V.', structuralVersionPattern.test('V.09') && !structuralVersionPattern.test('v9') && !structuralVersionPattern.test('V.'), graphContract.STRUCTURAL_VERSION_PATTERN_SOURCE);
+harness.equal('the JSON document carries the structural version grammar', graphContract.graphContractDocument().structuralVersionPatternSource, graphContract.STRUCTURAL_VERSION_PATTERN_SOURCE);
 const integerNameSet = new Set(graphContract.INTEGER_VALUED_PROPERTY_NAME_LIST || []);
 harness.equal('the list-valued and integer-valued registries are disjoint', JSON.stringify((graphContract.LIST_VALUED_PROPERTY_NAME_LIST || []).filter((oneName) => integerNameSet.has(oneName))), '[]');
 harness.equal('no name the list rule exempts is also registered list-valued', JSON.stringify(Object.keys(graphContract.LIST_NAME_RULE_EXEMPTION_BY_NAME || {}).filter((oneName) => (graphContract.LIST_VALUED_PROPERTY_NAME_LIST || []).indexOf(oneName) !== -1)), '[]');

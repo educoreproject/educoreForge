@@ -139,6 +139,7 @@ const REQUIRED = {
 	portSearchStart: '7811', // ini values arrive as strings — coercion is required, guessing is not
 	portSearchSpan: '200',
 	readyTimeoutSeconds: '90',
+	structuralVersion: 'V.09', // ⟪zeroBacklog lane D, D0-2⟫ the passport's declared structural version
 };
 const omitting = (keyName) => {
 	const config = { ...REQUIRED };
@@ -214,6 +215,23 @@ harness.equal(
 	'a CONFIGURED readyTimeoutSeconds converts seconds -> ms — the positive control',
 	settingsOrError(() => resolveSettings(asGiven('readyTimeoutSeconds', 5))).readyTimeoutMs,
 	5000,
+);
+
+// ----- ⟪zeroBacklog lane D, D0-2⟫ structuralVersion: declared data, never a default; its grammar is the contract's
+harness.rejects(
+	'an ABSENT structuralVersion is refused, naming the key, the section and the file',
+	thrownMessage(() => resolveSettings(omitting('structuralVersion'))),
+	/structuralVersion.*\[replay-manager\].*graphBuilder\.ini/s,
+);
+harness.rejects(
+	"a structuralVersion outside the grammar ('9') is refused, naming what was given and the grammar",
+	thrownMessage(() => resolveSettings(asGiven('structuralVersion', '9'))),
+	/structuralVersion='9'.*STRUCTURAL_VERSION_PATTERN_SOURCE/s,
+);
+harness.equal(
+	'a CONFIGURED structuralVersion is honoured verbatim — the positive control',
+	settingsOrError(() => resolveSettings(asGiven('structuralVersion', 'V.10'))).structuralVersion,
+	'V.10',
 );
 
 // -----

@@ -1,0 +1,10 @@
+{
+	"provenance": "every content property name ending in List or Keys on GOLD_EVAL_261021_ctdlHub (manifest 335e3c10, the first gold carrying the CTDL family), read-only, 2026-10-22, zeroBacklog lane D (INDIGO_COMPASS): MATCH (n) WHERE n._source IS NOT NULL UNWIND keys(n) ... and the same over edges whose endpoints both carry _source. Frozen here for the W-A-1 name rule (d2): the three CTDL JSON-string names are what read the P8 contract check 35/36.",
+	"propertyNameList": [
+		"qualifierKeys", "rangeClassIdList", "rangeClassNameList", "rangeDatatypeList", "rangeOptionSetIdList", "rangeOptionSetNameList",
+		"objectNameList", "objectNameSampleList", "documentationValueList", "occurrenceSectionList", "contextPathSampleList", "precedingCommentList",
+		"fileCommentList", "importList", "schemaAttributeList", "fileAnnotationList", "rootChangeLogLineList", "derivationDocumentationValueList",
+		"nativeDeclarationAnomalyList", "declaredCorrespondenceList", "foreignTermEntryList",
+		"propertyNameList", "attestationChannelList"
+	]
+}
