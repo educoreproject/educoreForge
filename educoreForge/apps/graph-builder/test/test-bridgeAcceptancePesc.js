@@ -954,7 +954,10 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // factory's anchor map, HAS_<HUB>_*); lib/vocabulary/ vocabulary-definitions.js 2/5 and test/testSupport/pureProxyFingerprintProbe.js 1/1 (as
 // (ii)); and test-bgNosub.js (its re-anchors, this commit). No lib/bridge-framework source, no bridge-maker, no PESC plugin edit:
 // frameworkFingerprint unchanged by R5.
-const P1_BASELINE_COMMIT = 'postSharedSurfacesR5OnR2PescCompose-102126'; // re-anchored by VELVET_CHORUS (R5 shared forge and build surfaces, on R2; census REANCHOR-CENSUS-R5-102126.md; GO SCARLET_ARROW); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-21 (TWILIGHT_HAVEN, successor of VELVET_CHORUS; R5 full-suite reds; GO BRONZE_CROWN) ═══ BG-COMPOSE-PESC
+// postSharedSurfacesR5OnR2PescCompose-102126 -> postSharedSurfacesR5FixPescCompose-102126, tag cut ON this commit. CENSUS over this gate's paths
+// (numstat from the OnR2 tag): test-bgNosub.js 8/2 ONLY (its seamDiffEmpty and (iii) re-anchors, this commit). No framework source, no PESC plugin.
+const P1_BASELINE_COMMIT = 'postSharedSurfacesR5FixPescCompose-102126'; // re-anchored by TWILIGHT_HAVEN (R5 full-suite reds; census REANCHOR-CENSUS-R5-102126.md; GO BRONZE_CROWN); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
