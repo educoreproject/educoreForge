@@ -1,0 +1,4 @@
+{
+	"about": "zeroBacklog A2-4 (census row 11, R6-3; BRONZE_CROWN ruling Q5, 2026-10-23): how to read this layer, stamped on the guide layer's root as layerUsageTips so the DME reads it from the graph instead of restating it. VERBATIM the first sentence of educore cli/lib.d/data-model-explorer/provider.json, tool dme_structure, definition.description, at educore main c07031f; the rest of that description (its modes and what the verb returns) describes the DME verb, not the layer, and stays in provider.json.",
+	"layerUsageTips": "The Conceptual Model of the CEDS Ontology Guide V14 (Appendix A), which dme_search and the other tools deliberately leave out: the concept (Person, Organization, Resource, Membership, Asset, Event, Claim, Provenance) each CEDS class belongs to, and the concepts the guide lists for each CEDS date property that records an Event."
+}

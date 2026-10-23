@@ -115,6 +115,9 @@ forgeCeds.forge({ sourcePath: CEDS_SOURCE_PATH, skipEmbedding: true }, (forgeErr
 				harness.equal('400 classes take a primary concept', edgesOfType(graph, 'HAS_PRIMARY_CONCEPT').length, 400);
 				harness.equal('191 take a secondary concept', edgesOfType(graph, 'HAS_SECONDARY_CONCEPT').length, 191);
 				harness.equal('204 event-date properties, 418 concept edges', new Set(edgesOfType(graph, 'HAS_EVENT_DATE_CONCEPT').map((oneEdge) => oneEdge.fromRef.id)).size * 1000 + edgesOfType(graph, 'HAS_EVENT_DATE_CONCEPT').length, 204418);
+				// ⟪zeroBacklog A2-4, census row 11 (R6-3)⟫ the layer root carries how to read the layer, from its data file, for the DME to read
+				harness.equal('the guide layer root carries layerUsageTips, its data file\'s text', rootOf(graph).layerUsageTips, require('../layers/guide/lib/guideLayerUsageTips.json').layerUsageTips);
+				harness.ok('and that text is a non-empty sentence about the Conceptual Model', /^The Conceptual Model of the CEDS Ontology Guide V14/.test(String(rootOf(graph).layerUsageTips)), String(rootOf(graph).layerUsageTips).slice(0, 80));
 				harness.equal('the guide\'s wrapped names come out whole (the by-eye check)', edgesOfType(graph, 'HAS_EVENT_DATE_CONCEPT').find((oneEdge) => oneEdge.fromRef.id.endsWith('/P002090')).properties.guidePropertyName, 'Accessible Format Issued Begin Date');
 			},
 			twinList: [

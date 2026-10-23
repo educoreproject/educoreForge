@@ -20,6 +20,8 @@ const path = require('path');
 const TREE_LIB = path.join(__dirname, '..', '..', '..', '..', 'lib');
 const vocabulary = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 const { readGuideTables, NO_SECONDARY_CONCEPT_TEXT, CONCEPT_LIST_SEPARATOR } = require('./lib/guideTables');
+// ⟪zeroBacklog A2-4, census row 11 (R6-3)⟫ how to read this layer, as DATA (the file says where its words come from); a layer-root property
+const { layerUsageTips: GUIDE_LAYER_USAGE_TIPS } = require('./lib/guideLayerUsageTips.json');
 
 const { DME_ROLES, EDGE_TYPES, PROVENANCE_TIER } = vocabulary;
 const GUIDE_VERSION = '14';
@@ -124,6 +126,7 @@ const produceLayer = ({ sourceFilePathByName, baseIndex, layerIdentity }, callba
 			edges: edgeList,
 			rootPropertyByName: {
 				guideVersion: GUIDE_VERSION,
+				layerUsageTips: GUIDE_LAYER_USAGE_TIPS,
 				conceptCount: guideTables.conceptRowList.length,
 				classConceptRowCount: guideTables.classRowList.length,
 				eventDatePropertyCount: guideTables.dateRowList.length,
