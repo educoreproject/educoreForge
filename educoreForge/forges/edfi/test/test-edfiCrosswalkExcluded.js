@@ -132,7 +132,7 @@ const judgeDeclared = ({ forgeResult }) => {
 	return [
 		{
 			label: 'DECLARED: mappingInstruction names no CEDS anchor and no implied target',
-			pass: Object.keys(mappingInstruction.hubAnchorPropertyNameByHub).length === 0 && Object.keys(mappingInstruction.hubOptionAnchorPropertyNameByHub).length === 0 && mappingInstruction.includeInImplied === false && mappingInstruction.impliedTargets.length === 0,
+			pass: Object.keys(mappingInstruction.hubAnchorPropertyNameByHub).length === 0 && Object.keys(mappingInstruction.hubOptionAnchorPropertyNameByHub).length === 0,
 			detail: JSON.stringify(mappingInstruction),
 		},
 		{ label: 'DECLARED: no crosswalk no-mapping sentinel is declared', pass: edfiForgeDeclaration.hubAnchorAbsentSentinelList.length === 0, detail: JSON.stringify(edfiForgeDeclaration.hubAnchorAbsentSentinelList) },

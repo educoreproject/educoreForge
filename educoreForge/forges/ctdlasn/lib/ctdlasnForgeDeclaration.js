@@ -32,8 +32,6 @@ const ctdlasnForgeDeclaration = Object.freeze({
 		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
-		includeInImplied: false,
-		impliedTargets: Object.freeze([]),
 	}),
 	nonEmbeddableRoleList: Object.freeze([]),
 	// ruling Q3: no DmeEmbedText nodes in P1/P2 (the oracle's node set holds); docketed for the hub phases

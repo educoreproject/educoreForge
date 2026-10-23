@@ -37,16 +37,14 @@ const sif260928ForgeDeclaration = Object.freeze({
 	rootLabel: 'Sif260928Root',
 	parserVersion: '1',
 	// EMPTY: this forge makes no mapping claim (ruled, A1a). The incumbent declares 'CEDS ID' as an
-	// anchor with impliedTargets ['CEDS']; that is an instruction to downstream mapping machinery,
-	// and that column is also the yardstick the bridge must never see. Six keys in the framework's
+	// anchor naming CEDS as its implied target; that is an instruction to downstream mapping machinery,
+	// and that column is also the yardstick the bridge must never see. Four keys in the framework's
 	// order: the stringified object is a block byte.
 	mappingInstruction: Object.freeze({
 		hubAnchorPropertyNameByHub: Object.freeze({}),
 		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
-		includeInImplied: false,
-		impliedTargets: Object.freeze([]),
 	}),
 	// RULED (EBONY_DREAM, review #9): Field (DmeInstance since campaign P3) and Container (DmeSupport) and the codesets
 	// (DmeOptionSet, DmeOptionValue) get no node vector. Only Objects (159) and Questions (5,018 by

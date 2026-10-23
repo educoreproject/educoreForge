@@ -645,8 +645,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 				const pass =
 					declarationError === null &&
 					subject.forgeDeclaration.compatibilityDeclarationList.length === 0 &&
-					Object.keys(mappingInstruction.hubAnchorPropertyNameByHub).length === 0 &&
-					mappingInstruction.impliedTargets.length === 0;
+					Object.keys(mappingInstruction.hubAnchorPropertyNameByHub).length === 0;
 				callback('', { pass, detail: declarationError ? declarationError.message.slice(0, 400) : `accepted; compatibilityDeclarationList ${JSON.stringify(subject.forgeDeclaration.compatibilityDeclarationList)}` });
 			},
 		},
@@ -1069,7 +1068,7 @@ const runReleaseGateSuite = ({ harness, bundleDirPath }, whenDone) => {
 					const hubNamedNode = forged.nodes.find((oneNode) => Object.keys(oneNode.properties).some((onePropertyName) => bridgingPropertyNameRe.test(onePropertyName)));
 					const foreignEdge = forged.edges.find((oneEdge) => oneEdge.fromRef.source !== subject.forgeDeclaration.standardSource || oneEdge.toRef.source !== subject.forgeDeclaration.standardSource);
 					const mappingInstruction = subject.forgeDeclaration.mappingInstruction;
-					const pass = hubNamedNode === undefined && foreignEdge === undefined && Object.keys(mappingInstruction.hubAnchorPropertyNameByHub).length === 0 && mappingInstruction.impliedTargets.length === 0;
+					const pass = hubNamedNode === undefined && foreignEdge === undefined && Object.keys(mappingInstruction.hubAnchorPropertyNameByHub).length === 0;
 					callback('', { pass, detail: `hub-named property (${bridgingPropertyNameRe.source}) on ${hubNamedNode ? hubNamedNode.stableId : 'no node'}; cross-standard edge ${foreignEdge ? foreignEdge.type : 'none'}` });
 				});
 			},

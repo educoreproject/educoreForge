@@ -81,14 +81,12 @@ const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName 
 		rootStableId: releaseDeclarationData.rootStableId,
 		rootLabel: releaseDeclarationData.rootLabel,
 		parserVersion: '1',
-		// six keys in the framework's order: the stringified object is a block byte
+		// four keys in the framework's order: the stringified object is a block byte
 		mappingInstruction: Object.freeze({
 			hubAnchorPropertyNameByHub: Object.freeze({}),
 			hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 			crosswalkPrefix: Object.freeze([]),
 			crosswalkResolveProperty: stableUriPropertyName,
-			includeInImplied: false,
-			impliedTargets: Object.freeze([]),
 		}),
 		nonEmbeddableRoleList: Object.freeze([DME_ROLES.SUPPORT, DME_ROLES.INSTANCE, DME_ROLES.OPTION_SET, DME_ROLES.OPTION_VALUE]),
 		embedTextDeclaration: Object.freeze({

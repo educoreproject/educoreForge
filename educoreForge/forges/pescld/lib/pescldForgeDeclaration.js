@@ -15,7 +15,7 @@ const { MAPPING_INSTRUCTION_KEY_ORDER } = require(path.join(__dirname, '..', '..
 
 const STABLE_URI_PROPERTY_NAME = 'pescldStableId';
 const ROOT_STABLE_ID = 'pescld:root';
-const EMPTY_MAPPING_INSTRUCTION_VALUE_LIST = Object.freeze([Object.freeze({}), Object.freeze({}), Object.freeze([]), STABLE_URI_PROPERTY_NAME, false, Object.freeze([])]);
+const EMPTY_MAPPING_INSTRUCTION_VALUE_LIST = Object.freeze([Object.freeze({}), Object.freeze({}), Object.freeze([]), STABLE_URI_PROPERTY_NAME]);
 // a shape (pescld:shape/<shapeID>), a TAP row (pescld:shape/<shapeID>/<propertyID>), a picklist (pescld:picklist/<shapeID>/<propertyID>)
 // and its values (…/<value>); a CURIE's local part and a bare literal value admit letters, digits, _ . -. The framework mints the
 // embed-text nodes under the root (<root>/embedText/<sha256>, lib/forge-framework/embedTextDerivation.js).
@@ -42,9 +42,9 @@ const pescldForgeDeclaration = Object.freeze({
 	rootLabel: 'PescLdRoot',
 	parserVersion: '1',
 	// EMPTY: the forge makes no mapping claim. Built from the framework contract's own ordered name list (the stringified object
-	// is a block byte, so order matters) because two of the six names still carry a hub's name (deferred re-key D1,
-	// DEFERRED-rekey-102126.md) and a new bundle writes no hub literal (TQ 2026-10-21). The values, by position: two anchor-name
-	// lists, crosswalkPrefix, crosswalkResolveProperty, includeInImplied, impliedTargets.
+	// is a block byte, so order matters), so the bundle restates no key name (the two anchor keys became hub-neutral per-hub maps
+	// and the two implied keys were retired in zeroBacklog A2). The values, by position: two anchor-name maps, crosswalkPrefix,
+	// crosswalkResolveProperty.
 	mappingInstruction: Object.freeze(MAPPING_INSTRUCTION_KEY_ORDER.reduce(
 		(instruction, instructionPropertyName, propertyIndex) => ({ ...instruction, [instructionPropertyName]: EMPTY_MAPPING_INSTRUCTION_VALUE_LIST[propertyIndex] }),
 		{},

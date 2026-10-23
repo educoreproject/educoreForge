@@ -98,8 +98,6 @@ const pescForgeDeclaration = Object.freeze({
 		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
-		includeInImplied: false,
-		impliedTargets: Object.freeze([]),
 	}),
 	// EMPTY, and MEASURED rather than assumed. The bespoke embedNodes (forgePesc260805.js:634-637)
 	// selects `nodes` with NO role filter whatever — every one of the 42,372 nodes is embedded,

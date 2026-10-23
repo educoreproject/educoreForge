@@ -72,7 +72,7 @@ THE FLOW, IN PROSE
 
      1. The recipe card (forgeDeclaration). A frozen object of plain facts: which standard this
         is, what its identifiers must look like, what its root node is called, which version of
-        the parser this is, the six-key mapping instruction, and the list of declared quirks (Ed-Fi:
+        the parser this is, the four-key mapping instruction, and the list of declared quirks (Ed-Fi:
         E6 and E8). No logic anywhere in it.
 
      2. The cook (hooks). Four entries:
@@ -130,7 +130,7 @@ THE FLOW, AS PSEUDO-CODE
        standardKey: 'edfi',  standardSource: 'EdFi',  standardDisplayName: 'Ed-Fi Data Standard',
        stableIdPattern: { pattern: '^edfi:[A-Za-z]+(/.+)?$', trimmed: true },
        rootStableId: 'edfi:root',  rootLabel: 'EdfiRoot',  parserVersion: '2',
-       mappingInstruction: { ...six keys, fixed order... },
+       mappingInstruction: { ...four keys, fixed order... },
        compatibilityDeclarationList: [ {E6}, {E8, logicalSourceFileNameList:[...]} ],
      }
 
@@ -216,7 +216,7 @@ WHAT A FORGE SUPPLIES
      The declaration (lib/<std>ForgeDeclaration.js) is a frozen object: standardKey, standardSource
      (equal to the descriptor's standardName), standardDisplayName, stableUriPropertyName,
      stableIdPattern ({ pattern, trimmed } -- the real predicate, as data), rootStableIdFrom and
-     rootStableId, rootLabel, parserVersion, mappingInstruction (six keys, fixed order -- the JSON
+     rootStableId, rootLabel, parserVersion, mappingInstruction (four keys, fixed order -- the JSON
      string is a byte of the block), nonEmbeddableRoleList, hubAnchorAbsentSentinelList,
      additionalSourceInputList, compatibilityDeclarationList. Ed-Fi's is 71 lines.
 

@@ -279,11 +279,11 @@ from the framework tomorrow:
   `parserVersion`, `coreVersion`. Never `ingestedAt` — no clock. If your standard has no source URL,
   OMIT `sourceUrl` rather than stamping `''` (absent is absent). The root's `description` is
   source-stated or absent, never a template like `"<Display> — N objects"`. `mappingInstruction` is
-  a JSON-stringified object with exactly six keys, all present even when empty:
-  `cedsOriginalAnchorPropertyName` (your node property that holds the raw CEDS anchor, e.g.
-  `cedsId`), `cedsOptionOriginalAnchorPropertyName` (same for option values), `crosswalkPrefix`,
-  `crosswalkResolveProperty`, `includeInImplied` (boolean), `impliedTargets` (list) — copy the shape
-  from `forges/sif/forgeSif.js:119-126` and fill in your values; the bridge reads it. Note the root's
+  a JSON-stringified object with exactly four keys, all present even when empty:
+  `hubAnchorPropertyNameByHub` (a map from a hub token to your node properties that hold that hub's raw
+  anchors; `{}` when you carry none, which is every bundle today), `hubOptionAnchorPropertyNameByHub` (same
+  for option values), `crosswalkPrefix`, `crosswalkResolveProperty` — copy the shape from any
+  `forges/<bundle>/lib/*ForgeDeclaration.js`. Nothing reads it at run time; it is a root byte. Note the root's
   `standardName` PROPERTY today carries the DISPLAY string (`STANDARD_DISPLAY`), not the descriptor's
   short `standardName` — that is forge-declared data (Profile §3.1). **[framework]** will build the
   root from your declaration object.

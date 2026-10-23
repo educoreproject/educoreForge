@@ -111,7 +111,7 @@ conjunctList.push(
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'mappingInstruction_permuted',
-		title: 'a mappingInstruction with the six keys in the WRONG order is refused naming the position',
+		title: 'a mappingInstruction with the four keys in the WRONG order is refused naming the position',
 		mode: 'inject',
 		shape: (scenario) => {
 			const { hubAnchorPropertyNameByHub, ...rest } = scenario.forgeDeclaration.mappingInstruction;
@@ -122,34 +122,26 @@ conjunctList.push(
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'mappingInstruction_missingKey',
-		title: 'a mappingInstruction missing a key is refused naming the six',
+		title: 'a mappingInstruction missing a key is refused naming the four',
 		mode: 'inject',
-		shape: (scenario) => { delete scenario.forgeDeclaration.mappingInstruction.impliedTargets; },
-		regex: /'mappingInstruction' must carry exactly the six keys/,
+		shape: (scenario) => { delete scenario.forgeDeclaration.mappingInstruction.crosswalkPrefix; },
+		regex: /'mappingInstruction' must carry exactly the four keys/,
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
 	refusalCase({
 		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'mappingInstruction_extraKey',
-		title: 'a mappingInstruction with a seventh key is refused',
+		title: 'a mappingInstruction with a fifth key is refused',
 		mode: 'inject',
 		shape: (scenario) => { scenario.forgeDeclaration.mappingInstruction.seventh = true; },
-		regex: /'mappingInstruction' must carry exactly the six keys/,
+		regex: /'mappingInstruction' must carry exactly the four keys/,
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
 	refusalCase({
-		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'mappingInstruction_namesOwnFamily',
-		title: "⟪campaign P3, W-C-16 / G14 b1⟫ a mappingInstruction whose impliedTargets names the forge's OWN standardFamily (the hub naming itself) is refused",
+		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'mappingInstruction_anchorMapMalformed',
+		title: '⟪zeroBacklog A2-1⟫ an anchor map keyed by something that is not a lowercase hub token is refused naming the map and the key',
 		mode: 'inject',
-		shape: (scenario) => { scenario.forgeDeclaration.mappingInstruction.includeInImplied = true; scenario.forgeDeclaration.mappingInstruction.impliedTargets = ['Toy']; },
-		regex: /'mappingInstruction' impliedTargets names the forge's own standardFamily 'Toy'/,
-		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
-	}),
-	refusalCase({
-		registry: twinRegistry, gateId: GATE_ID, conjunctId: 'mappingInstruction_impliedDisagrees',
-		title: '⟪campaign P3, W-C-16⟫ includeInImplied true with NO impliedTargets is refused as self-inconsistent',
-		mode: 'inject',
-		shape: (scenario) => { scenario.forgeDeclaration.mappingInstruction.includeInImplied = true; },
-		regex: /'mappingInstruction' includeInImplied true disagrees with impliedTargets \[\]/,
+		shape: (scenario) => { scenario.forgeDeclaration.mappingInstruction.hubAnchorPropertyNameByHub = { 'Not A Token': ['someProperty'] }; },
+		regex: /'mappingInstruction' hubAnchorPropertyNameByHub\['Not A Token'\] must be keyed by a lowercase hub token/,
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
 	refusalCase({
@@ -259,8 +251,10 @@ runGateFamily(
 		twinRegistry,
 		makeSubject: toyScenario.makeScenario,
 		cloneSubject: toyScenario.cloneScenario,
-		expectedConjunctCount: requiredKeyList.length + 19,
-		expectedTwinCount: requiredKeyList.length + 19,
+		// ⟪zeroBacklog A2⟫ 19 -> 18: the two implied-mapping refusals (namesOwnFamily, impliedDisagrees) left with the keys they
+		// tested (A2-2), and the anchor-map refusal arrived with the per-hub maps (A2-1)
+		expectedConjunctCount: requiredKeyList.length + 18,
+		expectedTwinCount: requiredKeyList.length + 18,
 	},
 	() => harness.report(),
 );

@@ -32,8 +32,6 @@ const toyForgeDeclaration = Object.freeze({
 		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: 'toyStableId',
-		includeInImplied: false,
-		impliedTargets: Object.freeze([]),
 	}),
 	nonEmbeddableRoleList: Object.freeze([DME_ROLES.SUPPORT]),
 	embedTextDeclaration: null,

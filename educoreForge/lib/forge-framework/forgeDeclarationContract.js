@@ -10,7 +10,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // Validation is a TABLE WALK over the contract, never a switch: every property has a `kind`
 // checked by ONE registry of kind-checkers; closed values are enumerated as data; the
-// mappingInstruction's six keys are a frozen ordered list compared by position (the JSON string is
+// mappingInstruction's four keys are a frozen ordered list compared by position (the JSON string is
 // a block byte, SPEC §10 G-JSONKEYS). Refused BY NAME at injectStandardHooks: a missing required
 // property; an UNKNOWN property (a typo must not become a silently ignored declaration); a wrong
 // kind; a closed-value violation; a permuted/missing/extra mappingInstruction key; a role not in
@@ -37,8 +37,12 @@ const {
 	ALLOWANCE_KIND,
 } = require('./migrationAllowanceRegistry');
 
-// the SIX keys of mappingInstruction, in the ONE order the four forges stringify them (Ed-Fi
-// cg:68-75; SIF forgeSif.js:119-126; CEDS forgeCeds.js:88-95; PESC forgePesc260805.js:67-74)
+// the FOUR keys of mappingInstruction, in the ONE order every forge stringifies them (six until zeroBacklog A2; the order of the
+// survivors is the order the original four forges stringified them: Ed-Fi cg:68-75, SIF forgeSif.js:119-126, CEDS
+// forgeCeds.js:88-95, PESC forgePesc260805.js:67-74)
+// ⟪zeroBacklog A2-2, census row 3 (D3); BRONZE_CROWN ruling Q1⟫ includeInImplied and impliedTargets are RETIRED: nothing read
+// them (code fact, this tree and educore), and the one non-empty value, CTDL's impliedTargets ['CEDS'], was a forge naming a hub
+// (FBB-001). Which bridges a graph carries is the recipe's business.
 // ⟪zeroBacklog A2-1, census row 1 (D1 / R5-1)⟫ the two anchor keys are HUB-NEUTRAL: each is a map from a hub token to the source
 // property names that carry that hub's anchors, so a second hub's anchors have a home and the framework names no hub. They were
 // cedsOriginalAnchorPropertyName / cedsOptionOriginalAnchorPropertyName (string lists); every bundle declared them empty, and
@@ -48,8 +52,6 @@ const MAPPING_INSTRUCTION_KEY_ORDER = Object.freeze([
 	'hubOptionAnchorPropertyNameByHub',
 	'crosswalkPrefix',
 	'crosswalkResolveProperty',
-	'includeInImplied',
-	'impliedTargets',
 ]);
 
 const ROOT_STABLE_ID_FROM_VALUES = Object.freeze(['declared', 'sourceUrl']);
@@ -230,17 +232,17 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 	},
 	mappingInstruction: (value, { forgeDeclaration }) => {
 		if (!isPlainObject(value)) {
-			return `must be a six-key object (got ${JSON.stringify(value)})`;
+			return `must be a four-key object (got ${JSON.stringify(value)})`;
 		}
 		const actualOrder = Object.keys(value);
 		if (actualOrder.length !== MAPPING_INSTRUCTION_KEY_ORDER.length) {
-			return `must carry exactly the six keys ${MAPPING_INSTRUCTION_KEY_ORDER.join(', ')} (got ${actualOrder.length}: ${actualOrder.join(', ')})`;
+			return `must carry exactly the four keys ${MAPPING_INSTRUCTION_KEY_ORDER.join(', ')} (got ${actualOrder.length}: ${actualOrder.join(', ')})`;
 		}
 		const firstMismatchIndex = MAPPING_INSTRUCTION_KEY_ORDER.findIndex(
 			(oneName, oneIndex) => actualOrder[oneIndex] !== oneName,
 		);
 		if (firstMismatchIndex !== -1) {
-			return `key ${firstMismatchIndex + 1} must be '${MAPPING_INSTRUCTION_KEY_ORDER[firstMismatchIndex]}' (got '${actualOrder[firstMismatchIndex]}'); the six keys are stringified onto the root IN THIS ORDER and the string is a block byte`;
+			return `key ${firstMismatchIndex + 1} must be '${MAPPING_INSTRUCTION_KEY_ORDER[firstMismatchIndex]}' (got '${actualOrder[firstMismatchIndex]}'); the four keys are stringified onto the root IN THIS ORDER and the string is a block byte`;
 		}
 		// ⟪zeroBacklog A2-1⟫ each anchor map: a plain object from a lowercase hub token to a list of non-empty property names
 		const anchorMapFault = ['hubAnchorPropertyNameByHub', 'hubOptionAnchorPropertyNameByHub']
@@ -257,17 +259,6 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 			.find((oneFault) => oneFault !== '');
 		if (anchorMapFault) {
 			return anchorMapFault;
-		}
-		// ⟪campaign P3, W-C-16 / G14 b1⟫ an implied-mapping hint is consistent with itself and never points a standard at
-		// its own family (CEDS declared includeInImplied true with impliedTargets ['CEDS']: the hub naming itself)
-		if (typeof value.includeInImplied !== 'boolean' || !Array.isArray(value.impliedTargets)) {
-			return `includeInImplied must be a boolean and impliedTargets a list (got ${JSON.stringify(value.includeInImplied)}, ${JSON.stringify(value.impliedTargets)})`;
-		}
-		if (value.includeInImplied !== (value.impliedTargets.length > 0)) {
-			return `includeInImplied ${value.includeInImplied} disagrees with impliedTargets ${JSON.stringify(value.impliedTargets)}: true requires at least one target, false requires none`;
-		}
-		if (value.impliedTargets.indexOf(forgeDeclaration.standardFamily) !== -1) {
-			return `impliedTargets names the forge's own standardFamily '${forgeDeclaration.standardFamily}'; a standard is never an implied mapping target of itself (FBB-001: a forge does no mapping)`;
 		}
 		return '';
 	},

@@ -47,15 +47,13 @@ const edfiForgeDeclaration = Object.freeze({
 	rootStableId: 'edfi:root',
 	rootLabel: 'EdfiRoot',
 	parserVersion: '2',
-	// EMPTY: no mapping claim (the crosswalk is retired, see the header); six keys in THIS order — the JSON
+	// EMPTY: no mapping claim (the crosswalk is retired, see the header); four keys in THIS order — the JSON
 	// string is a byte
 	mappingInstruction: Object.freeze({
 		hubAnchorPropertyNameByHub: Object.freeze({}),
 		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
-		includeInImplied: false,
-		impliedTargets: Object.freeze([]),
 	}),
 	nonEmbeddableRoleList: Object.freeze([]),
 	// embed-text lists — TQ decision 1 (PLAN-forgeEmbedText-091426 §8.2), label verbatim (R-ET-15). List

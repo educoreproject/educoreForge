@@ -1118,9 +1118,9 @@ none invented. `[code fact]` `build.js:1473-1490`:
 - The root's `description` MUST be source-stated or absent, never template-built. `[code fact]` Today
   three roots carry a template string (`forgeCeds.js:475`, `forgeSif.js:380`, `forgePesc260805.js:190`),
   which is the placeholder class §7.1 forbids (§13.1).
-- `mappingInstruction` is a six-key object `{ cedsOriginalAnchorPropertyName,
-  cedsOptionOriginalAnchorPropertyName, crosswalkPrefix, crosswalkResolveProperty, includeInImplied,
-  impliedTargets }`, JSON-stringified onto the root. `[code fact]` `forgeCeds.js:88-95`,
+- `mappingInstruction` is (since zeroBacklog A2) a four-key object `{ hubAnchorPropertyNameByHub,
+  hubOptionAnchorPropertyNameByHub, crosswalkPrefix, crosswalkResolveProperty }`, JSON-stringified onto the root
+  (the code facts below describe the original six-key shape). `[code fact]` `forgeCeds.js:88-95`,
   `forgeSif.js:119-126`, `forgeEdfiContractGraph.js:68-75`, `forgePesc260805.js:67-74`. `[design]`
   Framework schema; the forge supplies values (H1).
 - `[design]` The framework SHOULD build the root node itself from the H1 declared object and forbid a

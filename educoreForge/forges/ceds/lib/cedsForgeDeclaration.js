@@ -78,16 +78,13 @@ const cedsForgeDeclaration = Object.freeze({
 	rootStableIdFrom: 'sourceUrl',
 	rootLabel: 'CedsOntology', // the root's per-standard label (:468)
 	parserVersion: '1', // the root's parserVersion byte (:494) — CEDS's is '1', not Ed-Fi's '2'
-	// DECLARED present-but-unpopulated for CEDS (DECISIONS §12; forgeCeds.js:88-95). Six keys in
+	// DECLARED present-but-unpopulated for CEDS (DECISIONS §12; forgeCeds.js:88-95). Four keys in
 	// THIS order — the JSON string is a block byte (G-JSONKEYS).
 	mappingInstruction: Object.freeze({
 		hubAnchorPropertyNameByHub: Object.freeze({}),
 		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
-		// G14 b1 (TQ, 2026-10-06): false — a forge does no mapping (FBB-001), so the hub names no implied target
-		includeInImplied: false,
-		impliedTargets: Object.freeze([]),
 	}),
 	// the three roles forgeCeds.js:829-833 excluded from the embedding pass. They carry NO
 	// searchText at all, which the kit reproduces by omitting it for a non-embeddable role. The

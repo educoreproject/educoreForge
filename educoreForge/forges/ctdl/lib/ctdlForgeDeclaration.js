@@ -37,8 +37,6 @@ const ctdlForgeDeclaration = Object.freeze({
 		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
-		includeInImplied: true,
-		impliedTargets: Object.freeze(['CEDS']),
 	}),
 	nonEmbeddableRoleList: Object.freeze([]),
 	// ⟪zeroBacklog B1, R3-F1⟫ the CTDL hub's search population for embedTextVote-v1 (R-BR-9: the hub's texts of classes,
