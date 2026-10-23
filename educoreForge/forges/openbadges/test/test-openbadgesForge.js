@@ -107,6 +107,8 @@ taskList.push((args, next) => forgeSnapshot((forgeError, forgeResult) => {
 	harness.equal('AchievementCredential.issuer: oneOf branch 1 references Profile', `${issuerEdge.properties.referenceConstruct}|${issuerEdge.properties.locator}|${issuerEdge.toRef.id}`, 'oneOf|/oneOf/1/$ref|openbadges:Profile');
 	harness.equal('Achievement.alignment: items $ref to Alignment; xSrcpropPid names the value type', `${forgeResult.edges.find((oneEdge) => oneEdge.type === 'REFERENCES' && oneEdge.fromRef.id === 'openbadges:Achievement/alignment').properties.locator}|${nodeById['openbadges:Achievement/alignment'].properties.xSrcpropPid}`, '/items/$ref|org.1edtech.ob.v3p0.alignment.class');
 	harness.equal('@context: its items oneOf branches carried (two string branches, no $ref)', JSON.parse(nodeById['openbadges:AchievementCredential/@context'].properties.compositionBranches).map((oneBranch) => oneBranch.locator).join(','), '/items/oneOf/0,/items/oneOf/1');
+	harness.equal('a bare $ref property names its schema as text (Achievement.creator -> Profile; the judge sees it)', nodeById['openbadges:Achievement/creator'].properties.referencedSchemaNames, 'Profile');
+	harness.equal('46 properties carry referencedSchemaNames (every property with a REFERENCES edge)', forgeResult.nodes.filter((oneNode) => oneNode.properties.referencedSchemaNames !== undefined).length, new Set(forgeResult.edges.filter((oneEdge) => oneEdge.type === 'REFERENCES').map((oneEdge) => oneEdge.fromRef.id)).size);
 	const rootNode = nodeById['openbadges:root'];
 	harness.equal('the root: version, publishedVersion, versionSource', `${rootNode.properties.version}|${rootNode.properties.publishedVersion}|${rootNode.properties.versionSource}`, EXPECTED.rootVersionText);
 	harness.equal('the root: description from info.description; sourceUrl from standardSourceLocation', `${rootNode.properties.description}|${rootNode.properties.sourceUrl}`, 'Open Badges Data Model 3.0|https://purl.imsglobal.org/spec/ob/v3p0/schema/openapi/ob_v3p0_oas.json');
@@ -129,7 +131,8 @@ taskList.push((args, next) => validateDouble({ forgeResult: args.forgeResult, ca
 	next('', args);
 }));
 const ROUND_TRIP_TWIN_LIST = [
-	{ twinName: 'issuerProfileEdgeDropped', expectation: 'lost', perturb: (graph) => ({ ...graph, edges: graph.edges.filter((oneEdge) => !(oneEdge.type === 'REFERENCES' && oneEdge.fromRef.id === 'openbadges:AchievementCredential/issuer')) }) },
+	// a dropped REFERENCES edge disagrees with the property's derived referencedSchemaNames: the emitter refuses it by name
+	{ twinName: 'issuerProfileEdgeDropped', expectation: 'fault', faultPattern: /AchievementCredential\/issuer' carries referencedSchemaNames "Profile" but its REFERENCES edges reach ""/, perturb: (graph) => ({ ...graph, edges: graph.edges.filter((oneEdge) => !(oneEdge.type === 'REFERENCES' && oneEdge.fromRef.id === 'openbadges:AchievementCredential/issuer')) }) },
 	{ twinName: 'achievementTypeValueDropped', expectation: 'lost', perturb: (graph) => ({ ...graph, edges: graph.edges.filter((oneEdge) => oneEdge.toRef.id !== 'openbadges:Achievement/achievementType/enum/Badge') }) },
 	{ twinName: 'descriptionAltered', expectation: 'both', perturb: (graph) => ({ ...graph, nodes: graph.nodes.map((oneNode) => (oneNode.stableId === 'openbadges:Profile' ? { ...oneNode, properties: { ...oneNode.properties, description: `${oneNode.properties.description} (edited)` } } : oneNode)) }) },
 ];
@@ -137,7 +140,7 @@ ROUND_TRIP_TWIN_LIST.forEach((oneTwin) => taskList.push((args, next) => validate
 	if (oneTwin === ROUND_TRIP_TWIN_LIST[0]) {
 		harness.section('SECTION 3b — round-trip twins on the real graph, each observed RED');
 	}
-	const isRed = !validateError && verdict.roundTripClean === false
+	const isRed = oneTwin.expectation === 'fault' ? oneTwin.faultPattern.test(`${validateError}`) : !validateError && verdict.roundTripClean === false
 		&& (oneTwin.expectation === 'lost' ? verdict.lostTotal >= 1 : true)
 		&& (oneTwin.expectation === 'both' ? verdict.lostTotal >= 1 && verdict.inventedTotal >= 1 : true);
 	harness.ok(`RED-OBSERVED: ${oneTwin.twinName} → lost ${verdict && verdict.lostTotal}, invented ${verdict && verdict.inventedTotal}`, isRed, validateError);
