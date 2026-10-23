@@ -56,8 +56,9 @@ const EXPECTATION_LIST = Object.freeze([
 		sourceFileName: 'ctdl-schema.json',
 		sourceSha256: 'bf5dd4b5c975c898fc0d67f173a91c340b263fbd4f928c6eff17e0ea298158b9',
 		rootVersionText: 'Release 20260927|Release 20260927|provenance-file',
-		nodeCountByRole: { DmeStandardRoot: 1, DmeClass: 137, DmeProperty: 397, DmeOptionSet: 36, DmeOptionValue: 457 },
-		edgeCountByType: { HAS_CLASS: 137, SUBCLASS_OF: 82, HAS_PROPERTY: 7470, HAS_OPTION_SET: 43, REFERENCES: 2528, SUBPROPERTY_OF: 40, INVERSE_OF: 14, HAS_VALUE: 457, BROADER_CONCEPT: 98, TOP_CONCEPT_OF: 359 },
+		// ⟪zeroBacklog B1⟫ + the embed texts: 1,102 DmeEmbedText / 1,140 EMBEDS_TEXT_OF, counted independently of the derivation (DEVLOG-B)
+		nodeCountByRole: { DmeStandardRoot: 1, DmeClass: 137, DmeProperty: 397, DmeOptionSet: 36, DmeOptionValue: 457, DmeEmbedText: 1102 },
+		edgeCountByType: { HAS_CLASS: 137, SUBCLASS_OF: 82, HAS_PROPERTY: 7470, HAS_OPTION_SET: 43, REFERENCES: 2528, SUBPROPERTY_OF: 40, INVERSE_OF: 14, HAS_VALUE: 457, BROADER_CONCEPT: 98, TOP_CONCEPT_OF: 359, EMBEDS_TEXT_OF: 1140 },
 		statByName: { crossRefTotal: 872, declaredCorrespondenceTotal: 53, duplicateEdgeSuppressedCount: 2242, unresolvedNativePrefixReferenceCount: 160 },
 		foreignTermEntryCount: 41,
 		twinEdgeType: 'HAS_PROPERTY',
