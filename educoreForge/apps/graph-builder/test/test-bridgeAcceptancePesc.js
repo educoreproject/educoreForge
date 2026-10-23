@@ -1032,7 +1032,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // evidenceRenderer.js 29/11, bridge-framework.js 5/1, bridgePluginContract.js 7/0, hubBridgingContract.js 5/0, bridgeComposer.js 4/0,
 // test-renderedProseIdentifierRule.js 160/0 (new), test-bgDerived.js 2/2; B3 build.js 46/2, test-bridgeComposer.js 13/3, test-bgJudgeSlot.js 7/0,
 // test-bgDecl.js 3/1, test-hubBridging.js 2/1. No PESC plugin, no bridge-maker file. frameworkFingerprint moves (B3's rebridge re-keys).
-const P1_BASELINE_COMMIT = 'postZbB2PescCompose-102226'; // re-anchored by SILENT_TRAIL (zeroBacklog lane B; census REANCHOR-CENSUS-B-102226.md); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (IVORY_TRAIL; zeroBacklog lane C, C3, on main 3657652b; BRONZE_CROWN's grant for the C3 gate commit; rebased over
+// lane B's re-anchor) ═══ P1_BASELINE_COMMIT postZbB2PescCompose-102226 -> zbCPescLdOnBPescCompose-102326, tag cut ON this commit. CENSUS over
+// this gate's paths (numstat from that tag): lib/bridge-framework/test/test-bridgeComposer.js 25/3 (ADDED_SINCE_R3_START, RE_KEYED_SINCE_R3_START,
+// beside lane B's B3 list), test-hubBridging.js 35/4 (each declared plugin's rules = its hub's list filtered by its own pair value), and
+// test/test-bgNosub.js (its seamDiffEmpty re-anchor, this commit). No bridge-framework or bridge-maker source: frameworkFingerprint does not move.
+const P1_BASELINE_COMMIT = 'zbCPescLdOnBPescCompose-102326'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

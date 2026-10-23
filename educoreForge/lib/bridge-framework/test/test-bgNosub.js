@@ -1043,7 +1043,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // ═══ RE-ANCHOR, 2026-10-23 (SILENT_TRAIL; zeroBacklog lane B, on main 768a9477; ruled by BRONZE_CROWN: a lane re-anchors its own seam move) ═══
 // BG-SEAM-UNTOUCHED seamDiffEmpty postZbATermTierSeamDiffEmpty-102226 -> postZbB1SeamDiffEmpty-102226. CENSUS: forges/ctdl/lib/ctdlForgeDeclaration.js 20/4 (B1 embed texts and
 // the embedText stableId form), apps/graph-builder/lib/build.js 46/2 (B3 pair token, as G-SEAM). Path list unchanged.
-const PHASE3_ANCHOR_TAG = 'postZbB1SeamDiffEmpty-102226'; // re-anchored by SILENT_TRAIL (zeroBacklog lane B; census REANCHOR-CENSUS-B-102226.md); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (IVORY_TRAIL; zeroBacklog lane C, C1 + C3, on main 3657652b; BRONZE_CROWN's grant for the C3 gate commit; rebased over
+// lane B's re-anchor) ═══ PHASE3_ANCHOR_TAG postZbB1SeamDiffEmpty-102226 -> zbCPescLdOnBSeamDiffEmpty-102326, tag cut ON this commit. CENSUS over
+// this gate's paths (numstat from that tag): forges/pescld/forgePescld.js 26/0, forges/pescld/lib/pescldForgeDeclaration.js 67/0,
+// forges/pescld/lib/pescldHooks.js 50/0 (C1: a NEW forge bundle's entry, declaration and hooks files; no existing forge, no framework file).
+const PHASE3_ANCHOR_TAG = 'zbCPescLdOnBSeamDiffEmpty-102326'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
