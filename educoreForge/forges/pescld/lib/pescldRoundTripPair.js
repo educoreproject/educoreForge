@@ -17,6 +17,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   row|<shapeID>|<propertyID>|valueConstraint|<declared empty>   a constraint type with an empty constraint cell
 //   row|<shapeID>|<propertyID>|sourceTab|<file>         each TAP file the record appears in (graph: sourceTabs)
 //   row|<shapeID>|<propertyID>|termIri|<iri>            propertyID expanded by namespaces.csv
+//   row|<shapeID>|<propertyID>|dmeTextFromNote|<text>   the row's usage note AGAIN, as the DME text field (graph: description;
+//                                                       ruling BRONZE_CROWN 2026-10-23: the DME reads description only)
 //   resolved|<shapeID>|<propertyID>|<column>|<text>     a column whose records disagree, resolved by the profile's rule
 //   picklistValue|<shapeID>|<propertyID>|<value>        each distinct picklist value (graph: HAS_OPTION_SET then HAS_VALUE)
 //   picklistRepeat|<shapeID>|<propertyID>|<value>|<n>   a value listed n > 1 times in its cell (graph: listRepeatCount)
@@ -54,6 +56,10 @@ const SHAPE_PROPERTY_READING_LIST = Object.freeze([
 	{ propertyName: 'shapeNote', columnName: 'Note', valueKind: 'text' },
 	{ propertyName: 'termIri', columnName: 'termIri', valueKind: 'text' },
 ]);
+// the DME text: this instrument's own statement that the note column is carried a second time, verbatim, as description
+const DME_TEXT_SOURCE_COLUMN_NAME = 'note';
+const DME_TEXT_STATEMENT_COLUMN_NAME = 'dmeTextFromNote';
+
 const ROW_PROPERTY_READING_LIST = Object.freeze([
 	{ propertyName: 'name', columnName: 'propertyLabel', valueKind: 'text' },
 	{ propertyName: 'termCurie', columnName: 'propertyID', valueKind: 'text' },
@@ -67,6 +73,7 @@ const ROW_PROPERTY_READING_LIST = Object.freeze([
 	{ propertyName: 'severity', columnName: 'Severity', valueKind: 'text' },
 	{ propertyName: 'recUsage', columnName: 'Rec Usage', valueKind: 'text' },
 	{ propertyName: 'usageNote', columnName: 'note', valueKind: 'text' },
+	{ propertyName: 'description', columnName: DME_TEXT_STATEMENT_COLUMN_NAME, valueKind: 'text' },
 ]);
 const BOOLEAN_TEXT_BY_VALUE = Object.freeze({ true: 'TRUE', false: 'FALSE' });
 
@@ -164,6 +171,9 @@ const moduleFunction =
 					cellTextListByPairColumn[pairColumnId] = (cellTextListByPairColumn[pairColumnId] || []).concat([cellText]);
 					if (cellText !== '') {
 						statements.set(`${rowPrefix}|${columnName}|${cellText}`, {});
+					}
+					if (cellText !== '' && columnName === DME_TEXT_SOURCE_COLUMN_NAME) {
+						statements.set(`${rowPrefix}|${DME_TEXT_STATEMENT_COLUMN_NAME}|${cellText}`, {});
 					}
 				});
 				const valueShapeText = trimmed({ rawText: cellByColumnName.valueShape, fileName, lineNumber, columnName: 'valueShape' });

@@ -122,6 +122,11 @@ taskList.push((args, next) => forgeSnapshot({ sourcePath: SNAPSHOT_DIR_PATH }, (
 	harness.equal('root standardFamily', rootNode.properties.standardFamily, 'PESCLD');
 	harness.equal('root sourceUrl is about.csv\'s own url', rootNode.properties.sourceUrl, 'https://docs.google.com/spreadsheets/d/18HzS4phUl7olmUEjh0deA3vgVPdque4_iGzK7_zTWLE/');
 	harness.ok('every node is _source PESCLD', forgeResult.nodes.every((oneNode) => oneNode.properties._source === 'PESCLD'));
+	// ⟪zeroBacklog lane C, ruling BRONZE_CROWN 2026-10-23⟫ the DME reads description only: a row's usage note is carried there too,
+	// verbatim (it is not a definition; the root's descriptionSource says so), and nothing else carries description
+	const describedNodeList = forgeResult.nodes.filter((oneNode) => oneNode.properties.description !== undefined);
+	harness.equal('description = the usage note, verbatim, on every row that has one (48, measured; 34 of them pesc: rows) and on no other node', `${describedNodeList.length} ${describedNodeList.filter((oneNode) => oneNode.properties.description !== oneNode.properties.usageNote).length} ${forgeResult.nodes.filter((oneNode) => oneNode.properties.usageNote !== undefined && oneNode.properties.description === undefined).length}`, '48 0 0');
+	harness.ok('the root\'s descriptionSource names the usage note as the description, and says it is not a definition', /usage note/.test(rootNode.properties.descriptionSource) && /not a definition/.test(rootNode.properties.descriptionSource), rootNode.properties.descriptionSource);
 	const termNodeList = forgeResult.nodes.filter((oneNode) => (oneNode.role === 'DmeClass' || oneNode.role === 'DmeProperty') && oneNode.properties.termCurie !== undefined);
 	harness.equal('every shape and row carries a termCurie', termNodeList.length, 39 + 266);
 	harness.ok('every termCurie has its termIri, expanded from namespaces.csv', termNodeList.every((oneNode) => typeof oneNode.properties.termIri === 'string' && oneNode.properties.termIri.endsWith(oneNode.properties.termCurie.split(':')[1])));
@@ -205,6 +210,9 @@ const ROUND_TRIP_TWIN_LIST = [
 	{ twinName: 'a listRepeatCount removed', perturb: changeNode((oneNode) => oneNode.properties.listRepeatCount !== undefined, (target) => { delete target.properties.listRepeatCount; }), expectation: 'lost' },
 	{ twinName: 'a termIri changed', perturb: changeNode((oneNode) => oneNode.role === 'DmeClass', (target) => { target.properties.termIri = `${target.properties.termIri}X`; }), expectation: 'both' },
 	{ twinName: 'a usage note invented on a row that has none', perturb: changeNode((oneNode) => oneNode.role === 'DmeProperty' && oneNode.properties.usageNote === undefined, (target) => { target.properties.usageNote = 'invented'; }), expectation: 'invented' },
+	{ twinName: 'a description invented on a row with no usage note', perturb: changeNode((oneNode) => oneNode.role === 'DmeProperty' && oneNode.properties.usageNote === undefined, (target) => { target.properties.description = 'invented'; }), expectation: 'invented' },
+	{ twinName: 'a description changed', perturb: changeNode((oneNode) => oneNode.properties.description !== undefined, (target) => { target.properties.description = `${target.properties.description} (changed)`; }), expectation: 'both' },
+	{ twinName: 'a description dropped', perturb: changeNode((oneNode) => oneNode.properties.description !== undefined, (target) => { delete target.properties.description; }), expectation: 'lost' },
 	{ twinName: 'a declared emptiness removed', perturb: changeNode((oneNode) => oneNode.properties.valueConstraintDeclaredEmpty === true, (target) => { delete target.properties.valueConstraintDeclaredEmpty; }), expectation: 'lost' },
 ];
 ROUND_TRIP_TWIN_LIST.forEach((oneTwin, twinIndex) => taskList.push((args, next) => {

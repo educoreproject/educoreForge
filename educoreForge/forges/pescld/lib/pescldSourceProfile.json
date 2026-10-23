@@ -35,7 +35,7 @@
 		{ "columnName": "valueClass", "carriage": "crossRefLines" },
 		{ "columnName": "Severity", "carriage": "text", "propertyName": "severity", "isOptionalColumn": true },
 		{ "columnName": "Rec Usage", "carriage": "text", "propertyName": "recUsage" },
-		{ "columnName": "note", "carriage": "text", "propertyName": "usageNote" }
+		{ "columnName": "note", "carriage": "text", "propertyName": "usageNote", "dmeTextPropertyName": "description" }
 	],
 	"constraintCarriageByType": {
 		"": "scalar",
