@@ -81,8 +81,8 @@ const cedsForgeDeclaration = Object.freeze({
 	// DECLARED present-but-unpopulated for CEDS (DECISIONS §12; forgeCeds.js:88-95). Six keys in
 	// THIS order — the JSON string is a block byte (G-JSONKEYS).
 	mappingInstruction: Object.freeze({
-		cedsOriginalAnchorPropertyName: Object.freeze([]),
-		cedsOptionOriginalAnchorPropertyName: Object.freeze([]),
+		hubAnchorPropertyNameByHub: Object.freeze({}),
+		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
 		// G14 b1 (TQ, 2026-10-06): false — a forge does no mapping (FBB-001), so the hub names no implied target

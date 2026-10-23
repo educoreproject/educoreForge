@@ -50,8 +50,8 @@ const edfiForgeDeclaration = Object.freeze({
 	// EMPTY: no mapping claim (the crosswalk is retired, see the header); six keys in THIS order — the JSON
 	// string is a byte
 	mappingInstruction: Object.freeze({
-		cedsOriginalAnchorPropertyName: Object.freeze([]),
-		cedsOptionOriginalAnchorPropertyName: Object.freeze([]),
+		hubAnchorPropertyNameByHub: Object.freeze({}),
+		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
 		includeInImplied: false,

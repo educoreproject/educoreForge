@@ -83,8 +83,8 @@ const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName 
 		parserVersion: '1',
 		// six keys in the framework's order: the stringified object is a block byte
 		mappingInstruction: Object.freeze({
-			cedsOriginalAnchorPropertyName: Object.freeze([]),
-			cedsOptionOriginalAnchorPropertyName: Object.freeze([]),
+			hubAnchorPropertyNameByHub: Object.freeze({}),
+			hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 			crosswalkPrefix: Object.freeze([]),
 			crosswalkResolveProperty: stableUriPropertyName,
 			includeInImplied: false,

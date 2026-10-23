@@ -41,8 +41,8 @@ const sif260928ForgeDeclaration = Object.freeze({
 	// and that column is also the yardstick the bridge must never see. Six keys in the framework's
 	// order: the stringified object is a block byte.
 	mappingInstruction: Object.freeze({
-		cedsOriginalAnchorPropertyName: Object.freeze([]),
-		cedsOptionOriginalAnchorPropertyName: Object.freeze([]),
+		hubAnchorPropertyNameByHub: Object.freeze({}),
+		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
 		includeInImplied: false,

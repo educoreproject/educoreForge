@@ -28,8 +28,8 @@ const ctdlasnForgeDeclaration = Object.freeze({
 	rootLabel: 'CtdlasnRoot',
 	parserVersion: '1',
 	mappingInstruction: Object.freeze({
-		cedsOriginalAnchorPropertyName: Object.freeze([]),
-		cedsOptionOriginalAnchorPropertyName: Object.freeze([]),
+		hubAnchorPropertyNameByHub: Object.freeze({}),
+		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
 		includeInImplied: false,

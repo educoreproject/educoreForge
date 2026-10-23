@@ -391,7 +391,7 @@ pushStep((done) => {
 		harness.equal(
 			'root mappingInstruction makes NO mapping claim (the crosswalk is retired; empty anchors, no implied target)',
 			rootNode.properties.mappingInstruction,
-			'{"cedsOriginalAnchorPropertyName":[],"cedsOptionOriginalAnchorPropertyName":[],"crosswalkPrefix":[],"crosswalkResolveProperty":"edfiStableId","includeInImplied":false,"impliedTargets":[]}',
+			'{"hubAnchorPropertyNameByHub":{},"hubOptionAnchorPropertyNameByHub":{},"crosswalkPrefix":[],"crosswalkResolveProperty":"edfiStableId","includeInImplied":false,"impliedTargets":[]}',
 		);
 
 		// stableId scheme

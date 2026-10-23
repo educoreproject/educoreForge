@@ -114,10 +114,10 @@ conjunctList.push(
 		title: 'a mappingInstruction with the six keys in the WRONG order is refused naming the position',
 		mode: 'inject',
 		shape: (scenario) => {
-			const { cedsOriginalAnchorPropertyName, ...rest } = scenario.forgeDeclaration.mappingInstruction;
-			scenario.forgeDeclaration.mappingInstruction = { ...rest, cedsOriginalAnchorPropertyName };
+			const { hubAnchorPropertyNameByHub, ...rest } = scenario.forgeDeclaration.mappingInstruction;
+			scenario.forgeDeclaration.mappingInstruction = { ...rest, hubAnchorPropertyNameByHub };
 		},
-		regex: /'mappingInstruction' key 1 must be 'cedsOriginalAnchorPropertyName'/,
+		regex: /'mappingInstruction' key 1 must be 'hubAnchorPropertyNameByHub'/,
 		twinName: 'disableKindCheck', fileName: CONTRACT_FILE, find: KIND_CHECK_FIND, replace: KIND_CHECK_REPLACE,
 	}),
 	refusalCase({

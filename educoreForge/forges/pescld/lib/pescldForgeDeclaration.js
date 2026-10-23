@@ -15,7 +15,7 @@ const { MAPPING_INSTRUCTION_KEY_ORDER } = require(path.join(__dirname, '..', '..
 
 const STABLE_URI_PROPERTY_NAME = 'pescldStableId';
 const ROOT_STABLE_ID = 'pescld:root';
-const EMPTY_MAPPING_INSTRUCTION_VALUE_LIST = Object.freeze([Object.freeze([]), Object.freeze([]), Object.freeze([]), STABLE_URI_PROPERTY_NAME, false, Object.freeze([])]);
+const EMPTY_MAPPING_INSTRUCTION_VALUE_LIST = Object.freeze([Object.freeze({}), Object.freeze({}), Object.freeze([]), STABLE_URI_PROPERTY_NAME, false, Object.freeze([])]);
 // a shape (pescld:shape/<shapeID>), a TAP row (pescld:shape/<shapeID>/<propertyID>), a picklist (pescld:picklist/<shapeID>/<propertyID>)
 // and its values (…/<value>); a CURIE's local part and a bare literal value admit letters, digits, _ . -. The framework mints the
 // embed-text nodes under the root (<root>/embedText/<sha256>, lib/forge-framework/embedTextDerivation.js).

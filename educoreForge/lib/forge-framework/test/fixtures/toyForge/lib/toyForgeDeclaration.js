@@ -28,8 +28,8 @@ const toyForgeDeclaration = Object.freeze({
 	rootLabel: 'ToyRoot',
 	parserVersion: '1',
 	mappingInstruction: Object.freeze({
-		cedsOriginalAnchorPropertyName: Object.freeze([]),
-		cedsOptionOriginalAnchorPropertyName: Object.freeze([]),
+		hubAnchorPropertyNameByHub: Object.freeze({}),
+		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: 'toyStableId',
 		includeInImplied: false,

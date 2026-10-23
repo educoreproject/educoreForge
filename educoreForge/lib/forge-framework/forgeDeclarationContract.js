@@ -39,9 +39,13 @@ const {
 
 // the SIX keys of mappingInstruction, in the ONE order the four forges stringify them (Ed-Fi
 // cg:68-75; SIF forgeSif.js:119-126; CEDS forgeCeds.js:88-95; PESC forgePesc260805.js:67-74)
+// ⟪zeroBacklog A2-1, census row 1 (D1 / R5-1)⟫ the two anchor keys are HUB-NEUTRAL: each is a map from a hub token to the source
+// property names that carry that hub's anchors, so a second hub's anchors have a home and the framework names no hub. They were
+// cedsOriginalAnchorPropertyName / cedsOptionOriginalAnchorPropertyName (string lists); every bundle declared them empty, and
+// every bundle declares the maps empty ({}). The rename moves every standard base block (the root's mappingInstruction string).
 const MAPPING_INSTRUCTION_KEY_ORDER = Object.freeze([
-	'cedsOriginalAnchorPropertyName',
-	'cedsOptionOriginalAnchorPropertyName',
+	'hubAnchorPropertyNameByHub',
+	'hubOptionAnchorPropertyNameByHub',
 	'crosswalkPrefix',
 	'crosswalkResolveProperty',
 	'includeInImplied',
@@ -237,6 +241,22 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 		);
 		if (firstMismatchIndex !== -1) {
 			return `key ${firstMismatchIndex + 1} must be '${MAPPING_INSTRUCTION_KEY_ORDER[firstMismatchIndex]}' (got '${actualOrder[firstMismatchIndex]}'); the six keys are stringified onto the root IN THIS ORDER and the string is a block byte`;
+		}
+		// ⟪zeroBacklog A2-1⟫ each anchor map: a plain object from a lowercase hub token to a list of non-empty property names
+		const anchorMapFault = ['hubAnchorPropertyNameByHub', 'hubOptionAnchorPropertyNameByHub']
+			.map((anchorMapName) => {
+				const anchorMap = value[anchorMapName];
+				if (!isPlainObject(anchorMap)) {
+					return `${anchorMapName} must be a map from a hub token to a list of property names (got ${JSON.stringify(anchorMap)})`;
+				}
+				const badHubToken = Object.keys(anchorMap).find(
+					(hubToken) => !/^[a-z][a-z0-9]*$/.test(hubToken) || !Array.isArray(anchorMap[hubToken]) || anchorMap[hubToken].some((propertyName) => typeof propertyName !== 'string' || propertyName === ''),
+				);
+				return badHubToken === undefined ? '' : `${anchorMapName}['${badHubToken}'] must be keyed by a lowercase hub token and list non-empty property names (got ${JSON.stringify(anchorMap[badHubToken])})`;
+			})
+			.find((oneFault) => oneFault !== '');
+		if (anchorMapFault) {
+			return anchorMapFault;
 		}
 		// ⟪campaign P3, W-C-16 / G14 b1⟫ an implied-mapping hint is consistent with itself and never points a standard at
 		// its own family (CEDS declared includeInImplied true with impliedTargets ['CEDS']: the hub naming itself)

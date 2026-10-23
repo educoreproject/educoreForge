@@ -1,25 +1,84 @@
 {
-  "_comment": "G-JSONKEYS frozen expectations (SPEC §10.1): today's literal-order JSON strings for each forge's mappingInstruction (code facts: cg:68-75, forgeSif.js:119-126, forgeCeds.js:88-95, forgePesc260805.js:67-74) and Ed-Fi's crossRefs entry shape (cg:955-959, forgeCeds.js:116-123, forgeSif.js:443-450). Frozen 2026-08-16 by SHADOW_GATE from the source literals, not from a build.",
+  "_comment": "G-JSONKEYS frozen expectations (SPEC §10.1): today's literal-order JSON strings for each forge's mappingInstruction (code facts: cg:68-75, forgeSif.js:119-126, forgeCeds.js:88-95, forgePesc260805.js:67-74) and Ed-Fi's crossRefs entry shape (cg:955-959, forgeCeds.js:116-123, forgeSif.js:443-450). Frozen 2026-08-16 by SHADOW_GATE from the source literals, not from a build. ⟪zeroBacklog A2-1⟫ the two anchor keys renamed to the hub-neutral per-hub maps; the historic anchor values are kept under the hub token they named (ceds), so the order and byte rules are still exercised with a non-empty map.",
   "mappingInstructionByForge": {
     "edfi": {
-      "declared": { "cedsOriginalAnchorPropertyName": ["CEDSGlobalId"], "cedsOptionOriginalAnchorPropertyName": ["CEDSOptionCode"], "crosswalkPrefix": [], "crosswalkResolveProperty": "edfiStableId", "includeInImplied": true, "impliedTargets": ["CEDS"] },
-      "expectedString": "{\"cedsOriginalAnchorPropertyName\":[\"CEDSGlobalId\"],\"cedsOptionOriginalAnchorPropertyName\":[\"CEDSOptionCode\"],\"crosswalkPrefix\":[],\"crosswalkResolveProperty\":\"edfiStableId\",\"includeInImplied\":true,\"impliedTargets\":[\"CEDS\"]}"
+      "declared": {
+        "hubAnchorPropertyNameByHub": {
+          "ceds": [
+            "CEDSGlobalId"
+          ]
+        },
+        "hubOptionAnchorPropertyNameByHub": {
+          "ceds": [
+            "CEDSOptionCode"
+          ]
+        },
+        "crosswalkPrefix": [],
+        "crosswalkResolveProperty": "edfiStableId",
+        "includeInImplied": true,
+        "impliedTargets": [
+          "CEDS"
+        ]
+      },
+      "expectedString": "{\"hubAnchorPropertyNameByHub\":{\"ceds\":[\"CEDSGlobalId\"]},\"hubOptionAnchorPropertyNameByHub\":{\"ceds\":[\"CEDSOptionCode\"]},\"crosswalkPrefix\":[],\"crosswalkResolveProperty\":\"edfiStableId\",\"includeInImplied\":true,\"impliedTargets\":[\"CEDS\"]}"
     },
     "sif": {
-      "declared": { "cedsOriginalAnchorPropertyName": ["CEDS ID"], "cedsOptionOriginalAnchorPropertyName": [], "crosswalkPrefix": [], "crosswalkResolveProperty": "sifStableId", "includeInImplied": true, "impliedTargets": ["CEDS"] },
-      "expectedString": "{\"cedsOriginalAnchorPropertyName\":[\"CEDS ID\"],\"cedsOptionOriginalAnchorPropertyName\":[],\"crosswalkPrefix\":[],\"crosswalkResolveProperty\":\"sifStableId\",\"includeInImplied\":true,\"impliedTargets\":[\"CEDS\"]}"
+      "declared": {
+        "hubAnchorPropertyNameByHub": {
+          "ceds": [
+            "CEDS ID"
+          ]
+        },
+        "hubOptionAnchorPropertyNameByHub": {},
+        "crosswalkPrefix": [],
+        "crosswalkResolveProperty": "sifStableId",
+        "includeInImplied": true,
+        "impliedTargets": [
+          "CEDS"
+        ]
+      },
+      "expectedString": "{\"hubAnchorPropertyNameByHub\":{\"ceds\":[\"CEDS ID\"]},\"hubOptionAnchorPropertyNameByHub\":{},\"crosswalkPrefix\":[],\"crosswalkResolveProperty\":\"sifStableId\",\"includeInImplied\":true,\"impliedTargets\":[\"CEDS\"]}"
     },
     "ceds": {
-      "declared": { "cedsOriginalAnchorPropertyName": [], "cedsOptionOriginalAnchorPropertyName": [], "crosswalkPrefix": [], "crosswalkResolveProperty": "uri", "includeInImplied": true, "impliedTargets": ["CEDS"] },
-      "expectedString": "{\"cedsOriginalAnchorPropertyName\":[],\"cedsOptionOriginalAnchorPropertyName\":[],\"crosswalkPrefix\":[],\"crosswalkResolveProperty\":\"uri\",\"includeInImplied\":true,\"impliedTargets\":[\"CEDS\"]}"
+      "declared": {
+        "hubAnchorPropertyNameByHub": {},
+        "hubOptionAnchorPropertyNameByHub": {},
+        "crosswalkPrefix": [],
+        "crosswalkResolveProperty": "uri",
+        "includeInImplied": true,
+        "impliedTargets": [
+          "CEDS"
+        ]
+      },
+      "expectedString": "{\"hubAnchorPropertyNameByHub\":{},\"hubOptionAnchorPropertyNameByHub\":{},\"crosswalkPrefix\":[],\"crosswalkResolveProperty\":\"uri\",\"includeInImplied\":true,\"impliedTargets\":[\"CEDS\"]}"
     },
     "pesc260805": {
-      "declared": { "cedsOriginalAnchorPropertyName": [], "cedsOptionOriginalAnchorPropertyName": [], "crosswalkPrefix": [], "crosswalkResolveProperty": "pesc260805StableId", "includeInImplied": false, "impliedTargets": [] },
-      "expectedString": "{\"cedsOriginalAnchorPropertyName\":[],\"cedsOptionOriginalAnchorPropertyName\":[],\"crosswalkPrefix\":[],\"crosswalkResolveProperty\":\"pesc260805StableId\",\"includeInImplied\":false,\"impliedTargets\":[]}"
+      "declared": {
+        "hubAnchorPropertyNameByHub": {},
+        "hubOptionAnchorPropertyNameByHub": {},
+        "crosswalkPrefix": [],
+        "crosswalkResolveProperty": "pesc260805StableId",
+        "includeInImplied": false,
+        "impliedTargets": []
+      },
+      "expectedString": "{\"hubAnchorPropertyNameByHub\":{},\"hubOptionAnchorPropertyNameByHub\":{},\"crosswalkPrefix\":[],\"crosswalkResolveProperty\":\"pesc260805StableId\",\"includeInImplied\":false,\"impliedTargets\":[]}"
     }
   },
   "crossRefs": {
-    "input": [{ "system": "ceds", "id": "P000113", "raw": "000113", "locator": "CEDSGlobalId" }, { "system": "ceds", "id": "OS000045", "raw": null, "locator": "dc:identifier" }],
+    "input": [
+      {
+        "system": "ceds",
+        "id": "P000113",
+        "raw": "000113",
+        "locator": "CEDSGlobalId"
+      },
+      {
+        "system": "ceds",
+        "id": "OS000045",
+        "raw": null,
+        "locator": "dc:identifier"
+      }
+    ],
     "expectedString": "[{\"system\":\"ceds\",\"id\":\"P000113\",\"raw\":\"000113\",\"locator\":\"CEDSGlobalId\"},{\"system\":\"ceds\",\"id\":\"OS000045\",\"raw\":null,\"locator\":\"dc:identifier\"}]"
   },
   "mergeDirectives": {

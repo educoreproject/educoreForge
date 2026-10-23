@@ -94,8 +94,8 @@ const pescForgeDeclaration = Object.freeze({
 	// borrowed from a sibling. Six keys in THIS order — the JSON string is a block byte (G-JSONKEYS)
 	// and it is reproduced character-for-character from the bespoke pescMappingInstruction.
 	mappingInstruction: Object.freeze({
-		cedsOriginalAnchorPropertyName: Object.freeze([]),
-		cedsOptionOriginalAnchorPropertyName: Object.freeze([]),
+		hubAnchorPropertyNameByHub: Object.freeze({}),
+		hubOptionAnchorPropertyNameByHub: Object.freeze({}),
 		crosswalkPrefix: Object.freeze([]),
 		crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
 		includeInImplied: false,
