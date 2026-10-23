@@ -131,6 +131,10 @@ const standardBridging = Object.freeze({
 					declaredTargetRuleList: null,
 					remodelTableRef: null,
 					hubRemodelTableListLength: null,
+					// ⟪zeroBacklog lane B, BRONZE_CROWN ruling 2026-10-23⟫ NO judgment partition for the CTDL pairing: the template's partition
+					// (objectDomainAssignment.tsv) splits a question's units by the CEDS domain of its objects, a CEDS structure that must not
+					// shape CTDL judging. The ceds pairing keeps the template's (lane A moves it onto the ceds row as data).
+					judgmentPartition: null,
 				},
 			},
 		},
