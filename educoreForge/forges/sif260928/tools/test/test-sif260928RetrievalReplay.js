@@ -156,6 +156,8 @@ const replayShape = (scenario) => {
 	copyDirectory(SHIPPED_BRIDGES_DIR, path.join(scenario.forgesDirOverride, STANDARD_KEY, 'bridges'));
 	// ⟪hub-neutral bridge lane R3⟫ the copy composes with the hub's declaration, found by the hub bundle's descriptor
 	scenarioLib.copyShippedHubBridging({ forgesDirPath: scenario.forgesDirOverride, hubToken: 'ceds' });
+	// ⟪zeroBacklog B3⟫ the shipped sif260928 bridging file pairs with the CTDL hub too, so a scratch registry needs that hub's half as well
+	scenarioLib.copyShippedHubBridging({ forgesDirPath: scenario.forgesDirOverride, hubToken: 'ctdl' });
 	// ⟪campaign P4a⟫ the shipped plugin declares an evaluation scope (subjectSource.scopeStableIdListPath, since goldJev A
 	// 51d14f7): 5,017 real Question stableIds, which this two-Question toy graph cannot hold, so the framework rightly
 	// refused. The double writes ITS OWN scope list — the toy's two Questions — at the path the shipped declaration names.
