@@ -506,7 +506,11 @@ const POST_D1_BASE_TAG = 'postZeroBacklogD3bVocabularyIi-102226'; // re-anchored
 // ═══ RE-ANCHOR, 2026-10-23 (SILENT_TRAIL; zeroBacklog lane B, on main 768a9477; ruled by BRONZE_CROWN: a lane re-anchors its own seam move) ═══
 // (iii) postZeroBacklogD3ForgeFrameworkIii-102226 -> postZbBForgeFrameworkIii-102226. CENSUS (lib/forge-framework/): test/test-gSeamUntouched.js ONLY (lane B's G-SEAM re-anchor in
 // this same commit: the known coupling).
-const PHASE0_ANCHOR_TAG = 'postZbBForgeFrameworkIii-102226'; // re-anchored by SILENT_TRAIL (zeroBacklog lane B; census REANCHOR-CENSUS-B-102226.md); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (PEARL_CIPHER; zeroBacklog lane A2 rebased onto main e8ac4537, the controlled re-key batch; BRONZE_CROWN rulings Q1-Q5) ═══ PHASE0_ANCHOR_TAG
+// postZbBForgeFrameworkIii-102226 -> postZbA2rForgeFrameworkIii-102326, tag cut ON this commit. CENSUS over this gate's paths: lib/forge-framework/ forgeDeclarationContract.js 40/22 (A2-1 anchor maps, A2-2 four keys, the sentinel retired, A2-3 nativeIdentifierPropertyName),
+// rootNode.js 4/1 (A2-3 stamp), and its tests: expectedFingerprints.json 5/5 (toy and three forge proxies, ruled moves), the G-JSONKEYS fixture 55/10,
+// the toy declaration 5/5, test-gDecl.js 17/23. No other lib/forge-framework file.
+const PHASE0_ANCHOR_TAG = 'postZbA2rForgeFrameworkIii-102326'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A2; census in the block above); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -1054,7 +1058,12 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // PHASE3_ANCHOR_TAG zbCPescLdOnMainSeamDiffEmpty-102326 -> zbCPescLdC4SeamDiffEmpty-102326c, tag cut ON this commit. CENSUS over this gate's paths
 // (numstat from that tag): forges/pescld/lib/pescldForgeDeclaration.js 1/1 (descriptionSource: the usage note is the description, not a
 // definition). Nothing else.
-const PHASE3_ANCHOR_TAG = 'zbCPescLdC4SeamDiffEmpty-102326c'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (PEARL_CIPHER; zeroBacklog lane A2 rebased onto main e8ac4537, the controlled re-key batch; BRONZE_CROWN rulings Q1-Q5) ═══ PHASE3_ANCHOR_TAG
+// zbCPescLdC4SeamDiffEmpty-102326c -> postZbA2rSeamDiffEmpty-102326, tag cut ON this commit. CENSUS over this gate's paths: every forge declaration (the four mappingInstruction keys, the sentinel retired,
+// nativeIdentifierPropertyName; pescld 7/5 also carries the lane A x lane C merge resolution), forgeCedsContractGraph.js 2/3 (a stale comment), the CEDS guide layer forge 3/0 + guideLayerUsageTips.json 4/0
+// (layerUsageTips), the StandardDefinition finisher 4/1 (carries nativeIdentifierPropertyName), sif260928Bridging.js 20/18 (A2-5's judgmentPartition onto the ceds row, plus lane B's
+// hitsPerText-40 row 26768721, merged to main after this tag was cut on lane C's branch), and lib/forge-framework as (iii). (i-live): no shape moved.
+const PHASE3_ANCHOR_TAG = 'postZbA2rSeamDiffEmpty-102326'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A2; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
