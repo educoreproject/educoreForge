@@ -1065,7 +1065,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // lib/bridge-framework/test/testSupport/toyBridgeScenario.js 6/3 (c40c8a73: the default hangGuardMs 4000 -> 60000 and its comment). A test
 // harness constant only; lib/bridge-framework/test is outside FINGERPRINT_ROOT_LIST, so frameworkFingerprint does not move. No
 // bridge-framework or bridge-maker source.
-const P1_BASELINE_COMMIT = 'postZbHarnessPescCompose-102326'; // re-anchored by BRONZE_CROWN (census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (AZURE_MARBLE; nextStandards-102326 K0, BRONZE_CROWN grant) ═══ P1_BASELINE_COMMIT
+// postZbHarnessPescCompose-102326 -> postNsK0PescCompose-102326, tag cut ON this commit. CENSUS over this gate's paths: lib/vocabulary/vocabulary.js
+// 4/1 (STANDARD_FAMILY gains OPENBADGES and JEDX, wave 1's one vocabulary move) and lib/vocabulary/graph-contract.js 5/3 (the standardFamily
+// meaning text names both; minItems joins INTEGER_VALUED_PROPERTY_NAME_LIST; PRODUCER_LOCAL_LABEL_PATTERN gains the OpenBadges and Jedx stems).
+// No bridge-framework or bridge-maker source; the proxy fingerprints of all 16 existing forges are unchanged (laneA/k0/proxyBefore/After).
+const P1_BASELINE_COMMIT = 'postNsK0PescCompose-102326'; // re-anchored by AZURE_MARBLE (census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
