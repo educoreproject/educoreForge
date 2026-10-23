@@ -20,6 +20,9 @@ const toyForgeDeclaration = Object.freeze({
 	standardFamily: STANDARD_FAMILY.TOY,
 	releaseLabel: 'Toy',
 	descriptionSource: 'the toy source\'s description field',
+	// ⟪zeroBacklog A2-3, census row 10 (R6-1)⟫ the property this standard's OWN content nodes carry its published identifier in, or
+	// null when it publishes none beyond the stable uri: the toy publishes no identifier of its own
+	nativeIdentifierPropertyName: null,
 	standardUsageTips: 'Toy usage tips.',
 	stableUriPropertyName: 'toyStableId',
 	stableIdPattern: Object.freeze({ pattern: '^toy:[A-Za-z]+(/.+)?$', trimmed: true }),

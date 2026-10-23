@@ -72,6 +72,11 @@ const FORGE_DECLARATION_CONTRACT = Object.freeze({
 	// (PESC xs:documentation, CEDS dc:description, Ed-Fi MetaEd documentation, SIF the specification's Description column).
 	// A fact about the standard itself (FBB-001), stamped on the root and carried to the StandardDefinition card. REQUIRED.
 	descriptionSource: Object.freeze({ required: true, kind: 'nonBlankString' }),
+	// ⟪zeroBacklog A2-3, census row 10 (R6-1); BRONZE_CROWN ruling Q2⟫ the property name this standard's OWN content nodes carry its
+	// published identifier in (CEDS cedsId), or null when it publishes none beyond the stable uri. A fact about the standard (FBB-001),
+	// stamped on the root when not null and carried to the StandardDefinition card, so a reader never assumes one standard's
+	// identifier name for every standard. REQUIRED: a bundle with none declares null, never omits it.
+	nativeIdentifierPropertyName: Object.freeze({ required: true, kind: 'nonEmptyStringOrNull' }),
 	// ⟪campaign P3, W-C-4; CONTRACTS §7⟫ the family (closed vocabulary) and WHICH member of it this bundle is. releaseLabel is
 	// VERSION-FREE (CollegeTranscript, not CollegeTranscript-1.8.0): the version already lives in version / publishedVersion
 	// and two copies drift; a one-member family repeats the family name. Both stamped on the root, both REQUIRED.

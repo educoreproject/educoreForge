@@ -27,6 +27,10 @@ const sif260928ForgeDeclaration = Object.freeze({
 	standardFamily: STANDARD_FAMILY.SIF,
 	releaseLabel: 'sif260928',
 	descriptionSource: "the 'Description' column of the SIF 4.3 specification's element tables (one cell per field row)",
+	// ⟪zeroBacklog A2-3, census row 10 (R6-1); BRONZE_CROWN ruling 2026-10-23⟫ SIF's own published identifier is its XPath column,
+	// carried as `xpath` on the Field instances (15,620 nodes, measured on the B3 store); the minted Questions carry none (questionRefId is
+	// this forge's sha256 of the question's identity tuple, sif260928Questions.js, and cedsElementId names a HUB, so neither is native)
+	nativeIdentifierPropertyName: 'xpath',
 	standardUsageTips: "SIF keeps its mappings on INSTANCE nodes. A SIF Question (DmeProperty, the node search finds) carries no match edge; it has one Field (DmeInstance) per object it appears in, reached by HAS_INSTANCE, and the Fields carry the mappings. They arrive as dme_find_mappings rows with direction 'outgoingViaInstance' (or rows carrying instanceGroupList / instanceCount / viaInstanceGroupList), and in dme_graph_retriever as instanceView.mappingsViaInstances. Group them by the owning object, (object)-[:HAS_FIELD]->(field), e.g. StudentPersonal, StaffPersonal: present each hub concept ONCE with the objects that hold it and the instance count, never one repeated line per instance. If different objects carry different hub concepts for the same Question, say so plainly — the meaning differs by context; it is not an error. Structure: HAS_FIELD reads 'object has field', HAS_CHILD 'element contains element' (Object -> Container -> Container|Field).",
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// sif260928:<kind> or sif260928:<kind>/<rest>. trimmed is true because '(/.+)' admits

@@ -71,6 +71,9 @@ const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName 
 		standardUsageTips: PESC_RELEASE_STANDARD_USAGE_TIPS,
 		// ⟪lane FIX, Fix 3⟫ a node's description is its own xs:annotation/xs:documentation text (walk.js mintNode)
 		descriptionSource: "xs:documentation: the schema component's own xs:annotation/xs:documentation text (the first non-blank one)",
+		// ⟪zeroBacklog A2-3, census row 10 (R6-1)⟫ the property this standard's OWN content nodes carry its published identifier in, or
+		// null when it publishes none beyond the stable uri: PESC's XSDs publish no identifier beyond the component's own name and place; releaseIndependentId is minted by the forge
+		nativeIdentifierPropertyName: null,
 		// ⟪campaign P3, W-C-4⟫ every release is a member of the PESC family; its label is the release's own `standard` token
 		// (CollegeTranscript, …), which every releaseDeclaration.json already carries, so the seven bundles are untouched
 		standardFamily: STANDARD_FAMILY.PESC,

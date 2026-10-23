@@ -47,7 +47,7 @@ const PROBE_PATH = path.join(__dirname, 'testSupport', 'pureProxyFingerprintProb
 // proxyFingerprintByStandard; DEVLOG-G0 deliverable 2), measured at 97feee9. Never edited to match a
 // measurement.
 const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
-	ceds: '61273989294f0b95b94561558e23a270d85fbe54744195f91368ecb4f8650f5a',
+	ceds: 'ad19aefee8c7719c6d6dd9b56197f081df517ab287c9aa302d6c406e14bc51ba',
 	// edfi RE-PINNED 2026-10-02 (PRISM_LATTICE, goldJev lane F): G0's 814ce961570c… -> 04abc77b…. NOT edited to match a
 	// measurement: a RULED base move. TQ excluded the CEDS-authored crosswalk from every graph (2026-09-10, 2026-10-01), so the
 	// Ed-Fi forge no longer stamps its CEDS ids (3,045 nodes) and its root no longer names it; expectedFingerprints.json
@@ -69,10 +69,16 @@ const G0_PROXY_FINGERPRINT_BY_STANDARD = Object.freeze({
 	// every root. At 9617c66d (this branch without descriptionSource) this suite measured all four EQUAL to the previous literals
 	// (8/8); expectedFingerprints.json carries the same move. ceds d167724b… -> 61273989…, edfi eeeefa88… -> aee80fdc…, sif
 	// 6d808b95… -> dbb78746…, pesc260805 cc1ab741… -> afe8a0ec….
-	edfi: 'aee80fdcc2d23548fc7492564fdb76309b11e563ca2383c94de6e9e3f4cd7a26',
+	// ALL THREE RE-PINNED 2026-10-23 (PEARL_CIPHER, zeroBacklog lane A2): NOT edited to match a measurement: a RULED base move
+	// (BRONZE_CROWN rulings Q1-Q3). Every root's mappingInstruction string changed (the two anchor keys renamed to per-hub maps, A2-1;
+	// includeInImplied and impliedTargets retired, A2-2) and the framework stamps nativeIdentifierPropertyName on a root whose forge
+	// declares one (A2-3: ceds cedsId, edfi metaEdId; pesc260805 declares null). At 8de530ea (main, before any A2 commit) this suite
+	// measured 7/7 EQUAL to the previous literals. ceds 61273989… -> ad19aefe…, edfi aee80fdc… -> fcc9644a…, pesc260805 afe8a0ec… ->
+	// 48c9edc9….
+	edfi: 'fcc9644a46548392a996f302e5746cc9c49d81768127837cc57e97d30b14363e',
 	// ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ sif LEFT this table (its last literal dbb78746…) when the old SIF forge retired to
 	// codeAttic/forges/sif; its replacement sif260928 was never a G0 member. The other three still hold the V1 oracle.
-	pesc260805: 'afe8a0ec9ab3bb2e18967735ba5286c577e76eead7301b4d3778a46d9f0ed8ed',
+	pesc260805: '48c9edc9aef37b252d77dfca37fd58d5d0537b0647f3118bc84db7686026b011',
 });
 const STANDARD_TOKEN_LIST = Object.keys(G0_PROXY_FINGERPRINT_BY_STANDARD);
 

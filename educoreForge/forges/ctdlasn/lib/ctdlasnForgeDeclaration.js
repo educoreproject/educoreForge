@@ -19,6 +19,9 @@ const ctdlasnForgeDeclaration = Object.freeze({
 	standardFamily: STANDARD_FAMILY.CTDLASN,
 	releaseLabel: 'CTDLASN',
 	descriptionSource: "each term's dct:description, else rdfs:comment, else skos:definition (en-US) in the CTDL-ASN JSON-LD schema",
+	// ⟪zeroBacklog A2-3, census row 10 (R6-1)⟫ the property this standard's OWN content nodes carry its published identifier in, or
+	// null when it publishes none beyond the stable uri: the stable uri IS the CURIE the CTDL-ASN JSON-LD publishes for every term
+	nativeIdentifierPropertyName: STABLE_URI_PROPERTY_NAME,
 	standardUsageTips: null,
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// the native CURIE as written (the July identity rule); the prefix alternation is the profile's own allowlist

@@ -62,6 +62,9 @@ const pescForgeDeclaration = Object.freeze({
 	standardFamily: STANDARD_FAMILY.PESC,
 	releaseLabel: 'pesc260805',
 	descriptionSource: 'xs:documentation: the xs:annotation/xs:documentation text of each schema component',
+	// ⟪zeroBacklog A2-3, census row 10 (R6-1)⟫ the property this standard's OWN content nodes carry its published identifier in, or
+	// null when it publishes none beyond the stable uri: PESC's XSDs publish no identifier beyond the component's own name and place, which the stable uri already carries
+	nativeIdentifierPropertyName: null,
 	standardUsageTips: null,
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// THE SHARED PERMISSIVE PATTERN, and the choice is MEASURED rather than defensive. PESC's

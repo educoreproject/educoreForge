@@ -110,7 +110,7 @@ const moduleFunction =
 			       root.stableId AS rootStableId,
 			       root.standardKind AS standardKind, root.standardUsageTips AS standardUsageTips,
 			       root.standardFamily AS standardFamily, root.releaseLabel AS releaseLabel,
-			       root.descriptionSource AS descriptionSource,
+			       root.descriptionSource AS descriptionSource, root.nativeIdentifierPropertyName AS nativeIdentifierPropertyName,
 			       propertyCount, classCount, optionValueCount,
 			       exactMappedProperties, closeMappedProperties,
 			       mappingKindList, mappingSourceList, unkindedMappingEdgeCount,
@@ -197,6 +197,8 @@ const moduleFunction =
 					// ⟪lane FIX, Fix 3⟫ REQUIRED like the family: the root's forge-declared description provenance
 					descriptionSource: oneRow.descriptionSource,
 					...(oneRow.standardUsageTips ? { standardUsageTips: oneRow.standardUsageTips } : {}),
+					// ⟪zeroBacklog A2-3⟫ from the root, where the forge declared it; absent when the standard publishes no identifier
+					...(oneRow.nativeIdentifierPropertyName ? { nativeIdentifierPropertyName: oneRow.nativeIdentifierPropertyName } : {}),
 					// SORTED — collect() order is not stable and this node is in fingerprint scope.
 					mappingEdgeTypes: sorted(oneRow.mappingEdgeTypes).filter((oneType) => oneType !== 'null'),
 				},
@@ -237,6 +239,7 @@ const moduleFunction =
 					standardFamily: oneRecord.get('standardFamily'),
 					releaseLabel: oneRecord.get('releaseLabel'),
 					descriptionSource: oneRecord.get('descriptionSource'),
+					nativeIdentifierPropertyName: oneRecord.get('nativeIdentifierPropertyName'),
 					propertyCount: oneRecord.get('propertyCount'),
 					classCount: oneRecord.get('classCount'),
 					optionValueCount: oneRecord.get('optionValueCount'),

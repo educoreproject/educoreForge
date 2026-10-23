@@ -39,6 +39,9 @@ const edfiForgeDeclaration = Object.freeze({
 	standardFamily: STANDARD_FAMILY.EDFI,
 	releaseLabel: 'EdFi',
 	descriptionSource: "MetaEd 'documentation': the documentation text written on each Ed-Fi model construct and property",
+	// ⟪zeroBacklog A2-3, census row 10 (R6-1)⟫ the property this standard's OWN content nodes carry its published identifier in, or
+	// null when it publishes none beyond the stable uri: MetaEd's own model id, published by Ed-Fi on the constructs that have one (1,871 of 6,335 content nodes, measured)
+	nativeIdentifierPropertyName: 'metaEdId',
 	standardUsageTips: "Ed-Fi keeps its mappings directly on its properties (no instance nodes). The same property name often appears in several Ed-Fi entities or common types (e.g. BirthDate in the BirthData inline common and in ApplicantProfile), each with its own mapping and confidence: name the owning entity when presenting, and do not merge their confidences.",
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	// the REAL predicate (forgeEdfiContractGraph.js:216-221 EDFI_STABLE_ID_RE + trim), as data (FR6)
