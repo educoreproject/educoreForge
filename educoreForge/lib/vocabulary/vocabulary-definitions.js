@@ -61,7 +61,9 @@ const TERM_DEFINITIONS = {
 			'A declared element to each occurrence that stands for it: SIF Question to Field, PESC Element to Occurrence. A SIF question is one distinct (name, description, relative path) the source asks, and a source that repeats a block across objects asks the same question many times; a PESC element is one declaration reached at many document positions. This edge links the one to the many, so a judgement made once about the declaration can be read on every instance. Introduced for the sif260928 forge (Question to Field), written by the PESC release forge too (Element to Occurrence).',
 		REFERENCES_OBJECT:
 			'A reference field to the object it names: a field whose value is another object\'s identifier, linked to that object. It runs from the FIELD, which is the "via" of the reference, so one object referring to another through several fields keeps one edge per field. Introduced for the sif260928 forge (a RefId Field to an Object); SPEC §9 A24 admits only a curated-map resolution or an exact <Object>RefId name match, and gives an unresolved field no edge.',
-		REFERENCES: 'Generic intra-standard reference between structural nodes.',
+		// ⟪zeroBacklog lane D, D3-7, 2026-10-22; lane E measured⟫ was 'Generic intra-standard reference…': 227 of 4,405 REFERENCES on
+		// GOLD_EVAL_261021_ctdlHub cross _source, every one inside the CTDL family (CTDLASN->CTDL 95, CTDLQData->CTDL 65, CTDL->CTDLASN 53, others 14)
+		REFERENCES: 'Reference between structural nodes within one standard family: inside one standard, or between member standards of a family.',
 		BROADER_CONCEPT:
 			'Concept (option value) to the broader concept it narrows, within one standard: the source\'s skos:broader, one edge per pair. Its inverse, skos:narrower, is derivable by reading the edge backwards, so it is not stored twice (measured exact for CTDL and CTDL-QData, ctdlHub-101926 P2b). Introduced for the CTDL-family forges.',
 		TOP_CONCEPT_OF:
