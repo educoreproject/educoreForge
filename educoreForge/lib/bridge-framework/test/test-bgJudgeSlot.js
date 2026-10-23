@@ -92,6 +92,12 @@ const SHIPPED_PLUGIN_LIST = [
 	// judgePromptVariantFor -> crosswalk, bridgeEvidenceRenderer-v1), and nothing is ever rendered under it.
 	{ bridgeName: 'pescldCtdlDeclaredIdentity', composedFromBridgingFilePath: 'forges/pescld/bridges/pescldBridging.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'pescldCedsDeclaredIdentity', composedFromBridgingFilePath: 'forges/pescld/bridges/pescldBridging.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
+	// ADDED 2026-10-23 (IVORY_TRAIL, zeroBacklog lane C4; BRONZE_CROWN's grant): the four JUDGED PESC_LD plugins, judgeSlot-v1 with the
+	// instruction form of the split question (PESC_LD publishes no definitions), so each resolves to derivedJudgeSlot (measured)
+	{ bridgeName: 'pescldPescTermRowCedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pescld/bridges/pescldBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescldPescTermRowCtdlDerivedPlugin', composedFromBridgingFilePath: 'forges/pescld/bridges/pescldBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescldPescTermShapeCedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pescld/bridges/pescldBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescldPescTermShapeCtdlDerivedPlugin', composedFromBridgingFilePath: 'forges/pescld/bridges/pescldBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL },
 	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded, "known to be garbage"): edfiCedsCrosswalkPlugin moved to forges/edfi/retiredBridges/, out of the roster
 	// MOVED 2026-09-30 (IVORY_ECHO, WORKORDER-jevRelations-093026 R2, TQ ruling "every bridge uses judge-named relations"):
 	// Ed-Fi derived now declares predicateRule judgeSlot-v1, so it resolves to derivedJudgeSlot. Was: 'derived' / derived-v12.

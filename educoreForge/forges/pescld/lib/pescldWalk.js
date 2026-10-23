@@ -108,13 +108,17 @@ const emitContractGraph = ({ loaded, kit }) => {
 		}
 		return { termCurie: curieText, termIri: `${namespaceIri}${curieMatch[2]}` };
 	};
-	// columnCarriedProperties — the 'text' and 'boolean' columns of one record (or one merged cell map), absent when empty
+	// columnCarriedProperties — the 'text' and 'boolean' columns of one record (or one merged cell map), absent when empty. A text
+	// column the profile marks dmeTextPropertyName is ALSO carried, verbatim, into that property: the DME reads one text field
+	// (graph-contract DME_TEXT_FIELD_RULE) and PESC_LD publishes no definitions (ruling BRONZE_CROWN 2026-10-23)
 	const columnCarriedProperties = ({ columnList, cellTextByColumnName, origin }) => columnList
 		.filter((oneColumn) => (oneColumn.carriage === 'text' || oneColumn.carriage === 'boolean') && cellTextByColumnName[oneColumn.columnName] !== '')
 		.reduce((carried, oneColumn) => {
 			const cellText = cellTextByColumnName[oneColumn.columnName];
 			if (oneColumn.carriage === 'text') {
-				return { ...carried, [oneColumn.propertyName]: cellText };
+				return oneColumn.dmeTextPropertyName === undefined
+					? { ...carried, [oneColumn.propertyName]: cellText }
+					: { ...carried, [oneColumn.propertyName]: cellText, [oneColumn.dmeTextPropertyName]: cellText };
 			}
 			if (sourceProfile.booleanByCellText[cellText] === undefined) {
 				throw refusal(`${origin}: column '${oneColumn.columnName}' holds '${cellText}', not one of ${Object.keys(sourceProfile.booleanByCellText).join(', ')}`, 'a boolean column states TRUE or FALSE, or is empty (absent)');

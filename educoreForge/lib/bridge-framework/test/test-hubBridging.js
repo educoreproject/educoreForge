@@ -117,14 +117,47 @@ const towardHub = (hubToken) => pluginEntryList.filter((oneEntry) => oneEntry.ta
 const cedsEntryList = towardHub(cedsHubBridging.hubToken);
 // SCARLET_ARROW 2026-10-21: the two older pesc260805 plugins keep their own 5-field candidate list as a declared pair override (R3)
 const CANDIDATE_LIST_PAIR_OVERRIDE_BRIDGE_NAME_LIST = Object.freeze(['pescCedsDerivedPlugin', 'pescOptionSetCedsDerivedPlugin']);
+// ⟪zeroBacklog lane C4, 2026-10-23, ruled BRONZE_CROWN: NAMED lists, not counts, so the next lane sees who is in each set⟫
+// the current-generation judged CEDS plugins: they share the hub's candidate list and its identifier scan (was: 'the ten')
+const CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST = Object.freeze([
+	'edfiCedsDerivedPlugin',
+	'pescAcademicEportfolio1v0v0CedsDerivedPlugin',
+	'pescCollegeTranscript1v7v0CedsDerivedPlugin',
+	'pescCollegeTranscript1v8v0CedsDerivedPlugin',
+	'pescDocumentRequest1v0v0CedsDerivedPlugin',
+	'pescDocumentResponse1v0v0CedsDerivedPlugin',
+	'pescHighSchoolTranscript1v6v0CedsDerivedPlugin',
+	'pescLearningRecord1v0v0CedsDerivedPlugin',
+	'pescTestScoreReport1v1v0CedsDerivedPlugin',
+	'pescldPescTermRowCedsDerivedPlugin',
+	'pescldPescTermShapeCedsDerivedPlugin',
+	'sif260928CedsDerivedPlugin',
+]);
+// every judged CEDS plugin that retrieves candidates, the two older pesc260805 plugins included (was: 12)
+const RETRIEVING_CEDS_PLUGIN_NAME_LIST = Object.freeze([
+	'edfiCedsDerivedPlugin',
+	'pescAcademicEportfolio1v0v0CedsDerivedPlugin',
+	'pescCedsDerivedPlugin',
+	'pescCollegeTranscript1v7v0CedsDerivedPlugin',
+	'pescCollegeTranscript1v8v0CedsDerivedPlugin',
+	'pescDocumentRequest1v0v0CedsDerivedPlugin',
+	'pescDocumentResponse1v0v0CedsDerivedPlugin',
+	'pescHighSchoolTranscript1v6v0CedsDerivedPlugin',
+	'pescLearningRecord1v0v0CedsDerivedPlugin',
+	'pescOptionSetCedsDerivedPlugin',
+	'pescTestScoreReport1v1v0CedsDerivedPlugin',
+	'pescldPescTermRowCedsDerivedPlugin',
+	'pescldPescTermShapeCedsDerivedPlugin',
+	'sif260928CedsDerivedPlugin',
+]);
 const withCandidateList = cedsEntryList.filter((oneEntry) => oneEntry.bridgeDeclaration.renderingAllowList !== undefined);
 const candidateMismatchList = withCandidateList.filter((oneEntry) => !sameText(oneEntry.bridgeDeclaration.renderingAllowList.candidate, cedsHubBridging.candidateRenderingAllowList)).map((oneEntry) => oneEntry.bridgeName).sort();
 harness.equal('candidate rendering list = every judged CEDS plugin\'s, except the ruled pair overrides', candidateMismatchList.join(','), CANDIDATE_LIST_PAIR_OVERRIDE_BRIDGE_NAME_LIST.slice().sort().join(','));
-harness.equal('the candidate list is shared by the ten current-generation plugins', withCandidateList.length - candidateMismatchList.length, 10);
+harness.equal('the candidate list is shared by exactly the named current-generation plugins', withCandidateList.filter((oneEntry) => candidateMismatchList.indexOf(oneEntry.bridgeName) === -1).map((oneEntry) => oneEntry.bridgeName).sort().join(','), CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST.slice().sort().join(','));
 const withScan = cedsEntryList.filter((oneEntry) => oneEntry.bridgeDeclaration.promptIdentifierScan !== undefined);
-harness.equal('identifier pattern list = every scanning CEDS plugin\'s (10)', withScan.filter((oneEntry) => sameText(oneEntry.bridgeDeclaration.promptIdentifierScan.identifierPatternList, cedsHubBridging.promptIdentifierScan.identifierPatternList)).length, 10);
+harness.equal('identifier pattern list = every scanning CEDS plugin\'s, and the scanning plugins are exactly the named current generation', `${withScan.filter((oneEntry) => !sameText(oneEntry.bridgeDeclaration.promptIdentifierScan.identifierPatternList, cedsHubBridging.promptIdentifierScan.identifierPatternList)).map((oneEntry) => oneEntry.bridgeName).join(',')}|${withScan.map((oneEntry) => oneEntry.bridgeName).sort().join(',')}`, `|${CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST.slice().sort().join(',')}`);
 const withRetrieval = cedsEntryList.filter((oneEntry) => oneEntry.bridgeDeclaration.candidateRetrieval !== undefined);
-harness.equal('embedding model = every retrieving CEDS plugin\'s (12)', withRetrieval.filter((oneEntry) => oneEntry.bridgeDeclaration.candidateRetrieval.embeddingModelVersion === cedsHubBridging.embeddingModelVersion).length, 12);
+harness.equal('embedding model = every retrieving CEDS plugin\'s, and the retrieving plugins are exactly the named list', `${withRetrieval.filter((oneEntry) => oneEntry.bridgeDeclaration.candidateRetrieval.embeddingModelVersion !== cedsHubBridging.embeddingModelVersion).map((oneEntry) => oneEntry.bridgeName).join(',')}|${withRetrieval.map((oneEntry) => oneEntry.bridgeName).sort().join(',')}`, `|${RETRIEVING_CEDS_PLUGIN_NAME_LIST.slice().sort().join(',')}`);
 // the hub's anchor names, read off each plugin's blinding list in ITS order: the names a source stamps when it carries this hub's anchors
 const hubAnchorNameSet = new Set(cedsHubBridging.sourceAnchorBlindingNameList);
 const anchorBlindingMismatchList = cedsEntryList

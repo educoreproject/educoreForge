@@ -19,6 +19,6 @@
     { "standard": "ctdl" }
   ],
   "bridges": [
-    { "source": "pescld", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] }
+    { "source": "pescld", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] }
   ]
 }

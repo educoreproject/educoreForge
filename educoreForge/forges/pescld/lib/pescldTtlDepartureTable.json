@@ -9,7 +9,7 @@
 		"sh:minLength a with sh:maxLength b is lengthRange 'a..b'; sh:maxLength alone is maxLength",
 		"sh:pattern is pattern; sh:hasValue is the valueConstraint of a row with no constraint type",
 		"sh:node <S> is valueShape S; sh:class and each sh:or ( [ sh:class … ] ) member is a valueClass line",
-		"sh:name is propertyLabel, rdfs:label is a shape's label, rdfs:comment is note, sh:severity sh:X is Severity / severity X",
+		"sh:name is propertyLabel, rdfs:label is a shape's label, rdfs:comment is note (and again the DME text, dmeTextFromNote: the graph carries the note as description too), sh:severity sh:X is Severity / severity X",
 		"sh:targetClass c is target c and targetType class; sh:closed false is Closed FALSE",
 		"a CURIE is expanded with the TTL's OWN @prefix table (an expansion independent of namespaces.csv)"
 	],

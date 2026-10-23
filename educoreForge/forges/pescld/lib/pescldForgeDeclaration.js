@@ -30,7 +30,7 @@ const pescldForgeDeclaration = Object.freeze({
 	standardKind: STANDARD_KIND.DATA_STANDARD,
 	standardFamily: STANDARD_FAMILY.PESCLD,
 	releaseLabel: 'PESCLD',
-	descriptionSource: "the package publishes labels only (TAP propertyLabel, shapes.csv label) and no definitions; a TAP row's 'note' column is carried as usageNote",
+	descriptionSource: "a TAP row's 'note' column, its usage note, carried verbatim as description (and as usageNote): it is not a definition; the package publishes labels and usage notes only, no definitions, so a row without a note and every shape carry no description",
 	standardUsageTips: "PESC_LD is a SHACL application profile, not a vocabulary: a DmeClass is a SHAPE (a node shape that targets a class) and a DmeProperty is one ROW of the profile (one property as constrained on one shape). Most rows borrow their term from another standard; the borrowed term is on the node as termCurie (as the source writes it, e.g. ceterms:name) and termIri (expanded from the package's own namespaces.csv). The same borrowed term can appear on several shapes, so search by termCurie returns one row per shape. Picklists are DmeOptionSet nodes owned by their row.",
 	stableUriPropertyName: STABLE_URI_PROPERTY_NAME,
 	stableIdPattern: Object.freeze({

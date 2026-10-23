@@ -315,7 +315,9 @@ const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 // the PESC College Transcript 1.7.0 derived plugin (forges/pesccollegetranscript1v7v0/bridges/) declares it too.
 // zeroBacklog B3 (2026-10-22, SILENT_TRAIL): 12 → 22, the ten derived bridges toward the CTDL hub (one ctdl pair row per standard
 // bridging file: edfi, sif260928 and the eight PESC releases), each declaring candidateRetrieval with an explicit method.
-const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 22;
+// zeroBacklog lane C4 (2026-10-23, IVORY_TRAIL; BRONZE_CROWN's grant): 22 → 26, the four judged PESC_LD bridges (two facets × the
+// ceds and ctdl hubs, forges/pescld/bridges/pescldBridging.js), each declaring candidateRetrieval embedTextVote-v1.
+const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 26;
 const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 	method: 'embedTextVote-v1',
 	hitsPerText: 20,

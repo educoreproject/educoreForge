@@ -17,7 +17,7 @@ Accuracy was checked two ways:
 | source URL | the TAP spreadsheet `about.csv` names (`https://docs.google.com/spreadsheets/d/18HzS4phUl7olmUEjh0deA3vgVPdque4_iGzK7_zTWLE/`) |
 | version | `0.0.2` (the package's name; the files inside say v0.0.1; see Provenance) |
 | graph | scratch graphs `DEV_gb_materialize_36874_2` and `DEV_gb_materialize_38072_2`, built 2026-10-22 and disposed by name |
-| build | recipe `recipes/pescldOnlyRoundTrip.recipe.jsonc`. Vectorised: manifest `a45b062a…5ef26c`, standardBase block **`2838e68361172b32f27cc3a0b2207cbf307272c533e6d618062122af17c5a6e9`**. `--vectorize=false`: standardBase block `171ab377d8e866d28a1ad23840f361f83ac2bd5e1c95ed750e896c736c263973` |
+| build | recipe `recipes/pescldOnlyRoundTrip.recipe.jsonc`. Since the DME-text fix (2026-10-23, the usage note carried as `description`): `--vectorize=false` standardBase block **`27f3709b7d66ddd98c1bd80e766a7d9004f899827a923d235fffcbc0e0f046a2`** (measured twice at `8bc9aee8`, round trip clean). SUPERSEDED by that fix: vectorised `2838e683…c5a6e9` (manifest `a45b062a…5ef26c`) and `--vectorize=false` `171ab377…263973` (C1, reproduced four times on two heads before the fix); the vectorised id after the fix is not yet measured |
 | certification | `graphBuilder -goldEvalCheck`: **PASS** (1 declared validator, inventedTotal 0; conservation 1 of 1 member; no bridge, no judged edge) |
 | spend | $0.0014, embedding only (792 new vectors); judge $0 |
 | commit | branch `zb/c-pescLd` (zeroBacklog lane C1) |
@@ -52,7 +52,8 @@ Accuracy was checked two ways:
 
 ## The counts
 
-The round trip compared every source statement it models with the graph: **inventedTotal 0, lostTotal 0**. Declared omissions,
+The round trip compared every source statement it models with the graph: **inventedTotal 0, lostTotal 0**. The usage note's second
+carriage, as `description`, is its own statement (`dmeTextFromNote`), so a description invented, changed or dropped turns it red. Declared omissions,
 222 in all: the spreadsheet row-number column (167), the `namespaces.csv` table (47; applied as every `termIri`), the `about.csv`
 metadata (6; its url is the root's `sourceUrl`), and the raw text of 2 whitespace-trimmed cells.
 
@@ -78,7 +79,9 @@ The source states some things twice or not at all; each is carried under a decla
   its four values cite terms the named vocabulary's current release does not define. They are in the graph as written; a bridge
   will report them unresolved.
 - **The package's version is ambiguous.** It is called v0.0.2; its files say v0.0.1; `about.csv` has a date and no version.
-- **No definitions.** The package publishes labels and usage notes only, so nodes carry no `description`.
+- **No definitions.** The package publishes labels and usage notes only. The DME reads one text field, `description`, so a row's
+  usage note is carried there too, verbatim (48 rows); the root's `descriptionSource` says it is a usage note, not a definition.
+  Shapes and rows without a note carry no `description`.
 - **Picklist names are borrowed from their row.** A picklist has no name of its own in the source; it takes its row's label.
 
 These and the other source observations are in `README_ERRATA.md`.

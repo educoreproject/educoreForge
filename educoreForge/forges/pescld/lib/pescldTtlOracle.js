@@ -171,6 +171,9 @@ const canonicalizeTtl = ({ ttlFilePath }, callback) => {
 		}));
 		if (firstOf('rdfs:comment') !== undefined) {
 			statements.set(`${rowPrefix}|note|${termText(firstOf('rdfs:comment'))}`, {});
+			// the same text again as the DME text field: a translation of the round trip's own statement, not a departure (the graph
+			// carries the note as description too; ruling BRONZE_CROWN 2026-10-23)
+			statements.set(`${rowPrefix}|dmeTextFromNote|${termText(firstOf('rdfs:comment'))}`, {});
 			recordLanguageTag({ subjectIri: propertyShapeIri, predicateName: 'rdfs:comment', oneTerm: firstOf('rdfs:comment') });
 		}
 		if (firstOf('sh:severity') !== undefined) {

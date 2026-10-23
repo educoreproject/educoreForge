@@ -1,0 +1,24 @@
+{
+  // pescldBridged — zeroBacklog lane C (WORKORDER-C C4): PESC_LD beside both hubs with EVERY bridge its bridging file declares: the
+  // declared-identity facet (C2, C3; nothing judged) and the two JUDGED facets for the terms PESC_LD coins itself (pesc: rows and
+  // shapes; retrieval by the forge's text nodes, the judge naming the relation). Rehearsed under --useDebugJudge, then the real judge;
+  // pre-declared spend about $0.10 (159 subjects x 2 hubs), stop at $5 (BRONZE_CROWN).
+  "schemaVersion": "1.0.0",
+  "recipeName": "pescldBridged",
+  "kind": "dev",
+  "description": "PESC_LD beside both hubs with every bridge it declares: declared identity (C2, C3) and the judged pesc: terms (C4).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "pescld", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "pescld", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "pescld", "facet": "PescTermRow", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "pescld", "facet": "PescTermShape", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] }
+  ]
+}
