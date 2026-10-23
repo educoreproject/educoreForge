@@ -77,7 +77,10 @@ const RETIRED_CSV_FILE_NAME_LIST = Object.freeze(['EdFiEntityDescriptorsToCEDS.c
 // 6a979732…, the file now forges/edfi/bridges/edfiBridging.js — the plugin MIGRATED to a standard bridging declaration (the
 // declaration's hub half moved to forges/ceds/lib/cedsHubBridging.js); the COMPOSED declaration's digest equals the plugin's
 // (test-bridgeComposer (a)), and the bridge still declares no source channel (read below from the composed bridge).
-const DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A = '6a979732d83edbac0aacf62fe0a275ed11786b1c977022a97770a38c575c361d';
+// RE-ANCHORED 2026-10-23 by zeroBacklog lane B3 (SILENT_TRAIL; observed red in lane B's full suite at 50e7feee): 6a979732… -> 29aca7cf…. The file
+// gained ONE pair row, pairByHubToken.ctdl (the judged bridge toward the CTDL hub; neighbourVote null). The ceds row is byte-unchanged
+// (P-a1 16/16: the edfi→ceds declarationDigest is unmoved) and neither row declares a source channel.
+const DERIVED_PLUGIN_SHA256_AT_GOLDJEV_A = '29aca7cfcffc879bb7dbf7d5d7b45f183bb26feff7e2e69be38436c84a31a51b';
 
 // a node property naming CEDS, or a cross-reference of any kind, can only have come from a crosswalk:
 // Ed-Fi's own MetaEd publishes no CEDS anchor (the walk's scan uses the same rule)

@@ -149,6 +149,8 @@ const makePescForgesDir = (scenario) => {
 	copyDirectory(SHIPPED_BRIDGES_DIR, bridgesDirPath);
 	// ⟪hub-neutral bridge lane R3⟫ the copy composes with the hub's declaration, found by the hub bundle's descriptor
 	scenarioLib.copyShippedHubBridging({ forgesDirPath, hubToken: 'ceds' });
+	// ⟪zeroBacklog B3⟫ the shipped bridging file pairs with the CTDL hub too, so a scratch registry needs that hub's half as well
+	scenarioLib.copyShippedHubBridging({ forgesDirPath, hubToken: 'ctdl' });
 	const transformFile = (fileName, transform) => {
 		if (transform !== undefined) {
 			const filePath = path.join(bridgesDirPath, fileName);
