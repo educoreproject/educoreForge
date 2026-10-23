@@ -64,18 +64,6 @@ const declarationTemplate = Object.freeze({
 	// each Question's Fields, read once through the forge's Question → Field edge and frozen with its record, so the
 	// materialiser writes one edge per Field
 	materialisationFanout: { kind: 'edgeFromSubject', edgeType: 'HAS_INSTANCE' },
-	// one judgment per (Question, CEDS domain of the objects its Fields sit in). SIF_Metadata questions are one unit
-	// whatever objects they are copied into; SIF_ExtendedElements is split like the model (SPEC §9 A20).
-	judgmentPartition: {
-		kind: 'objectPartitionFile',
-		filePath: 'bridges/objectDomainAssignment.tsv',
-		sha256: 'a8c7c36f60fcec8f667ab105072e7d807f5503dd15b040322dd267f4884b2f79',
-		instanceObjectPropertyName: 'objectName',
-		objectColumnName: 'object',
-		partitionLabelColumnName: 'cedsDomainName',
-		renderedPropertyName: 'objectDomain',
-		unpartitionedSubjectRule: { propertyName: 'sharedBlock', valueList: ['SIF_Metadata'] },
-	},
 	evidenceHooksDeclared: { nominate: false, walkEvidence: false, globalGuidance: false },
 	compatibilityDeclarationList: [],
 });
@@ -115,6 +103,20 @@ const standardBridging = Object.freeze({
 					declaredTargetRuleList: null,
 					remodelTableRef: null,
 					hubRemodelTableListLength: null,
+					// ⟪zeroBacklog A2-5, census row 12 (R7-2); BRONZE_CROWN ruling 2026-10-22⟫ MOVED here from the declarationTemplate: the partition is by
+					// the TARGET hub's domains (cedsDomainName), so it belongs to the ceds pairing; byte-identical in what it composes and renders.
+					// one judgment per (Question, CEDS domain of the objects its Fields sit in). SIF_Metadata questions are one unit
+					// whatever objects they are copied into; SIF_ExtendedElements is split like the model (SPEC §9 A20).
+					judgmentPartition: {
+						kind: 'objectPartitionFile',
+						filePath: 'bridges/objectDomainAssignment.tsv',
+						sha256: 'a8c7c36f60fcec8f667ab105072e7d807f5503dd15b040322dd267f4884b2f79',
+						instanceObjectPropertyName: 'objectName',
+						objectColumnName: 'object',
+						partitionLabelColumnName: 'cedsDomainName',
+						renderedPropertyName: 'objectDomain',
+						unpartitionedSubjectRule: { propertyName: 'sharedBlock', valueList: ['SIF_Metadata'] },
+					},
 				},
 				// ⟪zeroBacklog B3⟫ toward the CTDL hub, in the post-refactor form: retrieval copied from the row above as the START (its measured
 				// k / floor reasoning stands until measured against CTDL), the hub's own candidate list and identifier scan, and the union
@@ -131,9 +133,9 @@ const standardBridging = Object.freeze({
 					declaredTargetRuleList: null,
 					remodelTableRef: null,
 					hubRemodelTableListLength: null,
-					// ⟪zeroBacklog lane B, BRONZE_CROWN ruling 2026-10-23⟫ NO judgment partition for the CTDL pairing: the template's partition
+					// ⟪zeroBacklog lane B, BRONZE_CROWN ruling 2026-10-23⟫ NO judgment partition for the CTDL pairing: the ceds row's partition
 					// (objectDomainAssignment.tsv) splits a question's units by the CEDS domain of its objects, a CEDS structure that must not
-					// shape CTDL judging. The ceds pairing keeps the template's (lane A moves it onto the ceds row as data).
+					// shape CTDL judging. The ceds pairing declares its own on its row (zeroBacklog A2-5); the template carries none.
 					judgmentPartition: null,
 				},
 			},
