@@ -355,21 +355,20 @@ forge layer — a mapping that cannot be canonicalized cannot pass as data.
 ### 3.3 The `mappingInstruction` block
 
 Every `DmeStandardRoot` carries a JSON-stringified `mappingInstruction` object
-(`forgeSif.js:69-76` is the current template):
+(the forge declaration's `mappingInstruction`; key order `MAPPING_INSTRUCTION_KEY_ORDER` in
+`lib/forge-framework/forgeDeclarationContract.js`):
 
 ```js
 {
-  cedsOriginalAnchorPropertyName: [...],   // which native field(s) carry the harvested CEDS anchor
-  cedsOptionOriginalAnchorPropertyName: [],
+  hubAnchorPropertyNameByHub: {},          // per hub token: the native field(s) carrying a harvested anchor into that hub
+  hubOptionAnchorPropertyNameByHub: {},
   crosswalkPrefix: [],
   crosswalkResolveProperty: STABLE_URI_PROPERTY_NAME,
-  includeInImplied: true,
-  impliedTargets: ['CEDS'],
 }
 ```
 
-For CEDS itself this is present-but-empty (CEDS is the hub, not a mapped-in standard). For SIF it
-names `'CEDS ID'` as the anchor column. The block is **required on the root** by
+(zeroBacklog A2: the two anchor keys became per-hub maps; `includeInImplied` and `impliedTargets` were retired.)
+Every forge in the tree declares both maps empty today. The block is **required on the root** by
 `REQUIRED_PROPERTIES.STANDARD_ROOT` (`lib/vocabulary/vocabulary.js`), so you must declare it — but
 a grep of `apps/` and `lib/` finds no *runtime* consumer beyond that validation. Declare it
 faithfully by copying SIF's pattern; do not assume any particular downstream reads it.
