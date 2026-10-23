@@ -1,0 +1,15 @@
+{
+  // openbadgesOnly — Open Badges 3.0 alone (stage off): the forge's base block, no hub, no bridge (nextStandards-102326 lane A1).
+  "schemaVersion": "1.0.0",
+  "recipeName": "openbadgesOnly",
+  "kind": "dev",
+  "description": "Forge the Open Badges 3.0 standard base only - proves the new OpenBadges bundle forges on the OpenAPI kit.",
+  "standards": [
+    {
+      "token": "openbadges",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

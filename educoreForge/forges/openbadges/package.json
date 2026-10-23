@@ -1,0 +1,7 @@
+{
+	"name": "forge-openbadges",
+	"version": "1.0.0",
+	"main": "forgeOpenbadges.js",
+	"description": "Open Badges 3.0 forge bundle — the 1EdTech OpenAPI 3.0 document's components.schemas on lib/openapi-forge: schemas, properties, enums, every $ref as a REFERENCES edge. It does no bridging.",
+	"private": true
+}

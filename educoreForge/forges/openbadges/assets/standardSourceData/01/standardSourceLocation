@@ -1,0 +1,7 @@
+standard: Open Badges 3.0 (1EdTech), OpenAPI 3.0 schema
+publishedVersion: 3.0
+publishedVersionEvidence: the document's own info.version "3.0" with x-status "Final" (and the URL's v3p0 segment)
+upstreamUrl: https://purl.imsglobal.org/spec/ob/v3p0/schema/openapi/ob_v3p0_oas.json
+publisher: 1EdTech Consortium (the document's info.contact still reads IMS Global)
+acquiredDate: 2026-10-23
+note: EDITING WARNING. deriveVersionStamp (lib/snapshot-provenance) takes THE ENTIRE REST OF the publishedVersion line as the version, so keep that line bare; citations belong on publishedVersionEvidence. context-3.0.3.json (https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json) is stored for reference only; the forge never reads it.

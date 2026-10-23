@@ -1,0 +1,14 @@
+{
+	"profileNote": "Open Badges 3.0 (1EdTech) on lib/openapi-forge (nextStandards-102326 A1). All 32 components.schemas are forged, including the ten API-plumbing schemas (OpenApi*, Imsx_*, ServiceDescriptionDocument, GetOpenBadgeCredentialsResponse, Proof) the pre-reset parser dropped: components.schemas round-trips whole and the plan's counts assume them.",
+	"sourceFileName": "ob_v3p0_oas.json",
+	"sourceFormat": "json",
+	"stableIdPrefix": "openbadges:",
+	"rootStableId": "openbadges:root",
+	"perStandardLabelByRole": {
+		"DmeClass": "OpenBadgesSchema",
+		"DmeProperty": "OpenBadgesProperty",
+		"DmeOptionSet": "OpenBadgesEnum",
+		"DmeOptionValue": "OpenBadgesEnumValue"
+	},
+	"schemaExclusionList": []
+}
