@@ -54,7 +54,7 @@ const { shippedBridgeDeclarationFor } = require('./testSupport/shippedBridge');
 
 // the five shipped plugins, with the bundle directory the contract resolves document channels against
 const SHIPPED_PLUGIN_LIST = [
-	{ bridgeName: 'sifCedsStandardPlugin', bundleDirName: 'sif' },
+	// RETIRED 2026-10-22 (zeroBacklog lane D, D3-6): sifCedsStandardPlugin left with the old SIF forge (codeAttic/forges/sif)
 	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded, "known to be garbage"): edfiCedsCrosswalkPlugin moved to forges/edfi/retiredBridges/, out of the roster
 	{ bridgeName: 'edfiCedsDerivedPlugin', bundleDirName: 'edfi' },
 	{ bridgeName: 'pescCedsDerivedPlugin', bundleDirName: 'pesc260805' },

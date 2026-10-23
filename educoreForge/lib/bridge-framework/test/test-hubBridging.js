@@ -108,7 +108,10 @@ harness.equal('hub anchor blinding names = each blinding CEDS plugin\'s, in its 
 const declaredCedsEntryList = cedsEntryList.filter((oneEntry) => oneEntry.bridgeDeclaration.declaredTargetRuleList !== undefined);
 harness.equal('declared target rules = the declared CEDS plugin\'s (one plugin)', `${declaredCedsEntryList.length} ${declaredCedsEntryList.every((oneEntry) => sameText(oneEntry.bridgeDeclaration.declaredTargetRuleList, cedsHubBridging.declaredTargetRuleList))}`, '1 true');
 const remodelRefList = cedsEntryList.map((oneEntry) => oneEntry.bridgeDeclaration.remodelTableRef).filter((oneRef) => oneRef !== null && oneRef !== undefined);
-harness.equal('remodel table refs = the set the CEDS plugins name', canonicalJsonText(Array.from(new Set(remodelRefList)).sort()), canonicalJsonText(cedsHubBridging.remodelTableRefList.slice().sort()));
+// ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ ceds14PropertyRemodel's one consumer, sifCedsStandardPlugin, retired with the old SIF forge, so the
+// hub now declares a table no shipped plugin names; it is stated here by name (the hub declaration is lane C's file, not edited by lane D)
+const REMODEL_REF_WITHOUT_SHIPPED_CONSUMER_LIST = Object.freeze(['ceds14PropertyRemodel']);
+harness.equal('remodel table refs = the set the CEDS plugins name, plus the named ones whose consumer retired', canonicalJsonText(Array.from(new Set(remodelRefList.concat(REMODEL_REF_WITHOUT_SHIPPED_CONSUMER_LIST))).sort()), canonicalJsonText(cedsHubBridging.remodelTableRefList.slice().sort()));
 
 harness.section('(d) one hub id list');
 const cedsIdListPath = path.join(FORGES_DIR_PATH, cedsHubBridging.hubToken, cedsHubBridging.promptIdentifierScan.identifierListPath);

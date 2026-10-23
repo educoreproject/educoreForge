@@ -769,12 +769,12 @@ function runResolverGuard() {
 				// "one file" means in practice.
 				realResolver('ceds', (cedsErr, cedsStore) => {
 					harness.accepts('GREEN — a real standard resolves a store', cedsErr ? [cedsErr] : []);
-					realResolver('sif', (sifErr, sifStore) => {
+					realResolver('sif260928', (sifErr, sifStore) => {
 						harness.accepts('  and so does a second one', sifErr ? [sifErr] : []);
 						harness.ok(
 							'  AND BOTH GET THE IDENTICAL HANDLE — the collapse to one file, observed',
 							!!cedsStore && cedsStore === sifStore,
-							`ceds===sif is ${cedsStore === sifStore}`,
+							`ceds===sif260928 is ${cedsStore === sifStore}`,
 						);
 						harness.ok(
 							'  and the resolved file carries the vectors table',

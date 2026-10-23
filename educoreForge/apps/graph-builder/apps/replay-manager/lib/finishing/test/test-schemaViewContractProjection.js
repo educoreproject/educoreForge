@@ -159,7 +159,9 @@ const forgeFamilyResidue = forgeFamilyResidueFor(coverage);
 harness.ok(`(e) every forge's label family (${forgeDeclarationPathList.length} declarations: ${forgeFamilyLabelList.filter((one, position) => position % 2 === 0).join(', ')}) is producer-local`, forgeDeclarationPathList.length >= 5 && forgeFamilyResidue.length === 0, forgeFamilyResidue.join(', ') || 'no residue');
 const preFixPatternList = ['^(Ceds|Edfi|Sif260928|Pesc[A-Za-z0-9]+)[A-Z]', '^StandardBase$', '^BridgedRelation_'];
 const preFixResidue = forgeFamilyResidueFor(require(COVERAGE_PATH)({ vocabulary: { ...vocabulary, PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST: preFixPatternList } }));
-harness.ok('(e) observed RED with the pre-fix pattern list (no old-SIF family)', preFixResidue.some((oneLabel) => /^Sif[A-Z]/.test(oneLabel)), preFixResidue.join(', '));
+// ⟪zeroBacklog lane D, D3-6 follower, 2026-10-22⟫ the old SIF forge (rootLabel SifRoot) retired to codeAttic, so no declaration mints a
+// Sif* label any more; the same pre-fix list now leaves the three CTDL families' labels as residue, which is what keeps this twin red
+harness.ok('(e) observed RED with the pre-fix pattern list (families it never declared: today the CTDL ones)', preFixResidue.length > 0 && preFixResidue.every((oneLabel) => /^Ctdl/.test(oneLabel)), preFixResidue.join(', '));
 harness.note(`RED-OBSERVED e twin='oldSifFamilyUndeclared' → residue [${preFixResidue.join(', ')}]`);
 
 harness.report();

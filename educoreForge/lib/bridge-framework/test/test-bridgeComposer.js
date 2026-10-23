@@ -53,6 +53,8 @@ const hubBridgingLoaderLib = require('../hubBridgingLoader');
 // frozen bridgeNames that are no longer registered, each with its reason (R0 census: 16 frozen names)
 const RETIRED_FROZEN_BRIDGE_NAME_REASON = Object.freeze({
 	edfiCedsCrosswalkPlugin: 'retired before this lane (forges/edfi/retiredBridges/); the AEM crosswalk was withdrawn as an answer key; no recipe names it',
+	// ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫
+	sifCedsStandardPlugin: 'retired with the old SIF forge to codeAttic/forges/sif (TQ ruling Q-Z4 under the mandate); sif260928 replaced it; no recipe of record names it',
 });
 
 const proofConfig = getConfig('noRebuildProof') || {};
@@ -69,8 +71,8 @@ if (digestFilePath !== '' && fs.existsSync(digestFilePath)) {
 	Object.keys(atStart).sort().forEach((bridgeName) => {
 		const entry = registry.entryByBridgeName[bridgeName];
 		const was = atStart[bridgeName];
-		const nowText = entry === undefined ? 'NOT REGISTERED' : `${entry.standardKey} → ${entry.targetHub} ${sha256Hex(entry.declarationCanonicalText)} hooks[${Object.keys(entry.bridgeHooks).sort().join(',')}]`;
-		harness.equal(`${bridgeName}${entry !== undefined && entry.pluginFilePath !== path.join(TREE_ROOT, was.pluginFile) ? ' (now composed from ' + path.relative(TREE_ROOT, entry.pluginFilePath) + ')' : ''}`, nowText, `${was.standardKey} → ${was.targetHub} ${was.declarationDigest} hooks[${was.hookNameList.join(',')}]`);
+		const nowText = entry === undefined ? (RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName] !== undefined ? `RETIRED: ${RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName]}` : 'NOT REGISTERED') : `${entry.standardKey} → ${entry.targetHub} ${sha256Hex(entry.declarationCanonicalText)} hooks[${Object.keys(entry.bridgeHooks).sort().join(',')}]`;
+		harness.equal(`${bridgeName}${entry !== undefined && entry.pluginFilePath !== path.join(TREE_ROOT, was.pluginFile) ? ' (now composed from ' + path.relative(TREE_ROOT, entry.pluginFilePath) + ')' : ''}`, nowText, RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName] !== undefined && entry === undefined ? `RETIRED: ${RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName]}` : `${was.standardKey} → ${was.targetHub} ${was.declarationDigest} hooks[${was.hookNameList.join(',')}]`);
 	});
 	harness.equal('no bridge registered now that was not registered at the start', Object.keys(registry.entryByBridgeName).filter((bridgeName) => atStart[bridgeName] === undefined).join(','), '');
 }
