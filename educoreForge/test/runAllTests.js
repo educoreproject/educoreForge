@@ -240,20 +240,32 @@ const doRun = () => {
 	xLog.status(`${moduleName}: ${allSuites.length} suite(s)\n`);
 
 	const childArgs = forwardedFlags();
+	// A suite killed by a SIGNAL (SIGSEGV, SIGBUS, SIGILL) gave no verdict: Node itself crashed. test-bgEts has been seen to
+	// die that way under full-suite load (exit 139, V8 ClearStaleLeftTrimmedPointerVisitor, DEVLOG-R5; 49/49 alone every
+	// time). Such a suite is run ONCE more and the crash is reported by name either way; a suite that FAILS (exits with a
+	// status) is never re-run, and a second crash is a FAIL.
+	const CRASH_SIGNAL_LIST = ['SIGSEGV', 'SIGBUS', 'SIGILL'];
+	const runSuite = (suitePath) => spawnSync(process.execPath, [suitePath, ...childArgs], {
+		encoding: 'utf8',
+		cwd: treeRoot,
+		stdio: 'inherit',
+	});
 	const results = allSuites.map((suitePath) => {
-		const run = spawnSync(process.execPath, [suitePath, ...childArgs], {
-			encoding: 'utf8',
-			cwd: treeRoot,
-			stdio: 'inherit',
-		});
-		return { label: relative(suitePath), ok: run.status === 0, status: run.status };
+		const firstRun = runSuite(suitePath);
+		if (!CRASH_SIGNAL_LIST.includes(firstRun.signal)) {
+			return { label: relative(suitePath), ok: firstRun.status === 0, status: firstRun.status };
+		}
+		xLog.error(`${moduleName}: ${relative(suitePath)} CRASHED (${firstRun.signal}) without a verdict; running it once more`);
+		const secondRun = runSuite(suitePath);
+		const crashNote = `crashed ${firstRun.signal} once, re-run ${secondRun.signal ? `crashed ${secondRun.signal}` : `exit ${secondRun.status}`}`;
+		return { label: relative(suitePath), ok: secondRun.status === 0, status: secondRun.signal || secondRun.status, crashNote };
 	});
 
 	const failed = results.filter((r) => !r.ok);
 
 	xLog.status('='.repeat(70));
 	results.forEach((r) => {
-		const line = `${r.ok ? 'PASS' : 'FAIL'}  ${r.label}${r.ok ? '' : `  (exit ${r.status})`}`;
+		const line = `${r.ok ? 'PASS' : 'FAIL'}  ${r.label}${r.ok ? '' : `  (exit ${r.status})`}${r.crashNote ? `  [${r.crashNote}]` : ''}`;
 		if (r.ok) {
 			xLog.status(line);
 		} else {

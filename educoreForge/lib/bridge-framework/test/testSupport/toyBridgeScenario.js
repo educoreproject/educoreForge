@@ -16,8 +16,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                           lib/decision-store, lib/judgment-cache, lib/match-forensics; a store persists ACROSS runs
 //                           of one scenario (materialise after re-judge) unless reset
 //   hangGuardMs             how long a run may go without calling back before it is reported HUNG (default
-//                           HANG_GUARD_MS, 4000; a release whose real-size double needs longer passes its own: PESC
-//                           ePortfolio's 2,542 units, QUIET_ORBIT ruling 2026-10-01). A positive integer, else refused
+//                           HANG_GUARD_MS, 60000; a release whose real-size double needs longer passes its own: PESC
+//                           ePortfolio's 2,542 units, QUIET_ORBIT ruling 2026-10-01). A positive integer, else refused.
+//                           The default was 4000 until 2026-10-23: under a full-suite load the PESC TestScoreReport
+//                           double went past it (HUNG at 4000 ms in the run of record, 36/36 alone). A real hang never
+//                           calls back, so a longer guard only delays the report of one; it cannot hide one.
 // runScenario(scenario, cb) → { runError?, runReport?, graphDouble, stores, framework }  — a refusal is a RESULT
 
 const path = require('path');
@@ -41,7 +44,7 @@ const debugJudgeLib = require(path.join(BRIDGE_MAKER_LIB_DIR, 'debugJudge'));
 const matchForensicsLib = require(path.join(FRAMEWORK_DIR, '..', 'match-forensics', 'match-forensics'));
 
 const cloneJson = (value) => JSON.parse(JSON.stringify(value));
-const HANG_GUARD_MS = 4000;
+const HANG_GUARD_MS = 60000;
 
 // ---------------------------------------------------------------------
 // store doubles — the SAME API and the SAME refusals as the tree libs, in memory (scratch to os.tmpdir() where a file is needed)
