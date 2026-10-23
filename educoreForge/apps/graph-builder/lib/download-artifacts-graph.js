@@ -164,6 +164,45 @@ const jsonLdFamilyListingEmitterFor = ({ bundleToken }) => {
 	};
 };
 
+// ⟪nextStandards-102326 A3, 2026-10-23⟫ the OpenAPI kit's standards: ONE round-trip pair (lib/openapi-forge/openapiRoundTripPair.js) over each
+// bundle's own openapi profile, built exactly as that bundle's roundTripValidator.js builds it; what differs per bundle is this table
+const OPENAPI_KIT_LISTING_RULE_BY_BUNDLE_TOKEN = Object.freeze({
+	openbadges: Object.freeze({ forgeDeclarationModuleName: 'openbadgesForgeDeclaration', openapiProfileFileName: 'openbadgesOpenapiProfile.json' }),
+});
+
+const openapiKitListingEmitterFor = ({ bundleToken }) => {
+	const listingRule = OPENAPI_KIT_LISTING_RULE_BY_BUNDLE_TOKEN[bundleToken];
+	if (!listingRule) {
+		throw new Error(`download-artifacts-graph: no OpenAPI kit listing rule for bundle '${bundleToken}'`);
+	}
+	return ({ treeRootPath, boltTriple }, callback) => {
+		const bundleLibDirPath = path.join(treeRootPath, 'forges', bundleToken, 'lib');
+		const forgeDeclaration = require(path.join(bundleLibDirPath, listingRule.forgeDeclarationModuleName));
+		const openapiProfile = require(path.join(bundleLibDirPath, listingRule.openapiProfileFileName));
+		const roundTripPair = require(path.join(treeRootPath, 'lib', 'openapi-forge', 'openapiRoundTripPair'))({ openapiProfile, stableUriPropertyName: forgeDeclaration.stableUriPropertyName, ruleModulePath: 'lib/openapi-forge/openapiRoundTripPair.js' });
+		const { openGraphReader } = require(path.join(treeRootPath, 'lib', 'forge-framework', 'roundTripHarness', 'graphReader'));
+		openGraphReader({ boltUrl: boltTriple.boltUrl, user: boltTriple.user, password: boltTriple.password, standardSource: forgeDeclaration.standardSource }, (openError, reader) => {
+			if (openError) {
+				callback(`${bundleToken} listing: ${openError}`);
+				return;
+			}
+			roundTripPair.emitFromGraph({ reader }, (emitError, emitted) => {
+				reader.close((closeError) => {
+					if (emitError || (emitted && emitted.fault !== undefined)) {
+						callback(`${bundleToken} listing: ${emitError || JSON.stringify(emitted.fault)}`);
+						return;
+					}
+					if (closeError) {
+						callback(`${bundleToken} listing: ${closeError}`);
+						return;
+					}
+					callback('', { statementMap: emitted.statements });
+				});
+			});
+		});
+	};
+};
+
 const statementListingEmitterByBundleToken = Object.freeze({
 	sif260928: sif260928ListingEmitter,
 	edfi: edfiListingEmitter,
@@ -171,6 +210,7 @@ const statementListingEmitterByBundleToken = Object.freeze({
 	ctdl: jsonLdFamilyListingEmitterFor({ bundleToken: 'ctdl' }),
 	ctdlasn: jsonLdFamilyListingEmitterFor({ bundleToken: 'ctdlasn' }),
 	ctdlqdata: jsonLdFamilyListingEmitterFor({ bundleToken: 'ctdlqdata' }),
+	openbadges: openapiKitListingEmitterFor({ bundleToken: 'openbadges' }),
 });
 
 module.exports = { installReadOnlyDriverGuard, statementListingEmitterByBundleToken };
