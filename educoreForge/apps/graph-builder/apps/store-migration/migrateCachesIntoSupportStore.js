@@ -120,6 +120,7 @@ const moduleFunction =
 		// table's column list came back blank, both as clean results rather than as errors. The tool
 		// lied plausibly, which is worse than crashing. A caller that names no statement is a caller
 		// bug, so it is named as one and no SQL is attempted.
+		const SQLITE_CLI_BUSY_TIMEOUT_MS = 30000;
 		const runSqliteCli = ({ databaseFilePath, statementText }, callback) => {
 			if (typeof databaseFilePath !== 'string' || databaseFilePath.trim() === '') {
 				callback(
@@ -135,9 +136,13 @@ const moduleFunction =
 				);
 				return;
 			}
+			// '.timeout' makes sqlite3 WAIT up to SQLITE_CLI_BUSY_TIMEOUT_MS for a lock another connection holds,
+			// instead of failing at once with SQLITE_BUSY. Without it a store still open in this process (the
+			// suite's throwaway store, a live build's handle) refused about one run in twelve under load
+			// (measured 2026-10-23, test-supportStore SECTION 3, 12 parallel runs).
 			execFile(
 				SQLITE_CLI,
-				[databaseFilePath, statementText],
+				['-cmd', `.timeout ${SQLITE_CLI_BUSY_TIMEOUT_MS}`, databaseFilePath, statementText],
 				{ maxBuffer: 64 * 1024 * 1024 },
 				(execError, stdout, stderr) => {
 					if (execError) {

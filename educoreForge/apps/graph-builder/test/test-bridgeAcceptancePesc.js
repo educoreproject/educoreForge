@@ -1060,7 +1060,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ═══ RE-ANCHOR, 2026-10-23 (PEARL_CIPHER; zeroBacklog lane A2-5 follow-up, BRONZE_CROWN grant) ═══ P1_BASELINE_COMMIT
 // postZbA2rPescCompose-102326 -> postZbA2rPartitionTestPescCompose-102326, tag cut ON this commit. CENSUS over this gate's paths: lib/bridge-framework/test/test-pairRowJudgmentPartition.js 21/7
 // (its fixture re-based on A2-5's state: the partition on the ceds row). No bridge-framework or bridge-maker source.
-const P1_BASELINE_COMMIT = 'postZbA2rPartitionTestPescCompose-102326'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A2; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (BRONZE_CROWN; zeroBacklog known-broken follow-up) ═══ P1_BASELINE_COMMIT
+// postZbA2rPartitionTestPescCompose-102326 -> postZbHarnessPescCompose-102326, tag cut ON this commit. CENSUS over this gate's paths:
+// lib/bridge-framework/test/testSupport/toyBridgeScenario.js 6/3 (c40c8a73: the default hangGuardMs 4000 -> 60000 and its comment). A test
+// harness constant only; lib/bridge-framework/test is outside FINGERPRINT_ROOT_LIST, so frameworkFingerprint does not move. No
+// bridge-framework or bridge-maker source.
+const P1_BASELINE_COMMIT = 'postZbHarnessPescCompose-102326'; // re-anchored by BRONZE_CROWN (census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
