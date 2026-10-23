@@ -1045,7 +1045,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // BG-COMPOSE-PESC (a) zbCPescLdOnMainPescCompose-102326 -> postZbBSizeFixPescCompose-102326. CENSUS (numstat): lib/bridge-framework/
 // candidateRetrievalMethodRegistry.js 49/5 (per-record retrievalHitList; paths name their hit by index; expandedRetrievalPathListFor),
 // test/test-retrievalHitList.js 97/0 (new), test/test-bgDerived.js 1/1 (a twin's find-text). No PESC plugin, no bridge-maker file.
-const P1_BASELINE_COMMIT = 'postZbBSizeFixPescCompose-102326'; // re-anchored by SILENT_TRAIL (zeroBacklog lane B (C)); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (SILENT_TRAIL; zeroBacklog lane B, the pair-row judgmentPartition, on main c1da0eb3; ruled by BRONZE_CROWN) ═══
+// BG-COMPOSE-PESC (a) postZbBSizeFixPescCompose-102326 -> postZbBPairPartitionPescCompose-102326. CENSUS (numstat): lib/bridge-framework/
+// standardBridgingContract.js 26/4 (the optional pair-row key and its kind checker), bridgeComposer.js 10/0 (applies it),
+// test/test-pairRowJudgmentPartition.js 83/0 (new). No PESC plugin, no bridge-maker file.
+const P1_BASELINE_COMMIT = 'postZbBPairPartitionPescCompose-102326'; // re-anchored by SILENT_TRAIL (zeroBacklog lane B); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
