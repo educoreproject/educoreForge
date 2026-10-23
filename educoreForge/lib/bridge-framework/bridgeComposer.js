@@ -115,6 +115,16 @@ const composeOne = ({ standardBridging, oneFacet, hubToken, pairRow, hubBridging
 		// existing digest moves (P-a1)
 		...(oneFacet.subjectRenderingAllowList === null || hubBridging.renderedProseIdentifierRule === null ? {} : { renderedProseIdentifierRule: { ...hubBridging.renderedProseIdentifierRule } }),
 	};
+	// ⟪zeroBacklog lane B, BRONZE_CROWN ruling 2026-10-23⟫ a pair row that STATES judgmentPartition decides this pairing's partition: an
+	// object replaces the template's, null removes it (the plugin contract reads an absent key as "no partition"); a row that does not
+	// state it leaves the template's in place, so no existing pairing's declaration moves
+	if (Object.prototype.hasOwnProperty.call(pairRow, 'judgmentPartition')) {
+		if (pairRow.judgmentPartition === null) {
+			delete bridgeDeclaration.judgmentPartition;
+		} else {
+			bridgeDeclaration.judgmentPartition = { ...pairRow.judgmentPartition };
+		}
+	}
 	return { pluginModule: { bridgeDeclaration, bridgeHooks, bridgeTarget: { targetHub: hubToken, judgeWording: { ...hubBridging.judgeWording } } } };
 };
 

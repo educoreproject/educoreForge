@@ -34,6 +34,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                                zeroBacklog lane C3, 2026-10-22) or null
 //   remodelTableRef              null, or { hubRemodelTable: <index into the hub's remodelTableRefList> }
 //   hubRemodelTableListLength    as hubAnchorListLength, for remodelTableRef
+// ⟪zeroBacklog lane B, BRONZE_CROWN ruling 2026-10-23⟫ ONE OPTIONAL key (PAIR_ROW_OPTIONAL_CONTRACT), the house form's single exception:
+//   judgmentPartition            this PAIRING's judgment partition: a partition declaration (judgmentPartition.js) overrides the
+//                                facet template's, null declares that the pairing has none. A row that does not state it keeps the
+//                                template's, so no existing pairing's declaration (and digest) moves. Why: a partition shared through the
+//                                template split one pairing's units by ANOTHER hub's domains, one hub's structure shaping another's judging.
 // ⟪R3⟫ a bridge created AFTER the refactor declares instead: blindingOrder { standardBlindingNameList, pairedHubAnchors:
 //   'union' } (the union over every hub the standard pairs with; hubAnchorListLength null), and promptIdentifierScan 'fromHub'
 //   (the pair hub's own patterns and list). Every existing pair keeps the array form and 'fromHubWithLegacyListPath'.
@@ -42,6 +47,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
+const judgmentPartitionLib = require('./judgmentPartition');
 
 // the declaration keys the composer writes; a template carrying one is refused (the value would be silently overwritten)
 const COMPOSED_DECLARATION_KEY_LIST = Object.freeze(['bridgeName', 'renderingAllowList', 'candidateRetrieval', 'promptIdentifierScan', 'blindingDeclaration', 'declaredTargetRuleList', 'remodelTableRef']);
@@ -70,6 +76,13 @@ const isIndexReference = (candidate, memberName) => isPlainObject(candidate) && 
 
 // ---- ONE registry of kind checkers: value → '' or a reason ----------------------------------------------------------------------
 const KIND_CHECKER_REGISTRY = Object.freeze({
+	partitionOrNone: (value) => {
+		if (value === null) {
+			return '';
+		}
+		const partitionReason = judgmentPartitionLib.declarationReason(value);
+		return partitionReason === '' ? '' : `must be null (this pairing has no partition) or a judgment partition declaration: ${partitionReason}`;
+	},
 	retrievalOrNone: (value) => (value === null || (isPlainObject(value) && value.embeddingModelVersion === undefined) ? '' : 'must be null or the pair\'s retrieval settings WITHOUT embeddingModelVersion (the hub declares it)'),
 	nameListOrNone: (value) => (value === null || (isNameList(value) && value.length > 0) ? '' : 'must be null or a non-empty list of field names'),
 	scanFromHubOrNone: (value) => (value === null || PROMPT_IDENTIFIER_SCAN_FORM_LIST.indexOf(value) !== -1 ? '' : `must be null or one of ${PROMPT_IDENTIFIER_SCAN_FORM_LIST.map((oneForm) => `'${oneForm}'`).join(', ')}`),
@@ -90,14 +103,18 @@ const PAIR_ROW_CONTRACT = Object.freeze({
 	hubRemodelTableListLength: 'lengthOrNone',
 });
 const PAIR_ROW_KEY_LIST = Object.freeze(Object.keys(PAIR_ROW_CONTRACT));
+const PAIR_ROW_OPTIONAL_CONTRACT = Object.freeze({
+	judgmentPartition: 'partitionOrNone',
+});
+const PAIR_ROW_OPTIONAL_KEY_LIST = Object.freeze(Object.keys(PAIR_ROW_OPTIONAL_CONTRACT));
 const STANDARD_BRIDGING_KEY_LIST = Object.freeze(['standardKey', 'bridgeNameStem', 'facetList']);
 const FACET_KEY_LIST = Object.freeze(['facetName', 'declarationTemplate', 'subjectRenderingAllowList', 'pairByHubToken']);
 
 const refusal = (whatText, whereText) => refuse.byName({ moduleName, what: whatText, where: whereText });
-const exactKeyRefusal = ({ value, keyList, whatName }) => {
-	const unknownName = Object.keys(value).find((oneName) => keyList.indexOf(oneName) === -1);
+const exactKeyRefusal = ({ value, keyList, whatName, optionalKeyList = [] }) => {
+	const unknownName = Object.keys(value).find((oneName) => keyList.indexOf(oneName) === -1 && optionalKeyList.indexOf(oneName) === -1);
 	if (unknownName !== undefined) {
-		return refusal(`${whatName} carries unknown key '${unknownName}'`, `it names exactly ${keyList.join(', ')}`);
+		return refusal(`${whatName} carries unknown key '${unknownName}'`, `it names exactly ${keyList.join(', ')}${optionalKeyList.length ? ` (optionally ${optionalKeyList.join(', ')})` : ''}`);
 	}
 	const missingName = keyList.find((oneName) => !Object.prototype.hasOwnProperty.call(value, oneName));
 	return missingName === undefined ? null : refusal(`${whatName} is missing required key '${missingName}'`, `it names exactly ${keyList.join(', ')}; an empty value is stated, never omitted`);
@@ -107,9 +124,13 @@ const pairRowRefusal = ({ pairRow, whatName }) => {
 	if (!isPlainObject(pairRow)) {
 		return refusal(`${whatName} is not an object`, 'a pair row is { ' + PAIR_ROW_KEY_LIST.join(', ') + ' }');
 	}
-	const keyError = exactKeyRefusal({ value: pairRow, keyList: PAIR_ROW_KEY_LIST, whatName });
+	const keyError = exactKeyRefusal({ value: pairRow, keyList: PAIR_ROW_KEY_LIST, whatName, optionalKeyList: PAIR_ROW_OPTIONAL_KEY_LIST });
 	if (keyError) {
 		return keyError;
+	}
+	const badOptionalName = PAIR_ROW_OPTIONAL_KEY_LIST.find((oneName) => Object.prototype.hasOwnProperty.call(pairRow, oneName) && KIND_CHECKER_REGISTRY[PAIR_ROW_OPTIONAL_CONTRACT[oneName]](pairRow[oneName]) !== '');
+	if (badOptionalName !== undefined) {
+		return refusal(`${whatName}.${badOptionalName} ${KIND_CHECKER_REGISTRY[PAIR_ROW_OPTIONAL_CONTRACT[badOptionalName]](pairRow[badOptionalName])}`, 'standardBridgingContract PAIR_ROW_OPTIONAL_CONTRACT');
 	}
 	const badName = PAIR_ROW_KEY_LIST.find((oneName) => KIND_CHECKER_REGISTRY[PAIR_ROW_CONTRACT[oneName]](pairRow[oneName]) !== '');
 	if (badName !== undefined) {
@@ -197,6 +218,7 @@ const validateStandardBridging = ({ standardBridging, bridgeHooksByFacetName, bu
 module.exports = {
 	COMPOSED_DECLARATION_KEY_LIST,
 	PAIR_ROW_KEY_LIST,
+	PAIR_ROW_OPTIONAL_KEY_LIST,
 	STANDARD_BRIDGING_KEY_LIST,
 	FACET_KEY_LIST,
 	PROMPT_IDENTIFIER_SCAN_FROM_HUB,
