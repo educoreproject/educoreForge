@@ -1,0 +1,57 @@
+{
+  // goldZeroBacklog — zeroBacklog campaign, lane A's A2 rebridge=all and lane F's final build as ONE run (BRONZE_CROWN plan
+  // change, 2026-10-23; PEARL_CIPHER). It is ctdlJudgedAll (= goldCtdlHub with the ten derived bridges paired with BOTH hubs,
+  // lane B) PLUS PESC_LD (lane C): the standard appended last, and its three bridging rows, each paired with both hubs — the
+  // declared-identity facet '' (C2, C3; asks no judge) and the two judged facets PescTermRow and PescTermShape (C4). Every
+  // entry carried over keeps its position; additions are APPENDED. Built with --rebridge=all --judgeCacheOnly=true
+  // --embeddingCacheOnly=true over a COPY of lane B's final judged store with lane C's caches folded in, so every block
+  // re-keys after A2 and no judge or embedder is asked. kind 'golden' so -stampPromotion may name its graph GOLD_EVAL_*.
+  "schemaVersion": "1.0.0",
+  "recipeName": "goldZeroBacklog",
+  "kind": "golden",
+  "description": "The zeroBacklog gold: goldCtdlHub (CEDS and CTDL hubs, CEDS layers guide and textRepair, Ed-Fi, SIF 260928, eight PESC releases, the CTDL family and its declared bridges) with the ten derived bridges judged against BOTH hubs, PLUS PESC_LD with its declared-identity bridges and its two judged facets (pesc: rows and shapes), each to both hubs.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sif260928", "version": "current" },
+    { "token": "pesccollegetranscript1v8v0", "version": "current" },
+    { "token": "pesccollegetranscript1v7v0", "version": "current" },
+    { "token": "peschighschooltranscript1v6v0", "version": "current" },
+    { "token": "pesctestscorereport1v1v0", "version": "current" },
+    { "token": "pesclearningrecord1v0v0", "version": "current" },
+    { "token": "pescdocumentrequest1v0v0", "version": "current" },
+    { "token": "pescdocumentresponse1v0v0", "version": "current" },
+    { "token": "pescacademiceportfolio1v0v0", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "ctdlasn", "version": "current" },
+    { "token": "ctdlqdata", "version": "current" },
+    { "token": "pescld", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "layers": [
+    { "standard": "ceds", "layer": "guide" },
+    { "standard": "ceds", "layer": "textRepair" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hubs": ["ceds", "ctdl"], "dependencies": ["edfi", "ceds", "ctdl"] },
+    { "source": "sif260928", "hubs": ["ceds", "ctdl"], "dependencies": ["sif260928", "ceds", "ctdl"] },
+    { "source": "pesccollegetranscript1v8v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesccollegetranscript1v8v0", "ceds", "ctdl"] },
+    { "source": "pesccollegetranscript1v7v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesccollegetranscript1v7v0", "ceds", "ctdl"] },
+    { "source": "peschighschooltranscript1v6v0", "hubs": ["ceds", "ctdl"], "dependencies": ["peschighschooltranscript1v6v0", "ceds", "ctdl"] },
+    { "source": "pesctestscorereport1v1v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesctestscorereport1v1v0", "ceds", "ctdl"] },
+    { "source": "pesclearningrecord1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesclearningrecord1v0v0", "ceds", "ctdl"] },
+    { "source": "pescdocumentrequest1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescdocumentrequest1v0v0", "ceds", "ctdl"] },
+    { "source": "pescdocumentresponse1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescdocumentresponse1v0v0", "ceds", "ctdl"] },
+    { "source": "pescacademiceportfolio1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescacademiceportfolio1v0v0", "ceds", "ctdl"] },
+    { "source": "ctdl", "hubs": ["ceds"], "dependencies": ["ctdl", "ceds"] },
+    { "source": "ctdlasn", "hubs": ["ctdl"], "dependencies": ["ctdlasn", "ctdl"] },
+    { "source": "ctdl", "familyStandards": ["ctdl", "ctdlasn", "ctdlqdata"], "bridge": "ctdlFamilyStructure", "dependencies": ["ctdl", "ctdlasn", "ctdlqdata"] },
+    { "source": "pescld", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "pescld", "facet": "PescTermRow", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "pescld", "facet": "PescTermShape", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] }
+  ],
+  "roundTripStage": true
+}
