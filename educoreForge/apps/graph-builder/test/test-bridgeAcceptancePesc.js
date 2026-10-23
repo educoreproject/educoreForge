@@ -1057,7 +1057,10 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ═══ RE-ANCHOR, 2026-10-23 (PEARL_CIPHER; zeroBacklog lane A2 rebased onto main e8ac4537, the controlled re-key batch; BRONZE_CROWN rulings Q1-Q5) ═══ P1_BASELINE_COMMIT
 // zbCPescLdC4PescCompose-102326c -> postZbA2rPescCompose-102326, tag cut ON this commit. CENSUS over this gate's paths: lib/vocabulary/test/test-sifVocabularyInvariance.js 9/3 (the three G0 proxy
 // literals re-pinned, a ruled base move) and lib/bridge-framework/test/test-bgNosub.js (its two re-anchors, this commit). No bridge-framework or bridge-maker source: frameworkFingerprint does not move.
-const P1_BASELINE_COMMIT = 'postZbA2rPescCompose-102326'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A2; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (PEARL_CIPHER; zeroBacklog lane A2-5 follow-up, BRONZE_CROWN grant) ═══ P1_BASELINE_COMMIT
+// postZbA2rPescCompose-102326 -> postZbA2rPartitionTestPescCompose-102326, tag cut ON this commit. CENSUS over this gate's paths: lib/bridge-framework/test/test-pairRowJudgmentPartition.js 21/7
+// (its fixture re-based on A2-5's state: the partition on the ceds row). No bridge-framework or bridge-maker source.
+const P1_BASELINE_COMMIT = 'postZbA2rPartitionTestPescCompose-102326'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A2; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
