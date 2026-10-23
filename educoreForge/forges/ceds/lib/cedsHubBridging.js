@@ -33,6 +33,13 @@ const hubBridging = Object.freeze({
 	declaredTargetRuleList: [
 		{ ruleKind: 'memberByNotation', pattern: '^ceds:(\\d{6})/?#(.+)$', containerStableIdTemplate: `${CEDS_TERM_IRI_PREFIX}C{1}`, memberEdgeType: 'HAS_VALUE', memberMatchProperty: 'notation', memberMatchGroup: 2 },
 		{ ruleKind: 'stableIdTemplate', pattern: '^ceds:(\\d{6})$', stableIdTemplate: `${CEDS_TERM_IRI_PREFIX}C{1}` },
+		// ⟪zeroBacklog lane C3, 2026-10-22⟫ the TERM forms a source cites CEDS by (PESC_LD: ceds:P……, ceds:C……, ceds:NI……), each to the
+		// term card's key, the term's full IRI (measured on DEV_p9CedsTermTier: every CEDS term card keys on this IRI, class 402,
+		// optionSet 965, property 2324, value 19546). They follow the two seam rules, which stay first and byte-identical: no CTDL seam
+		// target has a letter after 'ceds:', so none of the 53 resolves differently.
+		{ ruleKind: 'stableIdTemplate', pattern: '^ceds:(P\\d{6})$', stableIdTemplate: `${CEDS_TERM_IRI_PREFIX}{1}` },
+		{ ruleKind: 'stableIdTemplate', pattern: '^ceds:(C\\d{6})$', stableIdTemplate: `${CEDS_TERM_IRI_PREFIX}{1}` },
+		{ ruleKind: 'stableIdTemplate', pattern: '^ceds:(NI\\d+)$', stableIdTemplate: `${CEDS_TERM_IRI_PREFIX}{1}` },
 	],
 	termKeyForm: 'absoluteIri',
 	embeddingModelVersion: 'voyage-4-large',

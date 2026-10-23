@@ -1,0 +1,7 @@
+{
+	"pairingNote": "The hubs PESC_LD's declared-identity facet pairs with, and which of each hub's declared target rules it takes (lib/bridge-framework/standardBridgingContract.js DECLARED_TARGET_RULE_KIND_FILTER_BY_PAIR_VALUE). The CTDL hub's rules are all of a kind declared identity admits, so it takes them whole ('fromHub'); the CEDS hub's list opens with a memberByNotation rule for its CTDL seam, which declared identity does not admit, so it takes the term-form stableIdTemplate rules only. Data, so the code names no hub (zeroBacklog lane C3, 2026-10-23).",
+	"declaredTargetRuleListByHubToken": {
+		"ctdl": "fromHub",
+		"ceds": "fromHubStableIdTemplateRules"
+	}
+}

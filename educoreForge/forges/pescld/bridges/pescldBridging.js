@@ -80,17 +80,20 @@ const declarationTemplate = Object.freeze({
 });
 
 // the pair row every hub takes: nothing rendered (nothing is judged), the standard's own term names blinded beside the paired
-// hubs' anchor names (the new-bridge union form, R3), the hub's own rules
-const pairRowFromHubRules = Object.freeze({
+// hubs' anchor names (the new-bridge union form, R3), and the hub's own rules, taken as pescldHubPairing.json says for that hub
+// (C3: the hubs and their rule-taking are DATA, so this file names none)
+const hubPairing = require(path.join(__dirname, 'pescldHubPairing.json'));
+const pairRowFor = (declaredTargetRuleListPairValue) => Object.freeze({
 	candidateRetrieval: null,
 	candidateRenderingAllowList: null,
 	promptIdentifierScan: null,
 	blindingOrder: { standardBlindingNameList: ['termCurie', 'termIri'], pairedHubAnchors: 'union' },
 	hubAnchorListLength: null,
-	declaredTargetRuleList: 'fromHub',
+	declaredTargetRuleList: declaredTargetRuleListPairValue,
 	remodelTableRef: null,
 	hubRemodelTableListLength: null,
 });
+const pairByHubToken = Object.freeze(Object.fromEntries(Object.entries(hubPairing.declaredTargetRuleListByHubToken).map(([hubToken, pairValue]) => [hubToken, pairRowFor(pairValue)])));
 
 const standardBridging = Object.freeze({
 	standardKey: 'pescld',
@@ -100,9 +103,7 @@ const standardBridging = Object.freeze({
 			facetName: '',
 			declarationTemplate,
 			subjectRenderingAllowList: null,
-			pairByHubToken: {
-				ctdl: pairRowFromHubRules,
-			},
+			pairByHubToken,
 		},
 	],
 });
