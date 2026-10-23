@@ -1,0 +1,13 @@
+{
+	"about": "The directories runAllTests deliberately does NOT search for suites, each with its reason. Every entry is printed as SKIP by -list and by every run, so a skipped directory is never silently absent. An entry is either a directoryName (skipped wherever a directory of that name appears) or a directoryPath relative to the tree root (skipped there only; it must exist, or discovery refuses the stale entry by name).",
+	"exclusionList": [
+		{
+			"directoryName": "node_modules",
+			"reason": "third-party packages: their test-*.js files are the packages' own, not this tree's suites"
+		},
+		{
+			"directoryPath": "codeAttic",
+			"reason": "retired code kept for its history: its suites test modules that no longer run in this tree"
+		}
+	]
+}

@@ -31,6 +31,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { discoverSuites, moduleOwnTestDirSuites } = require('./testLib/suiteDiscovery');
 
 const treeRoot = path.join(__dirname, '..');
 const appsDir = path.join(treeRoot, 'apps');
@@ -47,11 +48,13 @@ SYNOPSIS
      runAllTests [-list] [--app=<name>] [--suite=<name>] [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Discovers every suite matching apps/**/test/test-*.js AND lib/**/test/test-*.js
-     (recursively, so a suite next to a nested component is found too), runs each in its own
-     process, and exits 0 only if every selected suite passed. Modules with no suite at all are
-     listed as untested so their absence cannot be mistaken for coverage -- an app module is a
-     package.json dir, a lib module is any lib directory holding .js files.
+     Discovers every file named test-*.js below a directory named test, ANYWHERE in the tree
+     (nested test dirs, tools/test, lib/ dirs inside app modules all included), except the
+     directories test/suiteDiscoveryExclusionList.json names with a reason; each of those is
+     listed as SKIP. Runs each suite in its own process, and exits 0 only if every selected
+     suite passed. Modules with no suite in their own test/ dir are listed as untested so their
+     absence cannot be mistaken for coverage -- an app module is a package.json dir, a lib
+     module is any lib directory holding .js files.
 
      --app selects among APP modules only and therefore drops every lib suite; that is
      deliberate (you are asking about one app, not about the substrate) and is why -list
@@ -113,17 +116,9 @@ const findModuleDirs = (dirPath) => {
 	return here.concat(deeper);
 };
 
-const suitesInModule = (moduleDir) => {
-	const testDir = path.join(moduleDir, 'test');
-	if (!fs.existsSync(testDir)) {
-		return [];
-	}
-	return fs
-		.readdirSync(testDir)
-		.filter((name) => /^test-.*\.js$/.test(name))
-		.sort()
-		.map((name) => path.join(testDir, name));
-};
+// ⟪zeroBacklog A3⟫ a module's OWN test/ dir decides only the per-module COVERAGE report (NONE lines) now; which suites RUN is
+// decided by the tree-wide discovery below (testLib/suiteDiscovery.js), which this rule measured 20 suites short of.
+const suitesInModule = (moduleDir) => moduleOwnTestDirSuites({ moduleDirPath: moduleDir });
 
 // tree-root lib/ is the shared SUBSTRATE, not a set of packages — its directories carry no
 // package.json, so findModuleDirs cannot see them. It still holds the most safety-critical code in
@@ -187,10 +182,31 @@ const untestedModules = suiteFilter
 			.concat(selectedLibDirs)
 			.filter((moduleDir) => suitesInModule(moduleDir).length === 0);
 
-const allSuites = selectedModules
-	.concat(selectedLibDirs)
-	.reduce((soFar, moduleDir) => soFar.concat(suitesInModule(moduleDir)), [])
+// ⟪zeroBacklog A3⟫ THE SUITES THAT RUN: every test-*.js below a directory named test, anywhere in the tree, minus the directories
+// test/suiteDiscoveryExclusionList.json names with a reason (each reported as SKIP). The module rule above found 20 fewer
+// (forges/*/tools/test, replay-manager/lib/finishing/test, apps/graph-builder/test/bridgeAcceptance), measured 2026-10-22.
+const discovery = discoverSuites({
+	treeRootPath: treeRoot,
+	exclusionList: JSON.parse(fs.readFileSync(path.join(__dirname, 'suiteDiscoveryExclusionList.json'), 'utf8')).exclusionList,
+});
+if (discovery.refusalText) {
+	xLog.error(`${moduleName}: ${discovery.refusalText}`);
+	process.exit(1);
+}
+// the discovery must find at least what the module rule finds; a walk that lost one is refused by name, not trusted
+const moduleRuleSuiteList = allModules.concat(libModuleDirs).reduce((soFar, moduleDir) => soFar.concat(suitesInModule(moduleDir)), []);
+const lostByDiscovery = moduleRuleSuiteList.filter((suitePath) => discovery.suitePathList.indexOf(suitePath) === -1);
+if (lostByDiscovery.length) {
+	xLog.error(`${moduleName}: REFUSED — the tree-wide discovery misses ${lostByDiscovery.length} suite(s) the module rule finds: ${lostByDiscovery.join(', ')}`);
+	process.exit(1);
+}
+// --app keeps its meaning: the suites whose DEEPEST owning module is that app (nested test dirs under it included)
+const owningModuleOf = (suitePath) =>
+	allModules.filter((moduleDir) => suitePath.startsWith(`${moduleDir}${path.sep}`)).sort((left, right) => right.length - left.length)[0];
+const allSuites = discovery.suitePathList
+	.filter((suitePath) => !appFilter || selectedModules.indexOf(owningModuleOf(suitePath)) !== -1)
 	.filter((suitePath) => !suiteFilter || path.basename(suitePath).includes(suiteFilter));
+const skippedDirectoryList = appFilter || suiteFilter ? [] : discovery.skippedDirectoryList;
 
 const relative = (aPath) => path.relative(treeRoot, aPath);
 
@@ -202,6 +218,7 @@ const doList = () => {
 	xLog.status(`${moduleName}: discovered suites`);
 	allSuites.forEach((suitePath) => xLog.result(`${relative(suitePath)}\n`));
 	untestedModules.forEach((moduleDir) => xLog.status(`  (${relative(moduleDir)} has no test suite)`));
+	skippedDirectoryList.forEach((oneSkip) => xLog.status(`  (SKIP ${relative(oneSkip.directoryPath)} -- ${oneSkip.reason})`));
 	process.exit(0);
 };
 
@@ -215,7 +232,7 @@ const doRun = () => {
 	if (!allSuites.length) {
 		xLog.error(
 			`${moduleName}: no test suites matched` +
-				(appFilter || suiteFilter ? ' the given selection' : ' apps/*/test/test-*.js'),
+				(appFilter || suiteFilter ? ' the given selection' : ' test-*.js below any test/ directory'),
 		);
 		process.exit(1);
 	}
@@ -245,6 +262,9 @@ const doRun = () => {
 	});
 	untestedModules.forEach((moduleDir) => {
 		xLog.status(`NONE  ${relative(moduleDir)}  -- no test suite yet`);
+	});
+	skippedDirectoryList.forEach((oneSkip) => {
+		xLog.status(`SKIP  ${relative(oneSkip.directoryPath)}  -- ${oneSkip.reason}`);
 	});
 	xLog.status('='.repeat(70));
 
