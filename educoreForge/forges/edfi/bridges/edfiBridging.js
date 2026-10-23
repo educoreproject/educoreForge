@@ -198,7 +198,9 @@ const standardBridging = Object.freeze({
 				// k / floor reasoning stands until measured against CTDL), the hub's own candidate list and identifier scan, and the union
 				// blinding: this standard's own answer-key names, then every hub it pairs with (computed by the composer, never written here).
 				ctdl: {
-					candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 20, minScore: 0.3, k: 15, neighbourVote: { method: 'neighbourVote-v1', owner: { kind: 'propertyValue', property: 'parentId' }, siblings: { kind: 'sameOwner' }, referencedObject: { kind: 'edgeTarget', edgeTypeList: ['REFERENCES'] }, earnRule: 'topShare' } },
+					// neighbourVote null, unlike the ceds row: the vote reads a card's ONE range slot, and a CTDL card carries many (measured,
+					// zeroBacklog B1 P-c re-run 2026-10-22: "candidate card … carries 57 RANGE slot edges — a card has at most one RANGE slot edge")
+					candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 20, minScore: 0.3, k: 15, neighbourVote: null },
 					candidateRenderingAllowList: null,
 					promptIdentifierScan: 'fromHub',
 					blindingOrder: { standardBlindingNameList: ['crossRefs'], pairedHubAnchors: 'union' },
