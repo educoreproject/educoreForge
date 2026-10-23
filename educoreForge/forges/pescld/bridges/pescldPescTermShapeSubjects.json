@@ -1,0 +1,19 @@
+[
+	"pescld:shape/AcademicDegreeRequirementShape",
+	"pescld:shape/AcademicHonorsShape",
+	"pescld:shape/AcademicSummaryShape",
+	"pescld:shape/AdditionalStudentAchievementShape",
+	"pescld:shape/AgencyIdentifierShape",
+	"pescld:shape/AwardSummaryShape",
+	"pescld:shape/CollegeTranscriptShape",
+	"pescld:shape/CourseSupplementalGradeShape",
+	"pescld:shape/GPAShape",
+	"pescld:shape/GradeShape",
+	"pescld:shape/LicensureAchievementShape",
+	"pescld:shape/LicensureShape",
+	"pescld:shape/PhoneShape",
+	"pescld:shape/ProgramSummaryShape",
+	"pescld:shape/ResidencyShape",
+	"pescld:shape/SessionSummaryShape",
+	"pescld:shape/SummaryShape"
+]

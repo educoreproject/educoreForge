@@ -1,8 +1,9 @@
 'use strict';
 
 // pescldBridging.js — the STANDARD half of every bridge from PESC_LD (zeroBacklog lane C2; lib/bridge-framework/standardBridgingContract.js).
-// ONE facet, basis DECLARED IDENTITY: a PESC_LD shape, profile row or picklist value whose term is a hub's own term IS that hub
-// term (the same IRI), so it meets the hub's TERM card by an EXACT_MATCH that nothing judges and nothing infers.
+// THREE facets. The first (facetName '', C2/C3), basis DECLARED IDENTITY: a PESC_LD shape, profile row or picklist value whose term
+// is a hub's own term IS that hub term (the same IRI), so it meets the hub's TERM card by an EXACT_MATCH that nothing judges and
+// nothing infers. The two JUDGED facets (C4) cover the terms PESC_LD coins itself; they are described where they are declared below.
 //
 // WHAT THIS FILE KNOWS, AND WHAT IT DOES NOT (BRONZE_CROWN ruling, option A; DESIGN-C2-pescLdDeclaredIdentity-102226.md). It knows
 // the source's side only: every PESC_LD node that carries a termCurie (the term exactly as the package writes it, forges/pescld) is
@@ -95,6 +96,51 @@ const pairRowFor = (declaredTargetRuleListPairValue) => Object.freeze({
 });
 const pairByHubToken = Object.freeze(Object.fromEntries(Object.entries(hubPairing.declaredTargetRuleListByHubToken).map(([hubToken, pairValue]) => [hubToken, pairRowFor(pairValue)])));
 
+// ⟪zeroBacklog lane C4, 2026-10-23⟫ THE JUDGED FACETS: the terms PESC_LD coins itself (termCurie under pesc:). No hub owns such a term,
+// so identity cannot bridge it: the framework retrieves each subject's nearest hub cards by its texts and the judge picks one card or
+// none and names the relation (judgeSlot-v1). Two facets because a subject source names ONE graph label: the profile rows that use a
+// pesc: property (PescLdProperty, 142 rows over 114 terms) and the shapes that target a pesc: class (PescLdShape, 17). Each scope
+// file beside this one is DERIVED from the forged snapshot and frozen (test-pescldJudgedFacets asserts it equals the forge's pesc:
+// nodes). The split question takes the instruction form, as SIF's does: PESC_LD publishes no definitions, so the owning-definition
+// form would have nothing to show. crossRefs is blinded: a valueClass may name a hub class, an answer key.
+const judgedDeclarationTemplateFor = ({ subjectLabel, scopeStableIdListPath }) => Object.freeze({
+	standardKey: 'pescld',
+	pluginVersion: '1.0.0',
+	producerKind: 'inferred',
+	matchBasis: 'derived',
+	sourceCuriePrefix: { prefix: 'pescld', iri: 'urn:educore:pescld:' },
+	subjectCuriePrefix: 'pescld',
+	// EMPTY, and required to be: nothing is walked, the subjects come from the graph
+	sourceChannelList: [],
+	subjectIdentity: { kind: 'forgedNode', property: 'stableId' },
+	subjectSource: { kind: 'graphLabel', label: subjectLabel, scopeStableIdListPath },
+	judgePromptVariant: 'derivedJudgeSlot',
+	choiceQuestionFormName: 'matchingInstructionsState',
+	// the judge names the relation itself through the tool's predicate slot, so no category table is declared
+	predicateSource: { kind: 'judge', predicateRule: 'judgeSlot-v1' },
+	mappingTool: { name: 'educoreForge bridge-framework derived', version: '1.0.0' },
+	evidenceColumnMap: { subject: [], assertion: [] },
+	consistencyCheckColumnList: [],
+	segmentNormalisationRuleList: [],
+	classSideRemodelTable: [],
+	blockRecordsJudgeConfig: true,
+	evidenceHooksDeclared: { nominate: false, walkEvidence: false, globalGuidance: false },
+	compatibilityDeclarationList: [],
+});
+// the judged pair row, one for every hub the pairing data names: retrieval copied from a PESC release's row as the START (WORKORDER-C
+// C4), the hub's own candidate list and identifier scan, the union blinding (this standard's crossRefs, then every paired hub's anchors)
+const judgedPairRow = Object.freeze({
+	candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 40, minScore: 0.3, k: 40, neighbourVote: null },
+	candidateRenderingAllowList: null,
+	promptIdentifierScan: 'fromHub',
+	blindingOrder: { standardBlindingNameList: ['crossRefs'], pairedHubAnchors: 'union' },
+	hubAnchorListLength: null,
+	declaredTargetRuleList: null,
+	remodelTableRef: null,
+	hubRemodelTableListLength: null,
+});
+const judgedPairByHubToken = Object.freeze(Object.fromEntries(Object.keys(hubPairing.declaredTargetRuleListByHubToken).map((hubToken) => [hubToken, judgedPairRow])));
+
 const standardBridging = Object.freeze({
 	standardKey: 'pescld',
 	bridgeNameStem: 'pescld',
@@ -104,6 +150,20 @@ const standardBridging = Object.freeze({
 			declarationTemplate,
 			subjectRenderingAllowList: null,
 			pairByHubToken,
+		},
+		{
+			facetName: 'PescTermRow',
+			declarationTemplate: judgedDeclarationTemplateFor({ subjectLabel: 'PescLdProperty', scopeStableIdListPath: 'bridges/pescldPescTermRowSubjects.json' }),
+			// THE JUDGE'S VIEW of a profile row: its label, its own term, where it sits (shape.property), its usage note and value typing
+			subjectRenderingAllowList: ['name', 'termCurie', 'path', 'usageNote', 'valueNodeType', 'valueDataType', 'valueConstraintType', 'mandatory', 'repeatable'],
+			pairByHubToken: judgedPairByHubToken,
+		},
+		{
+			facetName: 'PescTermShape',
+			declarationTemplate: judgedDeclarationTemplateFor({ subjectLabel: 'PescLdShape', scopeStableIdListPath: 'bridges/pescldPescTermShapeSubjects.json' }),
+			// THE JUDGE'S VIEW of a shape: its label, the class it targets, its shape id
+			subjectRenderingAllowList: ['name', 'termCurie', 'path', 'targetType'],
+			pairByHubToken: judgedPairByHubToken,
 		},
 	],
 });
@@ -147,6 +207,7 @@ const subjectStableIdFor = ({ subjectIdentityList, sourceReader, xLog }, callbac
 	callback('', { resolutionBySubjectKey });
 };
 
-const bridgeHooksByFacetName = { '': { walkSourceAssertions, subjectStableIdFor } };
+// NO HOOKS on the judged facets: both documentary hooks are forbidden on a derived basis
+const bridgeHooksByFacetName = { '': { walkSourceAssertions, subjectStableIdFor }, PescTermRow: {}, PescTermShape: {} };
 
 module.exports = { standardBridging, bridgeHooksByFacetName };
