@@ -122,8 +122,13 @@ const withOneByteAltered = (fileBuffer) => {
 };
 
 // a scratch forges/ dir holding ONLY each bundle's descriptor (the roster reads nothing else)
+// ⟪zeroBacklog lane D, D3-6, 2026-10-22; granted by BRONZE_CROWN⟫ the old SIF forge retired to codeAttic/forges/sif, so the real forges/
+// no longer holds a bundle named SIF; every scratch forges dir carries its retired descriptor as bundle 'sif', and A1a-UNIQUE runs there
+const RETIRED_SIF_DESCRIPTOR_PATH = path.join(REAL_FORGES_DIR, '..', 'codeAttic', 'forges', 'sif', 'parserDescriptor.ini');
 const makeScratchForgesDir = ({ descriptorTextByBundleDirName }) => {
 	const scratchForgesDirPath = makeScratchRoot('sif260928Forges-');
+	fs.mkdirSync(path.join(scratchForgesDirPath, 'sif'));
+	fs.writeFileSync(path.join(scratchForgesDirPath, 'sif', rosterLib.DESCRIPTOR_FILE_NAME), fs.readFileSync(RETIRED_SIF_DESCRIPTOR_PATH, 'utf8'));
 	fs.readdirSync(REAL_FORGES_DIR, { withFileTypes: true })
 		.filter((oneEntry) => oneEntry.isDirectory() && fs.existsSync(path.join(REAL_FORGES_DIR, oneEntry.name, rosterLib.DESCRIPTOR_FILE_NAME)))
 		.forEach((oneEntry) => {
@@ -148,7 +153,7 @@ const descriptorTextSayingSif = () => {
 // ---- the subject every conjunct reads and every twin mutates (on a clone)
 const makeSubject = () => ({
 	snapshotDirPath: REAL_SNAPSHOT_DIR,
-	forgesDirPath: REAL_FORGES_DIR,
+	forgesDirPath: makeScratchForgesDir({ descriptorTextByBundleDirName: {} }),
 	descriptorText: fs.readFileSync(DESCRIPTOR_PATH, 'utf8'),
 	forgeDeclaration: sif260928ForgeDeclaration,
 	nodeKindTable: sif260928NodeKindTable,
