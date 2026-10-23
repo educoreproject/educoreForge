@@ -15,6 +15,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   identifierListPath   bridges/<stem><Hub>IdList.json                       (today's per-plugin list; its string is digested)
 //   blindingDeclaration  the pair's blindingOrder, each { hubAnchor: i } replaced by the hub's i-th anchor name
 //   remodelTableRef      the hub's remodelTableRefList[i], or null
+//   declaredTargetRuleList  the hub's rules, every one ('fromHub') or only the kinds the pair row's value names, in hub order
+//                        (standardBridgingContract DECLARED_TARGET_RULE_KIND_FILTER_BY_PAIR_VALUE); a filter that leaves none is refused
 // <Hub> is the hub token with its first letter capitalised. A positional reference is checked against the length the pair
 // declared for the hub list: a hub edit that changes the length refuses every bridge that read it by position, by name
 // (SCARLET_ARROW's condition, 2026-10-21) — a hub declaration edit must never silently shift another bridge's blinding.
@@ -91,6 +93,12 @@ const composeOne = ({ standardBridging, oneFacet, hubToken, pairRow, hubBridging
 	if (pairRow.remodelTableRef !== null && hubBridging.remodelTableRefList[pairRow.remodelTableRef.hubRemodelTable] === undefined) {
 		return { error: refuse.byName({ moduleName, what: `${whatName}: remodelTableRef references hub remodel table ${pairRow.remodelTableRef.hubRemodelTable}, outside the ${hubToken} hub's ${hubBridging.remodelTableRefList.length}`, where: 'a positional reference names an entry the hub declares' }) };
 	}
+	// the hub's rules this pair takes: all, or only the kinds its pair-row value names (declared in the pair row, never silent)
+	const ruleKindFilter = pairRow.declaredTargetRuleList === null ? null : standardBridgingContractLib.DECLARED_TARGET_RULE_KIND_FILTER_BY_PAIR_VALUE[pairRow.declaredTargetRuleList];
+	const pairRuleList = pairRow.declaredTargetRuleList === null ? null : hubBridging.declaredTargetRuleList.filter((oneRule) => ruleKindFilter === null || ruleKindFilter.indexOf(oneRule.ruleKind) !== -1);
+	if (pairRuleList !== null && pairRuleList.length === 0) {
+		return { error: refuse.byName({ moduleName, what: `${whatName}: declaredTargetRuleList '${pairRow.declaredTargetRuleList}' takes the ${hubToken} hub's ${ruleKindFilter.join(', ')} rules, and its list holds no ${ruleKindFilter.join(' or ')} rule`, where: 'the hub declares no rule of the kinds this pair takes; add one in the hub\'s bridging declaration or take its rules by another pair value' }) };
+	}
 	const bridgeDeclaration = {
 		...template,
 		bridgeName,
@@ -101,7 +109,7 @@ const composeOne = ({ standardBridging, oneFacet, hubToken, pairRow, hubBridging
 		...(pairRow.promptIdentifierScan === null
 			? {}
 			: { promptIdentifierScan: promptIdentifierScanFor({ pairRow, hubBridging, bridgeNameStem: standardBridging.bridgeNameStem, hubToken }) }),
-		...(pairRow.declaredTargetRuleList === null ? {} : { declaredTargetRuleList: hubBridging.declaredTargetRuleList.map((oneRule) => ({ ...oneRule })) }),
+		...(pairRuleList === null ? {} : { declaredTargetRuleList: pairRuleList.map((oneRule) => ({ ...oneRule })) }),
 	};
 	return { pluginModule: { bridgeDeclaration, bridgeHooks, bridgeTarget: { targetHub: hubToken, judgeWording: { ...hubBridging.judgeWording } } } };
 };

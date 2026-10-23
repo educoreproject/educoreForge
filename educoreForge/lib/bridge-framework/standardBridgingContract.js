@@ -29,7 +29,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                                as { hubAnchor: <index into the hub's sourceAnchorBlindingNameList> }
 //   hubAnchorListLength          the length the hub's anchor list had when blindingOrder was written (required when any
 //                                hubAnchor is referenced, else null): a hub edit that changes it is REFUSED, never a silent shift
-//   declaredTargetRuleList       'fromHub' (the hub's declared-target rules) or null
+//   declaredTargetRuleList       'fromHub' (the hub's declared-target rules), 'fromHubStableIdTemplateRules' (only the hub's
+//                                stableIdTemplate rules, in hub order: a declared-identity pair, whose basis admits no other kind;
+//                                zeroBacklog lane C3, 2026-10-22) or null
 //   remodelTableRef              null, or { hubRemodelTable: <index into the hub's remodelTableRefList> }
 //   hubRemodelTableListLength    as hubAnchorListLength, for remodelTableRef
 // ⟪R3⟫ a bridge created AFTER the refactor declares instead: blindingOrder { standardBlindingNameList, pairedHubAnchors:
@@ -53,6 +55,13 @@ const PROMPT_IDENTIFIER_SCAN_FORM_LIST = Object.freeze([PROMPT_IDENTIFIER_SCAN_F
 const BLINDING_PAIRED_HUB_ANCHOR_MODE_LIST = Object.freeze(['union']);
 const isUnionBlindingOrder = (candidate) => isPlainObject(candidate) && Object.keys(candidate).sort().join(',') === 'pairedHubAnchors,standardBlindingNameList' && BLINDING_PAIRED_HUB_ANCHOR_MODE_LIST.indexOf(candidate.pairedHubAnchors) !== -1 && Array.isArray(candidate.standardBlindingNameList) && candidate.standardBlindingNameList.every(isNonEmptyString);
 const DECLARED_TARGET_RULES_FROM_HUB = 'fromHub';
+// ⟪zeroBacklog lane C3, BRONZE_CROWN ruling option A⟫ which of the hub's rules a pair takes, by pair-row value, as DATA: null = every
+// rule; a list = only the rules of those kinds, in the hub's order. The filter is stated in the pair row, never applied silently.
+const DECLARED_TARGET_RULE_KIND_FILTER_BY_PAIR_VALUE = Object.freeze({
+	[DECLARED_TARGET_RULES_FROM_HUB]: null,
+	fromHubStableIdTemplateRules: Object.freeze(['stableIdTemplate']),
+});
+const DECLARED_TARGET_RULE_PAIR_VALUE_LIST = Object.freeze(Object.keys(DECLARED_TARGET_RULE_KIND_FILTER_BY_PAIR_VALUE));
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const isNonEmptyString = (candidate) => typeof candidate === 'string' && candidate.trim() !== '';
@@ -66,7 +75,7 @@ const KIND_CHECKER_REGISTRY = Object.freeze({
 	scanFromHubOrNone: (value) => (value === null || PROMPT_IDENTIFIER_SCAN_FORM_LIST.indexOf(value) !== -1 ? '' : `must be null or one of ${PROMPT_IDENTIFIER_SCAN_FORM_LIST.map((oneForm) => `'${oneForm}'`).join(', ')}`),
 	blindingOrder: (value) => ((Array.isArray(value) && value.every((oneMember) => isNonEmptyString(oneMember) || isIndexReference(oneMember, 'hubAnchor'))) || isUnionBlindingOrder(value) ? '' : `must be a list of names and { hubAnchor: <index> } references, or { standardBlindingNameList: [names], pairedHubAnchors: ${BLINDING_PAIRED_HUB_ANCHOR_MODE_LIST.map((oneMode) => `'${oneMode}'`).join(' | ')} }`),
 	lengthOrNone: (value) => (value === null || (Number.isInteger(value) && value >= 0) ? '' : 'must be null or a non-negative integer'),
-	rulesFromHubOrNone: (value) => (value === null || value === DECLARED_TARGET_RULES_FROM_HUB ? '' : `must be null or '${DECLARED_TARGET_RULES_FROM_HUB}'`),
+	rulesFromHubOrNone: (value) => (value === null || DECLARED_TARGET_RULE_PAIR_VALUE_LIST.indexOf(value) !== -1 ? '' : `must be null or one of ${DECLARED_TARGET_RULE_PAIR_VALUE_LIST.map((oneValue) => `'${oneValue}'`).join(', ')}`),
 	remodelRefOrNone: (value) => (value === null || isIndexReference(value, 'hubRemodelTable') ? '' : 'must be null or { hubRemodelTable: <index> }'),
 });
 
@@ -194,6 +203,7 @@ module.exports = {
 	PROMPT_IDENTIFIER_SCAN_HUB_OWN,
 	isUnionBlindingOrder,
 	DECLARED_TARGET_RULES_FROM_HUB,
+	DECLARED_TARGET_RULE_KIND_FILTER_BY_PAIR_VALUE,
 	validateStandardBridging,
 	moduleName,
 };

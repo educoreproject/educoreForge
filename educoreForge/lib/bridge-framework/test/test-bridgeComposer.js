@@ -19,6 +19,9 @@
 //       pairs with (superset, ruled), and the identifier scan is the pair hub's own ('fromHub', its list resolved beside the hub)
 //   (h) the P-c overlay seam (bridgingOverlayDirPath, test/scratch only): the fixture lays edfi→ctdl over the tree; it composes
 //       with the union blinding and the CTDL hub's own scan; every shipped bridge is unchanged beside it; refusals by name
+//   (i) ⟪zeroBacklog lane C3, 2026-10-22⟫ declaredTargetRuleList 'fromHubStableIdTemplateRules': a declared-identity pair takes the
+//       hub's stableIdTemplate rules only, in hub order, the filter stated in the pair row; 'fromHub' over a hub whose list holds
+//       another kind is still refused by name at registration; an unknown value is refused by name
 //   (f) never-rendered names: RENDERING_NEVER_NAME_LIST names no hub's identifier properties; they reach each bridge through its
 //       composed blindingDeclaration, and BOTH nets (the declaration contract, the renderer) refuse an allow-listed blinded name
 
@@ -186,6 +189,47 @@ fs.mkdirSync(path.join(strayOverlayDirPath, 'edfi', 'bridges'), { recursive: tru
 fs.writeFileSync(path.join(strayOverlayDirPath, 'edfi', 'bridges', 'edfiExtraBridging.js'), "module.exports = {};\n");
 harness.match('an overlay file with no tree counterpart is refused (an overlay never adds a file)', overlayRefusalFor(strayOverlayDirPath), /has no tree counterpart/);
 fs.rmSync(strayOverlayDirPath, { recursive: true, force: true });
+
+harness.section('(i) a declared-identity pair takes the hub\'s stableIdTemplate rules, the filter stated in the pair row');
+{
+	const pluginRegistryForRuleFilter = require('../pluginRegistry');
+	const FIXTURE_PLUGIN_PATH = path.join(__dirname, 'fixtures', 'declaredBridge', 'forges', 'pescldfixture', 'bridges', 'pescLdFixtureCtdlDeclaredIdentityPlugin.js');
+	const fixtureLoaded = require(FIXTURE_PLUGIN_PATH);
+	const { bridgeName: unusedName, blindingDeclaration: unusedBlinding, remodelTableRef: unusedRemodel, declaredTargetRuleList: unusedRules, ...identityTemplate } = fixtureLoaded.bridgeDeclaration;
+	// a hub whose list holds a member rule FIRST, then two template rules: the real seam shape
+	const mixedRuleHubBridging = {
+		...toyHubBridging,
+		hubToken: 'hubm',
+		declaredTargetRuleList: [
+			{ ruleKind: 'memberByNotation', pattern: '^hm:(\\d{6})#(.+)$', containerStableIdTemplate: 'hm:C{1}', memberEdgeType: 'HAS_VALUE', memberMatchProperty: 'notation', memberMatchGroup: 2 },
+			{ ruleKind: 'stableIdTemplate', pattern: '^hm:(P\\d{6})$', stableIdTemplate: 'https://hm.example/terms/{1}' },
+			{ ruleKind: 'stableIdTemplate', pattern: '^hm:(C\\d{6})$', stableIdTemplate: 'https://hm.example/terms/{1}' },
+		],
+	};
+	const identityBridgingWith = (ruleListValue) => ({
+		standardKey: 'pescldfixture',
+		bridgeNameStem: 'pescldfixture',
+		facetList: [{ facetName: '', declarationTemplate: identityTemplate, subjectRenderingAllowList: null, pairByHubToken: { hubm: { candidateRetrieval: null, candidateRenderingAllowList: null, promptIdentifierScan: null, blindingOrder: { standardBlindingNameList: ['termIri'], pairedHubAnchors: 'union' }, hubAnchorListLength: null, declaredTargetRuleList: ruleListValue, remodelTableRef: null, hubRemodelTableListLength: null } } }],
+	});
+	const composeAndRegister = (ruleListValue) => {
+		const composed = composerLib.composePluginModuleList({ standardBridging: identityBridgingWith(ruleListValue), bridgeHooksByFacetName: { '': fixtureLoaded.bridgeHooks }, hubBridgingByToken: { hubm: mixedRuleHubBridging }, bundleDirName: 'pescldfixture' });
+		if (composed.error) {
+			return { composeError: composed.error.message };
+		}
+		const pluginModule = composed.pluginModuleList[0];
+		const registered = pluginRegistryForRuleFilter.registerPlugin({ pluginModule, pluginFilePath: FIXTURE_PLUGIN_PATH, bundleDirPath: path.dirname(path.dirname(FIXTURE_PLUGIN_PATH)) });
+		return { pluginModule, registerError: registered.error ? registered.error.message : '' };
+	};
+	const fromHubOutcome = composeAndRegister('fromHub');
+	harness.match("'fromHub' over a hub whose list holds a memberByNotation rule is refused by name at registration", String(fromHubOutcome.registerError), /rule 0 ruleKind 'memberByNotation', which matchBasis 'declaredIdentity' does not admit/);
+	const templateOutcome = composeAndRegister('fromHubStableIdTemplateRules');
+	harness.equal("'fromHubStableIdTemplateRules' composes and registers", String(templateOutcome.composeError || templateOutcome.registerError), '');
+	harness.equal('the composed list is the hub\'s template rules only, in hub order', JSON.stringify(templateOutcome.pluginModule ? templateOutcome.pluginModule.bridgeDeclaration.declaredTargetRuleList : null), JSON.stringify(mixedRuleHubBridging.declaredTargetRuleList.slice(1)));
+	const unknownOutcome = composeAndRegister('fromHubSomeRules');
+	harness.match('an unknown declaredTargetRuleList value is refused by name', String(unknownOutcome.composeError), /declaredTargetRuleList must be null or one of/);
+	const noTemplateOutcome = composerLib.composePluginModuleList({ standardBridging: identityBridgingWith('fromHubStableIdTemplateRules'), bridgeHooksByFacetName: { '': fixtureLoaded.bridgeHooks }, hubBridgingByToken: { hubm: { ...mixedRuleHubBridging, declaredTargetRuleList: mixedRuleHubBridging.declaredTargetRuleList.slice(0, 1) } }, bundleDirName: 'pescldfixture' });
+	harness.match('a hub with no template rule left to take is refused by name, never an empty list', String((noTemplateOutcome.error || {}).message), /holds no stableIdTemplate rule/);
+}
 
 harness.section('(f) a hub\'s identifier names are never rendered, supplied through the composer');
 const bridgePluginContractLib = require('../bridgePluginContract');
