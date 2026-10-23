@@ -223,7 +223,12 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // nativeIdentifierPropertyName reserved), vocabulary.js 3/1 (STANDARD_FAMILY.PESCLD), test/test-graphContract.js 4/1, test/test-sifEdgeVocabulary.js
 // 4/1 (schema view 341 -> 343, the two new contract fields, declared; this commit). graph-contract.js is
 // outside (ii)'s allowed vocabulary.js+tests, as P5's and P2b's rows were; contract sha 6e452d62 -> 1e2d39d7. Allowed-path list NOT widened.
-const POST_D1_BASE_TAG = 'postZeroBacklogD0VocabularyIi-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, D3-7 and the D3-6 followers; ruled by BRONZE_CROWN) ═══ (ii)
+// postZeroBacklogD0VocabularyIi-102226 -> postZeroBacklogD3bVocabularyIi-102226, tag cut ON this commit. CENSUS (lib/vocabulary/, numstat
+// from the D0 tag): vocabulary-definitions.js 3/1 (D3-7: REFERENCES' definition says one standard FAMILY, measured 227 cross-_source edges
+// inside CTDL; graph-contract sha unchanged), test/test-sifVocabularyInvariance.js 2/1 and testSupport/pureProxyFingerprintProbe.js 1/1
+// (D3-6). vocabulary-definitions.js is outside (ii)'s allowed vocabulary.js+tests. Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postZeroBacklogD3bVocabularyIi-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-7; census in the block above); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -1026,7 +1031,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // forgeSifContractGraph.js 0/602, lib/sifForgeDeclaration.js 0/173, lib/sifHooks.js 0/134} (the bundle moved to codeAttic/forges/sif);
 // forges/ceds/lib/cedsAnchorPrefixDeclaration.js 0/21 (deleted, granted); lib/forge-framework/ as (iii). (i-live): no shape moved
 // (interfaces.js 2/2 is its JSDoc for the bundle factory's deps, no COMPONENT_SHAPES member).
-const PHASE3_ANCHOR_TAG = 'postZeroBacklogD3SeamDiffEmpty-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-6; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (INDIGO_COMPASS; zeroBacklog lane D, D3-7 and the D3-6 followers; ruled by BRONZE_CROWN) ═══ BG-SEAM-UNTOUCHED seamDiffEmpty and (i-live)
+// postZeroBacklogD3SeamDiffEmpty-102226 -> postZeroBacklogD3bSeamDiffEmpty-102226, tag cut ON this commit. CENSUS from the D3 tag over this
+// gate's path list: replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 3/1 (its (e) twin stays red on the CTDL families
+// now that no declaration mints a Sif* label). (i-live): no shape moved.
+const PHASE3_ANCHOR_TAG = 'postZeroBacklogD3bSeamDiffEmpty-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-6 followers; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
