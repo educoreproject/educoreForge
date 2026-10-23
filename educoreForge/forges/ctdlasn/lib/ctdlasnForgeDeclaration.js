@@ -36,7 +36,6 @@ const ctdlasnForgeDeclaration = Object.freeze({
 	nonEmbeddableRoleList: Object.freeze([]),
 	// ruling Q3: no DmeEmbedText nodes in P1/P2 (the oracle's node set holds); docketed for the hub phases
 	embedTextDeclaration: null,
-	hubAnchorAbsentSentinelList: Object.freeze([]),
 	additionalSourceInputList: Object.freeze([Object.freeze({ inputName: 'sourceLocation', relativePathFromSourcePath: 'standardSourceLocation' })]),
 	compatibilityDeclarationList: Object.freeze([
 		Object.freeze({

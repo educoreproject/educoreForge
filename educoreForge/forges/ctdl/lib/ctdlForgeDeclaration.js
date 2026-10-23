@@ -54,7 +54,6 @@ const ctdlForgeDeclaration = Object.freeze({
 			DmeOptionSet: Object.freeze(['name', 'description']),
 		}),
 	}),
-	hubAnchorAbsentSentinelList: Object.freeze([]),
 	additionalSourceInputList: Object.freeze([Object.freeze({ inputName: 'sourceLocation', relativePathFromSourcePath: 'standardSourceLocation' })]),
 	compatibilityDeclarationList: Object.freeze([
 		Object.freeze({

@@ -60,7 +60,6 @@ const sif260928ForgeDeclaration = Object.freeze({
 			[DME_ROLES.CLASS]: Object.freeze(['name']),
 		}),
 	}),
-	hubAnchorAbsentSentinelList: Object.freeze([]),
 	// the RefId map only (phase A4; SPEC §9 A24). The framework verifies it against SHA256SUMS like
 	// the TSV and hands its path to the map loader under this inputName. The object-domain file is a
 	// BRIDGE input and never a forge input (SPEC §9 A20).

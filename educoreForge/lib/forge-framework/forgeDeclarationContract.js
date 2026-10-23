@@ -5,7 +5,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // forgeDeclarationContract.js — FORGE_DECLARATION_CONTRACT and its table-driven validator
 // (SPEC-forgeFramework-v1.md §4). H1 is a declaration OBJECT — DATA a forge author writes instead of
 // code: everything the Profile §3.5 lists as descriptor-shaped constants, plus root data, the
-// non-embeddable role list, the anchor sentinel list, the declared additional source inputs and
+// non-embeddable role list, the declared additional source inputs and
 // the compatibility declaration list.
 //
 // Validation is a TABLE WALK over the contract, never a switch: every property has a `kind`
@@ -56,6 +56,9 @@ const MAPPING_INSTRUCTION_KEY_ORDER = Object.freeze([
 
 const ROOT_STABLE_ID_FROM_VALUES = Object.freeze(['declared', 'sourceUrl']);
 
+// ⟪zeroBacklog A2, lane D relay⟫ hubAnchorAbsentSentinelList is RETIRED: required on every bundle, read by nothing once deCeds D3-6
+// removed kit.hubAnchorValue's sentinel branch (code fact: no reader in this tree), and every bundle declared it []. It was never
+// stamped on a root, so its retirement moves no block.
 const FORGE_DECLARATION_CONTRACT = Object.freeze({
 	standardKey: Object.freeze({ required: true, kind: 'lowercaseString' }),
 	standardSource: Object.freeze({ required: true, kind: 'nonEmptyString' }),
@@ -89,7 +92,6 @@ const FORGE_DECLARATION_CONTRACT = Object.freeze({
 	// null, or { embedTextLabel, textPropertyListByRole } — REQUIRED on every bundle (R-ET-19): a bundle
 	// that embeds no text says so with null
 	embedTextDeclaration: Object.freeze({ required: true, kind: 'embedTextDeclaration' }),
-	hubAnchorAbsentSentinelList: Object.freeze({ required: true, kind: 'stringList' }),
 	additionalSourceInputList: Object.freeze({ required: true, kind: 'additionalSourceInputList' }),
 	compatibilityDeclarationList: Object.freeze({ required: true, kind: 'compatibilityDeclarationList' }),
 });

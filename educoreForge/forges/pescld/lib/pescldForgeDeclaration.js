@@ -58,7 +58,6 @@ const pescldForgeDeclaration = Object.freeze({
 			[DME_ROLES.PROPERTY]: Object.freeze(['name', 'usageNote']),
 		}),
 	}),
-	hubAnchorAbsentSentinelList: Object.freeze([]),
 	additionalSourceInputList: Object.freeze([]),
 	// EMPTY, as the framework requires of a bundle outside MIGRATING_BUNDLE_LIST
 	compatibilityDeclarationList: Object.freeze([]),

@@ -135,7 +135,6 @@ const judgeDeclared = ({ forgeResult }) => {
 			pass: Object.keys(mappingInstruction.hubAnchorPropertyNameByHub).length === 0 && Object.keys(mappingInstruction.hubOptionAnchorPropertyNameByHub).length === 0,
 			detail: JSON.stringify(mappingInstruction),
 		},
-		{ label: 'DECLARED: no crosswalk no-mapping sentinel is declared', pass: edfiForgeDeclaration.hubAnchorAbsentSentinelList.length === 0, detail: JSON.stringify(edfiForgeDeclaration.hubAnchorAbsentSentinelList) },
 		{ label: 'DECLARED: allowance E8 lists no crosswalk logical source name', pass: allowanceE8 !== undefined && !allowanceE8.logicalSourceFileNameList.some((oneName) => /crosswalk/i.test(oneName)), detail: JSON.stringify(allowanceE8 && allowanceE8.logicalSourceFileNameList) },
 		{ label: "DECLARED: the root's sourceFiles do not name the crosswalk", pass: rootNode !== undefined && !rootSourceFileList.some((oneName) => /crosswalk/i.test(oneName)), detail: JSON.stringify(rootSourceFileList) },
 	];

@@ -217,7 +217,7 @@ WHAT A FORGE SUPPLIES
      (equal to the descriptor's standardName), standardDisplayName, stableUriPropertyName,
      stableIdPattern ({ pattern, trimmed } -- the real predicate, as data), rootStableIdFrom and
      rootStableId, rootLabel, parserVersion, mappingInstruction (four keys, fixed order -- the JSON
-     string is a byte of the block), nonEmbeddableRoleList, hubAnchorAbsentSentinelList,
+     string is a byte of the block), nonEmbeddableRoleList,
      additionalSourceInputList, compatibilityDeclarationList. Ed-Fi's is 71 lines.
 
      The hooks (lib/<std>Hooks.js) are functions the framework calls:

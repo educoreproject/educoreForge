@@ -97,7 +97,6 @@ const buildForgeDeclaration = ({ releaseDeclarationData, releaseDeclarationName 
 				[DME_ROLES.OPTION_SET]: Object.freeze(['name', 'documentation']),
 			}),
 		}),
-		hubAnchorAbsentSentinelList: Object.freeze([]),
 		// the manifest entry is the snapshot's declared second input: the framework verifies it against
 		// SHA256SUMS like the .xsd files and hands its path to loader 2 under this inputName. Then the
 		// release's documentation donors (phase F-B, documentationDonorTable.json; none for most

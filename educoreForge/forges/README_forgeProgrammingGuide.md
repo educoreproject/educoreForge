@@ -35,7 +35,7 @@ declares, each in its own `parserDescriptor.ini` (code fact, `forges/ceds/parser
 | `roundTripVerbModule=` | the bodies of `graphBuilder -roundTripCompile` / `-roundTripGates --standard=<token>` (they were `-cedsRoundTrip` / `-cedsGates`) | deCeds R5 S9 |
 | `edgeDefinitionDeclaration=` | the authored definitions of the hub's `HAS_<HUB>_*` edges, read by the schema view | deCeds R5 S7 |
 
-Also renamed: the forge declaration's `cedsAnchorAbsentSentinelList` is `hubAnchorAbsentSentinelList`; the build's
+Also renamed: the forge declaration's `cedsAnchorAbsentSentinelList` became `hubAnchorAbsentSentinelList` (since RETIRED, zeroBacklog A2: nothing read it); the build's
 two hub reports are `proseDivergence.<hubToken>.json` and `hubSkipReport.<hubToken>.json`. **Not renamed, on purpose:**
 the `mappingInstruction` key names `cedsOriginalAnchorPropertyName` and `cedsOptionOriginalAnchorPropertyName`, and
 `impliedTargets`, are written into every standard's root node, so renaming them would move every standard base block

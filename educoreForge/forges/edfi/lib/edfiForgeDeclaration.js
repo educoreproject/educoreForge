@@ -69,9 +69,6 @@ const edfiForgeDeclaration = Object.freeze({
 			DmeOptionSet: Object.freeze(['name', 'description']),
 		}),
 	}),
-	// EMPTY since the crosswalk's retirement: '000000' was the crosswalk's "no mapping" value, and nothing
-	// this forge reads carries a CEDS anchor
-	hubAnchorAbsentSentinelList: Object.freeze([]),
 	additionalSourceInputList: Object.freeze([]),
 	compatibilityDeclarationList: Object.freeze([
 		Object.freeze({
