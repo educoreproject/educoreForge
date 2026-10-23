@@ -11,6 +11,8 @@
 //   c  crossRefs is blinded in every judged bridge (a valueClass may name a hub class: an answer key)
 //   d  the declared facet does not move: its two bridges keep the digests lane C3 froze (61c6c9cd, a5245e6b)
 //   e  the judged facets pair with exactly the hubs the pairing data names, in no other way
+//   (a) also: each judged facet declares its own subjectDiscriminator (two derived bridges standard → hub would otherwise compose
+//       ONE relationship subject; the build refuses that by name, measured in the first debug rehearsal)
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = `
@@ -40,8 +42,8 @@ const HUB_PAIRING = require(path.join(BRIDGES_DIR_PATH, 'pescldHubPairing.json')
 const PESC_TERM_CURIE_PATTERN = /^pesc:/;
 // facet name → the role its subjects carry, its scope file and the count measured on snapshot 01
 const JUDGED_FACET_BY_NAME = Object.freeze({
-	PescTermRow: { role: 'DmeProperty', scopeFileName: 'pescldPescTermRowSubjects.json', expectedSubjectCount: 142 },
-	PescTermShape: { role: 'DmeClass', scopeFileName: 'pescldPescTermShapeSubjects.json', expectedSubjectCount: 17 },
+	PescTermRow: { role: 'DmeProperty', scopeFileName: 'pescldPescTermRowSubjects.json', expectedSubjectCount: 142, subjectDiscriminator: 'pescTermRow' },
+	PescTermShape: { role: 'DmeClass', scopeFileName: 'pescldPescTermShapeSubjects.json', expectedSubjectCount: 17, subjectDiscriminator: 'pescTermShape' },
 });
 const capitalised = (text) => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 const judgedBridgeNameFor = ({ facetName, hubToken }) => `pescld${facetName}${capitalised(hubToken)}DerivedPlugin`;
@@ -73,6 +75,8 @@ bundle.forge({ sourcePath: SNAPSHOT_DIR_PATH, owner: 'test', skipEmbedding: true
 			harness.equal(`a: ${bridgeName}: registered, toward ${hubToken}, derived, judgeSlot-v1, variant derivedJudgeSlot`,
 				entry === undefined ? `NOT REGISTERED${registry.error ? ': ' + registry.error.message : ''}` : `${entry.targetHub} ${declaration.matchBasis} ${declaration.predicateSource && declaration.predicateSource.predicateRule} ${resolved.judgePromptVariant}`,
 				`${hubToken} derived judgeSlot-v1 derivedJudgeSlot`);
+			// two derived bridges from one standard to one hub would compose ONE relationship subject: each facet names its own
+			harness.equal(`a: ${bridgeName} declares its own subjectDiscriminator`, declaration.subjectDiscriminator, JUDGED_FACET_BY_NAME[facetName].subjectDiscriminator);
 		});
 	});
 

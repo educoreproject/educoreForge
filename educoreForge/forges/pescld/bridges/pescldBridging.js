@@ -103,10 +103,13 @@ const pairByHubToken = Object.freeze(Object.fromEntries(Object.entries(hubPairin
 // file beside this one is DERIVED from the forged snapshot and frozen (test-pescldJudgedFacets asserts it equals the forge's pesc:
 // nodes). The split question takes the instruction form, as SIF's does: PESC_LD publishes no definitions, so the owning-definition
 // form would have nothing to show. crossRefs is blinded: a valueClass may name a hub class, an answer key.
-const judgedDeclarationTemplateFor = ({ subjectLabel, scopeStableIdListPath }) => Object.freeze({
+// Each facet names its own subjectDiscriminator: two derived bridges from one standard to one hub would otherwise compose ONE
+// relationship subject (the build refuses that by name before any spend; measured in the first debug rehearsal).
+const judgedDeclarationTemplateFor = ({ subjectLabel, scopeStableIdListPath, subjectDiscriminator }) => Object.freeze({
 	standardKey: 'pescld',
 	pluginVersion: '1.0.0',
 	producerKind: 'inferred',
+	subjectDiscriminator,
 	matchBasis: 'derived',
 	sourceCuriePrefix: { prefix: 'pescld', iri: 'urn:educore:pescld:' },
 	subjectCuriePrefix: 'pescld',
@@ -153,14 +156,14 @@ const standardBridging = Object.freeze({
 		},
 		{
 			facetName: 'PescTermRow',
-			declarationTemplate: judgedDeclarationTemplateFor({ subjectLabel: 'PescLdProperty', scopeStableIdListPath: 'bridges/pescldPescTermRowSubjects.json' }),
+			declarationTemplate: judgedDeclarationTemplateFor({ subjectLabel: 'PescLdProperty', scopeStableIdListPath: 'bridges/pescldPescTermRowSubjects.json', subjectDiscriminator: 'pescTermRow' }),
 			// THE JUDGE'S VIEW of a profile row: its label, its own term, where it sits (shape.property), its usage note and value typing
 			subjectRenderingAllowList: ['name', 'termCurie', 'path', 'usageNote', 'valueNodeType', 'valueDataType', 'valueConstraintType', 'mandatory', 'repeatable'],
 			pairByHubToken: judgedPairByHubToken,
 		},
 		{
 			facetName: 'PescTermShape',
-			declarationTemplate: judgedDeclarationTemplateFor({ subjectLabel: 'PescLdShape', scopeStableIdListPath: 'bridges/pescldPescTermShapeSubjects.json' }),
+			declarationTemplate: judgedDeclarationTemplateFor({ subjectLabel: 'PescLdShape', scopeStableIdListPath: 'bridges/pescldPescTermShapeSubjects.json', subjectDiscriminator: 'pescTermShape' }),
 			// THE JUDGE'S VIEW of a shape: its label, the class it targets, its shape id
 			subjectRenderingAllowList: ['name', 'termCurie', 'path', 'targetType'],
 			pairByHubToken: judgedPairByHubToken,
