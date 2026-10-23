@@ -37,6 +37,7 @@ const path = require('path');
 const TREE_ROOT = path.join(__dirname, '..', '..', '..');
 const candidateRetrievalLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'candidateRetrieval'));
 const decisionBlockLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'decisionBlock'));
+const candidateRetrievalMethodRegistryLib = require(path.join(TREE_ROOT, 'lib', 'bridge-framework', 'candidateRetrievalMethodRegistry'));
 const refuse = require(path.join(TREE_ROOT, 'lib', 'forge-framework', 'refuse'));
 const { DME_ROLES, hubEdgeType } = require(path.join(TREE_ROOT, 'lib', 'vocabulary', 'vocabulary'));
 
@@ -177,11 +178,29 @@ const replayVoteLists = ({ replayIndex, retrievalSettings, subjectStableIdList, 
 // ---------------------------------------------------------------------------------------------------------
 // THE CONTROL — every record's ordered retrievalVoteList, byte for byte in canonical text
 // ---------------------------------------------------------------------------------------------------------
+// recordedFullVoteListOf — a record's vote list in the FULL path form this tool replays. ⟪zeroBacklog lane B (C)⟫ a block frozen after the
+// size fix names each path's hit by index in its record's retrievalHitList; one frozen before it carries full paths, compared as it stands
+const recordedFullVoteListOf = (oneRecord) => {
+	if (oneRecord.retrievalVoteList === undefined || oneRecord.retrievalHitList === undefined) {
+		return { voteList: oneRecord.retrievalVoteList };
+	}
+	const voteList = [];
+	for (let rankIndex = 0; rankIndex < oneRecord.retrievalVoteList.length; rankIndex++) {
+		const oneEntry = oneRecord.retrievalVoteList[rankIndex];
+		const expanded = candidateRetrievalMethodRegistryLib.expandedRetrievalPathListFor({ retrievalHitList: oneRecord.retrievalHitList, pathList: oneEntry.pathList });
+		if (expanded.error) {
+			return { error: expanded.error };
+		}
+		voteList.push({ ...oneEntry, pathList: expanded.pathList });
+	}
+	return { voteList };
+};
 const compareWithBlock = ({ decisionBlock, voteListBySubjectStableId }) => {
 	const differingRecordList = [];
 	decisionBlock.decisionRecordList.forEach((oneRecord, recordIndex) => {
 		const replayedList = voteListBySubjectStableId[oneRecord.subjectStableId];
-		const recordedText = oneRecord.retrievalVoteList === undefined ? '(absent)' : canonicalTextOf(oneRecord.retrievalVoteList);
+		const recordedFull = recordedFullVoteListOf(oneRecord);
+		const recordedText = recordedFull.error ? `(unexpandable: ${recordedFull.error.message})` : recordedFull.voteList === undefined ? '(absent)' : canonicalTextOf(recordedFull.voteList);
 		const replayedText = replayedList === undefined ? '(not replayed)' : canonicalTextOf(replayedList);
 		if (recordedText !== replayedText || oneRecord.neighbourTrace !== null) {
 			differingRecordList.push({ recordIndex, subjectStableId: oneRecord.subjectStableId, judgmentPartitionLabel: oneRecord.judgmentPartitionLabel === undefined ? null : oneRecord.judgmentPartitionLabel, recordedSeatList: recordedText === '(absent)' ? null : oneRecord.retrievalVoteList.map((oneEntry) => oneEntry.stableId), replayedSeatList: replayedList === undefined ? null : replayedList.map((oneEntry) => oneEntry.stableId), neighbourTraceIsNull: oneRecord.neighbourTrace === null });

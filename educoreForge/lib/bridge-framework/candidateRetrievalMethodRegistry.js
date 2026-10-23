@@ -192,8 +192,17 @@ const RANKED_ENTRY_SHAPE_REGISTRY = Object.freeze({
 	neighbourVote: Object.freeze({ fieldNameList: Object.freeze(['bestCosine', 'cardTextCosine', 'cardTextWinningTextStableId', 'domainShare', 'domainVote', 'ownVotes', 'pathList', 'rangeShare', 'rangeVote', 'score', 'stableId']) }),
 });
 const RANKED_PATH_FIELD_NAME_LIST = Object.freeze(['baseKind', 'baseStableId', 'cosine', 'embedTextStableId', 'hitTextStableId', 'propertyNameList', 'slotKind']);
+// ⟪zeroBacklog lane B (C), the frozen-block size fix, BRONZE_CROWN 2026-10-23⟫ A path's four HIT fields (the subject's embed text, its
+// property names, the hub text it hit, the cosine) repeat across the pool's cards: on the B3 rehearsal's sif260928→ctdl block, record 0's
+// 120 paths shared 8 hits, and the block reached 506 MB of V8's ~537 MB string ceiling (a frozen block is one string). So each record carries
+// its hits ONCE, in retrievalHitList, in first-seen order (rank order, then path order), and each path names its hit by index beside the
+// fields that are its own. Nothing is dropped: expandedRetrievalPathListFor rebuilds the full path, field for field, in the old order.
+const RETRIEVAL_HIT_FIELD_NAME_LIST = Object.freeze(['embedTextStableId', 'propertyNameList', 'hitTextStableId', 'cosine']);
+const FROZEN_PATH_FIELD_NAME_LIST = Object.freeze(['hitIndex', 'baseStableId', 'baseKind', 'edgeType']);
 const frozenRetrievalVoteListFor = ({ rankedList, hubName }) => {
 	const retrievalVoteList = [];
+	const retrievalHitList = [];
+	const hitIndexByIdentityText = new Map();
 	for (let rankIndex = 0; rankIndex < rankedList.length; rankIndex++) {
 		const oneEntry = rankedList[rankIndex];
 		const entryFieldText = isPlainObject(oneEntry) ? fieldNameTextOf(oneEntry) : String(oneEntry);
@@ -210,12 +219,43 @@ const frozenRetrievalVoteListFor = ({ rankedList, hubName }) => {
 			if (!hasOwn(HUB_SLOT_BY_SLOT_KIND, onePath.slotKind)) {
 				return { error: refuse.byName({ moduleName, what: `card ${oneEntry.stableId} path ${pathIndex} names slot kind ${JSON.stringify(onePath.slotKind)}, none of ${Object.keys(HUB_SLOT_BY_SLOT_KIND).join(', ')}`, where: 'a path is frozen with its graph edge type, hubEdgeType(hubName, slot) (R-BR-9)' }) };
 			}
-			frozenPathList.push({ embedTextStableId: onePath.embedTextStableId, propertyNameList: onePath.propertyNameList.slice(), hitTextStableId: onePath.hitTextStableId, baseStableId: onePath.baseStableId, baseKind: onePath.baseKind, edgeType: hubEdgeType(hubName, HUB_SLOT_BY_SLOT_KIND[onePath.slotKind]), cosine: onePath.cosine });
+			const oneHit = { embedTextStableId: onePath.embedTextStableId, propertyNameList: onePath.propertyNameList.slice(), hitTextStableId: onePath.hitTextStableId, cosine: onePath.cosine };
+			const hitIdentityText = JSON.stringify(RETRIEVAL_HIT_FIELD_NAME_LIST.map((oneFieldName) => oneHit[oneFieldName]));
+			if (!hitIndexByIdentityText.has(hitIdentityText)) {
+				hitIndexByIdentityText.set(hitIdentityText, retrievalHitList.length);
+				retrievalHitList.push(oneHit);
+			}
+			frozenPathList.push({ hitIndex: hitIndexByIdentityText.get(hitIdentityText), baseStableId: onePath.baseStableId, baseKind: onePath.baseKind, edgeType: hubEdgeType(hubName, HUB_SLOT_BY_SLOT_KIND[onePath.slotKind]) });
 		}
 		const frozenEntry = RANKED_ENTRY_SHAPE_REGISTRY[shapeName].fieldNameList.filter((oneFieldName) => oneFieldName !== 'pathList').reduce((soFar, oneFieldName) => Object.assign(soFar, { [oneFieldName]: oneEntry[oneFieldName] }), {});
 		retrievalVoteList.push({ ...frozenEntry, pathList: frozenPathList });
 	}
-	return { retrievalVoteList };
+	return { retrievalVoteList, retrievalHitList };
+};
+
+// expandedRetrievalPathListFor — one card's frozen paths back to the full form the freezer wrote before the size fix (field order
+// embedTextStableId, propertyNameList, hitTextStableId, baseStableId, baseKind, edgeType, cosine), for any reader that needs a path whole
+// → { pathList } | { error }
+const expandedRetrievalPathListFor = ({ retrievalHitList, pathList } = {}) => {
+	if (!Array.isArray(retrievalHitList)) {
+		return { error: refuse.byName({ moduleName, what: `retrievalHitList is not a list (got ${retrievalHitList === null ? 'null' : typeof retrievalHitList})`, where: 'pass the decision record\'s retrievalHitList beside the card\'s pathList' }) };
+	}
+	if (!Array.isArray(pathList)) {
+		return { error: refuse.byName({ moduleName, what: `pathList is not a list (got ${pathList === null ? 'null' : typeof pathList})`, where: 'pass one retrievalVoteList entry\'s pathList' }) };
+	}
+	const expandedPathList = [];
+	for (let pathIndex = 0; pathIndex < pathList.length; pathIndex++) {
+		const onePath = pathList[pathIndex];
+		if (!isPlainObject(onePath) || fieldNameTextOf(onePath) !== FROZEN_PATH_FIELD_NAME_LIST.slice().sort(compareStrings).join(', ')) {
+			return { error: refuse.byName({ moduleName, what: `path ${pathIndex} carries { ${isPlainObject(onePath) ? fieldNameTextOf(onePath) : String(onePath)} }, not { ${FROZEN_PATH_FIELD_NAME_LIST.join(', ')} }`, where: 'a frozen path names its hit by index (the size fix); an older block carries full paths and needs no expansion' }) };
+		}
+		const oneHit = Number.isInteger(onePath.hitIndex) ? retrievalHitList[onePath.hitIndex] : undefined;
+		if (oneHit === undefined) {
+			return { error: refuse.byName({ moduleName, what: `path ${pathIndex} hitIndex ${onePath.hitIndex} names no hit (the record holds ${retrievalHitList.length})`, where: 'every frozen path\'s hitIndex is a position in its record\'s retrievalHitList' }) };
+		}
+		expandedPathList.push({ embedTextStableId: oneHit.embedTextStableId, propertyNameList: oneHit.propertyNameList.slice(), hitTextStableId: oneHit.hitTextStableId, baseStableId: onePath.baseStableId, baseKind: onePath.baseKind, edgeType: onePath.edgeType, cosine: oneHit.cosine });
+	}
+	return { pathList: expandedPathList };
 };
 
 const CANDIDATE_RETRIEVAL_METHOD_ROW_LIST = Object.freeze([
@@ -266,7 +306,7 @@ const CANDIDATE_RETRIEVAL_METHOD_ROW_LIST = Object.freeze([
 	Object.freeze({
 		methodName: 'embedTextVote-v1',
 		fieldNameList: Object.freeze(['method', 'hitsPerText', 'minScore', 'k', 'embeddingModelVersion', 'neighbourVote']),
-		recordTraceFieldNameList: Object.freeze(['neighbourTrace', 'retrievalVoteList']),
+		recordTraceFieldNameList: Object.freeze(['neighbourTrace', 'retrievalHitList', 'retrievalVoteList']),
 		settingsPairListFor: (retrievalDeclaration) => [['hitsPerText', retrievalDeclaration.hitsPerText], ['minScore', retrievalDeclaration.minScore], ['K', retrievalDeclaration.k], ['neighbourVote', neighbourScoringRowNameOf(retrievalDeclaration.neighbourVote)]],
 		prepareRetrieval: (retrievalContext, callback) => {
 			const { retrievalView, evidenceView, retrievalDeclaration, hubName, sourceStandardName } = retrievalContext;
@@ -377,7 +417,7 @@ const CANDIDATE_RETRIEVAL_METHOD_ROW_LIST = Object.freeze([
 			// text list by name, so one textless subject never refuses the run. A subject with no text records votes with an
 			// empty list and so lands here too (voteCandidatePool admits nothing without a text). No rank ran, so no trace.
 			if (voted.admittedList.length === 0) {
-				return { seatStableIdList: [], recordTraceByFieldName: { retrievalVoteList: [], neighbourTrace: null } };
+				return { seatStableIdList: [], recordTraceByFieldName: { retrievalHitList: [], retrievalVoteList: [], neighbourTrace: null } };
 			}
 			const ordered = candidateRetrievalLib.cardTextCosineFor({ admittedList: voted.admittedList, subjectTextRecordList, hubVectorIndex });
 			if (ordered.error) {
@@ -395,7 +435,7 @@ const CANDIDATE_RETRIEVAL_METHOD_ROW_LIST = Object.freeze([
 			if (frozenTrace.error) {
 				return { error: frozenTrace.error };
 			}
-			return { seatStableIdList: ranked.rankedList.map((oneEntry) => oneEntry.stableId), recordTraceByFieldName: { retrievalVoteList: frozenVotes.retrievalVoteList, neighbourTrace: frozenTrace.neighbourTrace } };
+			return { seatStableIdList: ranked.rankedList.map((oneEntry) => oneEntry.stableId), recordTraceByFieldName: { retrievalHitList: frozenVotes.retrievalHitList, retrievalVoteList: frozenVotes.retrievalVoteList, neighbourTrace: frozenTrace.neighbourTrace } };
 		},
 	}),
 ]);
@@ -515,6 +555,10 @@ module.exports = Object.freeze({
 	HUB_SLOT_BY_SLOT_KIND,
 	BASE_ROLE_BY_BASE_KIND,
 	methodRowFor,
+	frozenRetrievalVoteListFor,
+	expandedRetrievalPathListFor,
+	RETRIEVAL_HIT_FIELD_NAME_LIST,
+	FROZEN_PATH_FIELD_NAME_LIST,
 	poolForSubjectChecked,
 	registryViolation,
 	moduleName,
