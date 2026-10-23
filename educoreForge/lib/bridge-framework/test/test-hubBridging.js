@@ -17,6 +17,7 @@
 //   (d) ONE hub id list: the CEDS hub's identifier list is byte-equal (sha256) to every one of the ten per-plugin copies
 //   (e) the hub module never requires the bridging file (plan T4: the forged hub output cannot move)
 //   (f) the CTDL values equal what today's CTDL-targeting plugin carries
+//   (c, f) ⟪zeroBacklog lane C3⟫ each declared plugin's rules are its hub's list filtered by its OWN pair value; counts frozen
 //   (g) the framework files name no hub
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
@@ -42,9 +43,35 @@ const contractLib = require('../hubBridgingContract');
 const loaderLib = require('../hubBridgingLoader');
 const pluginRegistryLib = require('../pluginRegistry');
 const { canonicalJsonText } = require('../bridgePluginContract');
+const standardBridgingContractLib = require('../standardBridgingContract');
+const { derivedBridgeNameFor } = require('../bridgeComposer');
 
 const sameText = (leftValue, rightValue) => canonicalJsonText(leftValue) === canonicalJsonText(rightValue);
 const sha256OfFile = (filePath) => crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+
+// ⟪zeroBacklog lane C3, 2026-10-23, ruled BRONZE_CROWN⟫ a declared plugin's rules are the hub's list FILTERED BY ITS OWN PAIR
+// VALUE (the composed pair row's declaredTargetRuleList, standardBridgingContract DECLARED_TARGET_RULE_KIND_FILTER_BY_PAIR_VALUE):
+// 'fromHub' takes the list whole, 'fromHubStableIdTemplateRules' its stableIdTemplate rules. A plugin whose pair value cannot be
+// read (not composed, or no facet derives its name) gets no expected list, so it reads as a mismatch, never as a pass.
+const pairRuleValueOf = (oneEntry) => {
+	const standardBridging = require(oneEntry.pluginFilePath).standardBridging;
+	if (standardBridging === undefined) {
+		return undefined;
+	}
+	const facet = standardBridging.facetList.find((oneFacet) => derivedBridgeNameFor({ bridgeNameStem: standardBridging.bridgeNameStem, facetName: oneFacet.facetName, hubToken: oneEntry.targetHub, matchBasis: oneEntry.bridgeDeclaration.matchBasis }) === oneEntry.bridgeName);
+	return facet === undefined || facet.pairByHubToken[oneEntry.targetHub] === undefined ? undefined : facet.pairByHubToken[oneEntry.targetHub].declaredTargetRuleList;
+};
+const declaredRuleMismatchList = (declaredEntryList, hubRuleList) => declaredEntryList.filter((oneEntry) => {
+	const pairValue = pairRuleValueOf(oneEntry);
+	const ruleKindFilter = standardBridgingContractLib.DECLARED_TARGET_RULE_KIND_FILTER_BY_PAIR_VALUE[pairValue];
+	if (ruleKindFilter === undefined) {
+		return true;
+	}
+	const expectedRuleList = ruleKindFilter === null ? hubRuleList : hubRuleList.filter((oneRule) => ruleKindFilter.indexOf(oneRule.ruleKind) !== -1);
+	return !sameText(oneEntry.bridgeDeclaration.declaredTargetRuleList, expectedRuleList);
+}).map((oneEntry) => `${oneEntry.bridgeName}(${pairRuleValueOf(oneEntry)})`);
+// frozen: the declared plugins toward each hub (ctdl→ceds and pescld→ceds; ctdlasn→ctdl and pescld→ctdl)
+const DECLARED_PLUGIN_COUNT_BY_HUB_TOKEN = Object.freeze({ ceds: 2, ctdl: 2 });
 
 harness.section('(b) the loader, by declared location');
 const cedsLoaded = loaderLib.loadHubBridging({ forgesDirPath: FORGES_DIR_PATH, hubToken: 'ceds' });
@@ -106,7 +133,8 @@ const anchorBlindingMismatchList = cedsEntryList
 	.map((oneEntry) => oneEntry.bridgeName);
 harness.equal('hub anchor blinding names = each blinding CEDS plugin\'s, in its order', anchorBlindingMismatchList.join(','), '');
 const declaredCedsEntryList = cedsEntryList.filter((oneEntry) => oneEntry.bridgeDeclaration.declaredTargetRuleList !== undefined);
-harness.equal('declared target rules = the declared CEDS plugin\'s (one plugin)', `${declaredCedsEntryList.length} ${declaredCedsEntryList.every((oneEntry) => sameText(oneEntry.bridgeDeclaration.declaredTargetRuleList, cedsHubBridging.declaredTargetRuleList))}`, '1 true');
+harness.equal('declared CEDS plugins: the frozen count', declaredCedsEntryList.length, DECLARED_PLUGIN_COUNT_BY_HUB_TOKEN.ceds);
+harness.equal('declared target rules = each declared CEDS plugin\'s, filtered by its own pair value', declaredRuleMismatchList(declaredCedsEntryList, cedsHubBridging.declaredTargetRuleList).join(','), '');
 const remodelRefList = cedsEntryList.map((oneEntry) => oneEntry.bridgeDeclaration.remodelTableRef).filter((oneRef) => oneRef !== null && oneRef !== undefined);
 // ⟪zeroBacklog lane D, D3-6, 2026-10-22⟫ ceds14PropertyRemodel's one consumer, sifCedsStandardPlugin, retired with the old SIF forge, so the
 // hub now declares a table no shipped plugin names; it is stated here by name (the hub declaration is lane C's file, not edited by lane D)
@@ -125,9 +153,12 @@ const hubSourceFileList = ['ceds', 'ctdl'].map((hubToken) => fs.readFileSync(pat
 harness.equal('no hub module or hub-framework file reads a HubBridging module', hubSourceFileList.filter((sourceText) => /HubBridging\b/.test(sourceText) && /require\([^)]*HubBridging/.test(sourceText)).length, 0);
 
 harness.section('(f) CTDL: each value equals today\'s CTDL-targeting plugin');
-// ⟪zeroBacklog B3⟫ the DECLARED bridges toward CTDL: B3's derived bridges toward it carry no declared target rules
-const ctdlEntryList = towardHub(ctdlHubBridging.hubToken).filter((oneEntry) => oneEntry.bridgeDeclaration.matchBasis === 'declared');
-harness.equal('declared target rules = the declared CTDL plugin\'s (one plugin)', `${ctdlEntryList.length} ${ctdlEntryList.every((oneEntry) => sameText(oneEntry.bridgeDeclaration.declaredTargetRuleList, ctdlHubBridging.declaredTargetRuleList))}`, '1 true');
+// ⟪zeroBacklog B3 + lane C, rebase 2026-10-23⟫ the DECLARED bridges toward CTDL (those carrying declared target rules): B3's derived
+// bridges toward it carry none and are not counted here
+const ctdlEntryList = towardHub(ctdlHubBridging.hubToken);
+const declaredCtdlEntryList = ctdlEntryList.filter((oneEntry) => oneEntry.bridgeDeclaration.declaredTargetRuleList !== undefined);
+harness.equal('declared CTDL plugins: the frozen count', declaredCtdlEntryList.length, DECLARED_PLUGIN_COUNT_BY_HUB_TOKEN.ctdl);
+harness.equal('declared target rules = each declared CTDL plugin\'s, filtered by its own pair value', declaredRuleMismatchList(declaredCtdlEntryList, ctdlHubBridging.declaredTargetRuleList).join(','), '');
 
 harness.section('(g) no hub literal in the framework files');
 const frameworkFileList = [require.resolve('../hubBridgingContract'), require.resolve('../hubBridgingLoader')];

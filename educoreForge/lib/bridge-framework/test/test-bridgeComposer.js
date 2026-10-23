@@ -9,6 +9,8 @@
 //   (a) every bridge registered at the R3 start (graphBuilder.ini [noRebuildProof] baselineDirectoryPath/
 //       pluginDigestsAtR3Start.json) is registered now under the same bridgeName, standardKey and target hub, with the SAME
 //       declarationDigest and the same hook names — whether it still comes from a plugin file or is now composed
+//       (⟪zeroBacklog lane C, 2026-10-23⟫ a departure is declared by name: ADDED_SINCE_R3_START, RE_KEYED_SINCE_R3_START; the
+//       roster file itself is never edited)
 //   (b) every bridgeName frozen in any decision store (R0 census) is registered now, or is named in the retired list below
 //   (c) the composer refuses by name: a hub anchor referenced out of range; a hub anchor list whose length changed since the
 //       pair row was written (SCARLET_ARROW's condition: no silent shift); the same for remodel tables; a template carrying a
@@ -57,6 +59,17 @@ const RETIRED_FROZEN_BRIDGE_NAME_REASON = Object.freeze({
 	sifCedsStandardPlugin: 'retired with the old SIF forge to codeAttic/forges/sif (TQ ruling Q-Z4 under the mandate); sif260928 replaced it; no recipe of record names it',
 });
 
+// ⟪zeroBacklog lane C, 2026-10-23, ruled BRONZE_CROWN⟫ the R3-start roster (a shared baseline file) is never edited; a departure
+// from it is declared here, by name, with what it is now and why. A bridge registered since the start:
+const ADDED_SINCE_R3_START = Object.freeze({
+	pescldCtdlDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '61c6c9cda1b1f7cbca25ecf77f50bdf316c8f685d4447bcc9df5a418c7672ff7', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C2: PESC_LD declared identity to the CTDL hub (forges/pescld)' },
+	pescldCedsDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ceds', declarationDigest: 'a5245e6b402c54d1c7572da75ecd7dde6589edb5353e65c04273dff483772595', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C3: PESC_LD declared identity to the CEDS hub, its stableIdTemplate rules only (forges/pescld)' },
+});
+// a bridge whose declaration moved since the start: both digests, so the entry is anchored to the roster it departs from
+const RE_KEYED_SINCE_R3_START = Object.freeze({
+	ctdlCedsDeclaredCorrespondence: { fromDeclarationDigest: '8a65a6f3721ddf03ec3e45df13eabefbd0cd9d6b34aadae53f06d43c9573aefe', toDeclarationDigest: '044c7828adcb26c2920a641f18fe832fef3ab2bca0fa4f902eed5539271c1685', reason: 'lane C3: the CEDS hub gained three term-form rules after its two seam rules; this bridge takes the hub list whole, so its declaration re-keys with no judge (its 53 targets resolve as before)' },
+});
+
 const proofConfig = getConfig('noRebuildProof') || {};
 const baselineDirectoryPath = proofConfig.baselineDirectoryPath;
 const digestFilePath = typeof baselineDirectoryPath === 'string' ? path.join(baselineDirectoryPath, 'pluginDigestsAtR3Start.json') : '';
@@ -74,10 +87,19 @@ if (digestFilePath !== '' && fs.existsSync(digestFilePath)) {
 		const entry = registry.entryByBridgeName[bridgeName];
 		const was = atStart[bridgeName];
 		const nowText = entry === undefined ? (RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName] !== undefined ? `RETIRED: ${RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName]}` : 'NOT REGISTERED') : `${entry.standardKey} → ${entry.targetHub} ${sha256Hex(entry.declarationCanonicalText)} hooks[${Object.keys(entry.bridgeHooks).sort().join(',')}]`;
-		harness.equal(`${bridgeName}${entry !== undefined && entry.pluginFilePath !== path.join(TREE_ROOT, was.pluginFile) ? ' (now composed from ' + path.relative(TREE_ROOT, entry.pluginFilePath) + ')' : ''}`, nowText, RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName] !== undefined && entry === undefined ? `RETIRED: ${RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName]}` : `${was.standardKey} → ${was.targetHub} ${was.declarationDigest} hooks[${was.hookNameList.join(',')}]`);
+		const reKeyed = RE_KEYED_SINCE_R3_START[bridgeName];
+		const expectedDigest = reKeyed !== undefined ? reKeyed.toDeclarationDigest : was.declarationDigest;
+		harness.equal(`${bridgeName}${entry !== undefined && entry.pluginFilePath !== path.join(TREE_ROOT, was.pluginFile) ? ' (now composed from ' + path.relative(TREE_ROOT, entry.pluginFilePath) + ')' : ''}${reKeyed !== undefined ? ' (re-keyed by name)' : ''}`, nowText, RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName] !== undefined && entry === undefined ? `RETIRED: ${RETIRED_FROZEN_BRIDGE_NAME_REASON[bridgeName]}` : `${was.standardKey} → ${was.targetHub} ${expectedDigest} hooks[${was.hookNameList.join(',')}]`);
 	});
-	// ⟪zeroBacklog B3⟫ the ONLY bridges added since the R3 start are B3's judged bridges toward the CTDL hub, one per standard bridging file
-	harness.equal('no bridge registered now that was not registered at the start, except B3\'s derived bridges toward ctdl', Object.keys(registry.entryByBridgeName).filter((bridgeName) => atStart[bridgeName] === undefined && !(ZERO_BACKLOG_B3_BRIDGE_NAME_LIST.indexOf(bridgeName) !== -1 && registry.entryByBridgeName[bridgeName].targetHub === 'ctdl')).join(','), '');
+	harness.equal('every re-keyed entry departs from the digest the roster froze', Object.keys(RE_KEYED_SINCE_R3_START).filter((bridgeName) => atStart[bridgeName] === undefined || atStart[bridgeName].declarationDigest !== RE_KEYED_SINCE_R3_START[bridgeName].fromDeclarationDigest).join(','), '');
+	Object.keys(ADDED_SINCE_R3_START).sort().forEach((bridgeName) => {
+		const entry = registry.entryByBridgeName[bridgeName];
+		const added = ADDED_SINCE_R3_START[bridgeName];
+		harness.equal(`${bridgeName} (added since the start by name)`, entry === undefined ? 'NOT REGISTERED' : `${entry.standardKey} → ${entry.targetHub} ${sha256Hex(entry.declarationCanonicalText)} hooks[${Object.keys(entry.bridgeHooks).sort().join(',')}]`, `${added.standardKey} → ${added.targetHub} ${added.declarationDigest} hooks[${added.hookNameList.join(',')}]`);
+	});
+	harness.equal('no added entry was already in the roster', Object.keys(ADDED_SINCE_R3_START).filter((bridgeName) => atStart[bridgeName] !== undefined).join(','), '');
+	// ⟪zeroBacklog B3 + lane C, rebase 2026-10-23⟫ both lanes' named departures: lane C's ADDED_SINCE_R3_START, B3's judged bridges toward ctdl
+	harness.equal('no bridge registered now that was not registered at the start, except those added by name and B3\'s derived bridges toward ctdl', Object.keys(registry.entryByBridgeName).filter((bridgeName) => atStart[bridgeName] === undefined && ADDED_SINCE_R3_START[bridgeName] === undefined && !(ZERO_BACKLOG_B3_BRIDGE_NAME_LIST.indexOf(bridgeName) !== -1 && registry.entryByBridgeName[bridgeName].targetHub === 'ctdl')).join(','), '');
 }
 
 harness.section('(a2) zeroBacklog B3: all ten judged bridges toward the CTDL hub are registered, each a derived bridge carrying the hub\'s prose rule');
