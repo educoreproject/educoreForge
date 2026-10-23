@@ -1,0 +1,15 @@
+standard: forge-jedx
+publishedVersion: 1.0.0
+publishedVersionEvidence: info.version = "1.0.0" in all four openApiBundles/*.json (measured 2026-10-23). The inlined HR Open schema types carry their own "version" keyword: 4.3.0 at 37,729 sites, 4.5.0 at 1,015, "4.3.x" at 85, "4.5" at 5 (measured).
+publisher: HR Open Standards Consortium, Inc. for the JEDx Working Group (info.contact.name "JEDx Working Group"; externalDocs https://www.uschamberfoundation.org/solutions/workforce-development-and-training/jedx)
+upstreamUrl: https://github.com/HROpen/APISpecifications (branch development, commit 707ec7d3741df46f6973411e5dd75c756cf3d7d7, 2026-02-12T16:17:59-06:00)
+publisherLandingPage: https://www.hropenstandards.org/jedx-open-api-specifications ("Finalized 10/15/2024"; members-only download, NOT used)
+acquiredDate: 2026-10-23
+acquiredBy: SILVER_SPIRE (Milo, Programmer B, nextStandards-102326) over a public, anonymous git clone. No account was created and no licence or IP agreement was accepted or presented.
+note: |
+  The JEDx Open API Specification: four self-contained (fully dereferenced) OpenAPI 3.1.0 bundles. The forge reads
+  components.schemas of the four files in openApiBundles/ (the files SHA256SUMS lists). workers-openapi-bundle_v1.json
+  exists upstream ONLY as workers/v1/workers-openapi-bundle_v1.json.zip (sha256 b6ce01f05ef6aa82866db9c045323362e945c89919ff2a25f7c1426811dd12b0);
+  the file here is that zip's single member. The bundle bytes are NOT committed (the workers bundle is 273,864,811 bytes);
+  README_PROVENANCE.md carries the acquisition recipe. transportObjects/ and licence/ are PEERS carried for provenance with their
+  own SHA256SUMS; the forge does not read them.

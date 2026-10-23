@@ -11,6 +11,11 @@ output/
 # Git-clone consumers: acquisition recipe in the peer README_PROVENANCE.md one directory up.
 educoreForge/forges/edfi/assets/standardSourceData/04/metaEdModel/
 
+# forge-jedx snapshot 02: the four JEDx OpenAPI bundles are never committed (the workers bundle is 273,864,811 bytes,
+# over GitHub's per-file limit; BRONZE_CROWN ruling 2026-10-23, the Ed-Fi 04 precedent). SHA256SUMS still covers them;
+# acquisition recipe in the peer README_PROVENANCE.md. ONLY this subfolder.
+educoreForge/forges/jedx/assets/standardSourceData/02/openApiBundles/
+
 # Claude Code agent scratch worktrees — embedded git repos, never project content
 .claude/
 
