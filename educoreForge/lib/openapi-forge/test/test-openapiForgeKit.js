@@ -213,6 +213,7 @@ taskList.push((args, next) => forgeDocument({ caseName: 'fixtureForge', document
 	harness.equal('the anyOf branch scalars carried in compositionBranches (the pattern branch whole)', nodeById['synthapi:Thing/kind'].properties.compositionBranches,
 		JSON.stringify([{ locator: '/anyOf/0', construct: 'anyOf', dataType: 'string' }, { locator: '/anyOf/1', construct: 'anyOf', dataType: 'string', valuePattern: '(ext:)[a-z]+' }]));
 	harness.equal('a bare $ref property carries no description', nodeById['synthapi:Thing/owner'].properties.description, undefined);
+	harness.equal('referencedSchemaNames: the referenced schema named as text (bare $ref, items, and a oneOf with one $ref branch)', ['owner', 'parts', 'issuer', 'name'].map((propertyName) => nodeById[`synthapi:Thing/${propertyName}`].properties.referencedSchemaNames).join('|'), 'Party|Part|Party|');
 	harness.equal('stats: references by construct', sortedText(forgeResult.stats.referenceEdgeCountByConstruct), sortedText({ $ref: 1, items: 1, oneOf: 2, allOf: 1 }));
 	harness.equal('stats: schemas, excluded, properties, required, enums, values, branches, vendor', ['schemaCount', 'excludedSchemaCount', 'propertyCount', 'requiredPropertyCount', 'enumCount', 'enumValueCount', 'compositionBranchCount', 'vendorExtensionCount'].map((statName) => forgeResult.stats[statName]).join(','), '3,1,11,2,2,5,7,2');
 	harness.equal('the root states info.description', nodeById['synthapi:root'].properties.description, 'A synthetic data model');
@@ -233,21 +234,35 @@ taskList.push((args, next) => validateDouble({ forgeResult: args.forgeResult, ca
 	harness.equal('explicitly omitted, by declared kind (paths, info, openapi, securitySchemes.oauth; Envelope)', sortedText(countBy(verdict.explicitlyOmittedList, (oneItem) => oneItem.kind)), sortedText(EXPECTED.explicitlyOmittedByKind));
 	next('', args);
 }));
+// a vectorised graph's reader returns each content node's 'embedding' (the harness double drops it, so it is put back by hand here):
+// the vector is not a statement and must not count as invented
+taskList.push((args, next) => {
+	const outputPath = path.join(scratchRootPath, 'verdict-vectorised');
+	fs.mkdirSync(outputPath, { recursive: true });
+	const vectorisedReader = { readAll: (callback) => roundTripHarness.graphDoubleFrom({ forgeResult: args.forgeResult }).readAll((readError, graph) => callback(readError, readError ? graph : { ...graph, nodes: graph.nodes.map((oneNode) => ({ ...oneNode, properties: { ...oneNode.properties, embedding: [0.25, -0.5] } })) })), close: (callback) => callback('') };
+	validator.validateWithReader({ reader: vectorisedReader, snapshotPath: FIXTURE_SNAPSHOT_PATH, outputPath }, (validateError, verdict) => {
+		harness.equal('a node vector (embedding) read back is not an invented statement', validateError ? `${validateError}` : `${verdict.inventedTotal}|${verdict.lostTotal}`, '0|0');
+		next('', args);
+	});
+});
 
 const ROUND_TRIP_TWIN_LIST = [
-	{ twinName: 'oneOfReferenceEdgeDropped', expectation: 'lost', perturb: (graph) => ({ ...graph, edges: graph.edges.filter((oneEdge) => oneEdge.properties.locator !== '/oneOf/1/$ref') }) },
+	// a dropped REFERENCES edge no longer agrees with the property's derived referencedSchemaNames, so the emitter refuses it by name
+	{ twinName: 'oneOfReferenceEdgeDropped', expectation: 'fault', faultPattern: /synthapi:Thing\/issuer' carries referencedSchemaNames "Party" but its REFERENCES edges reach ""/, perturb: (graph) => ({ ...graph, edges: graph.edges.filter((oneEdge) => oneEdge.properties.locator !== '/oneOf/1/$ref') }) },
 	{ twinName: 'itemsReferenceLocatorMoved', expectation: 'both', perturb: (graph) => ({ ...graph, edges: graph.edges.map((oneEdge) => (oneEdge.properties.locator === '/items/$ref' ? { ...oneEdge, properties: { ...oneEdge.properties, locator: '/items/oneOf/0/$ref', referenceConstruct: 'oneOf' } } : oneEdge)) }) },
 	{ twinName: 'propertyInvented', expectation: 'invented', perturb: (graph) => ({ ...graph, nodes: graph.nodes.map((oneNode) => (oneNode.stableId === 'synthapi:Thing/name' ? { ...oneNode, properties: { ...oneNode.properties, maxLength: 9 } } : oneNode)) }) },
 	{ twinName: 'enumLocatorMoved', expectation: 'both', perturb: (graph) => ({ ...graph, nodes: graph.nodes.map((oneNode) => (oneNode.stableId === 'synthapi:Thing/kind/enum' ? { ...oneNode, properties: { ...oneNode.properties, enumLocator: '/enum' } } : oneNode)) }) },
 	{ twinName: 'branchPatternDropped', expectation: 'lost', perturb: (graph) => ({ ...graph, nodes: graph.nodes.map((oneNode) => (oneNode.stableId === 'synthapi:Thing/kind' ? { ...oneNode, properties: { ...oneNode.properties, compositionBranches: JSON.stringify([{ locator: '/anyOf/0', construct: 'anyOf', dataType: 'string' }, { locator: '/anyOf/1', construct: 'anyOf', dataType: 'string' }]) } } : oneNode)) }) },
 	{ twinName: 'requiredFlagFlipped', expectation: 'lost', perturb: (graph) => ({ ...graph, nodes: graph.nodes.map((oneNode) => (oneNode.stableId === 'synthapi:Thing/kind' ? { ...oneNode, properties: { ...oneNode.properties, isRequired: false } } : oneNode)) }) },
+	{ twinName: 'referencedSchemaNamesDisagreesWithEdges', expectation: 'fault', faultPattern: /carries referencedSchemaNames "Part" but its REFERENCES edges reach "Party"/, perturb: (graph) => ({ ...graph, nodes: graph.nodes.map((oneNode) => (oneNode.stableId === 'synthapi:Thing/owner' ? { ...oneNode, properties: { ...oneNode.properties, referencedSchemaNames: 'Part' } } : oneNode)) }) },
 	{ twinName: 'vendorExtensionAltered', expectation: 'both', perturb: (graph) => ({ ...graph, nodes: graph.nodes.map((oneNode) => (oneNode.stableId === 'synthapi:Thing' ? { ...oneNode, properties: { ...oneNode.properties, xClassPid: 'org.synth.other' } } : oneNode)) }) },
 ];
 ROUND_TRIP_TWIN_LIST.forEach((oneTwin) => taskList.push((args, next) => validateDouble({ forgeResult: oneTwin.perturb(copyOfForgeResult(args.forgeResult)), caseName: oneTwin.twinName }, (validateError, verdict) => {
 	if (oneTwin === ROUND_TRIP_TWIN_LIST[0]) {
 		harness.section('SECTION 3b — round-trip twins, each observed RED');
 	}
-	const isRed = !validateError && verdict.roundTripClean === false
+	// a 'fault' twin is refused by the emitter (an emission fault is FATAL in the harness): red is the named refusal
+	const isRed = oneTwin.expectation === 'fault' ? oneTwin.faultPattern.test(`${validateError}`) : !validateError && verdict.roundTripClean === false
 		&& (oneTwin.expectation === 'invented' ? verdict.inventedTotal >= 1 : true)
 		&& (oneTwin.expectation === 'lost' ? verdict.lostTotal >= 1 : true)
 		&& (oneTwin.expectation === 'both' ? verdict.lostTotal >= 1 && verdict.inventedTotal >= 1 : true);

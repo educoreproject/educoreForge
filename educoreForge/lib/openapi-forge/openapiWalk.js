@@ -40,6 +40,11 @@ const REFERENCE_CONSTRUCT_BY_POSITION = Object.freeze({ [POSITION.PROPERTY]: '$r
 const COMPOSITION_BRANCHES_PROPERTY_NAME = 'compositionBranches';
 const ENUM_LOCATOR_PROPERTY_NAME = 'enumLocator';
 const REQUIRED_PROPERTY_NAME = 'isRequired';
+// ⟪A1⟫ the names of the schemas a property references, as text, for a reader and the judge: a bare $ref property publishes no
+// description (OpenAPI 3.0 allows no sibling of $ref), so without it a judge sees 'creator' and not that it is a Profile. DERIVED
+// from the REFERENCES edges (distinct, in source order); the round-trip pair checks it against them and states nothing for it.
+const REFERENCED_SCHEMA_NAMES_PROPERTY_NAME = 'referencedSchemaNames';
+const REFERENCED_SCHEMA_NAMES_SEPARATOR = ', ';
 
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const VALUE_KIND_CHECK_BY_KIND = Object.freeze({
@@ -272,6 +277,7 @@ const moduleFunction =
 						carriedProperties: {
 							...propertyCarried,
 							[REQUIRED_PROPERTY_NAME]: isRequired,
+							...(accumulator.referenceList.length === 0 ? {} : { [REFERENCED_SCHEMA_NAMES_PROPERTY_NAME]: accumulator.referenceList.map((oneReference) => oneReference.targetSchemaName).filter((schemaName, nameIndex, nameList) => nameList.indexOf(schemaName) === nameIndex).join(REFERENCED_SCHEMA_NAMES_SEPARATOR) }),
 							// a JSON string, not a list: a one-entry list would be read back as a scalar (graph-contract §1)
 							...(accumulator.branchList.length === 0 ? {} : { [COMPOSITION_BRANCHES_PROPERTY_NAME]: JSON.stringify(accumulator.branchList) }),
 						},

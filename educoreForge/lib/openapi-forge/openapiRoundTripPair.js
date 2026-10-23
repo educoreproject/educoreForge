@@ -35,10 +35,14 @@ const ROOT_ROLE = DME_ROLES.STANDARD_ROOT;
 // layers the source states nothing about, excluded BY ROLE so the exclusion is a stated decision (the pescld/CTDL-family form)
 const NOT_SOURCE_ROLE_LIST = Object.freeze([DME_ROLES.EMBED_TEXT, EQUIVALENCE_NODE_LABELS.HUB_REFERENCE, EQUIVALENCE_NODE_LABELS.HUB_DEFINITION]);
 // the properties the framework derives or stamps on every content node: identity, structure, search; never a source statement
-const DERIVED_PROPERTY_NAME_LIST = Object.freeze(['_id', '_source', 'stableId', 'role', 'name', 'searchText', 'parentId', 'path', 'depth', 'crossRefs', 'embeddingModelVersion']);
+// 'embedding' is the node's vector: a vectorised build's graph reader returns it (measured: laneA/builds/a1recvec, 233 invented before this)
+const DERIVED_PROPERTY_NAME_LIST = Object.freeze(['_id', '_source', 'stableId', 'role', 'name', 'searchText', 'parentId', 'path', 'depth', 'crossRefs', 'embedding', 'embeddingModelVersion']);
 const COMPOSITION_BRANCHES_PROPERTY_NAME = 'compositionBranches';
 const ENUM_LOCATOR_PROPERTY_NAME = 'enumLocator';
 const REQUIRED_PROPERTY_NAME = 'isRequired';
+// derived from the REFERENCES edges by the walk; checked against them below, never a statement of its own
+const REFERENCED_SCHEMA_NAMES_PROPERTY_NAME = 'referencedSchemaNames';
+const REFERENCED_SCHEMA_NAMES_SEPARATOR = ', ';
 const BRANCH_RECORD_STRUCTURE_FIELD_LIST = Object.freeze(['locator', 'construct']);
 
 const OMITTED_KIND = Object.freeze({ OUT_OF_SCOPE_BY_DECLARATION: 'outOfScopeByDeclaration', EXCLUDED_SCHEMA: 'excludedSchema' });
@@ -210,6 +214,9 @@ const moduleFunction =
 								}
 								return;
 							}
+							if (oneName === REFERENCED_SCHEMA_NAMES_PROPERTY_NAME) {
+								return; // derived: checked against the REFERENCES edges after the node pass
+							}
 							if (oneName === COMPOSITION_BRANCHES_PROPERTY_NAME) {
 								JSON.parse(propertyValue).forEach((oneBranch) => Object.keys(oneBranch)
 									.filter((fieldName) => BRANCH_RECORD_STRUCTURE_FIELD_LIST.indexOf(fieldName) === -1)
@@ -288,6 +295,16 @@ const moduleFunction =
 						return;
 					}
 					fault = `edge ${oneEdge.type} (${fromNode.role} -> ${toNode.role}) ${oneEdge.fromStableId} -> ${oneEdge.toStableId} has no reading`;
+				});
+				// the derived referencedSchemaNames of every property equals the distinct targets of its REFERENCES edges (as a set)
+				graph.nodes.filter((oneNode) => oneNode.role === DME_ROLES.PROPERTY).forEach((oneNode) => {
+					const edgeTargetNameList = graph.edges.filter((oneEdge) => oneEdge.type === 'REFERENCES' && oneEdge.fromStableId === oneNode.stableId).map((oneEdge) => identityOf(oneEdge.toStableId).schemaName);
+					const carriedText = oneNode.properties[REFERENCED_SCHEMA_NAMES_PROPERTY_NAME];
+					const carriedNameList = carriedText === undefined ? [] : `${carriedText}`.split(REFERENCED_SCHEMA_NAMES_SEPARATOR);
+					const asSetText = (nameList) => nameList.filter((oneName, nameIndex) => nameList.indexOf(oneName) === nameIndex).sort().join('|');
+					if (asSetText(edgeTargetNameList) !== asSetText(carriedNameList)) {
+						fault = `property '${oneNode.stableId}' carries ${REFERENCED_SCHEMA_NAMES_PROPERTY_NAME} ${JSON.stringify(carriedText)} but its REFERENCES edges reach ${JSON.stringify(asSetText(edgeTargetNameList))}`;
+					}
 				});
 				if (fault !== undefined) {
 					callback('', { fault });
