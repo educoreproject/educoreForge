@@ -1001,7 +1001,13 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // test-sifEdgeVocabulary.js 4/1 (as (ii)); and
 // lib/bridge-framework/test/test-bgNosub.js (its three re-anchors, this commit). No bridge-framework or bridge-maker source:
 // frameworkFingerprint does not move; declarationDigest and every cache key do not.
-const P1_BASELINE_COMMIT = 'postZeroBacklogD0PescCompose-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-22 (IVORY_TRAIL; zeroBacklog lane C3 framework commit, rebased onto D0; AUTHORISED by BRONZE_CROWN, IMCS 68be4a40)
+// ═══ BG-COMPOSE-PESC postZeroBacklogD0PescCompose-102226 -> zbCTemplateRulesOnD0PescCompose-102226, tag cut ON this commit. CENSUS (numstat
+// from D0's tag; all of this branch's commit before this one): lib/bridge-framework/ bridgeComposer.js (the pair-row rule-kind filter),
+// standardBridgingContract.js (DECLARED_TARGET_RULE_KIND_FILTER_BY_PAIR_VALUE), test/test-bridgeComposer.js (section i). No PESC plugin,
+// build.js, interfaces.js, bridge-maker or lib/vocabulary/ change; no existing pair row uses the new value (declarationDigest unchanged);
+// frameworkFingerprint moves.
+const P1_BASELINE_COMMIT = 'zbCTemplateRulesOnD0PescCompose-102226'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C3 framework commit on D0; BRONZE_CROWN authorised); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
