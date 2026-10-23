@@ -503,7 +503,10 @@ const POST_D1_BASE_TAG = 'postZeroBacklogD3bVocabularyIi-102226'; // re-anchored
 // kit's hubAnchorPrefixByHubToken parameter removed), forge-framework.js 4/5 (the dep name left DEP_NAME_LIST), test/test-gDet.js 2/2 and
 // test/test-gSeam.js 1/1 (their twins' find-texts follow), test/test-labelCensus.js 3/3 (sif off the roster), test/
 // test-hubAnchorValueRetired.js 83/0 (new gate), and test/test-gSeamUntouched.js (its re-anchor, this commit). No block moves (P-a1 16/16).
-const PHASE0_ANCHOR_TAG = 'postZeroBacklogD3ForgeFrameworkIii-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-6; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (SILENT_TRAIL; zeroBacklog lane B, on main 768a9477; ruled by BRONZE_CROWN: a lane re-anchors its own seam move) ═══
+// (iii) postZeroBacklogD3ForgeFrameworkIii-102226 -> postZbBForgeFrameworkIii-102226. CENSUS (lib/forge-framework/): test/test-gSeamUntouched.js ONLY (lane B's G-SEAM re-anchor in
+// this same commit: the known coupling).
+const PHASE0_ANCHOR_TAG = 'postZbBForgeFrameworkIii-102226'; // re-anchored by SILENT_TRAIL (zeroBacklog lane B; census REANCHOR-CENSUS-B-102226.md); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -1037,7 +1040,10 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // now that no declaration mints a Sif* label). (i-live): no shape moved.
 // ═══ RE-ANCHOR, 2026-10-22 (PEARL_CIPHER; zeroBacklog lane A, P9, BRONZE_CROWN go) ═══ PHASE3_ANCHOR_TAG postZeroBacklogD3bSeamDiffEmpty-102226 ->
 // postZbATermTierSeamDiffEmpty-102226, tag cut ON this commit. CENSUS over this gate's paths (numstat from that tag): forges/ceds/lib/cedsHubDeclaration.js 8/4 (the term-tier flip: tierList and the term embedText template). Nothing else.
-const PHASE3_ANCHOR_TAG = 'postZbATermTierSeamDiffEmpty-102226'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A, P9; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (SILENT_TRAIL; zeroBacklog lane B, on main 768a9477; ruled by BRONZE_CROWN: a lane re-anchors its own seam move) ═══
+// BG-SEAM-UNTOUCHED seamDiffEmpty postZbATermTierSeamDiffEmpty-102226 -> postZbB1SeamDiffEmpty-102226. CENSUS: forges/ctdl/lib/ctdlForgeDeclaration.js 20/4 (B1 embed texts and
+// the embedText stableId form), apps/graph-builder/lib/build.js 46/2 (B3 pair token, as G-SEAM). Path list unchanged.
+const PHASE3_ANCHOR_TAG = 'postZbB1SeamDiffEmpty-102226'; // re-anchored by SILENT_TRAIL (zeroBacklog lane B; census REANCHOR-CENSUS-B-102226.md); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

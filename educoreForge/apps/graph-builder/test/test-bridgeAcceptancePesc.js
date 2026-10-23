@@ -1027,7 +1027,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // re-anchors, this commit). No bridge-framework or bridge-maker source: frameworkFingerprint does not move.
 // ═══ RE-ANCHOR, 2026-10-22 (PEARL_CIPHER; zeroBacklog lane A, P9, BRONZE_CROWN go) ═══ P1_BASELINE_COMMIT postZeroBacklogD3bPescCompose-102226 ->
 // postZbATermTierPescCompose-102226, tag cut ON this commit. CENSUS over this gate's paths (numstat from that tag): lib/bridge-framework/test/test-bgNosub.js ONLY (lane A's own seamDiffEmpty re-anchor, the same commit). No bridge-framework or bridge-maker source.
-const P1_BASELINE_COMMIT = 'postZbATermTierPescCompose-102226'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A, P9; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (SILENT_TRAIL; zeroBacklog lane B, on main 768a9477; ruled by BRONZE_CROWN: a lane re-anchors its own seam move) ═══
+// BG-COMPOSE-PESC (a) postZbATermTierPescCompose-102226 -> postZbB2PescCompose-102226. CENSUS (numstat, lane B's only): B2 renderedProseIdentifierRule.js 54/0 (new),
+// evidenceRenderer.js 29/11, bridge-framework.js 5/1, bridgePluginContract.js 7/0, hubBridgingContract.js 5/0, bridgeComposer.js 4/0,
+// test-renderedProseIdentifierRule.js 160/0 (new), test-bgDerived.js 2/2; B3 build.js 46/2, test-bridgeComposer.js 13/3, test-bgJudgeSlot.js 7/0,
+// test-bgDecl.js 3/1, test-hubBridging.js 2/1. No PESC plugin, no bridge-maker file. frameworkFingerprint moves (B3's rebridge re-keys).
+const P1_BASELINE_COMMIT = 'postZbB2PescCompose-102226'; // re-anchored by SILENT_TRAIL (zeroBacklog lane B; census REANCHOR-CENSUS-B-102226.md); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
