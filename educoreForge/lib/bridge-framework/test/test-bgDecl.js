@@ -317,7 +317,10 @@ const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 // bridging file: edfi, sif260928 and the eight PESC releases), each declaring candidateRetrieval with an explicit method.
 // zeroBacklog lane C4 (2026-10-23, IVORY_TRAIL; BRONZE_CROWN's grant): 22 → 26, the four judged PESC_LD bridges (two facets × the
 // ceds and ctdl hubs, forges/pescld/bridges/pescldBridging.js), each declaring candidateRetrieval embedTextVote-v1.
-const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 26;
+// nextStandards-102326 lane A2 (2026-10-23, AZURE_MARBLE): 26 → 28, the two judged Open Badges bridges (one facet × the ceds and ctdl
+// hubs, forges/openbadges/bridges/openbadgesBridging.js), named in their own ADDED table so lane B's rows merge beside them.
+const NEXT_STANDARDS_LANE_A_DECLARING_PLUGIN_NAME_LIST = Object.freeze(['openbadgesCedsDerivedPlugin', 'openbadgesCtdlDerivedPlugin']);
+const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 26 + NEXT_STANDARDS_LANE_A_DECLARING_PLUGIN_NAME_LIST.length;
 const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 	method: 'embedTextVote-v1',
 	hitsPerText: 20,
@@ -547,7 +550,7 @@ const nvConjunctList = [
 				return { pluginFileName: onePlugin.pluginLabel === undefined ? path.basename(onePlugin.pluginFilePath) : onePlugin.pluginLabel, refusalText: validated.error === undefined ? '' : validated.error.message };
 			});
 			const refusedList = outcomeList.filter((oneOutcome) => oneOutcome.refusalText !== '');
-			const countHolds = shippedList.length === EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT;
+			const countHolds = shippedList.length === EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT && NEXT_STANDARDS_LANE_A_DECLARING_PLUGIN_NAME_LIST.every((bridgeName) => shippedList.some((onePlugin) => onePlugin.pluginLabel === bridgeName));
 			return {
 				pass: countHolds && refusedList.length === 0,
 				detail: `${shippedList.length} shipped declaring (expected ${EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT}): ${outcomeList.map((oneOutcome) => oneOutcome.pluginFileName).join(', ')}; ${refusedList.length === 0 ? 'all register' : `REFUSED ${refusedList.map((oneOutcome) => `${oneOutcome.pluginFileName}: ${oneOutcome.refusalText.slice(0, 160)}`).join(' | ')}`}`,

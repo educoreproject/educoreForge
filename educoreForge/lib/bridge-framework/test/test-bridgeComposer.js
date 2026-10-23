@@ -61,6 +61,11 @@ const RETIRED_FROZEN_BRIDGE_NAME_REASON = Object.freeze({
 
 // ⟪zeroBacklog lane C, 2026-10-23, ruled BRONZE_CROWN⟫ the R3-start roster (a shared baseline file) is never edited; a departure
 // from it is declared here, by name, with what it is now and why. A bridge registered since the start:
+// ⟪nextStandards-102326 lane A2, 2026-10-23 (AZURE_MARBLE)⟫ ADDED, in this lane's own table: Open Badges 3.0's one judged facet
+const ADDED_NEXT_STANDARDS_LANE_A = Object.freeze({
+	openbadgesCedsDerivedPlugin: { standardKey: 'openbadges', targetHub: 'ceds', declarationDigest: '7811c14be1a42dcbe72aac9513a99068496849d58107bd4d4dfade44a8d6b202', hookNameList: [], reason: 'nextStandards A2: every Open Badges property judged toward the CEDS hub (forges/openbadges)' },
+	openbadgesCtdlDerivedPlugin: { standardKey: 'openbadges', targetHub: 'ctdl', declarationDigest: '3b300c024608a79245c2112a26752696b0352aa5d756b3d51b2c4bd214e2bc5c', hookNameList: [], reason: 'nextStandards A2: every Open Badges property judged toward the CTDL hub (forges/openbadges)' },
+});
 const ADDED_SINCE_R3_START = Object.freeze({
 	pescldCtdlDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '61c6c9cda1b1f7cbca25ecf77f50bdf316c8f685d4447bcc9df5a418c7672ff7', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C2: PESC_LD declared identity to the CTDL hub (forges/pescld)' },
 	pescldCedsDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ceds', declarationDigest: 'a5245e6b402c54d1c7572da75ecd7dde6589edb5353e65c04273dff483772595', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C3: PESC_LD declared identity to the CEDS hub, its stableIdTemplate rules only (forges/pescld)' },
@@ -69,6 +74,7 @@ const ADDED_SINCE_R3_START = Object.freeze({
 	pescldPescTermRowCtdlDerivedPlugin: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '418958d892d12f2bbec92aa9f920ef58f4f2a0303ada74ad6c464f79336046cc', hookNameList: [], reason: 'lane C4: the pesc: profile rows judged toward the CTDL hub' },
 	pescldPescTermShapeCedsDerivedPlugin: { standardKey: 'pescld', targetHub: 'ceds', declarationDigest: '41cd786ec6a64f44f077047e7c0e9feff14b6be1e1ba8548a5802dfdeb116129', hookNameList: [], reason: 'lane C4: the pesc: shapes judged toward the CEDS hub' },
 	pescldPescTermShapeCtdlDerivedPlugin: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: 'c17102e43c1933c974b190c4e290b319876789f9d0c7f674b73ae58cf7329127', hookNameList: [], reason: 'lane C4: the pesc: shapes judged toward the CTDL hub' },
+	...ADDED_NEXT_STANDARDS_LANE_A,
 });
 // a bridge whose declaration moved since the start: both digests, so the entry is anchored to the roster it departs from
 const RE_KEYED_SINCE_R3_START = Object.freeze({

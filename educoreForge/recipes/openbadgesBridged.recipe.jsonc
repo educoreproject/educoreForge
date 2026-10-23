@@ -1,0 +1,21 @@
+{
+  // openbadgesBridged — nextStandards-102326 lane A2: Open Badges 3.0 beside both hubs with its ONE judged facet (every property a
+  // subject; retrieval by the forge's text nodes, the judge Jev jev-1.13.0 naming the relation). Rehearsed under --useDebugJudge,
+  // then the real judge; pre-declared spend $0.14 (estimate: 233 units x 2 hubs x $0.00029; 201 units since no class facet), STOP at $2.
+  "schemaVersion": "1.0.0",
+  "recipeName": "openbadgesBridged",
+  "kind": "dev",
+  "description": "Open Badges 3.0 beside the CEDS and CTDL hubs with its one judged facet (A2).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "openbadges", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "openbadges", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["openbadges", "ceds", "ctdl"] }
+  ]
+}

@@ -1,0 +1,4 @@
+{
+	"pairingNote": "The hubs Open Badges 3.0's ONE judged facet pairs with (nextStandards-102326 A2). Data, so the bridging code names no hub. Each hub takes the same judged pair row (lib openbadgesBridging.js judgedPairRow), copied from PESC_LD's judged row as the start.",
+	"judgedHubTokenList": ["ceds", "ctdl"]
+}

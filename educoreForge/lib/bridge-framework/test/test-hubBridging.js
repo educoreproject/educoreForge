@@ -119,7 +119,10 @@ const cedsEntryList = towardHub(cedsHubBridging.hubToken);
 const CANDIDATE_LIST_PAIR_OVERRIDE_BRIDGE_NAME_LIST = Object.freeze(['pescCedsDerivedPlugin', 'pescOptionSetCedsDerivedPlugin']);
 // ⟪zeroBacklog lane C4, 2026-10-23, ruled BRONZE_CROWN: NAMED lists, not counts, so the next lane sees who is in each set⟫
 // the current-generation judged CEDS plugins: they share the hub's candidate list and its identifier scan (was: 'the ten')
-const CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST = Object.freeze([
+// ⟪nextStandards-102326 lane A2, 2026-10-23 (AZURE_MARBLE)⟫ ADDED, in this lane's own table: Open Badges' judged CEDS bridge is current
+// generation (the hub's candidate list and identifier scan) and retrieves candidates
+const NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST = Object.freeze(['openbadgesCedsDerivedPlugin']);
+const CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST,
 	'edfiCedsDerivedPlugin',
 	'pescAcademicEportfolio1v0v0CedsDerivedPlugin',
 	'pescCollegeTranscript1v7v0CedsDerivedPlugin',
@@ -134,7 +137,7 @@ const CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST = Object.freeze([
 	'sif260928CedsDerivedPlugin',
 ]);
 // every judged CEDS plugin that retrieves candidates, the two older pesc260805 plugins included (was: 12)
-const RETRIEVING_CEDS_PLUGIN_NAME_LIST = Object.freeze([
+const RETRIEVING_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST,
 	'edfiCedsDerivedPlugin',
 	'pescAcademicEportfolio1v0v0CedsDerivedPlugin',
 	'pescCedsDerivedPlugin',

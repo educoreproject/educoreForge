@@ -130,6 +130,10 @@ SHIPPED_PLUGIN_LIST.push(...ZERO_BACKLOG_B3_STANDARD_STEM_LIST.map((bridgeNameSt
 	const cedsSibling = SHIPPED_PLUGIN_LIST.find((onePlugin) => onePlugin.bridgeName === `${bridgeNameStem}CedsDerivedPlugin`);
 	return { ...cedsSibling, bridgeName: `${bridgeNameStem}CtdlDerivedPlugin` };
 }));
+// ⟪nextStandards-102326 lane A2, 2026-10-23 (AZURE_MARBLE)⟫ ADDED: Open Badges 3.0's one judged facet toward both hubs, judgeSlot-v1 with
+// the instruction form of the split question (the PESC_LD judged form), so each resolves to derivedJudgeSlot (measured)
+const NEXT_STANDARDS_LANE_A_PLUGIN_LIST = ['ceds', 'ctdl'].map((hubStem) => ({ bridgeName: `openbadges${hubStem.charAt(0).toUpperCase()}${hubStem.slice(1)}DerivedPlugin`, composedFromBridgingFilePath: 'forges/openbadges/bridges/openbadgesBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL }));
+SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_LANE_A_PLUGIN_LIST);
 
 // ---------------------------------------------------------------------
 // module loading: the real module, or a double carrying the scenario's mutations
