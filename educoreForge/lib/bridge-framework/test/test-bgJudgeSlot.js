@@ -112,6 +112,13 @@ const SHIPPED_PLUGIN_LIST = [
 	{ bridgeName: 'pescTestScoreReport1v1v0CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pesctestscorereport1v1v0/bridges/pescTestScoreReport1v1v0Bridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'pescLearningRecord1v0v0CedsDerivedPlugin', composedFromBridgingFilePath: 'forges/pesclearningrecord1v0v0/bridges/pescLearningRecord1v0v0Bridging.js', judgePromptVariant: 'derivedJudgeSlotOwningDefinition', rendererVersion: JUDGE_SLOT_OWNING_DEFINITION_RENDERER_VERSION_LITERAL },
 ];
+// ⟪zeroBacklog B3⟫ the ten derived bridges toward the CTDL hub: each composes from its standard's bridging file with the SAME template
+// as that standard's ceds bridge, so it resolves to the same variant and renderer version (the hub supplies no variant)
+const ZERO_BACKLOG_B3_STANDARD_STEM_LIST = ['edfi', 'sif260928', 'pescCollegeTranscript1v8v0', 'pescCollegeTranscript1v7v0', 'pescHighSchoolTranscript1v6v0', 'pescTestScoreReport1v1v0', 'pescLearningRecord1v0v0', 'pescDocumentRequest1v0v0', 'pescDocumentResponse1v0v0', 'pescAcademicEportfolio1v0v0'];
+SHIPPED_PLUGIN_LIST.push(...ZERO_BACKLOG_B3_STANDARD_STEM_LIST.map((bridgeNameStem) => {
+	const cedsSibling = SHIPPED_PLUGIN_LIST.find((onePlugin) => onePlugin.bridgeName === `${bridgeNameStem}CedsDerivedPlugin`);
+	return { ...cedsSibling, bridgeName: `${bridgeNameStem}CtdlDerivedPlugin` };
+}));
 
 // ---------------------------------------------------------------------
 // module loading: the real module, or a double carrying the scenario's mutations

@@ -313,7 +313,9 @@ const FORGES_DIR = path.join(TREE_ROOT, 'forges');
 // union is 5 + 2 (B2x) + 1 (E) + 3 (B1x) = 11.
 // forgeClean lane CT17 (2026-10-09, ONYX_DANCE; roster literals pre-authorised as seam re-anchors in WORKORDER-CT17): 11 → 12,
 // the PESC College Transcript 1.7.0 derived plugin (forges/pesccollegetranscript1v7v0/bridges/) declares it too.
-const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 12;
+// zeroBacklog B3 (2026-10-22, SILENT_TRAIL): 12 → 22, the ten derived bridges toward the CTDL hub (one ctdl pair row per standard
+// bridging file: edfi, sif260928 and the eight PESC releases), each declaring candidateRetrieval with an explicit method.
+const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 22;
 const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 	method: 'embedTextVote-v1',
 	hitsPerText: 20,
