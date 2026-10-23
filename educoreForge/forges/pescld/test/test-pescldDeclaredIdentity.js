@@ -42,6 +42,9 @@ const BRIDGE_NAME = 'pescldCtdlDeclaredIdentity';
 const SOURCE_STANDARD_NAME = 'PESCLD';
 const TERM_BEARING_ROLE_LIST = ['DmeClass', 'DmeProperty', 'DmeOptionValue'];
 const EXPECTED = Object.freeze({ specifiedCount: 18, distinctIriCount: 13 });
+// the real snapshot (775 term-bearing nodes) outgrows the toy default of 4000 ms on a loaded machine: measured HUNG at load 30, 2026-10-22;
+// the CTDL declared-bridge suite's figure
+const HANG_GUARD_MS = 120000;
 
 const bundle = require(path.join(__dirname, '..', 'forgePescld'))({ embedder: null });
 
@@ -54,6 +57,7 @@ const graphNodeOf = (forgedNode) => ({ stableId: forgedNode.stableId, labels: fo
 
 const scenarioFor = ({ forgedNodeList }) => {
 	const scenario = toyBridgeScenario.makeScenario();
+	scenario.hangGuardMs = HANG_GUARD_MS;
 	scenario.forgesDirOverride = FORGES_DIR_PATH;
 	scenario.graph = { nodeList: TERM_CARD_FIXTURE.cardList.map((oneCard) => JSON.parse(JSON.stringify(oneCard))).concat(forgedNodeList.map(graphNodeOf)), edgeList: [] };
 	scenario.spec = {
