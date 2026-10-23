@@ -2,12 +2,12 @@
   // pescldDeclared — zeroBacklog lane C (WORKORDER-C C2, C3): PESC_LD beside both hubs, and its DECLARED-IDENTITY bridges. A PESC_LD
   // shape, profile row or picklist value whose term IS a hub's term (the same IRI) meets that hub's TERM card by EXACT_MATCH, matchBasis
   // declaredIdentity; which terms are a hub's, and the card key they map to, is the hub's own declaredTargetRuleList. Nothing is judged.
-  // C2 bridges PESC_LD to CTDL only; C3 (after the CEDS term tier, P9) adds the CEDS pairing to the same entry. Built into a DEV_ graph
+  // C2 bridges PESC_LD to the ctdl hub only; C3 (after P9's term tier) adds the second hub to the same entry. Built into a DEV_ graph
   // with --rebridge=pescld --judgeCacheOnly=true: a declared basis asks nothing, so the cache-only guard is a seal.
   "schemaVersion": "1.0.0",
   "recipeName": "pescldDeclared",
   "kind": "dev",
-  "description": "CEDS + CTDL + PESC_LD, hubs CEDS and CTDL, the PESC_LD declared-identity bridge to CTDL (C2; C3 adds CEDS).",
+  "description": "PESC_LD beside both hubs and its declared-identity bridges (C2: the ctdl hub; C3 adds the other).",
   "standards": [
     { "token": "ceds", "version": "current" },
     { "token": "ctdl", "version": "current" },
