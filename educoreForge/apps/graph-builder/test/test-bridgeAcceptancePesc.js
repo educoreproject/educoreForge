@@ -1041,7 +1041,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // zbCPescLdOnMainPescCompose-102326, tag cut ON this commit. CENSUS over this gate's paths (numstat from that tag): lib/bridge-framework/test/
 // test-bgJudgeSlot.js 5/0 (the two PESC_LD rows of its shipped roster, granted by BRONZE_CROWN) and test/test-bgNosub.js (its re-anchor, this
 // commit). The previous tag also no longer names an ancestor after the rebase. No bridge-framework or bridge-maker source.
-const P1_BASELINE_COMMIT = 'zbCPescLdOnMainPescCompose-102326'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (SILENT_TRAIL; zeroBacklog lane B (C), the frozen-block size fix, on main 46ca9a68; ruled by BRONZE_CROWN) ═══
+// BG-COMPOSE-PESC (a) zbCPescLdOnMainPescCompose-102326 -> postZbBSizeFixPescCompose-102326. CENSUS (numstat): lib/bridge-framework/
+// candidateRetrievalMethodRegistry.js 49/5 (per-record retrievalHitList; paths name their hit by index; expandedRetrievalPathListFor),
+// test/test-retrievalHitList.js 97/0 (new), test/test-bgDerived.js 1/1 (a twin's find-text). No PESC plugin, no bridge-maker file.
+const P1_BASELINE_COMMIT = 'postZbBSizeFixPescCompose-102326'; // re-anchored by SILENT_TRAIL (zeroBacklog lane B (C)); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
