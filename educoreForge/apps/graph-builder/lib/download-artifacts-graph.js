@@ -10,7 +10,7 @@
 //     sessions went through it, so a run can show the guard was in the path.
 //
 //   statementListingEmitterByBundleToken[<bundleToken>]({ treeRootPath, boltTriple }, callback(err, { statementMap }))
-//     For a bundle whose validator writes no file of its emission (SIF260928, Ed-Fi), the graph side of its own round trip,
+//     For a bundle whose validator writes no file of its emission (SIF260928, Ed-Fi, PESC_LD, the CTDL family), the graph side of its own round trip,
 //     run again over the golden through the validator's own libraries, so the listing holds exactly the statements the
 //     verdict compared. A bundle of kind statementListing with no emitter here is refused by the tool, by name.
 //
@@ -122,10 +122,55 @@ const edfiListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
 	});
 };
 
+// ⟪zeroBacklog A4, 2026-10-23⟫ the CTDL family: three bundles, ONE round-trip pair (lib/ctdl-family-forge/jsonLdRoundTripPair.js),
+// each built over its own vocabulary profile exactly as that bundle's roundTripValidator.js builds it. What differs per bundle is
+// data, so it lives in this table rather than in three copies of the emitter.
+const JSON_LD_FAMILY_LISTING_RULE_BY_BUNDLE_TOKEN = Object.freeze({
+	ctdl: Object.freeze({ forgeDeclarationModuleName: 'ctdlForgeDeclaration', vocabularyProfileFileName: 'ctdlVocabularyProfile.json' }),
+	ctdlasn: Object.freeze({ forgeDeclarationModuleName: 'ctdlasnForgeDeclaration', vocabularyProfileFileName: 'ctdlasnVocabularyProfile.json' }),
+	ctdlqdata: Object.freeze({ forgeDeclarationModuleName: 'ctdlqdataForgeDeclaration', vocabularyProfileFileName: 'ctdlqdataVocabularyProfile.json' }),
+});
+
+const jsonLdFamilyListingEmitterFor = ({ bundleToken }) => {
+	const listingRule = JSON_LD_FAMILY_LISTING_RULE_BY_BUNDLE_TOKEN[bundleToken];
+	if (!listingRule) {
+		throw new Error(`download-artifacts-graph: no JSON-LD family listing rule for bundle '${bundleToken}'`);
+	}
+	return ({ treeRootPath, boltTriple }, callback) => {
+		const bundleLibDirPath = path.join(treeRootPath, 'forges', bundleToken, 'lib');
+		const forgeDeclaration = require(path.join(bundleLibDirPath, listingRule.forgeDeclarationModuleName));
+		const vocabularyProfile = require(path.join(bundleLibDirPath, listingRule.vocabularyProfileFileName));
+		const roundTripPair = require(path.join(treeRootPath, 'lib', 'ctdl-family-forge', 'jsonLdRoundTripPair'))({ vocabularyProfile, ruleModulePath: 'lib/ctdl-family-forge/jsonLdRoundTripPair.js' });
+		const { openGraphReader } = require(path.join(treeRootPath, 'lib', 'forge-framework', 'roundTripHarness', 'graphReader'));
+		openGraphReader({ boltUrl: boltTriple.boltUrl, user: boltTriple.user, password: boltTriple.password, standardSource: forgeDeclaration.standardSource }, (openError, reader) => {
+			if (openError) {
+				callback(`${bundleToken} listing: ${openError}`);
+				return;
+			}
+			roundTripPair.emitFromGraph({ reader }, (emitError, emitted) => {
+				reader.close((closeError) => {
+					if (emitError || (emitted && emitted.fault !== undefined)) {
+						callback(`${bundleToken} listing: ${emitError || JSON.stringify(emitted.fault)}`);
+						return;
+					}
+					if (closeError) {
+						callback(`${bundleToken} listing: ${closeError}`);
+						return;
+					}
+					callback('', { statementMap: emitted.statements });
+				});
+			});
+		});
+	};
+};
+
 const statementListingEmitterByBundleToken = Object.freeze({
 	sif260928: sif260928ListingEmitter,
 	edfi: edfiListingEmitter,
 	pescld: pescldListingEmitter,
+	ctdl: jsonLdFamilyListingEmitterFor({ bundleToken: 'ctdl' }),
+	ctdlasn: jsonLdFamilyListingEmitterFor({ bundleToken: 'ctdlasn' }),
+	ctdlqdata: jsonLdFamilyListingEmitterFor({ bundleToken: 'ctdlqdata' }),
 });
 
 module.exports = { installReadOnlyDriverGuard, statementListingEmitterByBundleToken };

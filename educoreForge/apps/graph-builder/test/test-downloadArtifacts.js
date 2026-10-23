@@ -26,9 +26,13 @@
 //       bundle whose record was not read is refused by name
 //   (l) the graph facet, the download that is not the original, says "experimental" in its README heading and its manifest
 //       description; the source facet says it in neither (TQ 2026-10-15, WORKORDER-experimentalLabel-101526)
+//   (m) ⟪zeroBacklog A4, 2026-10-23⟫ every standard a GOLDEN recipe in recipes/ holds is an offered bundle in the REAL
+//       downloadArtifactsRules.json, and every offered statementListing bundle has an emitter in the REAL
+//       download-artifacts-graph.js. Measured red first on main 391e24b7: the CTDL family (ctdl, ctdlasn, ctdlqdata) was in
+//       goldCtdlHub and goldZeroBacklog and offered by neither, so downloadArtifacts refused GOLD_EVAL_261023_zeroBacklog by name.
 // RED TWINS (in memory, module double): totalIgnored -> (g); strayAccepted -> (f); holdIgnored -> (d); familyRetyped -> (c);
 // unofferedTokenIgnored -> (c); sortDropped -> (a); sourceUrlDropped -> (k); unrecordedGivenAHomePage -> (k);
-// experimentalDropped -> (l); experimentalOnSource -> (l).
+// experimentalDropped -> (l); experimentalOnSource -> (l); ctdlEmitterDropped -> (m).
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -54,7 +58,11 @@ const LIB_PATH = path.join(__dirname, '..', 'lib', 'download-artifacts.js');
 const ZIP_PATH = path.join(__dirname, '..', 'lib', 'deterministic-zip.js');
 const libFor = (mutationList) => (mutationList.length === 0 ? require(LIB_PATH) : loadBuildJsDouble({ buildJsPath: LIB_PATH, mutationList }));
 const zipFor = (mutationList) => (mutationList.length === 0 ? require(ZIP_PATH) : loadBuildJsDouble({ buildJsPath: ZIP_PATH, mutationList }));
-const { installReadOnlyDriverGuard } = require(path.join(__dirname, '..', 'lib', 'download-artifacts-graph.js'));
+const GRAPH_LIB_PATH = path.join(__dirname, '..', 'lib', 'download-artifacts-graph.js');
+const graphLibFor = (mutationList) => (mutationList.length === 0 ? require(GRAPH_LIB_PATH) : loadBuildJsDouble({ buildJsPath: GRAPH_LIB_PATH, mutationList }));
+const { installReadOnlyDriverGuard } = require(GRAPH_LIB_PATH);
+const TREE_ROOT_PATH = path.join(__dirname, '..', '..', '..');
+const recipeLib = require(path.join(__dirname, '..', 'lib', 'recipe'))();
 const RULES = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'lib', 'downloadArtifactsRules.json'), 'utf8'));
 const TREE_ROOT = path.join(__dirname, '..', '..', '..');
 const REAL_SNAPSHOT_DIR_PATH = path.join(TREE_ROOT, 'forges', 'pesccollegetranscript1v8v0', 'assets', 'standardSourceData', '01');
@@ -269,6 +277,21 @@ const conjunctJudgeByRefId = {
 			detail: `${graphHeading} | ${graphDescription} | ${sourceHeading} | ${sourceDescription}`,
 		});
 	},
+	m_everyGoldenStandardOffered: (mutationList, done) => {
+		const recipesDirPath = path.join(TREE_ROOT_PATH, 'recipes');
+		const goldenStandardTokenList = fs
+			.readdirSync(recipesDirPath)
+			.filter((oneFileName) => /\.recipe\.jsonc$/.test(oneFileName))
+			.map((oneFileName) => recipeLib.loadRecipe(path.join(recipesDirPath, oneFileName), { forgesDirPath: path.join(TREE_ROOT_PATH, 'forges') }))
+			.filter((loaded) => !loaded.error && loaded.recipe.kind === 'golden')
+			.reduce((soFar, loaded) => soFar.concat(loaded.recipe.standards.map((oneStandard) => oneStandard.token)), [])
+			.filter((oneToken, tokenIndex, tokenList) => tokenList.indexOf(oneToken) === tokenIndex);
+		const offeredTokenList = RULES.offeredBundleList.map((oneBundle) => oneBundle.bundleToken);
+		const emitterByBundleToken = graphLibFor(mutationList).statementListingEmitterByBundleToken;
+		const unofferedList = goldenStandardTokenList.filter((oneToken) => offeredTokenList.indexOf(oneToken) === -1);
+		const unemittableList = RULES.offeredBundleList.filter((oneBundle) => oneBundle.graphEmissionKind === 'statementListing' && typeof emitterByBundleToken[oneBundle.bundleToken] !== 'function').map((oneBundle) => oneBundle.bundleToken);
+		done({ pass: goldenStandardTokenList.length > 0 && unofferedList.length === 0 && unemittableList.length === 0, detail: `golden standards ${goldenStandardTokenList.length}; unoffered [${unofferedList.join(', ')}]; statementListing without an emitter [${unemittableList.join(', ')}]` });
+	},
 	j_readOnlyGuard: (mutationList, done) => {
 		const sessionConfigList = [];
 		const fakeDriverModule = { session: { READ: 'READ', WRITE: 'WRITE' }, driver: () => ({ session: (sessionConfig) => { sessionConfigList.push(sessionConfig); return {}; } }) };
@@ -291,6 +314,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'k_sourceUrlCarried', twinName: 'unrecordedGivenAHomePage', libraryName: 'lib', find: '		return `- ${labelText}: ${SOURCE_URL_NOT_RECORDED_TEXT}`;', replace: '		return `- ${labelText}: Published on <https://www.ed-fi.org>`;' },
 	{ conjunctRefId: 'l_graphFacetTitledExperimental', twinName: 'experimentalDropped', libraryName: 'lib', find: "readmeHeadingText: 'written back out of the graph (experimental)', manifestDescriptionText: 'Written back out of the graph (experimental), with validation files' }", replace: "readmeHeadingText: 'written back out of the graph', manifestDescriptionText: 'Written back out of the graph, with validation files' }" },
 	{ conjunctRefId: 'l_graphFacetTitledExperimental', twinName: 'experimentalOnSource', libraryName: 'lib', find: "manifestDescriptionText: 'Source as ingested' }", replace: "manifestDescriptionText: 'Source as ingested (experimental)' }" },
+	{ conjunctRefId: 'm_everyGoldenStandardOffered', twinName: 'ctdlEmitterDropped', libraryName: 'graph', find: '	ctdl: jsonLdFamilyListingEmitterFor({ bundleToken: \'ctdl\' }),\n', replace: '' },
 	{ conjunctRefId: 'a_zipIsDeterministic', twinName: 'sortDropped', libraryName: 'zip', find: "	const sortedEntryList = zipEntryList.slice().sort((leftEntry, rightEntry) => Buffer.compare(Buffer.from(leftEntry.entryPath, 'utf8'), Buffer.from(rightEntry.entryPath, 'utf8')));", replace: '	const sortedEntryList = zipEntryList.slice();' },
 ];
 
@@ -300,7 +324,7 @@ const runSequence = (stepList, whenDone) => {
 	nextStep(0);
 };
 // a twin mutates one library; the conjunct reads that library through libFor / zipFor, so a twin of the other is a no-op
-const mutationListsFor = (oneTwin) => (oneTwin.libraryName === 'zip' ? { zip: [{ find: oneTwin.find, replace: oneTwin.replace }], lib: [] } : { zip: [], lib: [{ find: oneTwin.find, replace: oneTwin.replace }] });
+const mutationListsFor = (oneTwin) => ({ zip: [], lib: [], graph: [], [oneTwin.libraryName]: [{ find: oneTwin.find, replace: oneTwin.replace }] });
 harness.section('BASELINE — the real generator passes every conjunct');
 runSequence(
 	refIdList.map((oneRefId) => (stepDone) => conjunctJudgeByRefId[oneRefId]([], (verdict) => { harness.ok(`${oneRefId} PASS`, verdict.pass, verdict.detail); stepDone(); })),
@@ -309,7 +333,7 @@ runSequence(
 		runSequence(
 			TWIN_LIST.map((oneTwin) => (stepDone) => {
 				const mutationLists = mutationListsFor(oneTwin);
-				const mutationList = oneTwin.libraryName === 'zip' ? mutationLists.zip : mutationLists.lib;
+				const mutationList = mutationLists[oneTwin.libraryName];
 				conjunctJudgeByRefId[oneTwin.conjunctRefId](mutationList, (verdict) => {
 					harness.ok(`${oneTwin.conjunctRefId} observed RED under '${oneTwin.twinName}'`, !verdict.pass, verdict.detail);
 					harness.note(`RED-OBSERVED ${oneTwin.conjunctRefId} twin='${oneTwin.twinName}' → ${verdict.pass ? 'STILL PASSING' : 'FAIL'}`);
