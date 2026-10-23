@@ -1037,7 +1037,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // this gate's paths (numstat from that tag): lib/bridge-framework/test/test-bridgeComposer.js 25/3 (ADDED_SINCE_R3_START, RE_KEYED_SINCE_R3_START,
 // beside lane B's B3 list), test-hubBridging.js 35/4 (each declared plugin's rules = its hub's list filtered by its own pair value), and
 // test/test-bgNosub.js (its seamDiffEmpty re-anchor, this commit). No bridge-framework or bridge-maker source: frameworkFingerprint does not move.
-const P1_BASELINE_COMMIT = 'zbCPescLdOnBPescCompose-102326'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (IVORY_TRAIL; zeroBacklog lane C, the rebase onto main da8c240f) ═══ P1_BASELINE_COMMIT zbCPescLdOnBPescCompose-102326 ->
+// zbCPescLdOnMainPescCompose-102326, tag cut ON this commit. CENSUS over this gate's paths (numstat from that tag): lib/bridge-framework/test/
+// test-bgJudgeSlot.js 5/0 (the two PESC_LD rows of its shipped roster, granted by BRONZE_CROWN) and test/test-bgNosub.js (its re-anchor, this
+// commit). The previous tag also no longer names an ancestor after the rebase. No bridge-framework or bridge-maker source.
+const P1_BASELINE_COMMIT = 'zbCPescLdOnMainPescCompose-102326'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

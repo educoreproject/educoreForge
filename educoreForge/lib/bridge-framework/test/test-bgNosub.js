@@ -1047,7 +1047,10 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // lane B's re-anchor) ═══ PHASE3_ANCHOR_TAG postZbB1SeamDiffEmpty-102226 -> zbCPescLdOnBSeamDiffEmpty-102326, tag cut ON this commit. CENSUS over
 // this gate's paths (numstat from that tag): forges/pescld/forgePescld.js 26/0, forges/pescld/lib/pescldForgeDeclaration.js 67/0,
 // forges/pescld/lib/pescldHooks.js 50/0 (C1: a NEW forge bundle's entry, declaration and hooks files; no existing forge, no framework file).
-const PHASE3_ANCHOR_TAG = 'zbCPescLdOnBSeamDiffEmpty-102326'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (IVORY_TRAIL; zeroBacklog lane C, the rebase onto main da8c240f) ═══ PHASE3_ANCHOR_TAG zbCPescLdOnBSeamDiffEmpty-102326 ->
+// zbCPescLdOnMainSeamDiffEmpty-102326, tag cut ON this commit. CENSUS over this gate's paths (numstat from that tag): NONE. The move is only
+// because the rebase left the previous tag on a commit that is no longer an ancestor of the branch; a tag must name history that merges.
+const PHASE3_ANCHOR_TAG = 'zbCPescLdOnMainSeamDiffEmpty-102326'; // re-anchored by IVORY_TRAIL (zeroBacklog lane C; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
