@@ -18,6 +18,8 @@
 //   descriptionSource is REFUSED; (m) the root carries it; (n) every gold bundle declares one; (k) the gold bundles declare a family in the
 //   list — the seven PESC releases PESC with seven DISTINCT version-free labels, CEDS / EdFi / SIF one each.
 //   ⟪zeroBacklog lane D, D0-3⟫ (o) the family PESCLD (PESC_LD, lane C's forges/pescld) is admitted by the closed list.
+//   ⟪nextStandards-102326 K0⟫ (p) the family OpenBadges (lane A's forges/openbadges) and (q) the family JEDx (lane B's forges/jedx)
+//   are admitted by the closed list (the wave's ONE vocabulary commit).
 // RED TWINS, each observed in memory: (a) the contract row made optional; (b) the closed-value check accepting anything;
 // (c) the tips checker accepting ''; (d) the root dropping standardKind; (e) null stamped as a property; (f) the PESC release
 // declaration builder forgetting the tips.
@@ -129,6 +131,15 @@ const conjunctJudgeByRefId = {
 		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'PESCLD' }));
 		return { pass: message === '', detail: message || "standardFamily 'PESCLD' admitted" };
 	},
+	// ⟪nextStandards-102326 K0, 2026-10-23⟫ wave 1's two families: Open Badges 3.0 (lane A) and JEDx (lane B), each its own family
+	p_openbadgesFamilyAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'OpenBadges' }));
+		return { pass: message === '', detail: message || "standardFamily 'OpenBadges' admitted" };
+	},
+	q_jedxFamilyAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'JEDx' }));
+		return { pass: message === '', detail: message || "standardFamily 'JEDx' admitted" };
+	},
 	i_blankReleaseLabelRefused: (mutationList) => {
 		const message = validationMessageFor(mutationList, withChange({ releaseLabel: ' ' }));
 		return { pass: /forgeDeclaration 'releaseLabel'/.test(message), detail: message || 'accepted a blank releaseLabel' };
@@ -199,6 +210,8 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'g_missingFamilyRefused', twinName: 'familyOptional', modulePath: CONTRACT_PATH, find: "standardFamily: Object.freeze({ required: true, kind: 'closedValue'", replace: "standardFamily: Object.freeze({ required: false, kind: 'closedValue'" },
 	{ conjunctRefId: 'h_familyOutsideVocabularyRefused', twinName: 'familyAnyString', modulePath: CONTRACT_PATH, find: "standardFamily: Object.freeze({ required: true, kind: 'closedValue', allowedValueList: STANDARD_FAMILY_LIST }),", replace: "standardFamily: Object.freeze({ required: true, kind: 'nonEmptyString' })," },
 	{ conjunctRefId: 'o_pescldFamilyAdmitted', twinName: 'familyListWithoutPescld', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'PESCLD') })," },
+	{ conjunctRefId: 'p_openbadgesFamilyAdmitted', twinName: 'familyListWithoutOpenbadges', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'OpenBadges') })," },
+	{ conjunctRefId: 'q_jedxFamilyAdmitted', twinName: 'familyListWithoutJedx', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'JEDx') })," },
 	{ conjunctRefId: 'i_blankReleaseLabelRefused', twinName: 'labelOptional', modulePath: CONTRACT_PATH, find: "releaseLabel: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "releaseLabel: Object.freeze({ required: true, kind: 'nonEmptyString' })," },
 	{ conjunctRefId: 'j_rootCarriesFamilyAndLabel', twinName: 'rootDropsFamily', modulePath: ROOT_PATH, find: '\t\tstandardFamily,\n\t\treleaseLabel,\n', replace: '\t\treleaseLabel,\n' },
 	{ conjunctRefId: 'l_missingOrBlankDescriptionSourceRefused', twinName: 'descriptionSourceOptional', modulePath: CONTRACT_PATH, find: "descriptionSource: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "descriptionSource: Object.freeze({ required: false, kind: 'nonEmptyString' })," },

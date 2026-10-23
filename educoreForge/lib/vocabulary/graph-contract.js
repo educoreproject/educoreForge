@@ -76,11 +76,12 @@ const LIST_NAME_RULE_EXEMPTION_BY_NAME = Object.freeze({
 
 // §2 INTEGER_VALUED_PROPERTY_NAME_LIST — counts written as Neo4j INTEGER (W-A-2, V1-C04). The facets maxLength / minLength /
 // decimalPlaces (and CEDS's minCount / maxCount) joined in campaign P3 (W-C-17) once the CEDS parser typed them (Ed-Fi already carried numbers): ONE type per name.
+// ⟪nextStandards-102326 K0⟫ minItems: an OpenAPI array property's minimum count (lib/openapi-forge registry), an integer in the source.
 const INTEGER_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 	'byteCount', 'classCount', 'closeMappedProperties', 'codeCount', 'codePosition', 'contentEdgeCount', 'contentNodeCount',
 	'contextPathCount', 'decimalPlaces', 'depth', 'documentDepth', 'documentPosition', 'embeddingDims', 'emitTimeRowCount', 'exactMappedProperties',
 	'exemplarCount', 'explicitlyOmittedTotal', 'fieldCount', 'finishTimeRowCount', 'instanceCount', 'inventedTotal', 'lostTotal',
-	'maxCount', 'maxLength', 'meaningBearingEdgeCount', 'minCount', 'minLength', 'missingVectorTotal', 'optionValueCount', 'position', 'propertyCount', 'sequence', 'sequenceOrdinal', 'sequencePosition',
+	'maxCount', 'maxLength', 'meaningBearingEdgeCount', 'minCount', 'minItems', 'minLength', 'missingVectorTotal', 'optionValueCount', 'position', 'propertyCount', 'sequence', 'sequenceOrdinal', 'sequencePosition',
 	'siblingCount', 'sourceLineNumber', 'standardCount', 'subdomainPosition', 'totalDigits', 'unkindedMappingEdgeCount',
 	'valueCount', 'valueOrdinal', 'verifiedCount', 'xpathDepth',
 ]);
@@ -233,7 +234,7 @@ const STANDARD_DEFINITION_FIELD_LIST = Object.freeze([
 	{ name: 'unkindedMappingEdgeCount', type: 'integer', required: false, meaning: 'match edges carrying no mappingKind' },
 	{ name: 'standardKind', type: 'string', required: true, meaning: 'what kind of standard it is, as its forge declares' },
 	{ name: 'standardUsageTips', type: 'string', required: false, meaning: 'how to read the standard in this graph, as its forge declares; absent when the forge declares null (forgeDeclarationContract allows it: sif, pesc260805)' },
-	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC, CTDL, CTDLASN, CTDLQData, PESCLD), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
+	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC, CTDL, CTDLASN, CTDLQData, PESCLD, OpenBadges, JEDx), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
 	{ name: 'releaseLabel', type: 'string', required: true, meaning: 'which member of its family the standard is, version-free (CollegeTranscript, not CollegeTranscript-1.8.0); a one-member family repeats the family name' },
 	{ name: 'descriptionSource', type: 'string', required: true, meaning: 'where in the standard\'s SOURCE its description text is read from (PESC xs:documentation, CEDS dc:description, ...), declared by its forge (lane FIX, Fix 3)' },
 	// ⟪zeroBacklog lane D, D0-4, 2026-10-22⟫ RESERVED for lane A2 (census row 10), which stamps it on every standard and makes it required

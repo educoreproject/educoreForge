@@ -919,7 +919,10 @@ const STANDARD_KIND_LIST = Object.freeze([STANDARD_KIND.DATA_STANDARD, STANDARD_
 // to the RELEASES of one standard, and ASN / QData are not CTDL releases, so a CTDL filter must not return them.
 // ⟪zeroBacklog lane D, D0-3, 2026-10-22; census row 79⟫ PESCLD: PESC_LD (forges/pescld, lane C), the PESC linked-data vocabulary,
 // is its own family, not a PESC release: a PESC filter must not return it.
-const STANDARD_FAMILY = Object.freeze({ CEDS: 'CEDS', EDFI: 'EdFi', SIF: 'SIF', PESC: 'PESC', CTDL: 'CTDL', CTDLASN: 'CTDLASN', CTDLQDATA: 'CTDLQData', PESCLD: 'PESCLD', TOY: 'Toy' });
+// ⟪nextStandards-102326 K0, 2026-10-23; plan Q-N8⟫ wave 1's two families, in ONE commit for the wave: OPENBADGES (Open Badges 3.0,
+// lane A's forges/openbadges; 'OpenBadges' is the July _source name, so the inventory oracle's name matches) and JEDX (lane B's
+// forges/jedx, named by SILVER_SPIRE and confirmed by BRONZE_CROWN).
+const STANDARD_FAMILY = Object.freeze({ CEDS: 'CEDS', EDFI: 'EdFi', SIF: 'SIF', PESC: 'PESC', CTDL: 'CTDL', CTDLASN: 'CTDLASN', CTDLQDATA: 'CTDLQData', PESCLD: 'PESCLD', OPENBADGES: 'OpenBadges', JEDX: 'JEDx', TOY: 'Toy' });
 const STANDARD_FAMILY_LIST = Object.freeze(Object.keys(STANDARD_FAMILY).map((oneMember) => STANDARD_FAMILY[oneMember]));
 // BUILD_ATTESTATION_VERDICT — the words a :BuildAttestation row's verdict may be (lane R, 2026-10-05; FINDING 5-A of 2026-09-01).
 //   pass                 the gate ran and found nothing wrong

@@ -1,0 +1,51 @@
+{
+	"registryNote": "lib/openapi-forge keyword registry (nextStandards-102326 K0). DATA: which OpenAPI 3 / JSON Schema keyword the kit carries at which position, and how. A keyword absent from its position's table is REFUSED BY NAME by the walk; adding one is a row here plus a twin, never a code branch. Positions: 'schema' (a components.schemas member), 'property' (a member of a schema's properties), 'items' (a property's items), 'branch' (one member of a oneOf/anyOf/allOf at property or items position). A branch admits no items and no composition, so nested composition refuses by the same rule. Carriages: nodeProperty (a scalar under propertyName, of valueKind, optionally only requiredValue), requiredList, propertyMap, items, reference, enum, composition.",
+	"vendorExtensionRule": {
+		"namePrefix": "x-",
+		"positionList": ["schema", "property"],
+		"propertyNamePrefix": "x",
+		"valueKind": "string"
+	},
+	"compositionConstructList": ["oneOf", "anyOf", "allOf"],
+	"carriageByPosition": {
+		"schema": {
+			"type": { "carriage": "nodeProperty", "propertyName": "dataType", "valueKind": "string", "requiredValue": "object" },
+			"description": { "carriage": "nodeProperty", "propertyName": "description", "valueKind": "string" },
+			"additionalProperties": { "carriage": "nodeProperty", "propertyName": "additionalPropertiesAllowed", "valueKind": "boolean" },
+			"required": { "carriage": "requiredList" },
+			"properties": { "carriage": "propertyMap" }
+		},
+		"property": {
+			"type": { "carriage": "nodeProperty", "propertyName": "dataType", "valueKind": "string" },
+			"description": { "carriage": "nodeProperty", "propertyName": "description", "valueKind": "string" },
+			"format": { "carriage": "nodeProperty", "propertyName": "dataFormat", "valueKind": "string" },
+			"pattern": { "carriage": "nodeProperty", "propertyName": "valuePattern", "valueKind": "string" },
+			"minItems": { "carriage": "nodeProperty", "propertyName": "minItems", "valueKind": "integer" },
+			"items": { "carriage": "items" },
+			"$ref": { "carriage": "reference" },
+			"enum": { "carriage": "enum" },
+			"oneOf": { "carriage": "composition" },
+			"anyOf": { "carriage": "composition" },
+			"allOf": { "carriage": "composition" }
+		},
+		"items": {
+			"type": { "carriage": "nodeProperty", "propertyName": "itemsDataType", "valueKind": "string" },
+			"description": { "carriage": "nodeProperty", "propertyName": "itemsDescription", "valueKind": "string" },
+			"format": { "carriage": "nodeProperty", "propertyName": "itemsDataFormat", "valueKind": "string" },
+			"pattern": { "carriage": "nodeProperty", "propertyName": "itemsValuePattern", "valueKind": "string" },
+			"$ref": { "carriage": "reference" },
+			"enum": { "carriage": "enum" },
+			"oneOf": { "carriage": "composition" },
+			"anyOf": { "carriage": "composition" },
+			"allOf": { "carriage": "composition" }
+		},
+		"branch": {
+			"type": { "carriage": "nodeProperty", "propertyName": "dataType", "valueKind": "string" },
+			"description": { "carriage": "nodeProperty", "propertyName": "description", "valueKind": "string" },
+			"format": { "carriage": "nodeProperty", "propertyName": "dataFormat", "valueKind": "string" },
+			"pattern": { "carriage": "nodeProperty", "propertyName": "valuePattern", "valueKind": "string" },
+			"$ref": { "carriage": "reference" },
+			"enum": { "carriage": "enum" }
+		}
+	}
+}
