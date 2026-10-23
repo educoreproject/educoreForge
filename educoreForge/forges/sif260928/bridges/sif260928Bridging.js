@@ -120,10 +120,10 @@ const standardBridging = Object.freeze({
 				// k / floor reasoning stands until measured against CTDL), the hub's own candidate list and identifier scan, and the union
 				// blinding: this standard's own answer-key names, then every hub it pairs with (computed by the composer, never written here).
 				ctdl: {
-					// hitsPerText 20, not the ceds row's 40: the frozen block's retrievalVoteList is ~86% of its text and grows with hitsPerText; at 40
-					// the sif260928→ctdl block passed V8's maximum string length and the B3 rehearsal died 'Invalid string length' (the ceds block
-					// at 40 is already 493 MB of a ~537 MB ceiling, measured). k and minScore stay the ceds row's.
-					candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 20, minScore: 0.3, k: 40, neighbourVote: null },
+					// the ceds row's settings (40 / 0.3 / 40), RESTORED (BRONZE_CROWN ruling 2026-10-23). The B3 run used hitsPerText 20 because at 40
+					// the frozen block passed V8's string ceiling; the size fix (per-record retrievalHitList, c1da0eb3) took that block from 95% to 55%,
+					// and the measured cost of 20 was retrieval, not size: on 200 sampled subjects the pools at 20 and 40 had Jaccard median 0.40.
+					candidateRetrieval: { method: 'embedTextVote-v1', hitsPerText: 40, minScore: 0.3, k: 40, neighbourVote: null },
 					candidateRenderingAllowList: null,
 					promptIdentifierScan: 'fromHub',
 					blindingOrder: { standardBlindingNameList: [SIF_ANSWER_KEY_COLUMN_NAME, 'crossRefs'], pairedHubAnchors: 'union' },
