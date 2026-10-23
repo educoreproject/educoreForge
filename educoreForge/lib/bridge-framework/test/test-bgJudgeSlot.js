@@ -87,6 +87,11 @@ const SHIPPED_PLUGIN_LIST = [
 	// nothing; its variant row is the documentary 'crosswalk' (registration resolves one), and nothing is ever rendered under it.
 	{ bridgeName: 'ctdlCedsDeclaredCorrespondence', composedFromBridgingFilePath: 'forges/ctdl/bridges/ctdlBridging.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
 	{ bridgeName: 'ctdlasnCtdlDeclaredCorrespondence', composedFromBridgingFilePath: 'forges/ctdlasn/bridges/ctdlasnBridging.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
+	// ADDED 2026-10-23 (IVORY_TRAIL, zeroBacklog lane C2 + C3; BRONZE_CROWN's grant): the two PESC_LD DECLARED-IDENTITY plugins. A
+	// declared basis judges nothing; each resolves to the documentary 'crosswalk' row like the two declared CTDL plugins (measured:
+	// judgePromptVariantFor -> crosswalk, bridgeEvidenceRenderer-v1), and nothing is ever rendered under it.
+	{ bridgeName: 'pescldCtdlDeclaredIdentity', composedFromBridgingFilePath: 'forges/pescld/bridges/pescldBridging.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
+	{ bridgeName: 'pescldCedsDeclaredIdentity', composedFromBridgingFilePath: 'forges/pescld/bridges/pescldBridging.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL },
 	// RETIRED 2026-10-02 (goldJev lane F, BRIEF-F; TQ 2026-09-10 and 2026-10-01: the CEDS-authored crosswalk is excluded, "known to be garbage"): edfiCedsCrosswalkPlugin moved to forges/edfi/retiredBridges/, out of the roster
 	// MOVED 2026-09-30 (IVORY_ECHO, WORKORDER-jevRelations-093026 R2, TQ ruling "every bridge uses judge-named relations"):
 	// Ed-Fi derived now declares predicateRule judgeSlot-v1, so it resolves to derivedJudgeSlot. Was: 'derived' / derived-v12.
