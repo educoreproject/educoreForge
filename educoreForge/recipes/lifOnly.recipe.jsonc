@@ -1,0 +1,15 @@
+{
+  // lifOnly — LIF 2.0 alone (stage off): the forge's base block, no hub, no bridge (nextStandards-102326 lane C1).
+  "schemaVersion": "1.0.0",
+  "recipeName": "lifOnly",
+  "kind": "dev",
+  "description": "Forge the LIF 2.0 standard base only - proves the LIF bundle forges on the OpenAPI kit's dereferenced layout.",
+  "standards": [
+    {
+      "token": "lif",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

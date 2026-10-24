@@ -1,0 +1,7 @@
+{
+	"name": "forge-lif",
+	"version": "1.0.0",
+	"main": "forgeLif.js",
+	"description": "LIF 2.0 forge bundle — the LIF Initiative's lif-core lif-schema.json (OpenAPI 3.0) components.schemas on lib/openapi-forge's dereferenced layout: entities, inline objects, properties, enums. It does no bridging.",
+	"private": true
+}

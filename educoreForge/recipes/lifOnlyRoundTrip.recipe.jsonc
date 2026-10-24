@@ -1,0 +1,16 @@
+{
+  // lifOnlyRoundTrip — LIF 2.0 alone with the RT-13 round-trip stage: the nextStandards-102326 lane C1 certification recipe.
+  "schemaVersion": "1.0.0",
+  "recipeName": "lifOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the LIF 2.0 standard base and round-trip-validate the materialized product (RT-13 stage).",
+  "roundTripStage": true,
+  "standards": [
+    {
+      "token": "lif",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

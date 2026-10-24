@@ -1,0 +1,19 @@
+{
+	"profileNote": "LIF 2.0 (the LIF Initiative's lif-core reference_data/schemas/lif-schema.json) on lib/openapi-forge (nextStandards-102326 C1). One file whose eight entities nest their objects inline, with no titles, no $ref and no component copies: the dereferenced layout with a one-entry list. The statementOmissionDeclaration (K1c, ruled 2026-10-24) names what LIF states empty (179 description, 1,126 format, 847 use_recommendations, 1,261 example, 6 required) and its one enum repeat (Image, twice in Person.Consent.lifEntities): each is declared omitted, never carried.",
+	"sourceLayout": "dereferencedMultiFile",
+	"sourceFileNameList": ["lif-schema.json"],
+	"sourceFormat": "json",
+	"stableIdPrefix": "lif:",
+	"rootStableId": "lif:root",
+	"perStandardLabelByRole": {
+		"DmeClass": "LifSchema",
+		"DmeProperty": "LifProperty",
+		"DmeOptionSet": "LifEnum",
+		"DmeOptionValue": "LifEnumValue"
+	},
+	"schemaExclusionList": [],
+	"statementOmissionDeclaration": {
+		"emptyValueKeywordList": ["description", "format", "use_recommendations", "example", "required"],
+		"enumMemberRepeatList": [{ "enumObjectPointer": "Person/properties/Consent/properties/lifEntities", "memberText": "Image" }]
+	}
+}
