@@ -61,6 +61,11 @@ const RETIRED_FROZEN_BRIDGE_NAME_REASON = Object.freeze({
 
 // ⟪zeroBacklog lane C, 2026-10-23, ruled BRONZE_CROWN⟫ the R3-start roster (a shared baseline file) is never edited; a departure
 // from it is declared here, by name, with what it is now and why. A bridge registered since the start:
+// ⟪nextStandards-102326 lane B2, 2026-10-24 (SILVER_SPIRE)⟫ ADDED, in this lane's own table: JEDx's one judged facet
+const ADDED_NEXT_STANDARDS_LANE_B = Object.freeze({
+	jedxCedsDerivedPlugin: { standardKey: 'jedx', targetHub: 'ceds', declarationDigest: 'f7d74a99eb1b9243c007a3ea74e7c713b54e6d80cbd0eea43ec9b3eddb0aa208', hookNameList: [], reason: 'nextStandards B2: every JEDx property judged toward the CEDS hub (forges/jedx)' },
+	jedxCtdlDerivedPlugin: { standardKey: 'jedx', targetHub: 'ctdl', declarationDigest: 'd912e3da76d3a2b0ec209b2c76a73dfd37e8f6a6402c16d4ae738609086b0043', hookNameList: [], reason: 'nextStandards B2: every JEDx property judged toward the CTDL hub (forges/jedx)' },
+});
 // ⟪nextStandards-102326 lane A2, 2026-10-23 (AZURE_MARBLE)⟫ ADDED, in this lane's own table: Open Badges 3.0's one judged facet
 const ADDED_NEXT_STANDARDS_LANE_A = Object.freeze({
 	openbadgesCedsDerivedPlugin: { standardKey: 'openbadges', targetHub: 'ceds', declarationDigest: '7811c14be1a42dcbe72aac9513a99068496849d58107bd4d4dfade44a8d6b202', hookNameList: [], reason: 'nextStandards A2: every Open Badges property judged toward the CEDS hub (forges/openbadges)' },
@@ -75,6 +80,7 @@ const ADDED_SINCE_R3_START = Object.freeze({
 	pescldPescTermShapeCedsDerivedPlugin: { standardKey: 'pescld', targetHub: 'ceds', declarationDigest: '41cd786ec6a64f44f077047e7c0e9feff14b6be1e1ba8548a5802dfdeb116129', hookNameList: [], reason: 'lane C4: the pesc: shapes judged toward the CEDS hub' },
 	pescldPescTermShapeCtdlDerivedPlugin: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: 'c17102e43c1933c974b190c4e290b319876789f9d0c7f674b73ae58cf7329127', hookNameList: [], reason: 'lane C4: the pesc: shapes judged toward the CTDL hub' },
 	...ADDED_NEXT_STANDARDS_LANE_A,
+	...ADDED_NEXT_STANDARDS_LANE_B,
 });
 // a bridge whose declaration moved since the start: both digests, so the entry is anchored to the roster it departs from
 const RE_KEYED_SINCE_R3_START = Object.freeze({

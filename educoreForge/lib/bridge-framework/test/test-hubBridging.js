@@ -122,7 +122,10 @@ const CANDIDATE_LIST_PAIR_OVERRIDE_BRIDGE_NAME_LIST = Object.freeze(['pescCedsDe
 // ⟪nextStandards-102326 lane A2, 2026-10-23 (AZURE_MARBLE)⟫ ADDED, in this lane's own table: Open Badges' judged CEDS bridge is current
 // generation (the hub's candidate list and identifier scan) and retrieves candidates
 const NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST = Object.freeze(['openbadgesCedsDerivedPlugin']);
-const CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST,
+// ⟪nextStandards-102326 lane B2, 2026-10-24 (SILVER_SPIRE)⟫ ADDED, in this lane's own table: JEDx's judged CEDS bridge is current generation
+// (the hub's candidate list and identifier scan) and retrieves candidates
+const NEXT_STANDARDS_LANE_B_CEDS_PLUGIN_NAME_LIST = Object.freeze(['jedxCedsDerivedPlugin']);
+const CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_LANE_B_CEDS_PLUGIN_NAME_LIST,
 	'edfiCedsDerivedPlugin',
 	'pescAcademicEportfolio1v0v0CedsDerivedPlugin',
 	'pescCollegeTranscript1v7v0CedsDerivedPlugin',
@@ -137,7 +140,7 @@ const CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARD
 	'sif260928CedsDerivedPlugin',
 ]);
 // every judged CEDS plugin that retrieves candidates, the two older pesc260805 plugins included (was: 12)
-const RETRIEVING_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST,
+const RETRIEVING_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_LANE_B_CEDS_PLUGIN_NAME_LIST,
 	'edfiCedsDerivedPlugin',
 	'pescAcademicEportfolio1v0v0CedsDerivedPlugin',
 	'pescCedsDerivedPlugin',

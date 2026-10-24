@@ -134,6 +134,10 @@ SHIPPED_PLUGIN_LIST.push(...ZERO_BACKLOG_B3_STANDARD_STEM_LIST.map((bridgeNameSt
 // the instruction form of the split question (the PESC_LD judged form), so each resolves to derivedJudgeSlot (measured)
 const NEXT_STANDARDS_LANE_A_PLUGIN_LIST = ['ceds', 'ctdl'].map((hubStem) => ({ bridgeName: `openbadges${hubStem.charAt(0).toUpperCase()}${hubStem.slice(1)}DerivedPlugin`, composedFromBridgingFilePath: 'forges/openbadges/bridges/openbadgesBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL }));
 SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_LANE_A_PLUGIN_LIST);
+// ⟪nextStandards-102326 lane B2, 2026-10-24 (SILVER_SPIRE)⟫ ADDED: JEDx's one judged facet toward both hubs, judgeSlot-v1 with the instruction
+// form of the split question (the Open Badges form), so each resolves to derivedJudgeSlot
+const NEXT_STANDARDS_LANE_B_PLUGIN_LIST = ['ceds', 'ctdl'].map((hubStem) => ({ bridgeName: `jedx${hubStem.charAt(0).toUpperCase()}${hubStem.slice(1)}DerivedPlugin`, composedFromBridgingFilePath: 'forges/jedx/bridges/jedxBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL }));
+SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_LANE_B_PLUGIN_LIST);
 
 // ---------------------------------------------------------------------
 // module loading: the real module, or a double carrying the scenario's mutations
