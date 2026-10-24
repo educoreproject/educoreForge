@@ -1,0 +1,212 @@
+{
+	"about": "The mapping-layer registry (mappingLayers ML1-b; SPEC §4.5): one entry per layer, its versions in publication order, each with an ISO/IEC 11179 registration status and administration record. A layerKey not here is refused by name; a tag is never reassigned. -publishLayer appends; nothing rewrites a version.",
+	"registrationAuthorityIri": "https://w3id.org/EDUcore/agent/org/educore",
+	"registrarIri": "https://w3id.org/EDUcore/agent/org/educore",
+	"layerList": [
+		{
+			"layerKey": "jev",
+			"displayName": "Jev, the EDUcore judge",
+			"layerKind": "judge",
+			"authorAgentIri": "https://w3id.org/EDUcore/agent/org/educore",
+			"standardList": [
+				{
+					"standardKey": "edfi",
+					"standardName": "EdFi",
+					"sourceIri": "urn:educore:edfi:"
+				},
+				{
+					"standardKey": "pescacademiceportfolio1v0v0",
+					"standardName": "PESC-AcademicEportfolio-1.0.0",
+					"sourceIri": "urn:educore:pescacademiceportfolio1v0v0:"
+				},
+				{
+					"standardKey": "pesccollegetranscript1v7v0",
+					"standardName": "PESC-CollegeTranscript-1.7.0",
+					"sourceIri": "urn:educore:pesccollegetranscript1v7v0:"
+				},
+				{
+					"standardKey": "pesccollegetranscript1v8v0",
+					"standardName": "PESC-CollegeTranscript-1.8.0",
+					"sourceIri": "urn:educore:pesccollegetranscript1v8v0:"
+				},
+				{
+					"standardKey": "pescdocumentrequest1v0v0",
+					"standardName": "PESC-DocumentRequest-1.0.0",
+					"sourceIri": "urn:educore:pescdocumentrequest1v0v0:"
+				},
+				{
+					"standardKey": "pescdocumentresponse1v0v0",
+					"standardName": "PESC-DocumentResponse-1.0.0",
+					"sourceIri": "urn:educore:pescdocumentresponse1v0v0:"
+				},
+				{
+					"standardKey": "peschighschooltranscript1v6v0",
+					"standardName": "PESC-HighSchoolTranscript-1.6.0",
+					"sourceIri": "urn:educore:peschighschooltranscript1v6v0:"
+				},
+				{
+					"standardKey": "pescld",
+					"standardName": "PESCLD",
+					"sourceIri": "urn:educore:pescld:"
+				},
+				{
+					"standardKey": "pesclearningrecord1v0v0",
+					"standardName": "PESC-LearningRecord-1.0.0",
+					"sourceIri": "urn:educore:pesclearningrecord1v0v0:"
+				},
+				{
+					"standardKey": "pesctestscorereport1v1v0",
+					"standardName": "PESC-TestScoreReport-1.1.0",
+					"sourceIri": "urn:educore:pesctestscorereport1v1v0:"
+				},
+				{
+					"standardKey": "sif260928",
+					"standardName": "SIF260928",
+					"sourceIri": "urn:educore:sif260928:"
+				}
+			],
+			"hubList": [
+				{
+					"hubKey": "ceds",
+					"hubName": "CEDS",
+					"sourceIri": "urn:educore:hub:CEDS:"
+				},
+				{
+					"hubKey": "ctdl",
+					"hubName": "CTDL",
+					"sourceIri": "urn:educore:hub:CTDL:"
+				}
+			],
+			"versionList": [
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/org/educore",
+						"publishedAt": "2026-10-23T14:14:49Z",
+						"contentId": "4f3f4bb29c60f8fbe37342a378ada0192749da5c534d661cf70ad1a14d6fd400",
+						"versionTag": "cfg-03f64470322c"
+					},
+					"registrationStatus": "Standard",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-03f64470322c",
+					"contentIdBasis": "sortedMemberBlockHashList",
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::edfi@5.2.0::edfiCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "1a1e9d161672c044778dbd92862263ea9b1a852109b8e65ff969d2699291e583"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescacademiceportfolio1v0v0@1.0.0::pescAcademicEportfolio1v0v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "255e62eac1bd497d20032a310c2ec9ccc4ee7416052eecdefb7eec0271759b69"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pesccollegetranscript1v7v0@1.7.0::pescCollegeTranscript1v7v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "86068c724035fbaa21b540b7c31da3bf793e63e2927d45de30974269568c4e3a"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pesccollegetranscript1v8v0@1.8.0::pescCollegeTranscript1v8v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "b79fb08e6837d17edf351996f890db508dbb84920baa5b2ebd9c2e1cb357aa47"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescdocumentrequest1v0v0@1.0.0::pescDocumentRequest1v0v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "3948d639a2a8386ef95e0a42e9cd2c10e4810e2a4657f081706a8cc378e92566"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescdocumentresponse1v0v0@1.0.0::pescDocumentResponse1v0v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "bfbc5fa2cb3d4e9f57227b04bcbed39dc8f5391b4579fe587d1953169fd90768"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::peschighschooltranscript1v6v0@1.6.0::pescHighSchoolTranscript1v6v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "d3d5d15c03f60269a3c15e512c04fb35a11ee7ad23ade7c48c7d61b0087c788b"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pesclearningrecord1v0v0@1.0.0::pescLearningRecord1v0v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "a3d17cf80014689b6868fd919693445e3f21e9da3781ff876ff70e3e7eda2543"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pesctestscorereport1v1v0@1.1.0::pescTestScoreReport1v1v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "662442cb385a90b2adf2cb9a9760a98e29e22736788ec6d51bf5e4a46781933a"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::edfi@5.2.0::edfiCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "af79edefbe26b5543bc008192f49a4704484c940bc3645cbe94c01f40a278fe3"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescacademiceportfolio1v0v0@1.0.0::pescAcademicEportfolio1v0v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "faa48e3965fd5a9c2e7725c1ddcc3613f06ab4ad4c901d85dddded0f12a591c4"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pesccollegetranscript1v7v0@1.7.0::pescCollegeTranscript1v7v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "0c45cf0d645d9fc153606c1ae1199632c78b23d746fe2934332153e632452002"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pesccollegetranscript1v8v0@1.8.0::pescCollegeTranscript1v8v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "56d2d9decf04ed78fbe246ecbbc8de2882125ef78deb95fb5c9368d539eba83d"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescdocumentrequest1v0v0@1.0.0::pescDocumentRequest1v0v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "58367bbc5e10cff9cdeedb44e6443426b8063ff8294111778a9ccab328f90204"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescdocumentresponse1v0v0@1.0.0::pescDocumentResponse1v0v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "8de1cceb95eadebc1f823b8ae83db948c8b223895451bb3faca099a2fa72a591"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::peschighschooltranscript1v6v0@1.6.0::pescHighSchoolTranscript1v6v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "cd642538f1c0fb10309429655e865372be088c0e9d7bce446f323cb1392f5f60"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pesclearningrecord1v0v0@1.0.0::pescLearningRecord1v0v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "b3b3b65916e453e4bb4171241fff7d1508a5521500b81cd081f010be507aa67d"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pesctestscorereport1v1v0@1.1.0::pescTestScoreReport1v1v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "a9926ce2dc9c2225c590ba0cb15fb2115722dc5506306d24b64f38719433293c"
+						}
+					],
+					"note": "seeded by lane M (STEEL_BRIDGE, ML1-b) from the latest block of every pairKey in /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/zeroBacklog_102226/laneA/goldZeroBacklog/store/decisions.sqlite3 whose header judgeKind is jev:jev-1.13.0:data:cfg-03f64470322c"
+				},
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/org/educore",
+						"publishedAt": "2026-10-23T14:27:20Z",
+						"contentId": "d79e312939f1167360d26446761f83e69030ef0dc8a6c89ec459baddad9c17a5",
+						"versionTag": "cfg-cf8d41f82791"
+					},
+					"registrationStatus": "Standard",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-cf8d41f82791",
+					"contentIdBasis": "sortedMemberBlockHashList",
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermRowCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "ef33ba97ad95d4eddd7d3b43092a1a8b3d4d3c4cd68145d3fdbac066b27ceea3"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermShapeCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "50878e31578b2aed6a49e908142206f133d49aa6ec7a26130ee512037616e794"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::sif260928@4.3::sif260928CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermRowCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "1df1ddb3d112787efe7279c22459b5ec294383465314953d2840559ccf1ddc2f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermShapeCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "e7248e75d720538f7eb6c8330b58897cbeb077402ab71804f31e387a385b150f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::sif260928@4.3::sif260928CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "4fbf473aca97ef69ac132eda524dac156b484ba13334e7b1afab4d33c589a8ee"
+						}
+					],
+					"note": "seeded by lane M (STEEL_BRIDGE, ML1-b) from the latest block of every pairKey in /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/zeroBacklog_102226/laneA/goldZeroBacklog/store/decisions.sqlite3 whose header judgeKind is jev:jev-1.13.0:data:cfg-cf8d41f82791"
+				}
+			]
+		}
+	]
+}

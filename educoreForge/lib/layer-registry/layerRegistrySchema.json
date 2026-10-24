@@ -1,0 +1,20 @@
+{
+	"about": "What a mapping-layer registry (recipes/layers.json) and an agent registry (recipes/agents.json) may say (mappingLayers ML1-b; SPEC-mappingLayers-102326 §3.3, §4.5, §7). DATA: layerRegistry.js reads these lists and refuses by name anything outside them. The registration statuses are ISO/IEC 11179-6:2023 Table 1's lifecycle statuses (RULED R1: first-class grounding), in lifecycle order; Historical and Application are documentation statuses and are deliberately not listed.",
+	"registrationStatusList": ["Incomplete", "Candidate", "Recorded", "Qualified", "Standard", "Preferred Standard", "Superseded", "Retired"],
+	"administrationRecordFieldList": ["registrationAuthority", "registrar", "submitter", "publishedAt", "contentId", "versionTag"],
+	"producerKindByLayerKind": {
+		"judge": "inferred",
+		"human": "curated",
+		"curated": "curated",
+		"imported": "imported"
+	},
+	"agentKindByUriKind": {
+		"agentPerson": "person",
+		"agentJudge": "judge",
+		"agentOrganisation": "organisation"
+	},
+	"layerKeyPattern": "^[a-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*$",
+	"versionTagPattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+	"contentIdPattern": "^[0-9a-f]{64}$",
+	"publishedAtPattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+}

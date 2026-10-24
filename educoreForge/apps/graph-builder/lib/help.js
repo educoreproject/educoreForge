@@ -38,6 +38,9 @@ SYNOPSIS
                                    --replayLogPath=<the -replay run log>  | --replayBuildLogPath=<a replay build log>
                                    --reforgeEvidencePath=<reforgeCompare -summarize output>
      graphBuilder   -spendLedger [--since=YYYY-MM-DD] [--recipe=<recipeName>] [--lifetimeLedgerFilePath=<path>]
+     graphBuilder   -publishLayer --layerKey=<key> --versionTag=<tag> --sssomPath=<set.sssom.tsv>
+                                   --decisionStoreFilePath=<path> --sssomValidatorPath=<sssom-py's sssom binary>
+                                   [--authorIri=<edc agent IRI>] [--layerRegistryFilePath=<path>] [--agentRegistryFilePath=<path>]
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -441,6 +444,19 @@ OPTIONS
                                           judge calls; it also proves the decision blocks rebuild it.
                   Naming both is refused.
                   The bolt port and credential are read from the container ('docker inspect').
+
+     -publishLayer
+                  WRITES. Freezes one SSSOM/TSV mapping set as a version of a REGISTERED mapping layer (mappingLayers ML1-b):
+                  the set passes parseSssomTsv and then the real sssom-py ('sssom validate', --sssomValidatorPath); the
+                  whole set is frozen into the decision store under layerSet::<layerKey> (its sha256 IS the version's
+                  content id) and split, deterministically, into one block per (subject_source, object_source) pair
+                  named by the layer's standardList and hubList; the layer registry gains the version as Candidate
+                  and the action prints the content id and the edc layer-version URI. IDEMPOTENT: the same bytes under
+                  the same tag report alreadyPresent and write nothing new. REFUSED BY NAME: a tag already holding
+                  other bytes, these bytes under another tag, an unregistered layer or author, a judge layer, a
+                  curated set whose #mapping_provider is not its author, a row source the layer does not list.
+                  --layerRegistryFilePath and --agentRegistryFilePath default to the tree's recipes/layers.json and
+                  recipes/agents.json; every other parameter is required. Lists no library and touches no manifest.
 
      -spendLedger
                   WHAT THE BUILDS SPENT (spend ledger lane R1, 2026-10-21). READ-ONLY and FREE.

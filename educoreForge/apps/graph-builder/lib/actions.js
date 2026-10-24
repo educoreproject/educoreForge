@@ -1766,6 +1766,80 @@ const spendLedgerAction = (callback) => {
 	});
 };
 
+// ⟪mappingLayers ML1-b, 2026-10-24 (STEEL_BRIDGE)⟫ -publishLayer — freeze one SSSOM/TSV set as a version of a registered mapping
+// layer (lib/layer-registry/publishLayer.js): validates (parseSssomTsv, then the REAL sssom-py at --sssomValidatorPath), freezes the
+// whole set and its per-pair blocks into --decisionStoreFilePath, appends the version (Candidate) to the layer registry and prints
+// the content id. Idempotent on identical bytes (alreadyPresent); a tag already holding other bytes is refused by name. Lists no
+// library and touches no manifest. The registries default to the tree's recipes/layers.json and recipes/agents.json (help says so).
+const PUBLISH_LAYER_REGISTRY_DEFAULT_PATH_BY_PARAMETER_NAME = Object.freeze({
+	layerRegistryFilePath: path.join(__dirname, '..', '..', '..', 'recipes', 'layers.json'),
+	agentRegistryFilePath: path.join(__dirname, '..', '..', '..', 'recipes', 'agents.json'),
+});
+const publishLayerAction = (callback) => {
+	const { xLog, commandLineParameters } = process.global;
+	const { spawnSync } = require('child_process');
+	const layerRegistryLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-registry', 'layerRegistry'));
+	const publishLayerLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-registry', 'publishLayer'));
+	const requiredParameterNameList = ['layerKey', 'versionTag', 'sssomPath', 'decisionStoreFilePath', 'sssomValidatorPath'];
+	const missingParameterList = requiredParameterNameList.filter((parameterName) => !firstValue(commandLineParameters, parameterName));
+	if (missingParameterList.length) {
+		callback(`graphBuilder -publishLayer: ${missingParameterList.map((parameterName) => `--${parameterName}`).join(', ')} REQUIRED, with no default — a publish names what it freezes, where, and the validator that blesses it`);
+		return;
+	}
+	const sssomPath = path.resolve(firstValue(commandLineParameters, 'sssomPath'));
+	const sssomValidatorPath = firstValue(commandLineParameters, 'sssomValidatorPath');
+	if (!fs.existsSync(sssomPath) || !fs.existsSync(sssomValidatorPath)) {
+		callback(`graphBuilder -publishLayer: REFUSED — ${!fs.existsSync(sssomPath) ? `--sssomPath ${sssomPath}` : `--sssomValidatorPath ${sssomValidatorPath}`} does not exist`);
+		return;
+	}
+	const registryPathByParameterName = Object.keys(PUBLISH_LAYER_REGISTRY_DEFAULT_PATH_BY_PARAMETER_NAME).reduce((soFar, parameterName) => ({ ...soFar, [parameterName]: firstValue(commandLineParameters, parameterName) || PUBLISH_LAYER_REGISTRY_DEFAULT_PATH_BY_PARAMETER_NAME[parameterName] }), {});
+	const loaded = layerRegistryLib.loadRegistry(registryPathByParameterName);
+	if (loaded.error) {
+		callback(`graphBuilder -publishLayer: ${loaded.error}`);
+		return;
+	}
+	// the REAL validator, run as a child: exit 0 is a pass, anything else is its own words
+	const validateWithSssomPy = (validatedPath, validatedCallback) => {
+		const validatorRun = spawnSync(sssomValidatorPath, ['validate', validatedPath], { encoding: 'utf8' });
+		xLog.status(`graphBuilder: [publishLayer] sssom validate ${validatedPath}: exit ${validatorRun.status}`);
+		validatedCallback(validatorRun.status === 0 ? '' : `exit ${validatorRun.status}: ${`${validatorRun.stdout}\n${validatorRun.stderr}`.trim().slice(0, 2000)}`);
+	};
+	requireDecisionStore()().open({ databaseFilePath: firstValue(commandLineParameters, 'decisionStoreFilePath') }, (openError, decisionStore) => {
+		if (openError) {
+			callback(`graphBuilder -publishLayer: ${openError}`);
+			return;
+		}
+		const publishArgs = {
+			sssomText: fs.readFileSync(sssomPath, 'utf8'),
+			sssomPath,
+			layerKey: firstValue(commandLineParameters, 'layerKey'),
+			versionTag: firstValue(commandLineParameters, 'versionTag'),
+			authorIri: firstValue(commandLineParameters, 'authorIri'),
+			registry: loaded.registry,
+			decisionStore,
+			publishedAt: new Date().toISOString(),
+			validateWithSssomPy,
+		};
+		publishLayerLib.publishLayer(publishArgs, (publishError, published) => {
+			if (publishError) {
+				callback(`graphBuilder -publishLayer: ${publishError}`);
+				return;
+			}
+			// the store already holds the blocks; the registry is written last, by temp file and rename, so a crash between the two
+			// leaves blocks a re-run finds alreadyPresent and a registry that never names a block it does not have
+			if (published.layerRegistry !== null) {
+				const registryFilePath = registryPathByParameterName.layerRegistryFilePath;
+				const temporaryFilePath = `${registryFilePath}.publishLayer-${process.pid}.tmp`;
+				fs.writeFileSync(temporaryFilePath, layerRegistryLib.registryText(published.layerRegistry));
+				fs.renameSync(temporaryFilePath, registryFilePath);
+			}
+			const { layerRegistry, ...reported } = published;
+			xLog.status(`graphBuilder: [publishLayer] ${published.alreadyPresent ? 'alreadyPresent' : 'published'} ${published.layerVersionUri} contentId ${published.contentId} (${published.memberBlockList.length} pair block(s))`);
+			callback('', { exitCode: 0, resultText: JSON.stringify(reported, null, 2) });
+		});
+	});
+};
+
 return {
 	build,
 	validate,
@@ -1778,6 +1852,7 @@ return {
 	truncateStore: truncateStoreAction,
 	stampPromotion: stampPromotionAction,
 	spendLedger: spendLedgerAction,
+	publishLayer: publishLayerAction,
 	scanAvailableForges,
 	// exported for the hermetic gates: the no-default refusal is the phase's headline claim, and a
 	// claim provable only by launching a whole build is a claim nobody re-checks.

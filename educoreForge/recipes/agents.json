@@ -1,0 +1,21 @@
+{
+	"about": "The agent registry (mappingLayers ML1-b; SPEC §7, D-AUTHOR ruled): one row per author, registrar or submitter a layer names. A person is edc:agent/<educore userRefId>, never a username; raters stay pseudonymous; orcid and ror are optional aliases. Read by lib/layer-registry/layerRegistry.js, which refuses an agent a layer names that is not here.",
+	"agentList": [
+		{
+			"agentIri": "https://w3id.org/EDUcore/agent/org/educore",
+			"agentKind": "organisation",
+			"displayName": "EDUcore",
+			"note": "registration authority of the EDUcore layers and manifests (SPEC §3.3)"
+		},
+		{
+			"agentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-03f64470322c",
+			"agentKind": "judge",
+			"displayName": "Jev jev-1.13.0 (cfg-03f64470322c)"
+		},
+		{
+			"agentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-cf8d41f82791",
+			"agentKind": "judge",
+			"displayName": "Jev jev-1.13.0 (cfg-cf8d41f82791)"
+		}
+	]
+}
