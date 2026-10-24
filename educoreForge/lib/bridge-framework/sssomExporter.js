@@ -406,7 +406,8 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 	if (setLevelSlots.declaredPredicateProvenance !== undefined) {
 		headerLineList.push(`#declared_predicate: ${yamlScalar(JSON.stringify(setLevelSlots.declaredPredicateProvenance))}`);
 	}
-	const subjectCensus = { subjectCount: subjectSet.size, rowCount: rowList.length, note: 'rows are per (subject stableId, predicate, object); several source subjects sharing one leaf yield ONE row' };
+	// ⟪ML1⟫ the census counts MAPPED rows, as it always has; the abstention rows are reported as noTermFoundRowCount in the run report
+	const subjectCensus = { subjectCount: subjectSet.size, rowCount: rowList.length - noTermFoundPlannedList.length, note: 'rows are per (subject stableId, predicate, object); several source subjects sharing one leaf yield ONE row' };
 	headerLineList.push(`#subject_census: ${yamlScalar(JSON.stringify(isFannedOut ? { ...subjectCensus, judgedSubjectCount: judgedSubjectSet.size } : subjectCensus))}`);
 	const text = `${headerLineList.join('\n')}\n${columnList.join('\t')}\n${rowList.map((oneRow) => columnList.map((oneColumn) => tsvCell(oneRow[oneColumn])).join('\t')).join('\n')}${rowList.length ? '\n' : ''}`;
 	fs.mkdirSync(path.dirname(outputPath), { recursive: true });
