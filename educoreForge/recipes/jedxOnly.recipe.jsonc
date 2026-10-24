@@ -1,0 +1,15 @@
+{
+  // jedxOnly — JEDx alone (stage off): the forge's base block, no hub, no bridge (nextStandards-102326 lane B1).
+  "schemaVersion": "1.0.0",
+  "recipeName": "jedxOnly",
+  "kind": "dev",
+  "description": "Forge the JEDx standard base only - proves the JEDx bundle forges from the JEDx Open API Specification bundles.",
+  "standards": [
+    {
+      "token": "jedx",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

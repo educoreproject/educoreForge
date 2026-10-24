@@ -1,0 +1,21 @@
+{
+  // jedxBridged — nextStandards-102326 lane B (WORKORDER-jedx B2): JEDx beside both hubs with its ONE judged facet (every JEDx
+  // property a subject; retrieval by the forge's text nodes, the judge naming the relation). Rehearsed under --useDebugJudge, then the
+  // judge of record (Jev jev-1.13.0, TQ ruling); pre-declared spend about $0.39 (665 properties x 2 hubs x $0.00029), STOP at $2.
+  "schemaVersion": "1.0.0",
+  "recipeName": "jedxBridged",
+  "kind": "dev",
+  "description": "JEDx beside both hubs with its judged facet: every JEDx property judged against the CEDS and CTDL hubs.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "jedx", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "jedx", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["jedx", "ceds", "ctdl"] }
+  ]
+}

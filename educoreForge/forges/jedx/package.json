@@ -1,0 +1,7 @@
+{
+	"name": "forge-jedx",
+	"version": "1.0.0",
+	"main": "forgeJedx.js",
+	"description": "JEDx forge bundle — the JEDx Open API Specification's four dereferenced OpenAPI 3.1 bundles (HR Open schema types), their components.schemas united on lib/openapi-forge: schemas, properties, code lists, every inline copy of a component as a REFERENCES edge. It does no bridging.",
+	"private": true
+}

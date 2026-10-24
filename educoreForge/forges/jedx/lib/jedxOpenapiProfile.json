@@ -1,0 +1,20 @@
+{
+	"profileNote": "JEDx Open API Specification 1.0.0 (HR Open Standards Consortium for the JEDx Working Group) on lib/openapi-forge (nextStandards-102326 B1). Four self-contained bundles carry ONE data model: their components.schemas are united by name (191 schemas, 0 conflicting duplicates, measured 2026-10-23). The bundles are fully dereferenced (no $ref); every inline copy that equals a component by content is a REFERENCES edge (kit K1). All 191 components are forged, including the twelve API envelope schemas (*-schema_v1, ConfirmMessageType, MetaType ...): components.schemas round-trips whole.",
+	"sourceLayout": "dereferencedMultiFile",
+	"sourceFileNameList": [
+		"openApiBundles/organizations-openapi-bundle_v1.json",
+		"openApiBundles/workers-openapi-bundle_v1.json",
+		"openApiBundles/worker-compensation-reports-openapi-bundle_v1.json",
+		"openApiBundles/worker-paid-hours-reports-openapi-bundle_v1.json"
+	],
+	"sourceFormat": "json",
+	"stableIdPrefix": "jedx:",
+	"rootStableId": "jedx:root",
+	"perStandardLabelByRole": {
+		"DmeClass": "JedxSchema",
+		"DmeProperty": "JedxProperty",
+		"DmeOptionSet": "JedxEnum",
+		"DmeOptionValue": "JedxEnumValue"
+	},
+	"schemaExclusionList": []
+}

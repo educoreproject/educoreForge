@@ -1,0 +1,4 @@
+{
+	"pairingNote": "The hubs JEDx's one judged facet pairs with (nextStandards-102326 lane B, B2). JEDx carries no term borrowed from any hub, so there is no declared-identity facet and no declared target rule is taken from any hub: every pairing is judged (derived, judgeSlot-v1). Data, so jedxBridging.js names no hub.",
+	"judgedHubTokenList": ["ceds", "ctdl"]
+}
