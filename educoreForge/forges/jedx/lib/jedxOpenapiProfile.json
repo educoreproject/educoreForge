@@ -16,5 +16,6 @@
 		"DmeOptionSet": "JedxEnum",
 		"DmeOptionValue": "JedxEnumValue"
 	},
-	"schemaExclusionList": []
+	"schemaExclusionList": [],
+	"statementOmissionDeclaration": { "emptyValueKeywordList": [], "enumMemberRepeatList": [] }
 }
