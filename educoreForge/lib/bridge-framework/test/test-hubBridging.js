@@ -133,7 +133,10 @@ const NEXT_STANDARDS_LANE_C_CEDS_PLUGIN_NAME_LIST = Object.freeze(['lifCedsDeriv
 // ⟪nextStandards wave 2 lane E2, 2026-10-24 (HIDDEN_EMBER)⟫ ADDED, in this lane's own table: CASE's judged CEDS bridge is current
 // generation (the hub's candidate list and identifier scan) and retrieves candidates
 const NEXT_STANDARDS_WAVE2_LANE_E_CEDS_PLUGIN_NAME_LIST = Object.freeze(['caseCedsDerivedPlugin']);
-const CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_LANE_B_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_LANE_C_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_WAVE2_LANE_E_CEDS_PLUGIN_NAME_LIST,
+// ⟪nextStandards wave 2 lane F2, 2026-10-24 (OCEAN_SPIRE)⟫ ADDED, in this lane's own table: EduAPI's judged CEDS bridge is current
+// generation (the hub's candidate list and identifier scan) and retrieves candidates
+const NEXT_STANDARDS_WAVE2_LANE_F_CEDS_PLUGIN_NAME_LIST = Object.freeze(['eduapiCedsDerivedPlugin']);
+const CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_LANE_B_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_LANE_C_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_WAVE2_LANE_E_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_WAVE2_LANE_F_CEDS_PLUGIN_NAME_LIST,
 	'edfiCedsDerivedPlugin',
 	'pescAcademicEportfolio1v0v0CedsDerivedPlugin',
 	'pescCollegeTranscript1v7v0CedsDerivedPlugin',
@@ -148,7 +151,7 @@ const CURRENT_GENERATION_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARD
 	'sif260928CedsDerivedPlugin',
 ]);
 // every judged CEDS plugin that retrieves candidates, the two older pesc260805 plugins included (was: 12)
-const RETRIEVING_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_LANE_B_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_LANE_C_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_WAVE2_LANE_E_CEDS_PLUGIN_NAME_LIST,
+const RETRIEVING_CEDS_PLUGIN_NAME_LIST = Object.freeze([...NEXT_STANDARDS_LANE_A_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_LANE_B_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_LANE_C_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_WAVE2_LANE_E_CEDS_PLUGIN_NAME_LIST, ...NEXT_STANDARDS_WAVE2_LANE_F_CEDS_PLUGIN_NAME_LIST,
 	'edfiCedsDerivedPlugin',
 	'pescAcademicEportfolio1v0v0CedsDerivedPlugin',
 	'pescCedsDerivedPlugin',

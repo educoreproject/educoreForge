@@ -1,0 +1,21 @@
+{
+  // eduapiBridged — nextStandards wave 2 lane F2: EduAPI 1.0 beside both hubs with its ONE judged facet (every property a subject;
+  // retrieval by the forge's text nodes, the judge Jev jev-1.13.0 naming the relation). Rehearsed under --useDebugJudge, then the real
+  // judge; pre-declared spend $0.20 (341 units x 2 hubs x $0.00029), STOP at $1.00 (BRONZE_CROWN ruled 2026-10-24).
+  "schemaVersion": "1.0.0",
+  "recipeName": "eduapiBridged",
+  "kind": "dev",
+  "description": "EduAPI 1.0 beside the CEDS and CTDL hubs with its one judged facet (F2).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "eduapi", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "eduapi", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["eduapi", "ceds", "ctdl"] }
+  ]
+}

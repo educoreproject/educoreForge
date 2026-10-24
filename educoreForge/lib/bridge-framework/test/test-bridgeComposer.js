@@ -87,6 +87,11 @@ const ADDED_NEXT_STANDARDS_WAVE2_LANE_G = Object.freeze({
 	sedmCedsDeclaredIdentity: { standardKey: 'sedm', targetHub: 'ceds', declarationDigest: '290cd39cabbd9ffd19f26b9d5b954c4c120104f499a17073bb9b73bc2367eac5', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'nextStandards wave 2 G2: SEDM declared identity to the CEDS hub, its stableIdTemplate rules only (forges/sedm)' },
 	sedmElementCtdlDerivedPlugin: { standardKey: 'sedm', targetHub: 'ctdl', declarationDigest: 'fac42e2028d37628aa5b5562990ca2277bf0a9f62a9d8c3e34afbdc916192f32', hookNameList: [], reason: 'nextStandards wave 2 G2: every SEDM element judged toward the CTDL hub (forges/sedm)' },
 });
+// ⟪nextStandards wave 2 lane F2, 2026-10-24 (OCEAN_SPIRE)⟫ ADDED, in this lane's own table: EduAPI 1.0's one judged facet
+const ADDED_NEXT_STANDARDS_WAVE2_LANE_F = Object.freeze({
+	eduapiCedsDerivedPlugin: { standardKey: 'eduapi', targetHub: 'ceds', declarationDigest: '9d8679e3673c256e837b9be7d0dea94a505aeb53d619595b21276760782b4182', hookNameList: [], reason: 'nextStandards F2: every EduAPI property judged toward the CEDS hub (forges/eduapi)' },
+	eduapiCtdlDerivedPlugin: { standardKey: 'eduapi', targetHub: 'ctdl', declarationDigest: '276fbdc279f9e6759849fafd601e7f8f620aa7c90ca8ea40ad55623494d1cc86', hookNameList: [], reason: 'nextStandards F2: every EduAPI property judged toward the CTDL hub (forges/eduapi)' },
+});
 const ADDED_SINCE_R3_START = Object.freeze({
 	pescldCtdlDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '61c6c9cda1b1f7cbca25ecf77f50bdf316c8f685d4447bcc9df5a418c7672ff7', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C2: PESC_LD declared identity to the CTDL hub (forges/pescld)' },
 	pescldCedsDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ceds', declarationDigest: 'a5245e6b402c54d1c7572da75ecd7dde6589edb5353e65c04273dff483772595', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C3: PESC_LD declared identity to the CEDS hub, its stableIdTemplate rules only (forges/pescld)' },
@@ -100,6 +105,7 @@ const ADDED_SINCE_R3_START = Object.freeze({
 	...ADDED_NEXT_STANDARDS_LANE_C,
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_E,
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_G,
+	...ADDED_NEXT_STANDARDS_WAVE2_LANE_F,
 });
 // a bridge whose declaration moved since the start: both digests, so the entry is anchored to the roster it departs from
 const RE_KEYED_SINCE_R3_START = Object.freeze({
