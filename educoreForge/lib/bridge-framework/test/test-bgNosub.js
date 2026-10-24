@@ -1124,7 +1124,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postW1SeamDiffEmpty-102426 -> postNsV2SeamDiffEmpty-102426, tag cut ON this commit. CENSUS over this gate's paths: lib/forge-framework as (iii)
 // (test-gStandardMetadata.js 21/0) and apps/graph-builder/apps/replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 2/1 (its (e)
 // pre-fix twin admits Clr*, Case*, Eduapi*, Sedm* residue). No forge entry, declaration or hooks file; no build, forger or replay source.
-const PHASE3_ANCHOR_TAG = 'postNsV2SeamDiffEmpty-102426'; // re-anchored by QUIET_GATE (nextStandards wave 2 D0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (HIDDEN_EMBER; nextStandards wave 2 lane E, the CASE forge; the work order pre-grants a lane's own new files' seam
+// re-anchors) ═══ PHASE3_ANCHOR_TAG postNsV2SeamDiffEmpty-102426 -> postNsV2ESeamDiffEmpty-102426, tag cut ON this commit. CENSUS over this gate's
+// paths: forges/case/forgeCase.js 26/0, forges/case/lib/caseForgeDeclaration.js 59/0, forges/case/lib/caseHooks.js 9/0 (a new forge bundle's entry,
+// declaration and hooks). No build, forger or replay source; lib/forge-framework untouched. Allowed-path list NOT widened.
+const PHASE3_ANCHOR_TAG = 'postNsV2ESeamDiffEmpty-102426'; // re-anchored by HIDDEN_EMBER (nextStandards wave 2 E; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

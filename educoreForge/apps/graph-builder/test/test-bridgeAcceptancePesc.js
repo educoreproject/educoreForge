@@ -1104,7 +1104,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // framework/test/test-bgFanoutConsumers.js 38/12, test-bgMaterialiseFanout.js 6/2, test-bgP7.js 6/3 (the granted ML1-shape oracle edits),
 // test-bgNosub.js (the (ii) re-anchor, in this same commit), lib/vocabulary/ 38/5 (the ML1 vocabulary commit; census in test-bgNosub's (ii)
 // block). No bridge-maker source.
-const P1_BASELINE_COMMIT = 'postMl1PescCompose-102426'; // re-anchored by STEEL_BRIDGE (census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (HIDDEN_EMBER; nextStandards wave 2 lane E2; the roster-row re-anchor the work order pre-grants) ═══
+// postMl1PescCompose-102426 -> postNsV2EPescCompose-102426, tag cut ON this commit. CENSUS over this gate's paths: lane E's ADDED roster tables
+// in lib/bridge-framework/test/ (test-bgDecl.js 5/2, test-bgJudgeSlot.js 3/0, test-bridgeComposer.js 6/0, test-hubBridging.js 5/2). No
+// bridge-framework or bridge-maker source, no vocabulary file.
+const P1_BASELINE_COMMIT = 'postNsV2EPescCompose-102426'; // re-anchored by HIDDEN_EMBER (census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
