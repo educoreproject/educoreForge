@@ -21,6 +21,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // keyword not in its position's table REFUSES BY NAME, which is how schema-level composition, nested composition, an inline
 // object and every keyword no standard has needed yet are refused without a branch of their own. Vendor extensions (x-…) are
 // one rule, not rows: carried verbatim under the camelCased name (x-class-pid -> xClassPid), strings only.
+// ⟪K2, wave 2 lane E, CASE 1.1⟫ a word that begins with a DIGIT has no capital to carry its hyphen, so the rule marks it with '_'
+// (x-1edtech-privacy -> x_1edtechPrivacy); K0 spelled it x1edtechPrivacy, which its pair could not read back (every one invented and
+// lost). A vendor extension the profile's listValuedVendorExtensionNameList names holds a non-empty list of strings, carried as JSON
+// text; an enum member the source types as a number or boolean is carried as the text the profile's enumMemberTextDeclarationList
+// declares for it. Both declarations are checked for staleness at the end of the walk.
 //
 // FBB-001: the forge resolves nothing outside the document. A $ref must be '#/components/schemas/<name>' naming a forged schema;
 // anything else refuses (no stub class is synthesised: the pre-reset forge did, which invents nodes).
@@ -33,7 +38,8 @@ const openapiIdentity = require('./openapiIdentity');
 const keywordRegistry = require('./openapiKeywordRegistry.json');
 
 const LOCAL_SCHEMA_REFERENCE_PATTERN = /^#\/components\/schemas\/([^/]+)$/;
-const VENDOR_EXTENSION_NAME_PATTERN = /^x-[a-z0-9]+(-[a-z0-9]+)*$/;
+const VENDOR_EXTENSION_NAME_PATTERN = new RegExp(keywordRegistry.vendorExtensionRule.namePatternSource);
+const DIGIT_LED_WORD_MARK = '_';
 const POSITION = Object.freeze({ SCHEMA: 'schema', PROPERTY: 'property', ITEMS: 'items', BRANCH: 'branch' });
 // the referenceConstruct of a $ref found directly at a position (a branch's is its composition keyword)
 const REFERENCE_CONSTRUCT_BY_POSITION = Object.freeze({ [POSITION.PROPERTY]: '$ref', [POSITION.ITEMS]: 'items' });
@@ -51,13 +57,17 @@ const VALUE_KIND_CHECK_BY_KIND = Object.freeze({
 	string: (candidate) => typeof candidate === 'string',
 	boolean: (candidate) => typeof candidate === 'boolean',
 	integer: (candidate) => Number.isInteger(candidate),
+	nonEmptyStringList: (candidate) => Array.isArray(candidate) && candidate.length > 0 && candidate.every((oneMember) => typeof oneMember === 'string' && oneMember !== ''),
 });
+// the carriage of a DECLARED list-valued vendor extension (registry vendorExtensionRule.declaredListCarriage): a one-entry list would be
+// read back as a scalar (graph-contract §1), so it is JSON text, the compositionBranches form
+const DECLARED_LIST_CARRIAGE_BY_NAME = Object.freeze({ jsonText: (listValue) => JSON.stringify(listValue) });
 
-// vendorPropertyNameOf — x-class-pid -> xClassPid (the ONE vendor-extension naming rule)
+// vendorPropertyNameOf — x-class-pid -> xClassPid, x-1edtech-privacy -> x_1edtechPrivacy (the ONE vendor-extension naming rule)
 const vendorPropertyNameOf = (keywordName) => keywordName
 	.slice(keywordRegistry.vendorExtensionRule.namePrefix.length)
 	.split('-')
-	.reduce((soFar, onePart) => `${soFar}${onePart.charAt(0).toUpperCase()}${onePart.slice(1)}`, keywordRegistry.vendorExtensionRule.propertyNamePrefix);
+	.reduce((soFar, onePart) => `${soFar}${/^[0-9]/.test(onePart) ? `${DIGIT_LED_WORD_MARK}${onePart}` : `${onePart.charAt(0).toUpperCase()}${onePart.slice(1)}`}`, keywordRegistry.vendorExtensionRule.propertyNamePrefix);
 
 const refusal = (what, where) => refuse.byName({ moduleName, what, where });
 
@@ -65,7 +75,7 @@ const moduleFunction =
 	({ moduleName } = {}) =>
 	({ openapiProfile }) => {
 		validateOpenapiProfile(openapiProfile);
-		const { stableIdPrefix, perStandardLabelByRole, schemaExclusionList } = openapiProfile;
+		const { stableIdPrefix, perStandardLabelByRole, schemaExclusionList, listValuedVendorExtensionNameList, enumMemberTextDeclarationList } = openapiProfile;
 
 		// -----------------------------------------------------------------
 		// emitContractGraph — { loaded: the loader's payload, kit } → { nodes, edges, stats }
@@ -83,7 +93,12 @@ const moduleFunction =
 				enumValueCount: 0,
 				compositionBranchCount: 0,
 				vendorExtensionCount: 0,
+				declaredListVendorExtensionCount: 0,
+				declaredMemberTextCount: 0,
 			};
+			// the declarations a walk used, so a stale one is refused at the end (each walk's own: no state outlives one call)
+			const usedListVendorNameList = [];
+			const usedMemberTextDeclarationList = [];
 
 			const unknownExclusion = schemaExclusionList.find((schemaName) => schemaByName[schemaName] === undefined);
 			if (unknownExclusion !== undefined) {
@@ -100,15 +115,23 @@ const moduleFunction =
 				if (keywordRegistry.vendorExtensionRule.positionList.indexOf(position) === -1) {
 					throw refusal(`${origin}: vendor extension '${keywordName}' at position '${position}'`, `vendor extensions are carried at ${keywordRegistry.vendorExtensionRule.positionList.join(', ')} only (openapiKeywordRegistry.json vendorExtensionRule)`);
 				}
-				if (!VALUE_KIND_CHECK_BY_KIND[keywordRegistry.vendorExtensionRule.valueKind](keywordValue)) {
-					throw refusal(`${origin}: vendor extension '${keywordName}' holds ${JSON.stringify(keywordValue)}, not a ${keywordRegistry.vendorExtensionRule.valueKind}`, 'a vendor extension is carried verbatim as a string; any other shape needs its own declared carriage');
+				const isDeclaredList = listValuedVendorExtensionNameList.indexOf(keywordName) !== -1;
+				if (isDeclaredList && !VALUE_KIND_CHECK_BY_KIND[keywordRegistry.vendorExtensionRule.declaredListValueKind](keywordValue)) {
+					throw refusal(`${origin}: vendor extension '${keywordName}' is declared list-valued (listValuedVendorExtensionNameList) but holds ${JSON.stringify(keywordValue)}, not a ${keywordRegistry.vendorExtensionRule.declaredListValueKind}`, 'a declared list-valued vendor extension holds a non-empty list of non-empty strings at every site');
+				}
+				if (!isDeclaredList && !VALUE_KIND_CHECK_BY_KIND[keywordRegistry.vendorExtensionRule.valueKind](keywordValue)) {
+					throw refusal(`${origin}: vendor extension '${keywordName}' holds ${JSON.stringify(keywordValue)}, not a ${keywordRegistry.vendorExtensionRule.valueKind}`, 'a vendor extension is carried verbatim as a string; a list of strings is carried only when the profile names it in listValuedVendorExtensionNameList');
 				}
 				const propertyName = vendorPropertyNameOf(keywordName);
 				if (sink[propertyName] !== undefined) {
 					throw refusal(`${origin}: vendor extension '${keywordName}' becomes '${propertyName}', which this node already carries`, 'two keywords may not share one node property; rename by a registry row');
 				}
-				sink[propertyName] = keywordValue;
+				sink[propertyName] = isDeclaredList ? DECLARED_LIST_CARRIAGE_BY_NAME[keywordRegistry.vendorExtensionRule.declaredListCarriage](keywordValue) : keywordValue;
 				walkStats.vendorExtensionCount += 1;
+				if (isDeclaredList) {
+					walkStats.declaredListVendorExtensionCount += 1;
+					usedListVendorNameList.push(keywordName);
+				}
 			};
 
 			// visitShape — every keyword of one shape at one position, by the registry; findings land in the accumulator
@@ -164,14 +187,28 @@ const moduleFunction =
 					});
 				},
 				enum: ({ keywordValue, locator, accumulator, origin }) => {
-					if (!Array.isArray(keywordValue) || keywordValue.length === 0 || !keywordValue.every((oneMember) => typeof oneMember === 'string' && oneMember !== '')) {
+					// ⟪K2d⟫ a member the source types as a number or boolean becomes the text its declaration names, or the enum refuses
+					const enumObjectPointer = `${accumulator.ownerPointer}${locator}`;
+					const memberList = Array.isArray(keywordValue) ? keywordValue.map((oneMember) => {
+						if (typeof oneMember !== 'number' && typeof oneMember !== 'boolean') {
+							return oneMember;
+						}
+						const memberDeclaration = enumMemberTextDeclarationList.find((oneDeclaration) => oneDeclaration.enumObjectPointer === enumObjectPointer && oneDeclaration.statedValue === oneMember);
+						if (memberDeclaration === undefined) {
+							throw refusal(`${origin}: '${locator}/enum' member ${JSON.stringify(oneMember)} is a ${typeof oneMember}, not text, and enumMemberTextDeclarationList declares no text for it at '${enumObjectPointer}'`, 'an enum member becomes an option value named by its text; a typed scalar is carried only as the text the profile declares');
+						}
+						usedMemberTextDeclarationList.push(memberDeclaration);
+						walkStats.declaredMemberTextCount += 1;
+						return memberDeclaration.carriedText;
+					}) : keywordValue;
+					if (!Array.isArray(memberList) || memberList.length === 0 || !memberList.every((oneMember) => typeof oneMember === 'string' && oneMember !== '')) {
 						throw refusal(`${origin}: '${locator}/enum' is not a non-empty list of non-empty strings`, 'an enum member becomes an option value named by its text');
 					}
-					const repeatedMember = keywordValue.find((oneMember, memberIndex) => keywordValue.indexOf(oneMember) !== memberIndex);
+					const repeatedMember = memberList.find((oneMember, memberIndex) => memberList.indexOf(oneMember) !== memberIndex);
 					if (repeatedMember !== undefined) {
 						throw refusal(`${origin}: '${locator}/enum' lists '${repeatedMember}' twice`, 'no repeat rule is declared for enum members');
 					}
-					accumulator.enumList.push({ enumLocator: `${locator}/enum`, memberList: keywordValue });
+					accumulator.enumList.push({ enumLocator: `${locator}/enum`, memberList });
 				},
 				composition: ({ keywordName, keywordValue, locator, accumulator, origin }) => {
 					if (!Array.isArray(keywordValue) || keywordValue.length === 0 || !keywordValue.every(isPlainObject)) {
@@ -212,7 +249,7 @@ const moduleFunction =
 					throw refusal(`${origin} has no properties object`, 'the K0 kit models object schemas with properties; another shape is a registry decision');
 				}
 				const schemaSink = {};
-				const schemaAccumulator = { referenceList: [], enumList: [], branchList: [] };
+				const schemaAccumulator = { referenceList: [], enumList: [], branchList: [], ownerPointer: schemaName };
 				visitShape({ shapeObject: schemaObject, position: POSITION.SCHEMA, locator: '', compositionConstruct: undefined, sink: schemaSink, accumulator: schemaAccumulator, origin });
 				const stableId = openapiIdentity.schemaStableIdOf({ stableIdPrefix, schemaName });
 				const { description, ...schemaCarried } = schemaSink;
@@ -259,7 +296,7 @@ const moduleFunction =
 						throw refusal(`${origin} is not an object`, 'a property is a schema object');
 					}
 					const propertySink = {};
-					const accumulator = { referenceList: [], enumList: [], branchList: [] };
+					const accumulator = { referenceList: [], enumList: [], branchList: [], ownerPointer: `${schemaName}/properties/${propertyName}` };
 					visitShape({ shapeObject, position: POSITION.PROPERTY, locator: '', compositionConstruct: undefined, sink: propertySink, accumulator, origin });
 					if (accumulator.enumList.length > 1) {
 						throw refusal(`${origin} states ${accumulator.enumList.length} enums (${accumulator.enumList.map((oneEnum) => oneEnum.enumLocator).join(', ')})`, 'a property owns ONE option set; two would need a second identity rule');
@@ -328,6 +365,16 @@ const moduleFunction =
 					});
 				});
 			});
+
+			// ⟪K2⟫ a declaration the source never used is stale: refused, so a profile cannot carry a rule for a statement that is gone
+			const staleListVendorName = listValuedVendorExtensionNameList.find((keywordName) => usedListVendorNameList.indexOf(keywordName) === -1);
+			if (staleListVendorName !== undefined) {
+				throw refusal(`listValuedVendorExtensionNameList names '${staleListVendorName}', which the source never states as a list`, 'a stale declaration is refused; remove it from the profile');
+			}
+			const staleMemberDeclaration = enumMemberTextDeclarationList.find((oneDeclaration) => usedMemberTextDeclarationList.indexOf(oneDeclaration) === -1);
+			if (staleMemberDeclaration !== undefined) {
+				throw refusal(`enumMemberTextDeclarationList names ${JSON.stringify(staleMemberDeclaration.statedValue)} at '${staleMemberDeclaration.enumObjectPointer}', which the source does not state there`, 'a stale declaration is refused; remove it from the profile');
+			}
 
 			Object.keys(walkStats).forEach((statName) => {
 				kit.stats[statName] = walkStats[statName];

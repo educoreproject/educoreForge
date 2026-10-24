@@ -20,11 +20,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // and each leaf of a schema the profile excludes (excludedSchema).
 // A node property the emitter has no reading for is NOT ignored: it becomes an `unread|…` statement, which no source states, so
 // an invented property counts as invented. The names it may ignore are the framework's derived ones, listed here by name.
+// ⟪K2, wave 2 lane E⟫ the source is parsed by its sourceFormat (openapiSourceParser.js, as the loader). A vendor property name reads
+// back by the walk's rule, a '_'-marked word being a digit-led one (x_1edtechPrivacy -> x-1edtech-privacy); a vendor extension the
+// profile's listValuedVendorExtensionNameList names is JSON text holding the source list, read back member by member at its index.
+// EXPLICITLY OMITTED by the profile's enumMemberTextDeclarationList: each enum member the source types as a number or boolean
+// (declaredMemberText); the source then states the declared text in its place, which is what the graph carries.
 
-const fs = require('fs');
 const path = require('path');
 const { DME_ROLES, EQUIVALENCE_NODE_LABELS } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const { validateOpenapiProfile } = require('./openapiProfileContract');
+const { parseOpenapiSourceFile } = require('./openapiSourceParser');
 const keywordRegistry = require('./openapiKeywordRegistry.json');
 
 const SET_VALUED_KEYWORD_LIST = Object.freeze(['required', 'enum']);
@@ -45,7 +50,7 @@ const REFERENCED_SCHEMA_NAMES_PROPERTY_NAME = 'referencedSchemaNames';
 const REFERENCED_SCHEMA_NAMES_SEPARATOR = ', ';
 const BRANCH_RECORD_STRUCTURE_FIELD_LIST = Object.freeze(['locator', 'construct']);
 
-const OMITTED_KIND = Object.freeze({ OUT_OF_SCOPE_BY_DECLARATION: 'outOfScopeByDeclaration', EXCLUDED_SCHEMA: 'excludedSchema' });
+const OMITTED_KIND = Object.freeze({ OUT_OF_SCOPE_BY_DECLARATION: 'outOfScopeByDeclaration', EXCLUDED_SCHEMA: 'excludedSchema', DECLARED_MEMBER_TEXT: 'declaredMemberText' });
 const OMITTED_KIND_PROPERTY_NAME = 'omittedKind';
 const omitted = (kind) => ({ explicitlyOmitted: true, [OMITTED_KIND_PROPERTY_NAME]: kind });
 
@@ -56,12 +61,15 @@ const escapedPointerSegment = (segmentText) => `${segmentText}`.replace(/~/g, '~
 const keywordByPropertyNameAt = (position) => Object.keys(keywordRegistry.carriageByPosition[position])
 	.filter((keywordName) => keywordRegistry.carriageByPosition[position][keywordName].carriage === 'nodeProperty')
 	.reduce((byName, keywordName) => ({ ...byName, [keywordRegistry.carriageByPosition[position][keywordName].propertyName]: keywordName }), {});
-// vendorKeywordOf — xClassPid -> x-class-pid (the inverse of the walk's naming rule)
+// vendorKeywordOf — xClassPid -> x-class-pid, x_1edtechPrivacy -> x-1edtech-privacy (the inverse of the walk's naming rule: a word is a
+// capital and its lower-case run, or '_' and a digit-led run)
+const VENDOR_PROPERTY_WORD_PATTERN = /[A-Z][a-z0-9]*|_[0-9][a-z0-9]*/g;
 const vendorKeywordOf = (propertyName) => `${keywordRegistry.vendorExtensionRule.namePrefix}${propertyName
 	.slice(keywordRegistry.vendorExtensionRule.propertyNamePrefix.length)
-	.replace(/^[A-Z]/, (firstLetter) => firstLetter.toLowerCase())
-	.replace(/[A-Z]/g, (oneLetter) => `-${oneLetter.toLowerCase()}`)}`;
-const VENDOR_PROPERTY_NAME_PATTERN = new RegExp(`^${keywordRegistry.vendorExtensionRule.propertyNamePrefix}[A-Z][a-z0-9]*([A-Z][a-z0-9]*)*$`);
+	.match(VENDOR_PROPERTY_WORD_PATTERN)
+	.map((oneWord) => (oneWord.charAt(0) === '_' ? oneWord.slice(1) : oneWord.toLowerCase()))
+	.join('-')}`;
+const VENDOR_PROPERTY_NAME_PATTERN = new RegExp(`^${keywordRegistry.vendorExtensionRule.propertyNamePrefix}([A-Z][a-z0-9]*|_[0-9][a-z0-9]*)+$`);
 
 // the reference construct a locator implies (a consistency reading: the edge's own referenceConstruct must agree)
 const referenceConstructOfLocator = (locator) => {
@@ -76,7 +84,7 @@ const moduleFunction =
 	({ moduleName } = {}) =>
 	({ openapiProfile, stableUriPropertyName, ruleModulePath }) => {
 		validateOpenapiProfile(openapiProfile);
-		const { stableIdPrefix, sourceFileName, schemaExclusionList } = openapiProfile;
+		const { stableIdPrefix, sourceFileName, schemaExclusionList, listValuedVendorExtensionNameList, enumMemberTextDeclarationList } = openapiProfile;
 		const classKeywordByPropertyName = keywordByPropertyNameAt('schema');
 		const propertyKeywordByPropertyName = keywordByPropertyNameAt('property');
 		const itemsKeywordByPropertyName = keywordByPropertyNameAt('items');
@@ -88,12 +96,9 @@ const moduleFunction =
 		// -----------------------------------------------------------------
 		const canonicalizeSource = ({ snapshotPath, verifiedFileList }, callback) => {
 			const sourceFilePath = path.join(snapshotPath, sourceFileName);
-			let document;
-			try {
-				document = JSON.parse(fs.readFileSync(sourceFilePath, 'utf8'));
-			} catch (parseError) {
-				// localized parse boundary (house-sanctioned): the refusal, not the throw, is the flow
-				callback(`${moduleName} REFUSED: '${sourceFilePath}' is not parseable JSON (${parseError.message})`);
+			const { parseRefusal, document } = parseOpenapiSourceFile({ sourceFilePath, sourceFormat: openapiProfile.sourceFormat });
+			if (parseRefusal !== '') {
+				callback(`${moduleName} ${parseRefusal}`);
 				return;
 			}
 			if (!isPlainObject(document) || !isPlainObject(document.components) || !isPlainObject(document.components.schemas)) {
@@ -115,7 +120,19 @@ const moduleFunction =
 				if (Array.isArray(jsonValue)) {
 					const lastSegment = pointer.split('/').pop();
 					const isSetValued = SET_VALUED_KEYWORD_LIST.indexOf(lastSegment) !== -1;
-					jsonValue.forEach((oneMember, memberIndex) => leafStatementsOf({ schemaName, jsonValue: oneMember, pointer: `${pointer}/${isSetValued ? SET_MEMBER_SEGMENT : memberIndex}`, statementOf }));
+					const enumObjectPointer = `${schemaName}${pointer.slice(0, -'/enum'.length)}`;
+					jsonValue.forEach((oneMember, memberIndex) => {
+						const memberDeclaration = lastSegment === 'enum' && typeof oneMember !== 'string'
+							? enumMemberTextDeclarationList.find((oneDeclaration) => oneDeclaration.enumObjectPointer === enumObjectPointer && oneDeclaration.statedValue === oneMember)
+							: undefined;
+						if (memberDeclaration !== undefined) {
+							// ⟪K2d⟫ the stated scalar is declared omitted; the declared text is what the source states in its place
+							statements.set(`schema|${schemaName}|${pointer}/${SET_MEMBER_SEGMENT}|${JSON.stringify(oneMember)}`, omitted(OMITTED_KIND.DECLARED_MEMBER_TEXT));
+							statements.set(`schema|${schemaName}|${pointer}/${SET_MEMBER_SEGMENT}|${JSON.stringify(memberDeclaration.carriedText)}`, statementOf());
+							return;
+						}
+						leafStatementsOf({ schemaName, jsonValue: oneMember, pointer: `${pointer}/${isSetValued ? SET_MEMBER_SEGMENT : memberIndex}`, statementOf });
+					});
 					return;
 				}
 				if (isPlainObject(jsonValue)) {
@@ -160,6 +177,21 @@ const moduleFunction =
 				};
 				const statementFor = ({ schemaName, pointer, jsonValue }) => statements.set(`schema|${schemaName}|${pointer}|${JSON.stringify(jsonValue)}`, {});
 				const unreadStatementFor = ({ stableId, propertyName, propertyValue }) => statements.set(`unread|${stableId}|${propertyName}|${JSON.stringify(propertyValue)}`, {});
+				// vendorStatementsFor — one vendor node property back to its statement(s); a declared list-valued one is JSON text whose
+				// members are read at their index (anything else under that name is unread, so it counts as invented)
+				const vendorStatementsFor = ({ stableId, schemaName, pointerPrefix, propertyName, propertyValue }) => {
+					const vendorKeyword = vendorKeywordOf(propertyName);
+					if (listValuedVendorExtensionNameList.indexOf(vendorKeyword) === -1) {
+						statementFor({ schemaName, pointer: `${pointerPrefix}/${vendorKeyword}`, jsonValue: propertyValue });
+						return;
+					}
+					const memberList = typeof propertyValue === 'string' && /^\[/.test(propertyValue) ? JSON.parse(propertyValue) : undefined;
+					if (!Array.isArray(memberList)) {
+						unreadStatementFor({ stableId, propertyName, propertyValue });
+						return;
+					}
+					memberList.forEach((oneMember, memberIndex) => statementFor({ schemaName, pointer: `${pointerPrefix}/${vendorKeyword}/${memberIndex}`, jsonValue: oneMember }));
+				};
 
 				graph.nodes.forEach((oneNode) => {
 					const { stableId, role, properties } = oneNode;
@@ -183,7 +215,7 @@ const moduleFunction =
 								return;
 							}
 							if (VENDOR_PROPERTY_NAME_PATTERN.test(oneName)) {
-								statementFor({ schemaName, pointer: `/${vendorKeywordOf(oneName)}`, jsonValue: properties[oneName] });
+								vendorStatementsFor({ stableId, schemaName, pointerPrefix: '', propertyName: oneName, propertyValue: properties[oneName] });
 								return;
 							}
 							unreadStatementFor({ stableId, propertyName: oneName, propertyValue: properties[oneName] });
@@ -230,7 +262,7 @@ const moduleFunction =
 								return;
 							}
 							if (VENDOR_PROPERTY_NAME_PATTERN.test(oneName)) {
-								statementFor({ schemaName, pointer: `${propertyPointer}/${vendorKeywordOf(oneName)}`, jsonValue: propertyValue });
+								vendorStatementsFor({ stableId, schemaName, pointerPrefix: propertyPointer, propertyName: oneName, propertyValue });
 								return;
 							}
 							unreadStatementFor({ stableId, propertyName: oneName, propertyValue });
@@ -324,7 +356,8 @@ const moduleFunction =
 				'outOfScopeByDeclaration is every top-level member of the OpenAPI document other than components (paths, info, servers, tags, openapi, …) and ' +
 				'every components member other than schemas (headers, links, securitySchemes, …), one statement per member: the API protocol, not the data model ' +
 				'(plan Q-N3; info.version is read as the root\'s selfDescribedVersion and info.description as its description); excludedSchema is each leaf of a ' +
-				'schema the bundle\'s profile names in schemaExclusionList.',
+				'schema the bundle\'s profile names in schemaExclusionList; declaredMemberText is each enum member the source types as a number or boolean, which ' +
+				'the profile\'s enumMemberTextDeclarationList carries as text (the source is then read as stating that text).',
 		});
 
 		const semanticValidationLimit =
@@ -334,7 +367,9 @@ const moduleFunction =
 			'from the edges (HAS_CLASS, HAS_PROPERTY, REFERENCES by locator, HAS_OPTION_SET with HAS_VALUE at the enumLocator) and node properties by the kit\'s ' +
 			'keyword registry read backwards; a node property with no reading is an invented statement. EXPLICITLY OMITTED and listed: the document outside ' +
 			'components.schemas and any profile-excluded schema. NOT modelled: member ORDER (no meaning in JSON Schema; a branch\'s index is kept in its locator), ' +
-			'derived values (name, path, depth, searchText, embed texts) and the root\'s provenance fields (checked by the framework).';
+			'derived values (name, path, depth, searchText, embed texts) and the root\'s provenance fields (checked by the framework). A vendor extension the ' +
+			'profile declares list-valued is compared member by member at its index (its order kept); an enum member declared by enumMemberTextDeclarationList is ' +
+			'compared as its declared text.';
 
 		return { canonicalizeSource, emitFromGraph, semanticValidationLimit, omissionDeclaration };
 	};

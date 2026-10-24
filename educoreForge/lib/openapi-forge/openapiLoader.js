@@ -8,10 +8,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // the registry, because only the walk knows each keyword's position.
 // ⟪K1⟫ A dereferencedMultiFile profile names a LIST of files in one snapshot directory; each is read and checked the same way, and the
 // payload carries every document by file name (the walk unions them). referencedSingleFile is K0's one document, unchanged.
+// ⟪K2a, wave 2 lane E⟫ the text is parsed by the profile's sourceFormat through openapiSourceParser.js (json, yaml), the same module the
+// round-trip pairs read through.
 
 const fs = require('fs');
 const path = require('path');
 const { validateOpenapiProfile, sourceFileNameListOf } = require('./openapiProfileContract');
+const { parseOpenapiSourceFile } = require('./openapiSourceParser');
 
 const OPENAPI_VERSION_PATTERN = /^3\.[0-9]+\.[0-9]+$/;
 const LOCATION_URL_PATTERN = /^upstreamUrl:[ \t]*(\S+)[ \t]*$/m;
@@ -55,12 +58,9 @@ const moduleFunction =
 				if (!fs.existsSync(sourceFilePath)) {
 					return `${moduleName} REFUSED: the OpenAPI source '${sourceFilePath}' is not on disk`;
 				}
-				let document;
-				try {
-					document = JSON.parse(fs.readFileSync(sourceFilePath, 'utf8'));
-				} catch (parseError) {
-					// localized parse boundary (house-sanctioned, jsonLdVocabularyLoader.js): the refusal, not the throw, is the flow
-					return `${moduleName} REFUSED: '${sourceFilePath}' is not parseable JSON (${parseError.message}); reacquire per README_PROVENANCE.md`;
+				const { parseRefusal, document } = parseOpenapiSourceFile({ sourceFilePath, sourceFormat: openapiProfile.sourceFormat });
+				if (parseRefusal !== '') {
+					return `${moduleName} ${parseRefusal}`;
 				}
 				const documentRefusal = documentRefusalOf({ document, sourceFilePath });
 				if (documentRefusal === '') {

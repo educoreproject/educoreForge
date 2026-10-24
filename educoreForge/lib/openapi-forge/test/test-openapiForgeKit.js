@@ -56,6 +56,8 @@ const syntheticProfile = Object.freeze({
 	rootStableId: 'synthapi:root',
 	perStandardLabelByRole: { [DME_ROLES.CLASS]: 'SynthApiSchema', [DME_ROLES.PROPERTY]: 'SynthApiProperty', [DME_ROLES.OPTION_SET]: 'SynthApiEnum', [DME_ROLES.OPTION_VALUE]: 'SynthApiEnumValue' },
 	schemaExclusionList: ['Envelope'],
+	listValuedVendorExtensionNameList: [],
+	enumMemberTextDeclarationList: [],
 });
 const STABLE_URI_PROPERTY_NAME = 'synthapiStableId';
 const EMPTY_MAPPING_INSTRUCTION_VALUE_LIST = [{}, {}, [], STABLE_URI_PROPERTY_NAME];
@@ -165,7 +167,7 @@ const taskList = new taskListPlus();
 // SECTION 1 — the profile seam
 // -----------------------------------------------------------------
 taskList.push((args, next) => {
-	harness.section('SECTION 1 — the profile is the seam: every field required, unknown refused, yaml refused by name');
+	harness.section('SECTION 1 — the profile is the seam: every field required, unknown refused, yaml read (K2a)');
 	const refusalOf = (candidateProfile) => {
 		try {
 			validateOpenapiProfile(candidateProfile);
@@ -179,7 +181,15 @@ taskList.push((args, next) => {
 	harness.rejects('an unknown field is refused by name', refusalOf({ ...syntheticProfile, schemaExclusionLsit: [] }), /field 'schemaExclusionLsit' is not in the contract/);
 	const { schemaExclusionList, ...withoutExclusion } = syntheticProfile;
 	harness.rejects('an absent field is refused, never defaulted', refusalOf(withoutExclusion), /required field 'schemaExclusionList' is absent/);
-	harness.rejects('sourceFormat yaml is refused BY NAME', refusalOf({ ...syntheticProfile, sourceFormat: 'yaml' }), /sourceFormat 'yaml' is not read by the K0 kit/);
+	// ⟪K2a, lane E⟫ the K0 twin that refused yaml by name is inverted: yaml is read now
+	harness.accepts('sourceFormat yaml validates (K2a)', refusalOf({ ...syntheticProfile, sourceFormat: 'yaml' }));
+	const { listValuedVendorExtensionNameList, ...withoutListDeclaration } = syntheticProfile;
+	harness.rejects('K2c: an absent listValuedVendorExtensionNameList is refused, never defaulted', refusalOf(withoutListDeclaration), /required field 'listValuedVendorExtensionNameList' is absent/);
+	harness.rejects('K2c: a list-valued vendor declaration naming a non-vendor keyword is refused', refusalOf({ ...syntheticProfile, listValuedVendorExtensionNameList: ['privacy'] }), /field 'listValuedVendorExtensionNameList' is \["privacy"\], not a valid vendorExtensionNameList/);
+	const { enumMemberTextDeclarationList, ...withoutMemberDeclaration } = syntheticProfile;
+	harness.rejects('K2d: an absent enumMemberTextDeclarationList is refused, never defaulted', refusalOf(withoutMemberDeclaration), /required field 'enumMemberTextDeclarationList' is absent/);
+	harness.rejects('K2d: a member declaration whose carriedText is not the stated scalar\'s own text is refused', refusalOf({ ...syntheticProfile, enumMemberTextDeclarationList: [{ enumObjectPointer: 'Doc/properties/caseVersion', statedValue: 1.1, carriedText: '1.10' }] }), /field 'enumMemberTextDeclarationList' .* not a valid enumMemberTextDeclarationList/);
+	harness.rejects('K2d: a member declaration for a stated STRING is refused (text needs no declaration)', refusalOf({ ...syntheticProfile, enumMemberTextDeclarationList: [{ enumObjectPointer: 'Doc/properties/caseVersion', statedValue: '1.1', carriedText: '1.1' }] }), /not a valid enumMemberTextDeclarationList/);
 	harness.rejects('an unknown sourceFormat is refused', refusalOf({ ...syntheticProfile, sourceFormat: 'xml' }), /field 'sourceFormat' is "xml", not a valid sourceFormat/);
 	harness.rejects('a rootStableId outside the prefix is refused', refusalOf({ ...syntheticProfile, rootStableId: 'other:root' }), /does not begin with stableIdPrefix/);
 	harness.rejects('a label table missing a role is refused', refusalOf({ ...syntheticProfile, perStandardLabelByRole: { DmeClass: 'A', DmeProperty: 'B', DmeOptionSet: 'C' } }), /perStandardLabelByRole/);
@@ -317,6 +327,140 @@ taskList.push((args, next) => forgeDocument({ caseName: 'fixtureAgain', document
 	const textOf = (result) => JSON.stringify({ nodes: result.nodes.map((oneNode) => [oneNode.stableId, oneNode.labels, oneNode.properties]), edges: result.edges });
 	harness.ok('a second forge is identical', !forgeError && textOf(forgeResult) === textOf(args.forgeResult), forgeError);
 	next('', args);
+}));
+
+// -----------------------------------------------------------------
+// SECTION 6 — K2 (wave 2 lane E, CASE 1.1): a YAML source; vendor names with a digit-led word (x-1edtech-…); list-valued vendor
+// extensions declared by name; an enum member YAML types as a number, carried as the text the profile declares
+// -----------------------------------------------------------------
+const YAML_SOURCE_FILE_NAME = 'synth_oas.yaml';
+const yamlProfile = Object.freeze({
+	...syntheticProfile,
+	sourceFileName: YAML_SOURCE_FILE_NAME,
+	sourceFormat: 'yaml',
+	schemaExclusionList: [],
+	listValuedVendorExtensionNameList: ['x-1edtech-privacy'],
+	enumMemberTextDeclarationList: [{ enumObjectPointer: 'Doc/properties/caseVersion', statedValue: 1.1, carriedText: '1.1' }],
+});
+// written as YAML text by js-yaml's own dump, so the member 1.1 is an unquoted YAML number, as CASE's file states it
+const YAML_FIXTURE_DOCUMENT = Object.freeze({
+	openapi: '3.0.0',
+	info: { title: 'Synth YAML', version: '1.1' },
+	paths: {},
+	components: {
+		schemas: {
+			Doc: {
+				type: 'object',
+				description: 'A document.\n',
+				'x-1edtech-confidentiality': 'unrestricted',
+				'x-1edtech-privacy': ['extensions', 'notes'],
+				additionalProperties: false,
+				properties: {
+					caseVersion: { type: 'string', description: 'MUST be 1.1.', enum: [1.1] },
+					extensions: { $ref: '#/components/schemas/DocExtension' },
+				},
+			},
+			DocExtension: { type: 'object', description: 'Extensions.', 'x-1edtech-privacy': ['extensions'], properties: {}, additionalProperties: true },
+		},
+	},
+});
+const yamlTextOf = (document) => require('js-yaml').dump(document, { lineWidth: -1 });
+// yamlSnapshotOf — a snapshot directory holding YAML text (any text: a malformed one is a refusal case), its location file and SHA256SUMS
+const yamlSnapshotOf = ({ caseName, sourceText }) => {
+	const snapshotDirPath = path.join(scratchRootPath, caseName, 'standardSourceData', '01');
+	fs.mkdirSync(snapshotDirPath, { recursive: true });
+	fs.writeFileSync(path.join(snapshotDirPath, YAML_SOURCE_FILE_NAME), sourceText);
+	fs.writeFileSync(path.join(snapshotDirPath, 'standardSourceLocation'), 'standard: synth\npublishedVersion: 1.1\nupstreamUrl: https://example.invalid/synth_oas.yaml\n');
+	const checksumText = [YAML_SOURCE_FILE_NAME, 'standardSourceLocation'].map((oneName) => `${crypto.createHash('sha256').update(fs.readFileSync(path.join(snapshotDirPath, oneName))).digest('hex')}  ${oneName}`).join('\n');
+	fs.writeFileSync(path.join(snapshotDirPath, 'SHA256SUMS'), `${checksumText}\n`);
+	return snapshotDirPath;
+};
+const YAML_FIXTURE_SNAPSHOT_PATH = yamlSnapshotOf({ caseName: 'yamlFixture', sourceText: yamlTextOf(YAML_FIXTURE_DOCUMENT) });
+const yamlValidator = roundTripHarness.validatorFrom({
+	forgeDeclaration: syntheticDeclaration,
+	...openapiRoundTripPairFactory({ openapiProfile: yamlProfile, stableUriPropertyName: STABLE_URI_PROPERTY_NAME, ruleModulePath: 'lib/openapi-forge/openapiRoundTripPair.js' }),
+	verdictVersion: 'openapiKitTestVerdict-1',
+});
+const validateYamlDouble = ({ forgeResult, caseName }, callback) => {
+	const outputPath = path.join(scratchRootPath, `verdict-${caseName}`);
+	fs.mkdirSync(outputPath, { recursive: true });
+	yamlValidator.validateWithReader({ reader: roundTripHarness.graphDoubleFrom({ forgeResult }), snapshotPath: YAML_FIXTURE_SNAPSHOT_PATH, outputPath }, callback);
+};
+
+taskList.push((args, next) => bundleFor(yamlProfile).forge({ sourcePath: path.join(YAML_FIXTURE_SNAPSHOT_PATH, YAML_SOURCE_FILE_NAME), owner: 'test', skipEmbedding: true }, (forgeError, forgeResult) => {
+	harness.section('SECTION 6 — K2: a YAML source, digit-led vendor words, list-valued vendor extensions, a declared member text');
+	harness.accepts('K2a: the YAML fixture forges', forgeError ? [forgeError] : []);
+	if (forgeError) {
+		next('', args);
+		return;
+	}
+	const nodeById = forgeResult.nodes.reduce((byId, oneNode) => ({ ...byId, [oneNode.stableId]: oneNode }), {});
+	const doc = nodeById['synthapi:Doc'].properties;
+	harness.equal('K2a: a YAML block scalar description carried verbatim, its final newline kept', JSON.stringify(doc.description), JSON.stringify('A document.\n'));
+	harness.equal('K2a: the root names the YAML source format', nodeById['synthapi:root'].properties.sourceFormat, 'openapi-yaml');
+	harness.equal('K2b: x-1edtech-confidentiality carried as x_1edtechConfidentiality (a digit-led word is marked with _)', doc.x_1edtechConfidentiality, 'unrestricted');
+	harness.equal('K2c: a declared list-valued vendor extension carried as JSON text, in source order', doc.x_1edtechPrivacy, JSON.stringify(['extensions', 'notes']));
+	harness.equal('K2d: the YAML number 1.1 carried as the declared text 1.1', `${Boolean(nodeById['synthapi:Doc/caseVersion/enum/1.1'])}|${nodeById['synthapi:Doc/caseVersion/enum/1.1'] && nodeById['synthapi:Doc/caseVersion/enum/1.1'].properties.name}`, 'true|1.1');
+	harness.equal('K2: stats (vendor extensions, declared member texts)', `${forgeResult.stats.vendorExtensionCount}|${forgeResult.stats.declaredMemberTextCount}`, '3|1');
+	next('', { ...args, yamlForgeResult: forgeResult });
+}));
+taskList.push((args, next) => {
+	if (args.yamlForgeResult === undefined) {
+		harness.ok('K2: the YAML round trip needs the YAML forge', false);
+		next('', args);
+		return;
+	}
+	validateYamlDouble({ forgeResult: args.yamlForgeResult, caseName: 'yamlClean' }, (validateError, verdict) => {
+		harness.accepts('K2: the YAML validator runs', validateError ? [validateError] : []);
+		harness.equal('K2: the YAML round trip is clean, the member retyping declared (openapi, info, paths; declaredMemberText 1)',
+			validateError ? `${validateError}` : `${verdict.inventedTotal}|${verdict.lostTotal}|${sortedText(countBy(verdict.explicitlyOmittedList, (oneItem) => oneItem.kind))}`,
+			`0|0|${sortedText({ outOfScopeByDeclaration: 3, declaredMemberText: 1 })}`);
+		next('', args);
+	});
+});
+const YAML_ROUND_TRIP_TWIN_LIST = [
+	// the K0 spelling of a digit-led vendor word: what K0 forged, and what its pair could not read back (CASE's 65 statements)
+	{ twinName: 'digitLedVendorNameK0Spelling', expectation: 'both', perturb: (graph) => ({ ...graph, nodes: graph.nodes.map((oneNode) => { if (oneNode.stableId !== 'synthapi:Doc') { return oneNode; } const { x_1edtechConfidentiality, ...otherProperties } = oneNode.properties; return { ...oneNode, properties: { ...otherProperties, x1edtechConfidentiality: x_1edtechConfidentiality } }; }) }) },
+	{ twinName: 'listVendorMemberDropped', expectation: 'lost', perturb: (graph) => ({ ...graph, nodes: graph.nodes.map((oneNode) => (oneNode.stableId === 'synthapi:Doc' ? { ...oneNode, properties: { ...oneNode.properties, x_1edtechPrivacy: JSON.stringify(['extensions']) } } : oneNode)) }) },
+	{ twinName: 'listVendorMembersReordered', expectation: 'both', perturb: (graph) => ({ ...graph, nodes: graph.nodes.map((oneNode) => (oneNode.stableId === 'synthapi:Doc' ? { ...oneNode, properties: { ...oneNode.properties, x_1edtechPrivacy: JSON.stringify(['notes', 'extensions']) } } : oneNode)) }) },
+	{ twinName: 'declaredMemberValueDropped', expectation: 'lost', perturb: (graph) => ({ ...graph, edges: graph.edges.filter((oneEdge) => oneEdge.toRef.id !== 'synthapi:Doc/caseVersion/enum/1.1') }) },
+];
+YAML_ROUND_TRIP_TWIN_LIST.forEach((oneTwin) => taskList.push((args, next) => {
+	if (args.yamlForgeResult === undefined) {
+		harness.ok(`RED-OBSERVED: ${oneTwin.twinName} needs the YAML forge`, false);
+		next('', args);
+		return;
+	}
+	validateYamlDouble({ forgeResult: oneTwin.perturb(copyOfForgeResult(args.yamlForgeResult)), caseName: oneTwin.twinName }, (validateError, verdict) => {
+		const isRed = !validateError && verdict.roundTripClean === false
+			&& (oneTwin.expectation === 'lost' ? verdict.lostTotal >= 1 : true)
+			&& (oneTwin.expectation === 'both' ? verdict.lostTotal >= 1 && verdict.inventedTotal >= 1 : true);
+		harness.ok(`RED-OBSERVED (K2): ${oneTwin.twinName} → lost ${verdict && verdict.lostTotal}, invented ${verdict && verdict.inventedTotal}`, isRed, validateError);
+		next('', args);
+	});
+}));
+const withDocShape = (perturbDoc) => (document) => {
+	perturbDoc(document.components.schemas.Doc);
+	return document;
+};
+const YAML_REFUSAL_CASE_LIST = [
+	{ caseName: 'yamlUnlistedListVendor', perturb: withDocShape((doc) => { doc['x-1edtech-other'] = ['a']; }), refusalPattern: /vendor extension 'x-1edtech-other' holds \["a"\], not a string/ },
+	{ caseName: 'yamlListedVendorHoldsString', bundleProfile: { ...yamlProfile, listValuedVendorExtensionNameList: ['x-1edtech-privacy', 'x-1edtech-confidentiality'] }, perturb: (document) => document, refusalPattern: /vendor extension 'x-1edtech-confidentiality' is declared list-valued \(listValuedVendorExtensionNameList\) but holds "unrestricted"/ },
+	{ caseName: 'yamlStaleListDeclaration', bundleProfile: { ...yamlProfile, listValuedVendorExtensionNameList: ['x-1edtech-privacy', 'x-1edtech-absent'] }, perturb: (document) => document, refusalPattern: /listValuedVendorExtensionNameList names 'x-1edtech-absent', which the source never states/ },
+	{ caseName: 'yamlUndeclaredNumberMember', bundleProfile: { ...yamlProfile, enumMemberTextDeclarationList: [] }, perturb: (document) => document, refusalPattern: /'\/enum' member 1.1 is a number, not text, and enumMemberTextDeclarationList declares no text for it at 'Doc\/properties\/caseVersion'/ },
+	{ caseName: 'yamlStaleMemberDeclaration', bundleProfile: { ...yamlProfile, enumMemberTextDeclarationList: yamlProfile.enumMemberTextDeclarationList.concat([{ enumObjectPointer: 'Doc/properties/absent', statedValue: 2, carriedText: '2' }]) }, perturb: (document) => document, refusalPattern: /enumMemberTextDeclarationList names 2 at 'Doc\/properties\/absent', which the source does not state there/ },
+	{ caseName: 'yamlMalformed', sourceText: 'openapi: [unclosed\n', refusalPattern: /is not parseable yaml/ },
+	{ caseName: 'yamlTwoDocuments', sourceText: `${yamlTextOf(YAML_FIXTURE_DOCUMENT)}---\nopenapi: 3.0.0\n`, refusalPattern: /is not parseable yaml \(expected a single document/ },
+];
+YAML_REFUSAL_CASE_LIST.forEach((oneCase) => taskList.push((args, next) => {
+	if (oneCase === YAML_REFUSAL_CASE_LIST[0]) {
+		harness.section('SECTION 6b — K2 refusals, each observed by name');
+	}
+	const sourceText = oneCase.sourceText === undefined ? yamlTextOf(oneCase.perturb(copyOf(YAML_FIXTURE_DOCUMENT))) : oneCase.sourceText;
+	bundleFor(oneCase.bundleProfile === undefined ? yamlProfile : oneCase.bundleProfile).forge({ sourcePath: path.join(yamlSnapshotOf({ caseName: oneCase.caseName, sourceText }), YAML_SOURCE_FILE_NAME), owner: 'test', skipEmbedding: true }, (forgeError) => {
+		harness.rejects(`REFUSED (K2): ${oneCase.caseName}`, forgeError ? [forgeError] : [], oneCase.refusalPattern);
+		next('', args);
+	});
 }));
 
 pipeRunner(taskList.getList(), {}, (pipeError) => {

@@ -24,11 +24,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // EMPTY value ('' or []) of a keyword emptyValueKeywordList names (emptyValueStatement), and each declared repeat of an enum member
 // (repeatedEnumMember, keyed <member pointer>@repeat<n>). An UNdeclared repeat is a plain statement no graph can return, so it is lost.
 
-const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { DME_ROLES, EQUIVALENCE_NODE_LABELS } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const { validateOpenapiProfile, SOURCE_LAYOUT } = require('./openapiProfileContract');
+const { parseOpenapiSourceFile } = require('./openapiSourceParser');
 const keywordRegistry = require('./openapiDereferencedKeywordRegistry.json');
 
 const SET_VALUED_KEYWORD_LIST = Object.freeze(['required', 'enum']);
@@ -96,12 +96,10 @@ const moduleFunction =
 			let fault = '';
 			sourceFileNameList.forEach((sourceFileName) => {
 				const sourceFilePath = path.join(snapshotPath, sourceFileName);
-				let document;
-				try {
-					document = JSON.parse(fs.readFileSync(sourceFilePath, 'utf8'));
-				} catch (parseError) {
-					// localized parse boundary (house-sanctioned): the refusal, not the throw, is the flow
-					fault = fault || `${moduleName} REFUSED: '${sourceFilePath}' is not parseable JSON (${parseError.message})`;
+				// ⟪K2a⟫ parsed by the profile's sourceFormat, through the module the loader reads with
+				const { parseRefusal, document } = parseOpenapiSourceFile({ sourceFilePath, sourceFormat: openapiProfile.sourceFormat });
+				if (parseRefusal !== '') {
+					fault = fault || `${moduleName} ${parseRefusal}`;
 					return;
 				}
 				if (!isPlainObject(document) || !isPlainObject(document.components) || !isPlainObject(document.components.schemas)) {

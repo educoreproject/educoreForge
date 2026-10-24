@@ -54,6 +54,8 @@ const profileFor = (sourceFileNameList) => Object.freeze({
 	perStandardLabelByRole: { [DME_ROLES.CLASS]: 'SynthKSchema', [DME_ROLES.PROPERTY]: 'SynthKProperty', [DME_ROLES.OPTION_SET]: 'SynthKEnum', [DME_ROLES.OPTION_VALUE]: 'SynthKEnumValue' },
 	schemaExclusionList: [],
 	statementOmissionDeclaration: { emptyValueKeywordList: [], enumMemberRepeatList: [] },
+	listValuedVendorExtensionNameList: [],
+	enumMemberTextDeclarationList: [],
 });
 const declarationFor = (openapiProfile) => Object.freeze({
 	standardKey: 'synthk',
@@ -196,6 +198,10 @@ taskList.push((args, next) => {
 	harness.rejects('an unknown sourceLayout is refused', refusalOf({ ...dereferencedProfile, sourceLayout: 'scattered' }), /'sourceLayout' is "scattered", not one of referencedSingleFile, dereferencedMultiFile/);
 	harness.rejects('sourceFileName is refused under dereferencedMultiFile', refusalOf({ ...dereferencedProfile, sourceFileName: 'a.json' }), /field 'sourceFileName' does not belong to sourceLayout 'dereferencedMultiFile'/);
 	harness.rejects('a repeated file is refused', refusalOf({ ...dereferencedProfile, sourceFileNameList: ['a.json', 'a.json'] }), /field 'sourceFileNameList' is \["a.json","a.json"\], not a valid distinctNonEmptyStringList/);
+	// ⟪K2, wave 2 lane E⟫ the two K2 fields are required in EVERY profile (BRONZE_CROWN), but this layout's walk carries no vendor
+	// extension and reads no member-text declaration, so a non-empty one would be silently ignored: refused by name instead
+	harness.rejects('K2c: a non-empty listValuedVendorExtensionNameList is refused under dereferencedMultiFile', refusalOf({ ...dereferencedProfile, listValuedVendorExtensionNameList: ['x-1edtech-privacy'] }), /field 'listValuedVendorExtensionNameList' must be empty under sourceLayout 'dereferencedMultiFile'/);
+	harness.rejects('K2d: a non-empty enumMemberTextDeclarationList is refused under dereferencedMultiFile', refusalOf({ ...dereferencedProfile, enumMemberTextDeclarationList: [{ enumObjectPointer: 'A/properties/b', statedValue: 1, carriedText: '1' }] }), /field 'enumMemberTextDeclarationList' must be empty under sourceLayout 'dereferencedMultiFile'/);
 	harness.rejects('sourceFileNameList is refused under referencedSingleFile', refusalOf({ ...dereferencedProfile, sourceLayout: 'referencedSingleFile' }), /field 'sourceFileNameList' does not belong to sourceLayout 'referencedSingleFile'/);
 	next('', args);
 });

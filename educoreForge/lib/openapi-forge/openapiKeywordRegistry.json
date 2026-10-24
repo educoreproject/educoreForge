@@ -1,10 +1,13 @@
 {
-	"registryNote": "lib/openapi-forge keyword registry (nextStandards-102326 K0). DATA: which OpenAPI 3 / JSON Schema keyword the kit carries at which position, and how. A keyword absent from its position's table is REFUSED BY NAME by the walk; adding one is a row here plus a twin, never a code branch. Positions: 'schema' (a components.schemas member), 'property' (a member of a schema's properties), 'items' (a property's items), 'branch' (one member of a oneOf/anyOf/allOf at property or items position). A branch admits no items and no composition, so nested composition refuses by the same rule. Carriages: nodeProperty (a scalar under propertyName, of valueKind, optionally only requiredValue), requiredList, propertyMap, items, reference, enum, composition.",
+	"registryNote": "lib/openapi-forge keyword registry (nextStandards-102326 K0). DATA: which OpenAPI 3 / JSON Schema keyword the kit carries at which position, and how. A keyword absent from its position's table is REFUSED BY NAME by the walk; adding one is a row here plus a twin, never a code branch. Positions: 'schema' (a components.schemas member), 'property' (a member of a schema's properties), 'items' (a property's items), 'branch' (one member of a oneOf/anyOf/allOf at property or items position). A branch admits no items and no composition, so nested composition refuses by the same rule. Carriages: nodeProperty (a scalar under propertyName, of valueKind, optionally only requiredValue), requiredList, propertyMap, items, reference, enum, composition. vendorExtensionRule (K2, wave 2 lane E): a name must match namePatternSource; its property name is the camelCased words after the prefix, a digit-led word marked with '_' (x-1edtech-privacy -> x_1edtechPrivacy); a value is a valueKind, or, when the profile's listValuedVendorExtensionNameList names it, a declaredListValueKind carried by declaredListCarriage.",
 	"vendorExtensionRule": {
 		"namePrefix": "x-",
+		"namePatternSource": "^x-[a-z0-9]+(-[a-z0-9]+)*$",
 		"positionList": ["schema", "property"],
 		"propertyNamePrefix": "x",
-		"valueKind": "string"
+		"valueKind": "string",
+		"declaredListValueKind": "nonEmptyStringList",
+		"declaredListCarriage": "jsonText"
 	},
 	"compositionConstructList": ["oneOf", "anyOf", "allOf"],
 	"carriageByPosition": {
