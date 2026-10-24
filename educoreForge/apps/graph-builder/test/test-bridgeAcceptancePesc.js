@@ -1078,7 +1078,10 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ═══ RE-ANCHOR, 2026-10-24 (SILVER_SPIRE; nextStandards-102326 B2; BRONZE_CROWN's pre-grant, IMCS 03:16Z) ═══ postNsAPescCompose-102326 -> postNsBPescCompose-102326,
 // tag cut ON this commit. CENSUS over this gate's paths: the four roster tests' lane-B rows only (lib/bridge-framework/test/test-bgDecl.js 5/2,
 // test-bgJudgeSlot.js 4/0, test-bridgeComposer.js 6/0, test-hubBridging.js 5/2). No bridge-framework or bridge-maker source.
-const P1_BASELINE_COMMIT = 'postNsBPescCompose-102326'; // re-anchored by SILVER_SPIRE (census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (STEEL_MIRROR; nextStandards-102326 lane C0; pre-granted by BRONZE_CROWN) ═══ postNsBPescCompose-102326 -> postNsCPescCompose-102326,
+// tag cut ON this commit. CENSUS over this gate's paths: lib/vocabulary/graph-contract.js 2/2 and lib/vocabulary/vocabulary.js 3/1 (the LIF
+// vocabulary move). No bridge-framework or bridge-maker source.
+const P1_BASELINE_COMMIT = 'postNsCPescCompose-102326'; // re-anchored by STEEL_MIRROR (census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

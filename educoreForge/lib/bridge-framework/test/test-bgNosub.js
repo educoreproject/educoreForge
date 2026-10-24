@@ -234,7 +234,11 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // vocabulary.js 4/1 (STANDARD_FAMILY.OPENBADGES, .JEDX), test/test-sifEdgeVocabulary.js (schema view 343 -> 344, this commit) and
 // test/test-sifVocabularyInvariance.js (already on main). graph-contract.js is outside (ii)'s allowed vocabulary.js+tests, as D0's and P5's
 // rows were. Allowed-path list NOT widened.
-const POST_D1_BASE_TAG = 'postNsK0VocabularyIi-102326'; // re-anchored by AZURE_MARBLE (nextStandards K0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (STEEL_MIRROR; nextStandards-102326 lane C0, the LIF vocabulary move; pre-granted by BRONZE_CROWN) ═══ (ii)
+// postNsK0VocabularyIi-102326 -> postNsCVocabularyIi-102326, tag cut ON this commit. CENSUS (lib/vocabulary/, numstat from the K0 tag):
+// graph-contract.js 2/2 (standardFamily meaning names LIF; producer-local stem Lif), vocabulary.js 3/1 (STANDARD_FAMILY.LIF). graph-contract.js
+// is outside (ii)'s allowed vocabulary.js+tests, as K0's, D0's and P5's rows were. Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postNsCVocabularyIi-102326'; // re-anchored by STEEL_MIRROR (nextStandards C0; census in the block above); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -519,7 +523,10 @@ const POST_D1_BASE_TAG = 'postNsK0VocabularyIi-102326'; // re-anchored by AZURE_
 // ═══ RE-ANCHOR, 2026-10-23 (AZURE_MARBLE; nextStandards-102326 K0; BRONZE_CROWN's grant) ═══ PHASE0_ANCHOR_TAG
 // postZbA2rForgeFrameworkIii-102326 -> postNsK0ForgeFrameworkIii-102326, tag cut ON this commit. CENSUS over this gate's paths:
 // lib/forge-framework/test/test-gStandardMetadata.js 13/0 (conjuncts p and q: the OpenBadges and JEDx families admitted). No framework source.
-const PHASE0_ANCHOR_TAG = 'postNsK0ForgeFrameworkIii-102326'; // re-anchored by AZURE_MARBLE (nextStandards K0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (STEEL_MIRROR; nextStandards-102326 lane C0; pre-granted by BRONZE_CROWN) ═══ PHASE0_ANCHOR_TAG
+// postNsK0ForgeFrameworkIii-102326 -> postNsCForgeFrameworkIii-102326, tag cut ON this commit. CENSUS over this gate's paths:
+// lib/forge-framework/test/test-gStandardMetadata.js 6/0 (conjunct r: the LIF family admitted, and its twin). No framework source.
+const PHASE0_ANCHOR_TAG = 'postNsCForgeFrameworkIii-102326'; // re-anchored by STEEL_MIRROR (nextStandards C0; census in the block above); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -1084,7 +1091,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postNsASeamDiffEmpty-102326 -> postNsBSeamDiffEmpty-102326, tag cut ON this commit. CENSUS over this gate's paths: forges/jedx/forgeJedx.js
 // 26/0, lib/jedxForgeDeclaration.js 63/0, lib/jedxHooks.js 9/0 (a NEW forge's entry, declaration and hooks: the lane C1 coupling).
 // No existing forge, no framework, build, forger or replay source.
-const PHASE3_ANCHOR_TAG = 'postNsBSeamDiffEmpty-102326'; // re-anchored by SILVER_SPIRE (nextStandards B1; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (STEEL_MIRROR; nextStandards-102326 lane C0; pre-granted by BRONZE_CROWN) ═══ PHASE3_ANCHOR_TAG
+// postNsBSeamDiffEmpty-102326 -> postNsCSeamDiffEmpty-102326, tag cut ON this commit. CENSUS over this gate's paths: lib/forge-framework as (iii)
+// (test-gStandardMetadata.js 6/0) and apps/graph-builder/apps/replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 2/1 (its (e)
+// pre-fix twin admits Lif* residue). No forge entry, declaration or hooks file; no build, forger or replay source.
+const PHASE3_ANCHOR_TAG = 'postNsCSeamDiffEmpty-102326'; // re-anchored by STEEL_MIRROR (nextStandards C0; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
