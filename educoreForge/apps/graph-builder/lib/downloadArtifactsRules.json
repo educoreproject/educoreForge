@@ -44,7 +44,9 @@
 	"snapshotCompanionFileNameList": ["README_PROVENANCE.md", "SHA256SUMS", "standardSourceLocation", "layerSourceLocation", "LICENSE", "manifest.json"],
 	"snapshotExcludedPathList": [
 		{ "relativePath": ".gitkeep", "reasonText": "an empty marker file that keeps the directory in git; not source" },
-		{ "relativePath": "cedsAuthoredCrosswalk_DO_NOT_USE", "reasonText": "the retired Ed-Fi crosswalk, excluded from the forge's input since 2026-10-02 (known to be wrong); never ingested" }
+		{ "relativePath": "cedsAuthoredCrosswalk_DO_NOT_USE", "reasonText": "the retired Ed-Fi crosswalk, excluded from the forge's input since 2026-10-02 (known to be wrong); never ingested" },
+		{ "relativePath": "transportObjects", "reasonText": "JEDx snapshot 02: the publisher's newer, partial transport-objects JSON schemas, committed as a peer with their own SHA256SUMS for the record and never forged (forges/jedx/assets/standardSourceData/02/README_PROVENANCE.md)" },
+		{ "relativePath": "licence", "reasonText": "JEDx snapshot 02: the HR Open License Agreement PDF, committed as a peer with its own SHA256SUMS; its required notices travel in README_PROVENANCE.md, which every source zip ships" }
 	],
 	"documentationFileNameList": ["README_roundTripContract.md", "README_KnownIssues.md"],
 	"earlierCertificationFileName": "README_ValidationCertificate.md",
