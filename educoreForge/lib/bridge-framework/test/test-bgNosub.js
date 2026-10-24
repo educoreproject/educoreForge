@@ -1095,7 +1095,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postNsBSeamDiffEmpty-102326 -> postNsCSeamDiffEmpty-102326, tag cut ON this commit. CENSUS over this gate's paths: lib/forge-framework as (iii)
 // (test-gStandardMetadata.js 6/0) and apps/graph-builder/apps/replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 2/1 (its (e)
 // pre-fix twin admits Lif* residue). No forge entry, declaration or hooks file; no build, forger or replay source.
-const PHASE3_ANCHOR_TAG = 'postNsCSeamDiffEmpty-102326'; // re-anchored by STEEL_MIRROR (nextStandards C0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (STEEL_MIRROR; nextStandards-102326 C1-C2, the new LIF forge; BRONZE_CROWN's mandate: a seam re-anchor caused
+// purely by the lane's own new files) ═══ PHASE3_ANCHOR_TAG postNsCSeamDiffEmpty-102326 -> postNsC1SeamDiffEmpty-102326, tag cut ON this
+// commit. CENSUS over this gate's paths: forges/lif/forgeLif.js 26/0, lib/lifForgeDeclaration.js 63/0, lib/lifHooks.js 9/0 (a NEW forge's
+// entry, declaration and hooks: the lane C1 coupling). No existing forge, no framework, build, forger or replay source.
+const PHASE3_ANCHOR_TAG = 'postNsC1SeamDiffEmpty-102326'; // re-anchored by STEEL_MIRROR (nextStandards C1-C2; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
