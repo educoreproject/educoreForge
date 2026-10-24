@@ -101,6 +101,33 @@ const pescldListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
 	});
 };
 
+// ⟪nextStandards-102326 wave 2 lane G, 2026-10-24; BRONZE_CROWN's grant⟫ SEDM: pescldListingEmitter's form, over forges/sedm's round-trip pair
+const sedmListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
+	const bundleDirPath = path.join(treeRootPath, 'forges', 'sedm');
+	const forgeDeclaration = require(path.join(bundleDirPath, 'lib', 'sedmForgeDeclaration'));
+	const roundTripPair = require(path.join(bundleDirPath, 'lib', 'sedmRoundTripPair'))({ ruleModulePath: 'forges/sedm/lib/sedmRoundTripPair.js' });
+	const { openGraphReader } = require(path.join(treeRootPath, 'lib', 'forge-framework', 'roundTripHarness', 'graphReader'));
+	openGraphReader({ boltUrl: boltTriple.boltUrl, user: boltTriple.user, password: boltTriple.password, standardSource: forgeDeclaration.standardSource }, (openError, reader) => {
+		if (openError) {
+			callback(`sedm listing: ${openError}`);
+			return;
+		}
+		roundTripPair.emitFromGraph({ reader }, (emitError, emitted) => {
+			reader.close((closeError) => {
+				if (emitError || (emitted && emitted.fault !== undefined)) {
+					callback(`sedm listing: ${emitError || JSON.stringify(emitted.fault)}`);
+					return;
+				}
+				if (closeError) {
+					callback(`sedm listing: ${closeError}`);
+					return;
+				}
+				callback('', { statementMap: emitted.statements });
+			});
+		});
+	});
+};
+
 const edfiListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
 	const edfiLibDirPath = path.join(treeRootPath, 'forges', 'edfi', 'lib');
 	const roundTripEdfiCompiler = require(path.join(edfiLibDirPath, 'roundTripEdfiCompiler'))();
@@ -217,6 +244,7 @@ const statementListingEmitterByBundleToken = Object.freeze({
 	jedx: openapiKitListingEmitterFor({ bundleToken: 'jedx' }),
 	lif: openapiKitListingEmitterFor({ bundleToken: 'lif' }),
 	case: openapiKitListingEmitterFor({ bundleToken: 'case' }),
+	sedm: sedmListingEmitter,
 });
 
 module.exports = { installReadOnlyDriverGuard, statementListingEmitterByBundleToken };
