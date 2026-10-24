@@ -1,0 +1,7 @@
+standard: forge-lif
+publishedVersion: 2.0
+publishedVersionEvidence: openapi info.version, "Machine-Readable Schema for LIF"
+upstreamUrl: unknown (A4L-internal LIF schema export; no public URL recorded)
+copiedFrom: /Users/tqwhite/Documents/webdev/A4L/unityObjectGenerator/system/code/assets/databaseDefinitionss/LIF (restored 2026-10-24 from git 88336881:educoreForge/forges/lif/assets/standardSourceData/01/)
+copiedDate: 2026-05-28
+status: RECORD ONLY, SUPERSEDED. Not the pin (defaultSnapshot=02); no hooks read it. Kept as the record of what the July graph held (10 schemas, 740,551 bytes). Superseded by snapshot 02, the publisher's lif-core reference_data/schemas/lif-schema.json (TQ ruling 2026-10-23: the latest publisher artefact).

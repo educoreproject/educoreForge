@@ -1,0 +1,8 @@
+standard: LIF (the LIF Initiative's Learner Information Framework), OpenAPI 3.0 schema
+publishedVersion: 2.0
+publishedVersionEvidence: the document's own info.version "2.0" (info.title "Machine-Readable Schema for LIF"), at lif-core commit 290987a08dd08c3a5a01a8833b9a768e3ded69e4 (2026-09-08), the file's last change; unchanged at the repository head 34ca08a4c6b6c540e03dddcbe41da66cc5297567 (2026-10-23)
+upstreamUrl: https://github.com/LIF-Initiative/lif-core/blob/290987a08dd08c3a5a01a8833b9a768e3ded69e4/reference_data/schemas/lif-schema.json
+publisher: the LIF Initiative (GitHub organisation LIF-Initiative); lif-core's CLAUDE.md names this file the "Source of truth"
+licence: Apache License 2.0 (lif-core LICENSE, copied here as LICENSE; the repository has no NOTICE file)
+acquiredDate: 2026-10-24
+note: EDITING WARNING. deriveVersionStamp (lib/snapshot-provenance) takes THE ENTIRE REST OF the publishedVersion line as the version, so keep that line bare; citations belong on publishedVersionEvidence.
