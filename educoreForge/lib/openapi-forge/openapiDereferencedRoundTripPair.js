@@ -20,6 +20,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // EXPLICITLY OMITTED, per file: every top-level member other than components and every components member other than schemas (the API
 // around the data model, plan Q-N3), and each leaf of a profile-excluded component.
 // A node property the emitter has no reading for is an `unread|…` statement, so an invented property counts as invented.
+// ⟪K1c, 2026-10-24⟫ ALSO EXPLICITLY OMITTED, by the profile's statementOmissionDeclaration (its own reading here, not the walk's): each
+// EMPTY value ('' or []) of a keyword emptyValueKeywordList names (emptyValueStatement), and each declared repeat of an enum member
+// (repeatedEnumMember, keyed <member pointer>@repeat<n>). An UNdeclared repeat is a plain statement no graph can return, so it is lost.
 
 const fs = require('fs');
 const path = require('path');
@@ -49,7 +52,8 @@ const SITE_POINTER_PROPERTY_NAME = 'sitePointer';
 const BRANCH_RECORD_STRUCTURE_FIELD_LIST = Object.freeze(['locator', 'construct']);
 const STRUCTURALLY_READ_PROPERTY_NAME_LIST = Object.freeze([COMPOSITION_BRANCHES_PROPERTY_NAME, MATCHED_SITE_DESCRIPTIONS_PROPERTY_NAME, REQUIRED_FROM_COMPOSITION_PROPERTY_NAME, ENUM_LOCATOR_PROPERTY_NAME, ENUM_NAME_PROPERTY_NAME, REQUIRED_PROPERTY_NAME, BUNDLE_MEMBERSHIP_PROPERTY_NAME]);
 
-const OMITTED_KIND = Object.freeze({ OUT_OF_SCOPE_BY_DECLARATION: 'outOfScopeByDeclaration', EXCLUDED_SCHEMA: 'excludedSchema' });
+const OMITTED_KIND = Object.freeze({ OUT_OF_SCOPE_BY_DECLARATION: 'outOfScopeByDeclaration', EXCLUDED_SCHEMA: 'excludedSchema', EMPTY_VALUE_STATEMENT: 'emptyValueStatement', REPEATED_ENUM_MEMBER: 'repeatedEnumMember' });
+const REPEAT_SEGMENT_PREFIX = '@repeat';
 const OMITTED_KIND_PROPERTY_NAME = 'omittedKind';
 const omitted = (kind) => ({ explicitlyOmitted: true, [OMITTED_KIND_PROPERTY_NAME]: kind });
 
@@ -76,7 +80,9 @@ const moduleFunction =
 		if (openapiProfile.sourceLayout !== SOURCE_LAYOUT.DEREFERENCED_MULTI_FILE) {
 			throw new Error(`${moduleName} REFUSED: the profile's sourceLayout is '${openapiProfile.sourceLayout}' — this pair reads '${SOURCE_LAYOUT.DEREFERENCED_MULTI_FILE}' only`);
 		}
-		const { stableIdPrefix, sourceFileNameList, schemaExclusionList } = openapiProfile;
+		const { stableIdPrefix, sourceFileNameList, schemaExclusionList, statementOmissionDeclaration } = openapiProfile;
+		const { emptyValueKeywordList, enumMemberRepeatList } = statementOmissionDeclaration;
+		const isDeclaredRepeat = ({ enumObjectPointer, memberText }) => enumMemberRepeatList.some((oneRepeat) => oneRepeat.enumObjectPointer === enumObjectPointer && oneRepeat.memberText === memberText);
 		const keywordByPropertyNameByPosition = Object.keys(keywordRegistry.carriageByPosition).reduce((byPosition, position) => ({ ...byPosition, [position]: keywordByPropertyNameAt(position) }), {});
 		const ignoredPropertyNameList = DERIVED_PROPERTY_NAME_LIST.concat([stableUriPropertyName]);
 		const compositionConstructList = keywordRegistry.compositionConstructList;
@@ -162,6 +168,10 @@ const moduleFunction =
 					}
 					Object.keys(jsonValue).forEach((memberName) => {
 						const memberValue = jsonValue[memberName];
+						if (emptyValueKeywordList.indexOf(memberName) !== -1 && (memberValue === '' || (Array.isArray(memberValue) && memberValue.length === 0))) {
+							statements.set(`schema|${schemaName}|${pointer}/${escapedPointerSegment(memberName)}|${JSON.stringify(memberValue)}`, omitted(OMITTED_KIND.EMPTY_VALUE_STATEMENT));
+							return;
+						}
 						if (memberName === ALIGNED_KEYWORD.NAMES && Array.isArray(memberValue) && Array.isArray(jsonValue[ALIGNED_KEYWORD.MEMBERS])) {
 							memberValue.forEach((nameText, nameIndex) => statements.set(`schema|${schemaName}|${pointer}/${ALIGNED_KEYWORD.NAMES}@${JSON.stringify(jsonValue[ALIGNED_KEYWORD.MEMBERS][nameIndex])}|${JSON.stringify(nameText)}`, statementOf()));
 							return;
@@ -172,7 +182,17 @@ const moduleFunction =
 				}
 				if (Array.isArray(jsonValue)) {
 					const isSetValued = SET_VALUED_KEYWORD_LIST.indexOf(pointer.split('/').pop()) !== -1;
-					jsonValue.forEach((oneMember, memberIndex) => leafStatementsOf({ schemaName, jsonValue: oneMember, pointer: `${pointer}/${isSetValued ? SET_MEMBER_SEGMENT : memberIndex}`, statementOf }));
+					jsonValue.forEach((oneMember, memberIndex) => {
+						// a set member stated again is its own statement (a Map would fold it away): omitted if declared, else lost
+						const priorCount = isSetValued ? jsonValue.slice(0, memberIndex).filter((priorMember) => sortedJsonText(priorMember) === sortedJsonText(oneMember)).length : 0;
+						if (priorCount !== 0) {
+							const enumObjectPointer = `${schemaName}${pointer.slice(0, pointer.length - `/${ALIGNED_KEYWORD.MEMBERS}`.length)}`;
+							const isDeclared = pointer.endsWith(`/${ALIGNED_KEYWORD.MEMBERS}`) && isDeclaredRepeat({ enumObjectPointer, memberText: oneMember });
+							statements.set(`schema|${schemaName}|${pointer}/${SET_MEMBER_SEGMENT}${REPEAT_SEGMENT_PREFIX}${priorCount + 1}|${JSON.stringify(oneMember)}`, isDeclared ? omitted(OMITTED_KIND.REPEATED_ENUM_MEMBER) : statementOf());
+							return;
+						}
+						leafStatementsOf({ schemaName, jsonValue: oneMember, pointer: `${pointer}/${isSetValued ? SET_MEMBER_SEGMENT : memberIndex}`, statementOf });
+					});
 					return;
 				}
 				statements.set(`schema|${schemaName}|${pointer}|${JSON.stringify(jsonValue)}`, statementOf());
@@ -385,7 +405,9 @@ const moduleFunction =
 			caveatText:
 				'outOfScopeByDeclaration is, in EACH file, every top-level member other than components (paths, info, servers, tags, externalDocs, openapi) and every ' +
 				'components member other than schemas (responses, parameters, headers, requestBodies, …), one statement per member: the API around the data model ' +
-				'(plan Q-N3). excludedSchema is each leaf of a component the profile excludes.',
+				'(plan Q-N3). excludedSchema is each leaf of a component the profile excludes. emptyValueStatement is each empty value (\'\' or []) of a keyword ' +
+				'the profile\'s statementOmissionDeclaration.emptyValueKeywordList names: it states nothing, so nothing is carried. repeatedEnumMember is each ' +
+				'repeat of an enum member the declaration names: the member is carried once.',
 		});
 
 		const semanticValidationLimit =
@@ -394,7 +416,7 @@ const moduleFunction =
 			'description; every other leaf at its JSON pointer; enum and required compared as sets; enumNames keyed by the member each names; each component\'s files. ' +
 			'The body of a copy is not restated at its site: it is stated once, under its component. Structure is read back from the edges and node properties by ' +
 			'the dereferenced keyword registry read backwards; a node property with no reading is invented. EXPLICITLY OMITTED and listed: each file outside ' +
-			'components.schemas and any profile-excluded component. NOT modelled: member order, and derived values (names of untitled inline objects, path, ' +
+			'components.schemas, any profile-excluded component, and the empty values and enum repeats the profile\'s statementOmissionDeclaration names. NOT modelled: member order, and derived values (names of untitled inline objects, path, ' +
 			'depth, searchText, embed texts, referencedSchemaNames).';
 
 		return { canonicalizeSource, emitFromGraph, semanticValidationLimit, omissionDeclaration };

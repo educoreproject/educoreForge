@@ -1,5 +1,5 @@
 {
-	"registryNote": "lib/openapi-forge keyword registry for the dereferencedMultiFile layout (nextStandards-102326 K1, ruled 2026-10-24). DATA, the K0 registry's form: which keyword is carried at which position and under what node property name; a keyword absent from its position's table is REFUSED BY NAME. Positions: 'class' (a component that is an object/composition, a datatype component, or an inline object matching no component), 'codeList' (an enum-only component), 'site' (a property's own shape when it is neither a component copy nor an inline object), 'items' (a site's items when not a copy or inline object), 'branch' (a composition branch that is neither). A site, items or branch that EQUALS a component (canonical JSON minus its top description) is a reference and is not read against these tables. Carriages: nodeProperty (a scalar under propertyName, of valueKind; allowedValueList when given), jsonText (any JSON value, carried as a JSON string), requiredList, propertyMap, definitionMap, items, composition, enum, enumNames (aligned with the same object's enum).",
+	"registryNote": "lib/openapi-forge keyword registry for the dereferencedMultiFile layout (nextStandards-102326 K1, ruled 2026-10-24). DATA, the K0 registry's form: which keyword is carried at which position and under what node property name; a keyword absent from its position's table is REFUSED BY NAME. Positions: 'class' (a component that is an object/composition, a datatype component, or an inline object matching no component), 'codeList' (an enum-only component), 'site' (a property's own shape when it is neither a component copy nor an inline object), 'items' (a site's items when not a copy or inline object), 'branch' (a composition branch that is neither). A site, items or branch that EQUALS a component (canonical JSON minus its top description) is a reference and is not read against these tables. K1c (2026-10-24, LIF): use_recommendations (LIF's usage guidance, class and site) and example (site) are carried as strings; an EMPTY value of a keyword the profile's statementOmissionDeclaration lists is not carried and is declared omitted by the pair. Carriages: nodeProperty (a scalar under propertyName, of valueKind; allowedValueList when given), jsonText (any JSON value, carried as a JSON string), requiredList, propertyMap, definitionMap, items, composition, enum, enumNames (aligned with the same object's enum).",
 	"compositionConstructList": ["oneOf", "anyOf", "allOf"],
 	"complexKeywordList": ["properties", "allOf", "anyOf", "oneOf", "definitions"],
 	"complexTypeValueList": ["object"],
@@ -17,6 +17,7 @@
 			"exclusiveMinimum": { "carriage": "nodeProperty", "propertyName": "exclusiveMinimum", "valueKind": "booleanOrNumber" },
 			"minProperties": { "carriage": "nodeProperty", "propertyName": "minProperties", "valueKind": "integer" },
 			"hropenFormat": { "carriage": "nodeProperty", "propertyName": "hropenFormat", "valueKind": "string" },
+			"use_recommendations": { "carriage": "nodeProperty", "propertyName": "useRecommendations", "valueKind": "string" },
 			"links": { "carriage": "jsonText", "propertyName": "linkDescriptions" },
 			"additionalProperties": { "carriage": "nodeProperty", "propertyName": "additionalPropertiesAllowed", "valueKind": "boolean" },
 			"required": { "carriage": "requiredList" },
@@ -50,6 +51,8 @@
 			"exclusiveMinimum": { "carriage": "nodeProperty", "propertyName": "exclusiveMinimum", "valueKind": "booleanOrNumber" },
 			"minItems": { "carriage": "nodeProperty", "propertyName": "minItems", "valueKind": "integer" },
 			"hropenFormat": { "carriage": "nodeProperty", "propertyName": "hropenFormat", "valueKind": "string" },
+			"use_recommendations": { "carriage": "nodeProperty", "propertyName": "useRecommendations", "valueKind": "string" },
+			"example": { "carriage": "nodeProperty", "propertyName": "exampleValue", "valueKind": "string" },
 			"links": { "carriage": "jsonText", "propertyName": "linkDescriptions" },
 			"items": { "carriage": "items" },
 			"enum": { "carriage": "enum" },

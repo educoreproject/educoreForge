@@ -53,6 +53,7 @@ const profileFor = (sourceFileNameList) => Object.freeze({
 	rootStableId: 'synthk:root',
 	perStandardLabelByRole: { [DME_ROLES.CLASS]: 'SynthKSchema', [DME_ROLES.PROPERTY]: 'SynthKProperty', [DME_ROLES.OPTION_SET]: 'SynthKEnum', [DME_ROLES.OPTION_VALUE]: 'SynthKEnumValue' },
 	schemaExclusionList: [],
+	statementOmissionDeclaration: { emptyValueKeywordList: [], enumMemberRepeatList: [] },
 });
 const declarationFor = (openapiProfile) => Object.freeze({
 	standardKey: 'synthk',
@@ -328,6 +329,97 @@ REFUSAL_CASE_LIST.forEach((oneCase) => taskList.push((args, next) => {
 		next('', args);
 	});
 }));
+
+// -----------------------------------------------------------------
+// SECTION 6 — K1c (ruled 2026-10-24, LIF's real bytes): use_recommendations and example carried; the statementOmissionDeclaration
+// -----------------------------------------------------------------
+// LIF's quirks in miniature: an array-typed component with properties, '' for format / description / example / use_recommendations,
+// required: [] on an inline object, and an enum listing one member twice
+const LIF_QUIRK_DOCUMENT = Object.freeze({
+	openapi: '3.0.0',
+	info: { title: 'LifQuirks', version: '2.0', description: 'OpenAPI Spec' },
+	paths: {},
+	components: {
+		schemas: {
+			Person: {
+				type: 'array',
+				required: ['name'],
+				use_recommendations: '',
+				properties: {
+					name: { description: '', use_recommendations: 'Only use if consent has been verified.', type: 'string', example: '', format: '' },
+					email: { description: 'An email address.', use_recommendations: 'No change', type: 'string', example: 'someone@example.invalid', format: 'string' },
+					tags: { description: 'Its tags.', use_recommendations: 'No change', type: 'array', example: '', format: 'string', enum: ['Alpha', 'Image', 'Beta', 'Image'] },
+					Contact: { type: 'object', required: [], use_recommendations: 'Contact guidance.', properties: { phone: { description: 'A phone.', use_recommendations: '', type: 'string', example: '', format: '' } } },
+				},
+			},
+		},
+	},
+});
+const LIF_QUIRK_DECLARATION = Object.freeze({ emptyValueKeywordList: ['description', 'format', 'example', 'use_recommendations', 'required'], enumMemberRepeatList: [{ enumObjectPointer: 'Person/properties/tags', memberText: 'Image' }] });
+const lifQuirkCase = ({ caseName, declarationChange, documentChange }) => {
+	const documentByFileName = { 'lif-schema.json': copyOf(LIF_QUIRK_DOCUMENT) };
+	if (documentChange) {
+		documentChange(documentByFileName['lif-schema.json'].components.schemas);
+	}
+	return { caseName, documentByFileName, profileChange: { statementOmissionDeclaration: { ...LIF_QUIRK_DECLARATION, ...(declarationChange || {}) } } };
+};
+// validateWithPairOf — the forged graph validated by a pair built from ANOTHER declaration: the pair reads the profile itself, so a
+// pair that forgot a declared omission must report the statement LOST (its independence from the walk)
+const validateWithPairOf = ({ forged, caseName, statementOmissionDeclaration }, callback) => {
+	const openapiProfile = { ...profileFor(['lif-schema.json']), statementOmissionDeclaration };
+	const pair = openapiLayout.roundTripPairFor({ openapiProfile, stableUriPropertyName: STABLE_URI_PROPERTY_NAME, ruleModulePath: 'lib/openapi-forge/openapiDereferencedRoundTripPair.js' });
+	const validator = roundTripHarness.validatorFrom({ forgeDeclaration: declarationFor(openapiProfile), ...pair, verdictVersion: 'openapiDereferencedKitTestVerdict-1' });
+	const outputPath = path.join(scratchRootPath, `verdict-${caseName}`);
+	fs.mkdirSync(outputPath, { recursive: true });
+	validator.validateWithReader({ reader: roundTripHarness.graphDoubleFrom({ forgeResult: forged.forgeResult }), snapshotPath: forged.snapshotPath, outputPath }, callback);
+};
+taskList.push((args, next) => {
+	harness.section('SECTION 6 — K1c: use_recommendations and example carried; declared empties and the declared repeat omitted, by name');
+	const declaredProfile = { ...profileFor(['lif-schema.json']), statementOmissionDeclaration: LIF_QUIRK_DECLARATION };
+	harness.accepts('a dereferenced profile with a statementOmissionDeclaration validates', (() => { try { validateOpenapiProfile(declaredProfile); return []; } catch (refusedError) { return [refusedError.message]; } })());
+	const { statementOmissionDeclaration, ...withoutDeclaration } = declaredProfile;
+	const refusalTextOf = (candidateProfile) => { try { validateOpenapiProfile(candidateProfile); return []; } catch (refusedError) { return [refusedError.message]; } };
+	harness.rejects('an absent statementOmissionDeclaration is refused, never defaulted', refusalTextOf(withoutDeclaration), /required field 'statementOmissionDeclaration' is absent/);
+	harness.rejects('a declaration with an unknown member is refused', refusalTextOf({ ...declaredProfile, statementOmissionDeclaration: { ...LIF_QUIRK_DECLARATION, dropEverything: true } }), /field 'statementOmissionDeclaration' is .* not a valid statementOmissionDeclaration/);
+	harness.rejects('a repeat entry without memberText is refused', refusalTextOf({ ...declaredProfile, statementOmissionDeclaration: { ...LIF_QUIRK_DECLARATION, enumMemberRepeatList: [{ enumObjectPointer: 'Person/properties/tags' }] } }), /not a valid statementOmissionDeclaration/);
+	harness.rejects('statementOmissionDeclaration is refused under referencedSingleFile', refusalTextOf({ ...declaredProfile, sourceLayout: 'referencedSingleFile', sourceFileName: 'lif-schema.json', sourceFileNameList: undefined }), /does not belong to sourceLayout 'referencedSingleFile'/);
+	next('', args);
+});
+taskList.push((args, next) => forgeCase(lifQuirkCase({ caseName: 'lifQuirks' }), (forgeError, forged) => {
+	harness.accepts('LIF\'s quirks forge under their declaration', forgeError ? [forgeError] : []);
+	if (forgeError) {
+		next('', args);
+		return;
+	}
+	const { nodes, stats } = forged.forgeResult;
+	const nodeById = nodes.reduce((byId, oneNode) => ({ ...byId, [oneNode.stableId]: oneNode }), {});
+	harness.equal('use_recommendations is carried as useRecommendations on a property and on an inline class; a non-empty example as exampleValue', `${nodeById['synthk:Person/name'].properties.useRecommendations}|${nodeById['synthk:Person/Contact/inline'].properties.useRecommendations}|${nodeById['synthk:Person/email'].properties.exampleValue}`, 'Only use if consent has been verified.|Contact guidance.|someone@example.invalid');
+	harness.equal('a declared empty value is not carried (no description, format, exampleValue or useRecommendations property holds \'\')', nodes.filter((oneNode) => Object.values(oneNode.properties).some((propertyValue) => propertyValue === '')).map((oneNode) => oneNode.stableId).join(', '), '');
+	harness.equal('the empties are counted per keyword', sortedText(stats.emptyValueOmittedCountByKeyword), sortedText({ description: 1, format: 2, example: 3, use_recommendations: 2, required: 1 }));
+	harness.equal('the declared repeat is carried once and counted', `${nodes.filter((oneNode) => oneNode.role === DME_ROLES.OPTION_VALUE).map((oneNode) => oneNode.properties.name).join(',')}|${stats.enumMemberRepeatOmittedCount}`, 'Alpha,Image,Beta|1');
+	validateDouble({ forged, forgeResult: forged.forgeResult, caseName: 'lifQuirks' }, (validateError, verdict) => {
+		harness.equal('its round trip is clean, every declared omission in explicitlyOmittedTotal (9 empties + 1 repeat + 3 out of scope)', verdict && `${verdict.inventedTotal}|${verdict.lostTotal}|${verdict.roundTripClean}|${verdict.explicitlyOmittedTotal}`, '0|0|true|13');
+		validateWithPairOf({ forged, caseName: 'lifQuirksPairWithoutFormat', statementOmissionDeclaration: { ...LIF_QUIRK_DECLARATION, emptyValueKeywordList: ['description', 'example', 'use_recommendations', 'required'] } }, (pairError, pairVerdict) => {
+			harness.equal('the PAIR reads the declaration itself: a pair not told about format reports its two empties LOST', pairVerdict && `${pairVerdict.inventedTotal}|${pairVerdict.lostTotal}`, '0|2');
+			validateWithPairOf({ forged, caseName: 'lifQuirksPairWithoutRepeat', statementOmissionDeclaration: { ...LIF_QUIRK_DECLARATION, enumMemberRepeatList: [] } }, (repeatPairError, repeatPairVerdict) => {
+				harness.equal('a pair not told about the repeat reports it LOST (a Map does not fold it away)', repeatPairVerdict && `${repeatPairVerdict.inventedTotal}|${repeatPairVerdict.lostTotal}`, '0|1');
+				next('', args);
+			});
+		});
+	});
+}));
+const K1C_REFUSAL_CASE_LIST = [
+	{ ...lifQuirkCase({ caseName: 'emptyUndeclared', declarationChange: { emptyValueKeywordList: ['description', 'example', 'use_recommendations', 'required'] } }), refusalPattern: /'\/format' is the empty string/ },
+	{ ...lifQuirkCase({ caseName: 'emptyRequiredUndeclared', declarationChange: { emptyValueKeywordList: ['description', 'format', 'example', 'use_recommendations'] } }), refusalPattern: /'\/properties\/Contact\/required' is not a non-empty list of distinct names/ },
+	{ ...lifQuirkCase({ caseName: 'repeatUndeclared', declarationChange: { enumMemberRepeatList: [] } }), refusalPattern: /'\/enum' lists 'Image' twice — no repeat is declared for it/ },
+	{ ...lifQuirkCase({ caseName: 'staleEmptyKeyword', declarationChange: { emptyValueKeywordList: LIF_QUIRK_DECLARATION.emptyValueKeywordList.concat(['pattern']) } }), refusalPattern: /emptyValueKeywordList names 'pattern', which the source never states empty/ },
+	{ ...lifQuirkCase({ caseName: 'staleRepeat', declarationChange: { enumMemberRepeatList: LIF_QUIRK_DECLARATION.enumMemberRepeatList.concat([{ enumObjectPointer: 'Person/properties/tags', memberText: 'Beta' }]) } }), refusalPattern: /enumMemberRepeatList names 'Beta' at 'Person\/properties\/tags', which the source does not repeat there/ },
+	{ ...lifQuirkCase({ caseName: 'repeatWithEnumNames', documentChange: (schemaByName) => { schemaByName.Person.properties.tags.enumNames = ['a', 'i', 'b', 'i2']; } }), refusalPattern: /repeats a member and states enumNames/ },
+];
+K1C_REFUSAL_CASE_LIST.forEach((oneCase) => taskList.push((args, next) => forgeCase(oneCase, (forgeError) => {
+	harness.rejects(`REFUSED (K1c): ${oneCase.caseName}`, forgeError ? [forgeError] : [], oneCase.refusalPattern);
+	next('', args);
+})));
 
 pipeRunner(taskList.getList(), {}, (pipeError) => {
 	if (pipeError) {

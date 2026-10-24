@@ -26,6 +26,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // site relative to its owner: '' for a property's own shape).
 //
 // WHAT IS CARRIED is DATA: openapiDereferencedKeywordRegistry.json. A keyword not in its position's table REFUSES BY NAME.
+//
+// ⟪K1c, ruled by BRONZE_CROWN 2026-10-24 for LIF⟫ WHAT IS NOT CARRIED, BY NAME: the profile's statementOmissionDeclaration. An EMPTY value
+// ('' or []) of a keyword its emptyValueKeywordList names is skipped and counted per keyword (the pair declares it omitted); an enum member
+// its enumMemberRepeatList names for that enum's object is carried ONCE and the repeat counted. Everything else empty or repeated still
+// refuses, and a declaration the source never needed (a listed keyword never empty, a listed repeat absent) is refused as stale.
 
 const path = require('path');
 const crypto = require('crypto');
@@ -86,7 +91,9 @@ const moduleFunction =
 		if (openapiProfile.sourceLayout !== SOURCE_LAYOUT.DEREFERENCED_MULTI_FILE) {
 			throw refusal(`the profile's sourceLayout is '${openapiProfile.sourceLayout}'`, `this walk reads '${SOURCE_LAYOUT.DEREFERENCED_MULTI_FILE}' only; openapiLayout.js chooses the walk by layout`);
 		}
-		const { stableIdPrefix, perStandardLabelByRole, schemaExclusionList } = openapiProfile;
+		const { stableIdPrefix, perStandardLabelByRole, schemaExclusionList, statementOmissionDeclaration } = openapiProfile;
+		const { emptyValueKeywordList, enumMemberRepeatList } = statementOmissionDeclaration;
+		const isEmptyValue = (keywordValue) => keywordValue === '' || (Array.isArray(keywordValue) && keywordValue.length === 0);
 
 		// -----------------------------------------------------------------
 		// emitContractGraph — { loaded: the loader's payload, kit } → { nodes, edges, stats }
@@ -111,7 +118,18 @@ const moduleFunction =
 				localEnumCount: 0,
 				localEnumValueCount: 0,
 				compositionBranchCount: 0,
+				emptyValueOmittedCountByKeyword: emptyValueKeywordList.reduce((byKeyword, keywordName) => ({ ...byKeyword, [keywordName]: 0 }), {}),
+				enumMemberRepeatOmittedCount: 0,
 			};
+			// isDeclaredEmpty — an empty value the declaration names: counted here, never carried
+			const isDeclaredEmpty = ({ keywordName, keywordValue }) => {
+				if (!isEmptyValue(keywordValue) || emptyValueKeywordList.indexOf(keywordName) === -1) {
+					return false;
+				}
+				walkStats.emptyValueOmittedCountByKeyword[keywordName] += 1;
+				return true;
+			};
+			const usedRepeatTextList = [];
 
 			// -----------------------------------------------------------------
 			// 1. the union of components.schemas over the files
@@ -182,6 +200,9 @@ const moduleFunction =
 
 			// carryScalar — one nodeProperty / jsonText keyword into a sink, by its registry row
 			const carryScalar = ({ keywordName, keywordValue, carriageRow, sink, origin, locator }) => {
+				if (isDeclaredEmpty({ keywordName, keywordValue })) {
+					return;
+				}
 				if (carriageRow.carriage === 'jsonText') {
 					sink[carriageRow.propertyName] = JSON.stringify(keywordValue);
 					return;
@@ -210,16 +231,26 @@ const moduleFunction =
 				return carriageRow;
 			};
 
-			// enumOf — a checked enum (and its aligned enumNames), or a refusal
-			const enumOf = ({ shapeObject, origin, locator }) => {
-				const memberList = shapeObject.enum;
-				if (!Array.isArray(memberList) || memberList.length === 0 || !memberList.every((oneMember) => typeof oneMember === 'string' && oneMember !== '')) {
+			// enumOf — a checked enum (and its aligned enumNames), or a refusal. enumObjectPointer is '<Schema><pointer of the object holding
+			// the enum>', the key a declared repeat names (K1c)
+			const enumOf = ({ shapeObject, origin, locator, enumObjectPointer }) => {
+				const statedMemberList = shapeObject.enum;
+				if (!Array.isArray(statedMemberList) || statedMemberList.length === 0 || !statedMemberList.every((oneMember) => typeof oneMember === 'string' && oneMember !== '')) {
 					throw refusal(`${origin}: '${locator}/enum' is not a non-empty list of non-empty strings`, 'an enum member becomes an option value named by its text');
 				}
-				const repeatedMember = memberList.find((oneMember, memberIndex) => memberList.indexOf(oneMember) !== memberIndex);
-				if (repeatedMember !== undefined) {
-					throw refusal(`${origin}: '${locator}/enum' lists '${repeatedMember}' twice`, 'no repeat rule is declared for enum members');
+				const repeatIndexList = statedMemberList.map((oneMember, memberIndex) => memberIndex).filter((memberIndex) => statedMemberList.indexOf(statedMemberList[memberIndex]) !== memberIndex);
+				const undeclaredRepeatIndex = repeatIndexList.find((memberIndex) => !enumMemberRepeatList.some((oneRepeat) => oneRepeat.enumObjectPointer === enumObjectPointer && oneRepeat.memberText === statedMemberList[memberIndex]));
+				if (undeclaredRepeatIndex !== undefined) {
+					throw refusal(`${origin}: '${locator}/enum' lists '${statedMemberList[undeclaredRepeatIndex]}' twice`, `no repeat is declared for it (statementOmissionDeclaration.enumMemberRepeatList names { enumObjectPointer: '${enumObjectPointer}', memberText } to carry it once)`);
 				}
+				if (repeatIndexList.length !== 0 && shapeObject.enumNames !== undefined) {
+					throw refusal(`${origin}: '${locator}/enum' repeats a member and states enumNames`, 'enumNames[i] names enum[i]; a repeated member cannot be carried once and keep its alignment');
+				}
+				repeatIndexList.forEach((memberIndex) => {
+					usedRepeatTextList.push(JSON.stringify([enumObjectPointer, statedMemberList[memberIndex]]));
+					walkStats.enumMemberRepeatOmittedCount += 1;
+				});
+				const memberList = statedMemberList.filter((oneMember, memberIndex) => repeatIndexList.indexOf(memberIndex) === -1);
 				const enumNameList = shapeObject.enumNames;
 				if (enumNameList !== undefined && (!Array.isArray(enumNameList) || enumNameList.length !== memberList.length || !enumNameList.every((oneName) => typeof oneName === 'string' && oneName !== ''))) {
 					throw refusal(`${origin}: '${locator}/enumNames' is not a list of ${memberList.length} non-empty strings aligned with its enum`, 'enumNames[i] names enum[i]; a misaligned list cannot be carried member by member');
@@ -346,7 +377,7 @@ const moduleFunction =
 				if (branchRecordList.length !== 0) {
 					classSink[COMPOSITION_BRANCHES_PROPERTY_NAME] = JSON.stringify(branchRecordList);
 				}
-				if (shapeObject.required !== undefined) {
+				if (shapeObject.required !== undefined && !isDeclaredEmpty({ keywordName: 'required', keywordValue: shapeObject.required })) {
 					const requiredNameList = shapeObject.required;
 					if (!Array.isArray(requiredNameList) || requiredNameList.length === 0 || !requiredNameList.every((oneName) => typeof oneName === 'string') || new Set(requiredNameList).size !== requiredNameList.length) {
 						throw refusal(`${origin}: '${sitePointer}/required' is not a non-empty list of distinct names`, 'required is a non-empty string list (an empty one would be lost: absent and [] read back alike)');
@@ -424,7 +455,7 @@ const moduleFunction =
 				}
 				const propertyNameList = Object.keys(shapeObject.properties);
 				// required was checked by walkClassShape; a name a composition supplies is carried on the class
-				const requiredNameList = shapeObject.required === undefined ? [] : shapeObject.required;
+				const requiredNameList = shapeObject.required === undefined ? [] : shapeObject.required; // a declared-empty [] reads as none
 				propertyNameList.forEach((propertyName) => {
 					const siteShape = shapeObject.properties[propertyName];
 					const propertyPointer = `${sitePointer}/properties/${escapedPointerSegment(propertyName)}`;
@@ -456,7 +487,7 @@ const moduleFunction =
 							}
 						});
 						if (siteShape.enum !== undefined) {
-							enumWorkList.push({ ...enumOf({ shapeObject: siteShape, origin: propertyOrigin, locator: '' }), enumLocator: '/enum' });
+							enumWorkList.push({ ...enumOf({ shapeObject: siteShape, origin: propertyOrigin, locator: '', enumObjectPointer: propertyOrigin }), enumLocator: '/enum' });
 						} else if (siteShape.enumNames !== undefined) {
 							throw refusal(`${propertyOrigin}: enumNames without an enum`, 'enumNames names the members of an enum beside it');
 						}
@@ -483,7 +514,7 @@ const moduleFunction =
 									}
 								});
 								if (itemsShape.enum !== undefined) {
-									enumWorkList.push({ ...enumOf({ shapeObject: itemsShape, origin: propertyOrigin, locator: '/items' }), enumLocator: '/items/enum' });
+									enumWorkList.push({ ...enumOf({ shapeObject: itemsShape, origin: propertyOrigin, locator: '/items', enumObjectPointer: `${propertyOrigin}/items` }), enumLocator: '/items/enum' });
 								}
 							}
 						}
@@ -549,7 +580,7 @@ const moduleFunction =
 						carryScalar({ keywordName, keywordValue: componentShape[keywordName], carriageRow, sink: codeListSink, origin, locator: '' });
 					}
 				});
-				const { memberList, enumNameList } = enumOf({ shapeObject: componentShape, origin, locator: '' });
+				const { memberList, enumNameList } = enumOf({ shapeObject: componentShape, origin, locator: '', enumObjectPointer: schemaName });
 				const optionSetStableId = componentStableIdOf(schemaName);
 				const { description, ...codeListCarried } = codeListSink;
 				kit.makeNode({
@@ -574,6 +605,15 @@ const moduleFunction =
 				walkStats.classComponentCount += 1;
 			});
 
+			// a declaration the source never needed is stale: refused, so it cannot outlive the fault it excused
+			const staleKeywordName = emptyValueKeywordList.find((keywordName) => walkStats.emptyValueOmittedCountByKeyword[keywordName] === 0);
+			if (staleKeywordName !== undefined) {
+				throw refusal(`statementOmissionDeclaration.emptyValueKeywordList names '${staleKeywordName}', which the source never states empty`, 'a stale declaration is refused; remove it from the profile');
+			}
+			const staleRepeat = enumMemberRepeatList.find((oneRepeat) => usedRepeatTextList.indexOf(JSON.stringify([oneRepeat.enumObjectPointer, oneRepeat.memberText])) === -1);
+			if (staleRepeat !== undefined) {
+				throw refusal(`statementOmissionDeclaration.enumMemberRepeatList names '${staleRepeat.memberText}' at '${staleRepeat.enumObjectPointer}', which the source does not repeat there`, 'a stale declaration is refused; remove it from the profile');
+			}
 			Object.keys(walkStats).forEach((statName) => {
 				kit.stats[statName] = walkStats[statName];
 			});

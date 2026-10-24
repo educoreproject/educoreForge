@@ -13,6 +13,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // The fields each layout requires are DATA (FIELD_NAME_LIST_BY_LAYOUT), not a branch.
 //
 // sourceFormat is a closed list. 'yaml' is refused by its own name (ruled 2026-10-23): CASE's lane adds the reader with its own twin.
+//
+// statementOmissionDeclaration (K1c, ruled by BRONZE_CROWN 2026-10-24 for LIF; dereferencedMultiFile only) names, BY NAME, the source
+// statements the walk does not carry and the pair declares omitted, so they reach explicitlyOmittedTotal and never lostTotal:
+//   emptyValueKeywordList  keywords whose EMPTY value ('' , or [] for a list) states nothing. An empty value of an unlisted keyword is
+//                          still refused; a listed keyword the source never states empty is refused as stale.
+//   enumMemberRepeatList   { enumObjectPointer: '<Schema><JSON pointer of the object holding the enum>', memberText }: one enum member the
+//                          source lists twice, carried once. An unlisted repeat is still refused; a listed one the source lacks is stale.
+// Both lists may be empty (JEDx states none); the field itself is required, so no bundle is silently given an empty declaration.
 
 const path = require('path');
 const { DME_ROLES } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
@@ -35,6 +43,15 @@ const KIND_CHECK_BY_KIND = Object.freeze({
 	stableIdPrefix: (candidate) => typeof candidate === 'string' && STABLE_ID_PREFIX_PATTERN.test(candidate),
 	sourceFormat: (candidate) => READABLE_SOURCE_FORMAT_LIST.indexOf(candidate) !== -1,
 	sourceLayout: (candidate) => SOURCE_LAYOUT_LIST.indexOf(candidate) !== -1,
+	statementOmissionDeclaration: (candidate) => isPlainObject(candidate)
+		&& JSON.stringify(Object.keys(candidate).sort()) === JSON.stringify(['emptyValueKeywordList', 'enumMemberRepeatList'])
+		&& isStringList(candidate.emptyValueKeywordList) && new Set(candidate.emptyValueKeywordList).size === candidate.emptyValueKeywordList.length
+		&& Array.isArray(candidate.enumMemberRepeatList)
+		&& candidate.enumMemberRepeatList.every((oneRepeat) => isPlainObject(oneRepeat)
+			&& JSON.stringify(Object.keys(oneRepeat).sort()) === JSON.stringify(['enumObjectPointer', 'memberText'])
+			&& typeof oneRepeat.enumObjectPointer === 'string' && oneRepeat.enumObjectPointer.length > 0
+			&& typeof oneRepeat.memberText === 'string' && oneRepeat.memberText.length > 0)
+		&& new Set(candidate.enumMemberRepeatList.map((oneRepeat) => JSON.stringify([oneRepeat.enumObjectPointer, oneRepeat.memberText]))).size === candidate.enumMemberRepeatList.length,
 	perStandardLabelByRole: (candidate) => isPlainObject(candidate)
 		&& JSON.stringify(Object.keys(candidate).sort()) === JSON.stringify(LABELLED_ROLE_LIST.slice().sort())
 		&& Object.values(candidate).every((oneLabel) => typeof oneLabel === 'string' && /^[A-Z][A-Za-z0-9]*$/.test(oneLabel)),
@@ -50,11 +67,12 @@ const OPENAPI_PROFILE_FIELD_KIND = Object.freeze({
 	rootStableId: 'nonEmptyString',
 	perStandardLabelByRole: 'perStandardLabelByRole',
 	schemaExclusionList: 'stringList',
+	statementOmissionDeclaration: 'statementOmissionDeclaration',
 });
 const COMMON_FIELD_NAME_LIST = Object.freeze(['profileNote', 'sourceLayout', 'sourceFormat', 'stableIdPrefix', 'rootStableId', 'perStandardLabelByRole', 'schemaExclusionList']);
 const FIELD_NAME_LIST_BY_LAYOUT = Object.freeze({
 	[SOURCE_LAYOUT.REFERENCED_SINGLE_FILE]: Object.freeze(COMMON_FIELD_NAME_LIST.concat(['sourceFileName'])),
-	[SOURCE_LAYOUT.DEREFERENCED_MULTI_FILE]: Object.freeze(COMMON_FIELD_NAME_LIST.concat(['sourceFileNameList'])),
+	[SOURCE_LAYOUT.DEREFERENCED_MULTI_FILE]: Object.freeze(COMMON_FIELD_NAME_LIST.concat(['sourceFileNameList', 'statementOmissionDeclaration'])),
 });
 
 const refused = (what) => new Error(`${moduleName} REFUSED: ${what} — the openapi profile is the kit's whole seam; see lib/openapi-forge/openapiProfileContract.js`);
