@@ -1,0 +1,33 @@
+{
+	"about": "The edc: URI scheme (mappingLayers ML1-a, ruled by BRONZE_CROWN 2026-10-24). Kinds are DATA: edcUri.js mints and parses only the kinds listed here, and an unlisted kind is refused by name. A template is '/'-separated segments after baseIri; a segment is literal text and {placeholders}. Every placeholder value is encoded by segmentEncoding unless the kind lists it under verbatimPartList (a part copied from an already-minted URI, whose spelling another module owns). A published URI is never respelled; a scheme change is a new prefix segment (D-URI). Nothing here is published yet (w3id ruled NO public registration; a local stub resolves).",
+	"schemeVersion": "edc-uri-1",
+	"baseIri": "https://w3id.org/EDUcore/",
+	"curiePrefix": "edc",
+	"segmentEncoding": {
+		"about": "UTF-8 after NFC; each byte whose ASCII character is in literalCharacterList is kept, every other byte becomes %XX with uppercase hex. '/', '@', '%', space and ',' are therefore always encoded inside a value.",
+		"literalCharacterList": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:",
+		"forbiddenSegmentTextList": ["", ".", ".."]
+	},
+	"absoluteIriPrefixList": ["https://", "http://"],
+	"predicatePrefixExpansion": {
+		"skos": "http://www.w3.org/2004/02/skos/core#",
+		"owl": "http://www.w3.org/2002/07/owl#"
+	},
+	"kindList": [
+		{ "kind": "meaning", "template": "{hubSegment}/hub/{hubReleaseSegment}/{addressSignature}", "verbatimPartList": ["hubSegment", "hubReleaseSegment"], "about": "a HubReference card (exists; minted by the hub framework as namespace + release segment + '/' + addressSignature)" },
+		{ "kind": "element", "template": "{standardName}/{standardVersion}/{elementStableId}", "verbatimPartList": [], "about": "a standard's slot; standardName is the _source name the graph stamps on every node and edge" },
+		{ "kind": "layer", "template": "layer/{layerKey}", "verbatimPartList": [], "about": "a mapping layer, floating: resolves to its current Standard version" },
+		{ "kind": "layerVersion", "template": "layer/{layerKey}/{versionTag}", "verbatimPartList": [], "about": "a layer version by its tag (an alias the registry records; never reassigned)" },
+		{ "kind": "layerVersionByContent", "template": "layer/{layerKey}/sha256/{contentId}", "verbatimPartList": [], "about": "a layer version by its content id" },
+		{ "kind": "assertion", "template": "assertion/{decisionBlockHash}/{assertionHash}", "verbatimPartList": [], "about": "one mapping assertion, scoped by the decision block that holds it (R-1)" },
+		{ "kind": "interpretationPinned", "template": "{standardName}/{standardVersion}/{elementStableId}@{layerKey}/{versionTag}", "verbatimPartList": [], "about": "element x layer version" },
+		{ "kind": "interpretationFloating", "template": "{standardName}/{standardVersion}/{elementStableId}@{layerKey}", "verbatimPartList": [], "about": "element x layer, follows the layer" },
+		{ "kind": "manifest", "template": "manifest/{publicLabel}", "verbatimPartList": [], "about": "a published manifest by its label (an alias)" },
+		{ "kind": "manifestByContent", "template": "manifest/sha256/{manifestRefId}", "verbatimPartList": [], "about": "a manifest by its membership hash" },
+		{ "kind": "question", "template": "manifest/{publicLabel}/q/{standardName}/{elementStableId}", "verbatimPartList": [], "about": "manifest x element, answered by the manifest's default layer for every hub" },
+		{ "kind": "questionForHub", "template": "manifest/{publicLabel}/q/{standardName}/{elementStableId}/{hubSegment}", "verbatimPartList": ["hubSegment"], "about": "manifest x element x hub" },
+		{ "kind": "agentPerson", "template": "agent/{userRefId}", "verbatimPartList": [], "about": "a person, by educore user refId, never the username (D-AUTHOR)" },
+		{ "kind": "agentJudge", "template": "agent/judge/{judgeIdentity}", "verbatimPartList": [], "about": "a machine author, by its judge identity" },
+		{ "kind": "agentOrganisation", "template": "agent/org/{organisationSlug}", "verbatimPartList": [], "about": "an organisation" }
+	]
+}

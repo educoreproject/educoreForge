@@ -1,0 +1,958 @@
+{
+	"about": "REAL values read from a running graph by captureGoldUriFixture.js (lane M, ML1 G-URI). Regenerate with the tool; never hand-edit.",
+	"capturedFrom": {
+		"containerName": "GOLD_EVAL_261023_zeroBacklog",
+		"boltUrl": "bolt://localhost:7813",
+		"capturedAt": "2026-10-24T05:39:57.746Z",
+		"manifestRefId": "3587a17c9b393d3ee203d891b313e3253925a7442c70030a31be2721cdfe1483"
+	},
+	"meaningList": [
+		{
+			"hubName": "CEDS",
+			"namespace": "https://w3id.org/EDUcore/CEDStandards/hub/",
+			"hubVersion": "14.0.0.0",
+			"addressSignature": "000039bfcc4d28b301e45c367ab73c7e6659edb5f47f94cbc8931d9297314aa4",
+			"uri": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/000039bfcc4d28b301e45c367ab73c7e6659edb5f47f94cbc8931d9297314aa4"
+		},
+		{
+			"hubName": "CTDL",
+			"namespace": "https://w3id.org/EDUcore/CTDL/hub/",
+			"hubVersion": "Release 20260927",
+			"addressSignature": "00084cddf2b9ff80cf83401ac9cc9b270e406087fc263cf27cce28e0feefce1f",
+			"uri": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/00084cddf2b9ff80cf83401ac9cc9b270e406087fc263cf27cce28e0feefce1f"
+		}
+	],
+	"edgeClassList": [
+		{
+			"subjectSource": "CTDL",
+			"edgeType": "DECLARED_CORRESPONDENCE",
+			"isFanOut": false,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "Release 20260927",
+				"objectStableId": "https://w3id.org/CEDStandards/terms/NI000113115284",
+				"objectSource": "CEDS",
+				"subjectStableId": "financialAid:AcademicAssistantship",
+				"subjectSource": "CTDL",
+				"decisionBlockHash": "8fd3fa5db920088d86a3bb9b51f56103d32a504b78f5d681dd17f934a9c77353",
+				"predicateCurie": "owl:equivalentClass",
+				"matchId": "a08179b7153848f5c31f7a72f18d6c0e8faf479477eeb99c22207b7a3d8cfb63"
+			}
+		},
+		{
+			"subjectSource": "CTDLASN",
+			"edgeType": "DECLARED_CORRESPONDENCE",
+			"isFanOut": false,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "20260626",
+				"objectStableId": "ceterms:codedNotation",
+				"objectSource": "CTDL",
+				"subjectStableId": "ceasn:codedNotation",
+				"subjectSource": "CTDLASN",
+				"decisionBlockHash": "ef4689d893ac21b0029c053bc28ee7cfc72b937cc0cfa66fc97be58280674961",
+				"predicateCurie": "owl:equivalentProperty",
+				"matchId": "4d4a53e9478fe7e21d832cba86c32e6ac0d934660a7e702a95d7e4cd82bacb86"
+			}
+		},
+		{
+			"subjectSource": "EdFi",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": false,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "5.2.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/f00d6fb737ea381b78e65547bab577895458ddc764479c406175334d3c475eca",
+				"objectSource": "CEDS",
+				"subjectStableId": "edfi:property/abstractEntity.EducationOrganization.Address",
+				"subjectSource": "EdFi",
+				"decisionBlockHash": "1a1e9d161672c044778dbd92862263ea9b1a852109b8e65ff969d2699291e583",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "b1922f1f1c1f29c2d15dfb90311f2175c822ecbf47388da6679ce3f5a8fb85e3"
+			}
+		},
+		{
+			"subjectSource": "EdFi",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": false,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "5.2.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/5bc8e06a306ecaeb67efbcb90d64c3ed1c7272d2f867bd4836098f1024243be6",
+				"objectSource": "CTDL",
+				"subjectStableId": "edfi:property/abstractEntity.EducationOrganization.NameOfInstitution",
+				"subjectSource": "EdFi",
+				"decisionBlockHash": "af79edefbe26b5543bc008192f49a4704484c940bc3645cbe94c01f40a278fe3",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "e0518180a25ee617e75c822048d9925973f65d841399f63bc794693c2f2ecf68"
+			}
+		},
+		{
+			"subjectSource": "EdFi",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": false,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "5.2.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/99b1ffc275e8c02b5fe25db3b006bfe3d5f11f9acfc70bb631ba0ad9a5c698e9",
+				"objectSource": "CEDS",
+				"subjectStableId": "edfi:property/abstractEntity.EducationOrganization.NameOfInstitution",
+				"subjectSource": "EdFi",
+				"decisionBlockHash": "1a1e9d161672c044778dbd92862263ea9b1a852109b8e65ff969d2699291e583",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "a3b346f793f716e9ae2a0b90fe04ecc551c21edc9ea6af44ca75d893acf370a8"
+			}
+		},
+		{
+			"subjectSource": "EdFi",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": false,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "5.2.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/e63f2b15527cf0379aecf25016c8cbfb755ab529b2bade726b3c82dbe659618b",
+				"objectSource": "CEDS",
+				"subjectStableId": "edfi:property/abstractEntity.EducationOrganization.EducationOrganizationCategory",
+				"subjectSource": "EdFi",
+				"decisionBlockHash": "1a1e9d161672c044778dbd92862263ea9b1a852109b8e65ff969d2699291e583",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "2a7a426598edf33a123a78549951854ba94aad4572943d3ad1c706760a20ead0"
+			}
+		},
+		{
+			"subjectSource": "PESC-AcademicEportfolio-1.0.0",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/4327771839cec8095426d2b0f4b196cb59b46ecc8a76082e6974613f26c377ae",
+				"objectSource": "CTDL",
+				"subjectStableId": "pescacademiceportfolio1v0v0:group/urn:org:pesc:core:CoreMain:v1.16.0#AcademicProgramCodeGroup/el/3:ProgramHEGISCode/at/AcademicEPortfolio/Education/ApplicationForAdmission/Applicant/Application/ApplicationDetail/ApplicationDegreeProgram/ProgramHEGISCode",
+				"subjectSource": "PESC-AcademicEportfolio-1.0.0",
+				"decisionBlockHash": "faa48e3965fd5a9c2e7725c1ddcc3613f06ab4ad4c901d85dddded0f12a591c4",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "70f5f4a4cbb1deafd26d90a296938fb416d23bb6f6d1eba90e8bdb24a8e8207d"
+			}
+		},
+		{
+			"subjectSource": "PESC-AcademicEportfolio-1.0.0",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/bebeaa38ca66d7ec7825950e0d61d00186be65e3d7a17e938d2f7b7ca6562577",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescacademiceportfolio1v0v0:group/urn:org:pesc:core:CoreMain:v1.16.0#AcademicProgramCodeGroup/el/2:ProgramCIPCode/at/AcademicEPortfolio/Education/ApplicationForAdmission/Applicant/Application/ApplicationDetail/ApplicationDegreeProgram/ProgramCIPCode",
+				"subjectSource": "PESC-AcademicEportfolio-1.0.0",
+				"decisionBlockHash": "255e62eac1bd497d20032a310c2ec9ccc4ee7416052eecdefb7eec0271759b69",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "2533d5e2258161472d1690df39362983a028b7e9addfcdb7d812c3c977857f40"
+			}
+		},
+		{
+			"subjectSource": "PESC-AcademicEportfolio-1.0.0",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/bebeaa38ca66d7ec7825950e0d61d00186be65e3d7a17e938d2f7b7ca6562577",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescacademiceportfolio1v0v0:group/urn:org:pesc:core:CoreMain:v1.16.0#AcademicProgramCodeGroup/el/3:ProgramHEGISCode/at/AcademicEPortfolio/Education/ApplicationForAdmission/Applicant/Application/ApplicationDetail/ApplicationDegreeProgram/ProgramHEGISCode",
+				"subjectSource": "PESC-AcademicEportfolio-1.0.0",
+				"decisionBlockHash": "255e62eac1bd497d20032a310c2ec9ccc4ee7416052eecdefb7eec0271759b69",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "29a7ea279b31a725001e634ecbbdd2019933cb535fdd112165deb5747bdfdacf"
+			}
+		},
+		{
+			"subjectSource": "PESC-AcademicEportfolio-1.0.0",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/bebeaa38ca66d7ec7825950e0d61d00186be65e3d7a17e938d2f7b7ca6562577",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescacademiceportfolio1v0v0:group/urn:org:pesc:core:CoreMain:v1.16.0#AcademicProgramCodeGroup/el/7:ProgramLocalCode/at/AcademicEPortfolio/Education/CollegeTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramLocalCode",
+				"subjectSource": "PESC-AcademicEportfolio-1.0.0",
+				"decisionBlockHash": "255e62eac1bd497d20032a310c2ec9ccc4ee7416052eecdefb7eec0271759b69",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "6288fd756674bd860d9c5e232edabafee5e0eb61ab23eb96404d9718f63cd62e"
+			}
+		},
+		{
+			"subjectSource": "PESC-CollegeTranscript-1.7.0",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.7.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/4327771839cec8095426d2b0f4b196cb59b46ecc8a76082e6974613f26c377ae",
+				"objectSource": "CTDL",
+				"subjectStableId": "pesccollegetranscript1v7v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/5:ProgramUSISCode/at/CollegeTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramUSISCode",
+				"subjectSource": "PESC-CollegeTranscript-1.7.0",
+				"decisionBlockHash": "0c45cf0d645d9fc153606c1ae1199632c78b23d746fe2934332153e632452002",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "9c197742ef10691b59f2176e02f72fc030755839047c80519a6420c8f0c756e9"
+			}
+		},
+		{
+			"subjectSource": "PESC-CollegeTranscript-1.7.0",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.7.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/bfed306e9e7a097574b86242f3d20758ff03c212866ddc3a308dc282a5ea5751",
+				"objectSource": "CTDL",
+				"subjectStableId": "pesccollegetranscript1v7v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/1:ProgramSecondarySchoolCode/at/CollegeTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramSecondarySchoolCode",
+				"subjectSource": "PESC-CollegeTranscript-1.7.0",
+				"decisionBlockHash": "0c45cf0d645d9fc153606c1ae1199632c78b23d746fe2934332153e632452002",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "2be56cd5f8f992fe59d96f2c183efcdee67682b687848b13bab5381302f64595"
+			}
+		},
+		{
+			"subjectSource": "PESC-CollegeTranscript-1.7.0",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.7.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/bebeaa38ca66d7ec7825950e0d61d00186be65e3d7a17e938d2f7b7ca6562577",
+				"objectSource": "CEDS",
+				"subjectStableId": "pesccollegetranscript1v7v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/2:ProgramCIPCode/at/CollegeTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramCIPCode",
+				"subjectSource": "PESC-CollegeTranscript-1.7.0",
+				"decisionBlockHash": "86068c724035fbaa21b540b7c31da3bf793e63e2927d45de30974269568c4e3a",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "b468e61b620fea90ca4bd8042c20d6b375abc7dd09869bef8ebb707e2ae68212"
+			}
+		},
+		{
+			"subjectSource": "PESC-CollegeTranscript-1.7.0",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.7.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/e4134c5e4184c8eaf49aca6359bcb98b09046276c74b59c9e0baed7a6f391d4f",
+				"objectSource": "CEDS",
+				"subjectStableId": "pesccollegetranscript1v7v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/1:ProgramSecondarySchoolCode/at/CollegeTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramSecondarySchoolCode",
+				"subjectSource": "PESC-CollegeTranscript-1.7.0",
+				"decisionBlockHash": "86068c724035fbaa21b540b7c31da3bf793e63e2927d45de30974269568c4e3a",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "b930a818f49907d76bec6a88c043b933962eac770f6b25dbd1effb534f5892cc"
+			}
+		},
+		{
+			"subjectSource": "PESC-CollegeTranscript-1.8.0",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.8.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/4327771839cec8095426d2b0f4b196cb59b46ecc8a76082e6974613f26c377ae",
+				"objectSource": "CTDL",
+				"subjectStableId": "pesccollegetranscript1v8v0:group/urn:org:pesc:core:CoreMain:v1.19.0#AcademicProgramCodeGroup/el/5:ProgramUSISCode/at/CollegeTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramUSISCode",
+				"subjectSource": "PESC-CollegeTranscript-1.8.0",
+				"decisionBlockHash": "56d2d9decf04ed78fbe246ecbbc8de2882125ef78deb95fb5c9368d539eba83d",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "4c418fff2b6caadaf07a5e0e27a1380cc2660fa99afd06b0403b0bb3116f5b12"
+			}
+		},
+		{
+			"subjectSource": "PESC-CollegeTranscript-1.8.0",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.8.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/bfed306e9e7a097574b86242f3d20758ff03c212866ddc3a308dc282a5ea5751",
+				"objectSource": "CTDL",
+				"subjectStableId": "pesccollegetranscript1v8v0:group/urn:org:pesc:core:CoreMain:v1.19.0#AcademicProgramCodeGroup/el/1:ProgramSecondarySchoolCode/at/CollegeTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramSecondarySchoolCode",
+				"subjectSource": "PESC-CollegeTranscript-1.8.0",
+				"decisionBlockHash": "56d2d9decf04ed78fbe246ecbbc8de2882125ef78deb95fb5c9368d539eba83d",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "002f4f6c4b28e44ff71270e2b9c2b1a6725e5350671415a66108472fb24a9906"
+			}
+		},
+		{
+			"subjectSource": "PESC-CollegeTranscript-1.8.0",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.8.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/bebeaa38ca66d7ec7825950e0d61d00186be65e3d7a17e938d2f7b7ca6562577",
+				"objectSource": "CEDS",
+				"subjectStableId": "pesccollegetranscript1v8v0:group/urn:org:pesc:core:CoreMain:v1.19.0#AcademicProgramCodeGroup/el/2:ProgramCIPCode/at/CollegeTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramCIPCode",
+				"subjectSource": "PESC-CollegeTranscript-1.8.0",
+				"decisionBlockHash": "b79fb08e6837d17edf351996f890db508dbb84920baa5b2ebd9c2e1cb357aa47",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "bb4cace82cb767eecf61f4c6270ae2e59aea0480555f79ab2057eaf62ebbd7c7"
+			}
+		},
+		{
+			"subjectSource": "PESC-CollegeTranscript-1.8.0",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.8.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/e4134c5e4184c8eaf49aca6359bcb98b09046276c74b59c9e0baed7a6f391d4f",
+				"objectSource": "CEDS",
+				"subjectStableId": "pesccollegetranscript1v8v0:group/urn:org:pesc:core:CoreMain:v1.19.0#AcademicProgramCodeGroup/el/1:ProgramSecondarySchoolCode/at/CollegeTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramSecondarySchoolCode",
+				"subjectSource": "PESC-CollegeTranscript-1.8.0",
+				"decisionBlockHash": "b79fb08e6837d17edf351996f890db508dbb84920baa5b2ebd9c2e1cb357aa47",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "6f90923bd882011a7e9acdf9a9f2d11f2619af42e5229a4fb2863b94e5ce2ed2"
+			}
+		},
+		{
+			"subjectSource": "PESC-DocumentRequest-1.0.0",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/b0d7b1e4e5aa9f43d2bf1684bdda13e92c63d466da177f201f939932bd509d9c",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescdocumentrequest1v0v0:group/urn:org:pesc:core:CoreMain:v1.19.1#OrganizationIDMultiChoiceGroup/el/17:GEOCode/at/DocumentRequest/RequestDetails/DocumentRecipient/Receiver/Person/HighSchool/GEOCode",
+				"subjectSource": "PESC-DocumentRequest-1.0.0",
+				"decisionBlockHash": "3948d639a2a8386ef95e0a42e9cd2c10e4810e2a4657f081706a8cc378e92566",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "7e4f0faaaf19e0eab59c266d3c5628d8a0c0116456fde0e55ee481f4cc3922dd"
+			}
+		},
+		{
+			"subjectSource": "PESC-DocumentRequest-1.0.0",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/e11f9a70bf818438e4300058258c6bbd4d69550e1b6714e615808c47748998bf",
+				"objectSource": "CTDL",
+				"subjectStableId": "pescdocumentrequest1v0v0:group/urn:org:pesc:core:CoreMain:v1.19.1#CommonAddressDetailsGroup/el/2:City/at/DocumentRequest/RequestDetails/DocumentRecipient/Receiver/Person/Contacts/Address/City",
+				"subjectSource": "PESC-DocumentRequest-1.0.0",
+				"decisionBlockHash": "58367bbc5e10cff9cdeedb44e6443426b8063ff8294111778a9ccab328f90204",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "dc0b21b03f7d07fc6a15a937eb40842fdf4bde1ba4dfb133b827d1c2d5ab9fa7"
+			}
+		},
+		{
+			"subjectSource": "PESC-DocumentRequest-1.0.0",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescdocumentrequest1v0v0:group/urn:org:pesc:core:CoreMain:v1.19.1#CommonAddressDetailsGroup/el/2:City/at/DocumentRequest/RequestDetails/DocumentRecipient/Receiver/Person/Contacts/Address/City",
+				"subjectSource": "PESC-DocumentRequest-1.0.0",
+				"decisionBlockHash": "3948d639a2a8386ef95e0a42e9cd2c10e4810e2a4657f081706a8cc378e92566",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "eacdf21a439703420791ff1dc1b316a9e772bd277d18266198372ac0415bd95b"
+			}
+		},
+		{
+			"subjectSource": "PESC-DocumentRequest-1.0.0",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/c0e66b35a172b5750e287a52773e1fedbdd2c429201cf2e800587eb337d5cbbb",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescdocumentrequest1v0v0:group/urn:org:pesc:core:CoreMain:v1.19.1#CommonAddressDetailsGroup/el/1:AddressLine/at/DocumentRequest/RequestDetails/DocumentRecipient/Receiver/Person/Contacts/Address/AddressLine",
+				"subjectSource": "PESC-DocumentRequest-1.0.0",
+				"decisionBlockHash": "3948d639a2a8386ef95e0a42e9cd2c10e4810e2a4657f081706a8cc378e92566",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "4c9510a168b46d73f3946d2efe380bcb527ee38382a80e9d493156bd50552d04"
+			}
+		},
+		{
+			"subjectSource": "PESC-DocumentResponse-1.0.0",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/2b09fee4f42a20a4d9bc934af1faa2f04cb4d7a5f21df3ae5d5ef158b30c92dc",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescdocumentresponse1v0v0:group/urn:org:pesc:core:CoreMain:v1.19.1#OrganizationIDMultiChoiceGroup/el/16:APAS/at/DocumentResponse/ResponseDetails/RequestedStudent/Attendance/School/APAS",
+				"subjectSource": "PESC-DocumentResponse-1.0.0",
+				"decisionBlockHash": "bfbc5fa2cb3d4e9f57227b04bcbed39dc8f5391b4579fe587d1953169fd90768",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "2e784ca36f2b96de4b753efb0cfbd0744889c9d5294bb77306fb93503dd132ae"
+			}
+		},
+		{
+			"subjectSource": "PESC-DocumentResponse-1.0.0",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/dbe324868e56654b679c18e91500f4106cc6ec549b3221492476e4ed4300ac7d",
+				"objectSource": "CTDL",
+				"subjectStableId": "pescdocumentresponse1v0v0:group/urn:org:pesc:core:CoreMain:v1.19.1#CommonAddressDetailsGroup/el/2:City/at/DocumentResponse/ResponseDetails/Receiver/Person/Contacts/Address/City",
+				"subjectSource": "PESC-DocumentResponse-1.0.0",
+				"decisionBlockHash": "8de1cceb95eadebc1f823b8ae83db948c8b223895451bb3faca099a2fa72a591",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "caf67d3214c906e6b307ef62099c0bf606fd1d54ebae7a9f863712d4c273d787"
+			}
+		},
+		{
+			"subjectSource": "PESC-DocumentResponse-1.0.0",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescdocumentresponse1v0v0:group/urn:org:pesc:core:CoreMain:v1.19.1#CommonAddressDetailsGroup/el/2:City/at/DocumentResponse/ResponseDetails/Receiver/Person/Contacts/Address/City",
+				"subjectSource": "PESC-DocumentResponse-1.0.0",
+				"decisionBlockHash": "bfbc5fa2cb3d4e9f57227b04bcbed39dc8f5391b4579fe587d1953169fd90768",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "0d756e78ab420cb740836dfa8b047213197a11ab9d859533f49f562cb9804904"
+			}
+		},
+		{
+			"subjectSource": "PESC-DocumentResponse-1.0.0",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/7882e591462612d0d5c883facf0665bd3333b2f9d9247eaa10ed852b4b4a079a",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescdocumentresponse1v0v0:element/urn:org:pesc:message:DocumentResponse:v1.0.0#DocumentResponse/anon/el/2:ResponseDetails/at/DocumentResponse/ResponseDetails",
+				"subjectSource": "PESC-DocumentResponse-1.0.0",
+				"decisionBlockHash": "bfbc5fa2cb3d4e9f57227b04bcbed39dc8f5391b4579fe587d1953169fd90768",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "237ae474bbf4986daffe7ad031e476db89e0bc54c9c48bd383fc130803f2c76c"
+			}
+		},
+		{
+			"subjectSource": "PESC-HighSchoolTranscript-1.6.0",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.6.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/4327771839cec8095426d2b0f4b196cb59b46ecc8a76082e6974613f26c377ae",
+				"objectSource": "CTDL",
+				"subjectStableId": "peschighschooltranscript1v6v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/4:ProgramCSISCode/at/HighSchoolTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramCSISCode",
+				"subjectSource": "PESC-HighSchoolTranscript-1.6.0",
+				"decisionBlockHash": "cd642538f1c0fb10309429655e865372be088c0e9d7bce446f323cb1392f5f60",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "175972a5b8bedec3a48df6fcef3ed797af1a33b3cf31f06e8cd658abb218ee08"
+			}
+		},
+		{
+			"subjectSource": "PESC-HighSchoolTranscript-1.6.0",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.6.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/bfed306e9e7a097574b86242f3d20758ff03c212866ddc3a308dc282a5ea5751",
+				"objectSource": "CTDL",
+				"subjectStableId": "peschighschooltranscript1v6v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/1:ProgramSecondarySchoolCode/at/HighSchoolTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramSecondarySchoolCode",
+				"subjectSource": "PESC-HighSchoolTranscript-1.6.0",
+				"decisionBlockHash": "cd642538f1c0fb10309429655e865372be088c0e9d7bce446f323cb1392f5f60",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "aa167d5b80cb682262a07acf59fac328e138260676ba7e1f01dfa514727ebbf9"
+			}
+		},
+		{
+			"subjectSource": "PESC-HighSchoolTranscript-1.6.0",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.6.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/07ebdfab0910a8401238c1be8670891e953b6104fecb04d5a94475014f197c2a",
+				"objectSource": "CEDS",
+				"subjectStableId": "peschighschooltranscript1v6v0:group/urn:org:pesc:core:CoreMain:v1.17.0#CommonAddressDetailsGroup/el/2:City/at/HighSchoolTranscript/Student/AcademicRecord/AcademicSession/Course/CourseOverrideSchool/Contacts/Address/City",
+				"subjectSource": "PESC-HighSchoolTranscript-1.6.0",
+				"decisionBlockHash": "d3d5d15c03f60269a3c15e512c04fb35a11ee7ad23ade7c48c7d61b0087c788b",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "e6eb2d8e8350163b7d10681965e0a978ddfe111f3e4f897fbd34177a908b3a00"
+			}
+		},
+		{
+			"subjectSource": "PESC-HighSchoolTranscript-1.6.0",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.6.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/e4134c5e4184c8eaf49aca6359bcb98b09046276c74b59c9e0baed7a6f391d4f",
+				"objectSource": "CEDS",
+				"subjectStableId": "peschighschooltranscript1v6v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/1:ProgramSecondarySchoolCode/at/HighSchoolTranscript/Student/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramSecondarySchoolCode",
+				"subjectSource": "PESC-HighSchoolTranscript-1.6.0",
+				"decisionBlockHash": "d3d5d15c03f60269a3c15e512c04fb35a11ee7ad23ade7c48c7d61b0087c788b",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "6e2c18ccbe2d4a1dd8549b53540ee05c595a197932ebfcf0598392aa867a13e0"
+			}
+		},
+		{
+			"subjectSource": "PESC-LearningRecord-1.0.0",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/4327771839cec8095426d2b0f4b196cb59b46ecc8a76082e6974613f26c377ae",
+				"objectSource": "CTDL",
+				"subjectStableId": "pesclearningrecord1v0v0:group/urn:org:pesc:core:CoreMain:v1.18.0#AcademicProgramCodeGroup/el/3:ProgramHEGISCode/at/LearningRecord/DocumentProduction/AcademicAward/AcademicAwardProgram/ProgramHEGISCode",
+				"subjectSource": "PESC-LearningRecord-1.0.0",
+				"decisionBlockHash": "b3b3b65916e453e4bb4171241fff7d1508a5521500b81cd081f010be507aa67d",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "0478f01e50f055a0f023b10499efa21adeb13b81fdf8b00839e82051f5710505"
+			}
+		},
+		{
+			"subjectSource": "PESC-LearningRecord-1.0.0",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/bfed306e9e7a097574b86242f3d20758ff03c212866ddc3a308dc282a5ea5751",
+				"objectSource": "CTDL",
+				"subjectStableId": "pesclearningrecord1v0v0:group/urn:org:pesc:core:CoreMain:v1.18.0#AcademicProgramCodeGroup/el/1:ProgramSecondarySchoolCode/at/LearningRecord/DocumentProduction/AcademicAward/AcademicAwardProgram/ProgramSecondarySchoolCode",
+				"subjectSource": "PESC-LearningRecord-1.0.0",
+				"decisionBlockHash": "b3b3b65916e453e4bb4171241fff7d1508a5521500b81cd081f010be507aa67d",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "8595b9a97978c27d68866466559fd1b891f6c07c137fb7be4e4441e5ecef43d9"
+			}
+		},
+		{
+			"subjectSource": "PESC-LearningRecord-1.0.0",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/bebeaa38ca66d7ec7825950e0d61d00186be65e3d7a17e938d2f7b7ca6562577",
+				"objectSource": "CEDS",
+				"subjectStableId": "pesclearningrecord1v0v0:group/urn:org:pesc:core:CoreMain:v1.18.0#AcademicProgramCodeGroup/el/2:ProgramCIPCode/at/LearningRecord/DocumentProduction/AcademicAward/AcademicAwardProgram/ProgramCIPCode",
+				"subjectSource": "PESC-LearningRecord-1.0.0",
+				"decisionBlockHash": "a3d17cf80014689b6868fd919693445e3f21e9da3781ff876ff70e3e7eda2543",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "4df3ffbf02d643bc5ddb03fd0a512f43e03d2ec4c24f51c6e36dbb69794cbcad"
+			}
+		},
+		{
+			"subjectSource": "PESC-LearningRecord-1.0.0",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.0.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/e4134c5e4184c8eaf49aca6359bcb98b09046276c74b59c9e0baed7a6f391d4f",
+				"objectSource": "CEDS",
+				"subjectStableId": "pesclearningrecord1v0v0:group/urn:org:pesc:core:CoreMain:v1.18.0#AcademicProgramCodeGroup/el/1:ProgramSecondarySchoolCode/at/LearningRecord/DocumentProduction/AcademicAward/AcademicAwardProgram/ProgramSecondarySchoolCode",
+				"subjectSource": "PESC-LearningRecord-1.0.0",
+				"decisionBlockHash": "a3d17cf80014689b6868fd919693445e3f21e9da3781ff876ff70e3e7eda2543",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "4c0133b5d0331f50c0a319a3f9fdf4e54af7485f7ff251cc91fb163d29ca5e37"
+			}
+		},
+		{
+			"subjectSource": "PESC-TestScoreReport-1.1.0",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.1.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/4327771839cec8095426d2b0f4b196cb59b46ecc8a76082e6974613f26c377ae",
+				"objectSource": "CTDL",
+				"subjectStableId": "pesctestscorereport1v1v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/4:ProgramCSISCode/at/TestScoreReport/TestStudent/SchoolSelectionCriteria/SchoolCharacteristics/AcademicMajor/ProgramCSISCode",
+				"subjectSource": "PESC-TestScoreReport-1.1.0",
+				"decisionBlockHash": "a9926ce2dc9c2225c590ba0cb15fb2115722dc5506306d24b64f38719433293c",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "2f5afe60cb91e60a062fe8f23aceea76a46b854d9b70b3d0fd26ee1db437de0f"
+			}
+		},
+		{
+			"subjectSource": "PESC-TestScoreReport-1.1.0",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "1.1.0",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/bfed306e9e7a097574b86242f3d20758ff03c212866ddc3a308dc282a5ea5751",
+				"objectSource": "CTDL",
+				"subjectStableId": "pesctestscorereport1v1v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/1:ProgramSecondarySchoolCode/at/TestScoreReport/TestStudent/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramSecondarySchoolCode",
+				"subjectSource": "PESC-TestScoreReport-1.1.0",
+				"decisionBlockHash": "a9926ce2dc9c2225c590ba0cb15fb2115722dc5506306d24b64f38719433293c",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "7024b602525d80a0b57a97551d3e567b008cf09ae096bbd463f74f9db521ff31"
+			}
+		},
+		{
+			"subjectSource": "PESC-TestScoreReport-1.1.0",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.1.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/bebeaa38ca66d7ec7825950e0d61d00186be65e3d7a17e938d2f7b7ca6562577",
+				"objectSource": "CEDS",
+				"subjectStableId": "pesctestscorereport1v1v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/2:ProgramCIPCode/at/TestScoreReport/TestStudent/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramCIPCode",
+				"subjectSource": "PESC-TestScoreReport-1.1.0",
+				"decisionBlockHash": "662442cb385a90b2adf2cb9a9760a98e29e22736788ec6d51bf5e4a46781933a",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "26674eb1952822e19a3085d7527a30b00f4852b35d1b0faefd815fba6645c76c"
+			}
+		},
+		{
+			"subjectSource": "PESC-TestScoreReport-1.1.0",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "1.1.0",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/e4134c5e4184c8eaf49aca6359bcb98b09046276c74b59c9e0baed7a6f391d4f",
+				"objectSource": "CEDS",
+				"subjectStableId": "pesctestscorereport1v1v0:group/urn:org:pesc:core:CoreMain:v1.17.0#AcademicProgramCodeGroup/el/1:ProgramSecondarySchoolCode/at/TestScoreReport/TestStudent/AcademicRecord/AcademicAward/AcademicAwardProgram/ProgramSecondarySchoolCode",
+				"subjectSource": "PESC-TestScoreReport-1.1.0",
+				"decisionBlockHash": "662442cb385a90b2adf2cb9a9760a98e29e22736788ec6d51bf5e4a46781933a",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "dd8a1e694413ab32b2ef657a4ea94b17a7ba3aeaa6800533e6f7528c6693e0fb"
+			}
+		},
+		{
+			"subjectSource": "PESCLD",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": false,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "0.0.2",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/3ba5a736953b25c0531edbd3118fa006d7be60443a7852a4227fe1030ea1a012",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescld:shape/AcademicAwardShape/pesc:academicDegreeRequirement",
+				"subjectSource": "PESCLD",
+				"decisionBlockHash": "ef33ba97ad95d4eddd7d3b43092a1a8b3d4d3c4cd68145d3fdbac066b27ceea3",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "1e21a91e65c77ca500fc70da7c2e658d2538568ffc56cdf3aac1b9606fac4f52"
+			}
+		},
+		{
+			"subjectSource": "PESCLD",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": false,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "0.0.2",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/7a4ff93a9a71c9fd7ef280f71ca3bb121a33166480ef4af3f5f999562b8200c2",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescld:shape/AcademicAwardShape/pesc:academicCompletionDate",
+				"subjectSource": "PESCLD",
+				"decisionBlockHash": "ef33ba97ad95d4eddd7d3b43092a1a8b3d4d3c4cd68145d3fdbac066b27ceea3",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "7d479159692d4e0f8ea9124b1f1bad31793aca7bed7d2cf60554bb1733231e8b"
+			}
+		},
+		{
+			"subjectSource": "PESCLD",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": false,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "0.0.2",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/7022ddacae037b5b2b45671b6da1caf0fb9cd6af2a165632f3c685f57922b85b",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescld:picklist/AcademicAwardShape/ceds:P001668/ceds:NI001668151655",
+				"subjectSource": "PESCLD",
+				"decisionBlockHash": "57c048933f39657800d5dd43170d327b880db504ea626289ea1e2e8698384286",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "2c19294eaa9be431dbb66cd77b35db34a2f174e5877f4d832e171860f4cdc9fc"
+			}
+		},
+		{
+			"subjectSource": "PESCLD",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": false,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "0.0.2",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/701200ae7c42b99da70e31c206a30d2b75e5c8e030fb6668c577a8c72e0291a2",
+				"objectSource": "CEDS",
+				"subjectStableId": "pescld:shape/AcademicSummaryShape/pesc:academicHonors",
+				"subjectSource": "PESCLD",
+				"decisionBlockHash": "ef33ba97ad95d4eddd7d3b43092a1a8b3d4d3c4cd68145d3fdbac066b27ceea3",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "18e9c0e38d24ead9b5e98e1c8f2dc8aba23c57edc307923fc865ca42cc9aa07e"
+			}
+		},
+		{
+			"subjectSource": "SIF260928",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "4.3",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/4a506b5e7e5a90dae304c99beac9bc4cc8cfd1ae6526f4919364a72d616ab17e",
+				"objectSource": "CEDS",
+				"subjectStableId": "sif260928:field/AccountingPeriods/AccountingPeriod/SIF_Metadata/EducationFilter/SubjectAreas/SubjectArea/Code",
+				"subjectSource": "SIF260928",
+				"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "8216bf6ac638e52fb0eb3fc16ce5d2b98081da2d179a6aeddaec6b579b3bdb5a"
+			}
+		},
+		{
+			"subjectSource": "SIF260928",
+			"edgeType": "BROAD_MATCH",
+			"isFanOut": true,
+			"hasAt": true,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "4.3",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/8f519f13a9ae98e10fd7effb7e228e52c6dca043f68419f630cb782d32ac1e71",
+				"objectSource": "CTDL",
+				"subjectStableId": "sif260928:field/AccountingPeriods/AccountingPeriod/SIF_Metadata/EducationFilter/BloomsTaxonomyLevels/BloomsTaxonomyLevel/@Codeset",
+				"subjectSource": "SIF260928",
+				"decisionBlockHash": "4fbf473aca97ef69ac132eda524dac156b484ba13334e7b1afab4d33c589a8ee",
+				"predicateCurie": "skos:broadMatch",
+				"matchId": "b43554a7de014e439eade656f5dc3a577d27201a30bf82a86259a10111b7b3ed"
+			}
+		},
+		{
+			"subjectSource": "SIF260928",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "4.3",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/86648fa01aa1414b2ef03434c95909fa2b3309e15304a6e4ca820669ec0aa5e2",
+				"objectSource": "CEDS",
+				"subjectStableId": "sif260928:field/AccountingPeriods/AccountingPeriod/FiscalYearRefId",
+				"subjectSource": "SIF260928",
+				"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "b84ec719bf1001b2b33e760af5dca91159b4529950e07e9213391d00ca745813"
+			}
+		},
+		{
+			"subjectSource": "SIF260928",
+			"edgeType": "CLOSE_MATCH",
+			"isFanOut": true,
+			"hasAt": true,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "4.3",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/9a53b99a58ad4df3e9955427a8ad17c328c5ef4ca185480a189a62dad31bf16a",
+				"objectSource": "CEDS",
+				"subjectStableId": "sif260928:field/Activitys/Activity/ActivityTime/Duration/@Units",
+				"subjectSource": "SIF260928",
+				"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7",
+				"predicateCurie": "skos:closeMatch",
+				"matchId": "7454cf4fa50bdce2613935be2ec9ce7c02bc23f981c66b4b920eec5b257ac0ed"
+			}
+		},
+		{
+			"subjectSource": "SIF260928",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "4.3",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/55a686b539a2ad421ac39a5f84d9102a6298af4dfb2a961aae560fc1a2b452a3",
+				"objectSource": "CEDS",
+				"subjectStableId": "sif260928:field/AccountingPeriods/AccountingPeriod/EndDate",
+				"subjectSource": "SIF260928",
+				"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "b538fadbf56981f1474fd1bd8fc6f703b65de2649a8b7bd552cf8db1bdc2be7b"
+			}
+		},
+		{
+			"subjectSource": "SIF260928",
+			"edgeType": "EXACT_MATCH",
+			"isFanOut": true,
+			"hasAt": true,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "Release 20260927",
+				"subjectVersion": "4.3",
+				"objectStableId": "https://w3id.org/EDUcore/CTDL/hub/Release_20260927/f72213f27ce6048ca209dab6999ac0972792dc1e99e58d522688fb79f8bcdfc7",
+				"objectSource": "CTDL",
+				"subjectStableId": "sif260928:field/AccountingPeriods/AccountingPeriod/SIF_Metadata/RightsElements/RightsElement/FeesForUse/FeeForUse/PerUseCharge/@Currency",
+				"subjectSource": "SIF260928",
+				"decisionBlockHash": "4fbf473aca97ef69ac132eda524dac156b484ba13334e7b1afab4d33c589a8ee",
+				"predicateCurie": "skos:exactMatch",
+				"matchId": "83f7fb456826cba0bb49c31ccab797a3026e305cba6902bacfd001666f70cf05"
+			}
+		},
+		{
+			"subjectSource": "SIF260928",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": true,
+			"hasAt": false,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "4.3",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/c5dbdadfcb0ec8a61adecaa3993095b9493b353ad5c015286fe2585cc83b15e7",
+				"objectSource": "CEDS",
+				"subjectStableId": "sif260928:field/AccountingPeriods/AccountingPeriod/SIF_Metadata/EducationFilter/BloomsTaxonomyLevels/BloomsTaxonomyLevel",
+				"subjectSource": "SIF260928",
+				"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "7cf052285d5ecf8abc31421241d61cab20354831535ff0c6e120adc3d888ff9b"
+			}
+		},
+		{
+			"subjectSource": "SIF260928",
+			"edgeType": "NARROW_MATCH",
+			"isFanOut": true,
+			"hasAt": true,
+			"hasSpace": false,
+			"oneEdge": {
+				"objectVersion": "14.0.0.0",
+				"subjectVersion": "4.3",
+				"objectStableId": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/7f1b4f5e75bce7f4ba56bb83086c91757e072e5998abc1bc668bcb37c8aa612d",
+				"objectSource": "CEDS",
+				"subjectStableId": "sif260928:field/ActivityProviders/ActivityProvider/Address/@Type",
+				"subjectSource": "SIF260928",
+				"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7",
+				"predicateCurie": "skos:narrowMatch",
+				"matchId": "77a55d8ca6bca1846c98a866d10c184a85ab0fee069aeef8a061df7571476e44"
+			}
+		}
+	],
+	"oddStableIdList": [
+		{
+			"oneCharacter": " ",
+			"stableId": "edfi:value/AbsenceEventCategory.Compensatory leave time",
+			"standardName": "EdFi"
+		},
+		{
+			"oneCharacter": ",",
+			"stableId": "edfi:value/AcademicHonorCategory.Completion of requirement, but no units awarded",
+			"standardName": "EdFi"
+		},
+		{
+			"oneCharacter": "#",
+			"stableId": "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property",
+			"standardName": "CEDS"
+		},
+		{
+			"oneCharacter": "%",
+			"stableId": "edfi:value/SpecialEducationSetting.Inside reg class between 40-79% of the day",
+			"standardName": "EdFi"
+		},
+		{
+			"oneCharacter": "&",
+			"stableId": "edfi:value/TribalAffiliation.Sac & Fox Nation of Missouri in KS & NE",
+			"standardName": "EdFi"
+		}
+	],
+	"judgeIdentityList": [
+		"jev:jev-1.13.0:data:cfg-03f64470322c",
+		"jev:jev-1.13.0:data:cfg-cf8d41f82791"
+	]
+}
