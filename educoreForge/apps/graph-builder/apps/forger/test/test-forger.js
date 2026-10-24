@@ -1655,8 +1655,11 @@ harness.match(
 
 // THE OTHER HALF OF THE SEPARATION, gated so the case 'lif' used to cover is not lost: a standard
 // with no kit at all is refused at bundle resolution, naming the descriptor path it looked for.
+// ⟪nextStandards-102326 C1, 2026-10-24 (STEEL_MIRROR; BRONZE_CROWN's grant)⟫ the fixture was 'lif'; LIF became a real forge
+// (forges/lif), so the forger found its kit and refused for a different reason. The standard is now a name in this file's
+// 'zztestonly' convention that no kit can ever take.
 const noSuchKitOutcome = foldOutcome({
-	standard: 'lif',
+	standard: 'zztestonlynokit',
 	bundleVersion: '14.0.0.0',
 	requestedVersion: 'current',
 	baseNodeEdges: engineShapeCedsBase,
@@ -1670,7 +1673,7 @@ const KITS_THAT_MUST_BE_LISTED = ['ceds', 'edfi', 'pesc260805', 'sif260928']; //
 harness.match(
 	"a standard declared a hub that has NO FORGE BUNDLE AT ALL is refused at bundle resolution, naming the descriptor it looked for and the kits that exist",
 	noSuchKitOutcome.error,
-	/no forge bundle for standard 'lif'[\s\S]*parserDescriptor\.ini[\s\S]*Known forges: /,
+	/no forge bundle for standard 'zztestonlynokit'[\s\S]*parserDescriptor\.ini[\s\S]*Known forges: /,
 );
 const listedKitNameList = String(noSuchKitOutcome.error).replace(/^[\s\S]*Known forges: /, '').split(/,\s*/).map((oneName) => oneName.trim());
 harness.ok(
