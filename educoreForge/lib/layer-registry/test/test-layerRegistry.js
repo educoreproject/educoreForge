@@ -47,7 +47,7 @@ const agentRegistry = {
 		{ agentIri: PERSON_IRI, agentKind: 'person', displayName: 'rater 05, survey A' },
 	],
 };
-const memberBlockListFor = (letter) => [{ pairKey: `ceds@14.0.0.0::toy@1::layer.toyCurated::curated`, decisionBlockHash: letter.repeat(64) }];
+const memberBlockListFor = (letter) => [{ pairKey: `toyhub@1.0::toy@1::layer.toyCurated::curated`, decisionBlockHash: letter.repeat(64) }];
 const versionFor = ({ letter, versionTag, registrationStatus, publishedAt }) => ({
 	administrationRecord: { registrationAuthority: ORGANISATION_IRI, registrar: ORGANISATION_IRI, submitter: PERSON_IRI, publishedAt, contentId: letter.repeat(64), versionTag },
 	registrationStatus,

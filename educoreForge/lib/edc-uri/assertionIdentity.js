@@ -6,7 +6,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // D-ASSERTID; DESIGN-ML1a-uriSchemeAndAssertionId-102426.md §3, ruled by BRONZE_CROWN 2026-10-24). PURE and synchronous.
 //
 //   nodeIriFor({ stableId, standardName, standardVersion }) → { iri } | { error }
-//       a stableId that is already an absolute IRI (uriScheme.json absoluteIriPrefixList: hub cards, CEDS terms) is its own
+//       a stableId that is already an absolute IRI (uriScheme.json absoluteIriPrefixList: hub cards, a standard's own term IRIs) is its own
 //       IRI; a vocabulary term (vocabularyIriByCurie: sssom:NoTermFound, an abstention's object) is its declared IRI; every
 //       other stableId is a CURIE-shaped key and expands to the edc element IRI of its standard version
 //   predicateIriFor(predicateCurie) → { iri } | { error }        through uriScheme.json predicatePrefixExpansion

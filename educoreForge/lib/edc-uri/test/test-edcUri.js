@@ -140,12 +140,12 @@ const KNOWN_TRIPLE = {
 	subjectStandardName: 'EdFi',
 	subjectStandardVersion: '5.2.0',
 	predicateCurie: 'skos:exactMatch',
-	objectStableId: 'https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/000039bfcc4d28b301e45c367ab73c7e6659edb5f47f94cbc8931d9297314aa4',
-	objectStandardName: 'CEDS',
-	objectStandardVersion: '14.0.0.0',
+	objectStableId: 'https://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa',
+	objectStandardName: 'ToyHub',
+	objectStandardVersion: '1.0',
 };
-// printf 'https://w3id.org/EDUcore/EdFi/5.2.0/edfi:value%%2FAbsenceEventCategory.Jury%%20duty\nhttp://www.w3.org/2004/02/skos/core#exactMatch\nhttps://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/000039bf…' | shasum -a 256
-const KNOWN_ASSERTION_HASH = '6ad0fb95d941e682987f2ea0c2f485831b4a47e46e7e9b30befb966b6da7ffe1';
+// printf 'https://w3id.org/EDUcore/EdFi/5.2.0/edfi:value%%2FAbsenceEventCategory.Jury%%20duty\nhttp://www.w3.org/2004/02/skos/core#exactMatch\nhttps://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa' | shasum -a 256
+const KNOWN_ASSERTION_HASH = '8cb3a7dd6d34c179ad6723b5e0e72a90377a310f3bf95d1fdd2760f3061af022';
 const knownAnswer = assertionIdentity.assertionIdFor(KNOWN_TRIPLE);
 harness.equal('subject expands to the edc element IRI (percent-encoded)', knownAnswer.subjectIri, 'https://w3id.org/EDUcore/EdFi/5.2.0/edfi:value%2FAbsenceEventCategory.Jury%20duty');
 harness.equal('predicate expands through predicatePrefixExpansion', knownAnswer.predicateIri, 'http://www.w3.org/2004/02/skos/core#exactMatch');
@@ -153,7 +153,7 @@ harness.equal('an object that is already an IRI is its own IRI', knownAnswer.obj
 harness.equal('assertionHash = sha256(subjectIri \\n predicateIri \\n objectIri) (known answer)', knownAnswer.assertionHash, KNOWN_ASSERTION_HASH);
 harness.equal('assertionId is the edc assertion IRI over (decisionBlockHash, assertionHash)', knownAnswer.assertionId, `https://w3id.org/EDUcore/assertion/${KNOWN_TRIPLE.decisionBlockHash}/${KNOWN_ASSERTION_HASH}`);
 harness.equal('the declared CURIE object (ceterms:) expands to an element IRI of its standard version', assertionIdentity.nodeIriFor({ stableId: declaredCurieEdge.objectStableId, standardName: declaredCurieEdge.objectSource, standardVersion: declaredCurieEdge.objectVersion }).iri, `https://w3id.org/EDUcore/CTDL/Release%2020260927/${declaredCurieEdge.objectStableId}`);
-harness.equal('an abstention object (sssom:NoTermFound) is its declared vocabulary IRI, never an element', assertionIdentity.nodeIriFor({ stableId: 'sssom:NoTermFound', standardName: 'CEDS', standardVersion: '14.0.0.0' }).iri, 'https://w3id.org/sssom/NoTermFound');
+harness.equal('an abstention object (sssom:NoTermFound) is its declared vocabulary IRI, never an element', assertionIdentity.nodeIriFor({ stableId: 'sssom:NoTermFound', standardName: 'ToyHub', standardVersion: '1.0' }).iri, 'https://w3id.org/sssom/NoTermFound');
 harness.equal('owl:equivalentClass expands verbatim', assertionIdentity.predicateIriFor('owl:equivalentClass').iri, 'http://www.w3.org/2002/07/owl#equivalentClass');
 harness.match('an unexpandable predicate prefix is refused by name', assertionIdentity.predicateIriFor('edc:bestMatch').error, /predicate prefix 'edc' .* has no expansion/);
 harness.match('a non-hex block hash is refused', assertionIdentity.assertionIdFor({ ...KNOWN_TRIPLE, decisionBlockHash: 'abc' }).error, /not a 64-hex id/);
