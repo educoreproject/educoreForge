@@ -1,0 +1,17 @@
+{
+  // sif260928Only — SIF 260928 alone (stage off): the forge's base block, no hub, no bridge. The recipe of
+  // test-embeddedEndToEnd since the old sif forge (and its sifOnly recipe) retired in zeroBacklog D3-6
+  // (nextStandards W1, SUNSET_SIGNAL, 2026-10-24). Its source is COMMITTED, which is why that gate uses it.
+  "schemaVersion": "1.0.0",
+  "recipeName": "sif260928Only",
+  "kind": "dev",
+  "description": "Forge the SIF 260928 standard base only - proves the sif260928 bundle forges, embeds and materializes.",
+  "standards": [
+    {
+      "token": "sif260928",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

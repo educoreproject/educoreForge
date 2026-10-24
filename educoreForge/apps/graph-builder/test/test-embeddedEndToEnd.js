@@ -12,8 +12,8 @@
 // precisely because the suite was forbidden to spend credit. TQ's command (GRANITE_MIRROR, 2026-07-26):
 // the suite CAN spend Voyage credit and it MUST. This is that gate.
 //
-// It runs the REAL graphBuilder -build on sifOnly (27,069 nodes, 212 embed batches — the survival forge
-// whose source is COMMITTED; see the recipe note below) with --vectorize=true, cold, and proves the
+// It runs the REAL graphBuilder -build on sif260928Only (39,268 contract-graph nodes, 41 embed batches — the
+// forge whose source is COMMITTED; see the recipe note below) with --vectorize=true, cold, and proves the
 // embedded spine (forge -> embed -> harvest -> compose -> materialize) completes. It provisions a DEV_* Docker graph and spends real embedding credit BY DESIGN,
 // then disposes the materialize graph and its throwaway store so it leaves nothing behind.
 //
@@ -29,7 +29,7 @@ SYNOPSIS
      ${moduleName} [-verbose] [-quiet] [-help]
 
 DESCRIPTION
-     Runs graphBuilder -build on sifOnly (27,069 vectorized nodes; the child is spawned with a
+     Runs graphBuilder -build on sif260928Only (39,268 contract-graph nodes; the child is spawned with a
      6144 MB heap because graphBuilder's own heap gate refuses that load at the default ~4 GB —
      observed Phase 4 2026-08-15) with --vectorize=true, cold, and proves the embedded
      forge -> embed -> harvest -> compose -> materialize spine completes. This is the gate that
@@ -56,8 +56,12 @@ const graphBuilderPath = path.join(treeRoot, 'apps', 'graph-builder', 'graphBuil
 // trips graphBuilder's heap gate outright; edfiOnly (~6.3k nodes) passed — but its MetaEd source is
 // GITIGNORED (Ed-Fi Alliance-licensed bytes, .gitignore + README_PROVENANCE.md), so that gate passed
 // ONLY on a machine holding the licensed snapshot: on a fresh clone it fails at source acquisition. A
-// gate that passes on one machine is not a gate. sifOnly's source is committed, so it is the recipe.
-const recipePath = path.join(treeRoot, 'recipes', 'sifOnly.recipe.jsonc');
+// gate that passes on one machine is not a gate. sifOnly's source was committed, so it was the recipe.
+// ⟪nextStandards W1, 2026-10-24⟫ zeroBacklog D3-6 retired the old sif forge and its sifOnly recipe, and this gate went on naming
+// the deleted file. Its successor, sif260928 (source committed too), is the recipe now. The node count below was RE-DERIVED from a
+// real build of this recipe, not carried over: the old 27,069 was the retired forge's.
+const recipePath = path.join(treeRoot, 'recipes', 'sif260928Only.recipe.jsonc');
+const SIF260928_CONTRACT_GRAPH_NODE_COUNT = 39268;
 
 // hermetic: a throwaway standardsDatabase in a temp dir, never a project database (the -build guard
 // that refuses a default path exists because a scratch save once wrote the canonical store).
@@ -73,10 +77,10 @@ const isolatedCacheFilePath = path.join(scratchDir, 'isolatedGate.vectorCache.sq
 // EVERY suite run — re-littering it and, once, riding into a commit. The run dir is disposed with scratchDir.
 const scratchBuildLogsDirPath = path.join(scratchDir, 'buildLogs');
 
-harness.section('REAL embedded end-to-end — sifOnly, --vectorize=true, cold');
+harness.section('REAL embedded end-to-end — sif260928Only, --vectorize=true, cold');
 harness.note('provisions a DEV_* Docker graph and spends Voyage embedding credit BY DESIGN (isolated cache)');
 
-// SPAWNED HEAP (Phase 4 K3b, 2026-08-15): sifOnly forges 27,069 vectorized nodes × 1024 dims, and
+// SPAWNED HEAP (Phase 4 K3b, 2026-08-15): sifOnly forged 27,069 vectorized nodes × 1024 dims, and
 // graphBuilder's own heap gate (build.js resolveHeapAdequacy: 16× raw vector bytes + 1GB) estimates
 // ~5GB for that load — the default ~4GB heap of a bare `node` child is REFUSED before provisioning
 // (observed: attempt 1, "estimated to need ~5GB … limited to 4GB … --max-old-space-size=5510"). The
@@ -110,6 +114,14 @@ harness.ok(
 	'graphBuilder -build (embedded, cold) exits 0',
 	run.status === 0,
 	`exit=${run.status}; tail:\n${tail}`,
+);
+
+// the recipe's one forge produced the graph it is measured to produce: a gate on a forge that quietly lost (or gained) nodes is
+// not the gate it was
+harness.match(
+	`the sif260928 forge's contract graph holds ${SIF260928_CONTRACT_GRAPH_NODE_COUNT} nodes`,
+	combinedOutput,
+	new RegExp(`\\[forge-sif260928\\] contract graph: ${SIF260928_CONTRACT_GRAPH_NODE_COUNT} nodes,`),
 );
 
 harness.match(
