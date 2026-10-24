@@ -77,18 +77,21 @@ const P3_ADDED_NAME_LIST = ['judgePickConfidence', 'judgeTopProbability', 'judge
 const V1_ADDED_NAME_LIST = ['judgedSubjectStableId'];
 // the three names lane P ADDED (mappingProvenance 2026-10-04, TQ's design): what kind of claim, who made it, how sure
 const PROVENANCE_ADDED_NAME_LIST = ['mappingConfidence', 'mappingKind', 'mappingSource'];
+// ⟪mappingLayers ML1-a, 2026-10-24 (STEEL_BRIDGE; D-ASSERTID)⟫ the public assertion identity, the declared twin of matchId (count 26 -> 27,
+// observed red at 26 before this row)
+const ML1_ADDED_NAME_LIST = ['assertionId'];
 
 // the four conjuncts, each a pure judge over a vocabulary module (real or double)
 const conjunctJudgeByRefId = {
 	'a_everyEdgePropertyNameIsARow': (subject) => {
 		const valueList = Object.keys(subject.MAPPING_PROPERTIES).map((oneMember) => subject.MAPPING_PROPERTIES[oneMember]);
-		const missing = B2_ADDED_NAME_LIST.concat(PRE_EXISTING_NAME_LIST, V1_ADDED_NAME_LIST, PROVENANCE_ADDED_NAME_LIST, P3_ADDED_NAME_LIST).filter((oneName) => valueList.indexOf(oneName) === -1);
+		const missing = B2_ADDED_NAME_LIST.concat(PRE_EXISTING_NAME_LIST, V1_ADDED_NAME_LIST, PROVENANCE_ADDED_NAME_LIST, P3_ADDED_NAME_LIST, ML1_ADDED_NAME_LIST).filter((oneName) => valueList.indexOf(oneName) === -1);
 		const retiredPresent = RETIRED_NAME_LIST.filter((oneName) => valueList.indexOf(oneName) !== -1);
-		return { pass: missing.length === 0 && retiredPresent.length === 0 && valueList.length === 26, detail: missing.length || retiredPresent.length ? `missing: ${missing.join(', ')}; retired yet present: ${retiredPresent.join(', ')}` : `count ${valueList.length}` };
+		return { pass: missing.length === 0 && retiredPresent.length === 0 && valueList.length === 27, detail: missing.length || retiredPresent.length ? `missing: ${missing.join(', ')}; retired yet present: ${retiredPresent.join(', ')}` : `count ${valueList.length}` };
 	},
 	'b_nameListEqualsRegistryValues': (subject) => {
 		const valueList = Object.keys(subject.MAPPING_PROPERTIES).map((oneMember) => subject.MAPPING_PROPERTIES[oneMember]);
-		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 26;
+		const equal = JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST) === JSON.stringify(valueList) && subject.MAPPING_PROPERTY_NAME_LIST.length === 27;
 		return { pass: equal, detail: `list ${JSON.stringify(subject.MAPPING_PROPERTY_NAME_LIST)}` };
 	},
 	// ⟪lane P, 2026-10-04⟫ replaces c_producerDerivedTiersOnly: the tier tables it pinned are retired with provenanceTier's

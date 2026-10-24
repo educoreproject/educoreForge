@@ -13,6 +13,10 @@
 		"skos": "http://www.w3.org/2004/02/skos/core#",
 		"owl": "http://www.w3.org/2002/07/owl#"
 	},
+	"vocabularyIriByCurie": {
+		"about": "objects that are vocabulary terms, not graph nodes: an abstention row's object (SSSOM 1.0: sssom:NoTermFound MAY stand as object_id)",
+		"sssom:NoTermFound": "https://w3id.org/sssom/NoTermFound"
+	},
 	"kindList": [
 		{ "kind": "meaning", "template": "{hubSegment}/hub/{hubReleaseSegment}/{addressSignature}", "verbatimPartList": ["hubSegment", "hubReleaseSegment"], "about": "a HubReference card (exists; minted by the hub framework as namespace + release segment + '/' + addressSignature)" },
 		{ "kind": "element", "template": "{standardName}/{standardVersion}/{elementStableId}", "verbatimPartList": [], "about": "a standard's slot; standardName is the _source name the graph stamps on every node and edge" },

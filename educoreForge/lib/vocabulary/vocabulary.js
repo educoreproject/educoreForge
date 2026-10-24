@@ -743,6 +743,10 @@ const MAPPING_PROPERTIES = {
 	// ⟪W-B-4 / V1-C06⟫ the judge's recorded text for this pick, verbatim from the frozen record (judged edges only, present iff
 	// the plugin opted in with blockRecordsJudgeConfig). Jev's is a sentence its client composed from the numbers and says so.
 	MAPPING_RATIONALE: 'mappingRationale',
+	// ⟪mappingLayers ML1-a, 2026-10-24; D-ASSERTID ruled by BRONZE_CROWN⟫ the PUBLIC identity of the assertion an edge makes: the edc
+	// assertion IRI over (decisionBlockHash, sha256(subjectIri \n predicateIri \n objectIri)), lib/edc-uri/assertionIdentity.js. A
+	// declared twin of MATCH_ID, which stays INTERNAL (C6); this one IS exported, as SSSOM record_id.
+	ASSERTION_ID: 'assertionId',
 };
 // RETIRED edge property names → the name that replaced each. graphSeamRules refuses a retired name BY ITS REPLACEMENT, and
 // the DME contract gate (graphContract.json retiredMatchEdgePropertyNameList) refuses a Cypher read of one.
@@ -822,6 +826,7 @@ const SSSOM_COLUMN_BY_EDGE_PROPERTY = Object.freeze({
 	[MAPPING_PROPERTIES.JUDGE_RUNNER_UP_MARGIN]: 'judge_runner_up_margin',
 	[MAPPING_PROPERTIES.JUDGE_PICK_CONFIDENCE]: 'judge_pick_confidence',
 	[MAPPING_PROPERTIES.MAPPING_RATIONALE]: 'mapping_rationale',
+	[MAPPING_PROPERTIES.ASSERTION_ID]: 'record_id', // an SSSOM 1.1 slot: the exporter writes sssom_version 1.1 when it is present
 });
 // CONFIDENCE_BAND_TABLE — the judge's discrete CATEGORY → the discrete mappingConfidence a judged edge carries (moved here
 // from lib/bridge-framework/confidenceBandTable.js, which re-exports it, W-B-3). A BAND of the judge's category, never the
@@ -845,12 +850,16 @@ const MAPPING_KIND_BY_RESOLUTION = Object.freeze({ judged: MAPPING_KIND.INFERRED
 const MAPPING_SOURCE_SEPARATOR = '-';
 // ⟪ctdlHub P6⟫ DECLARED: the family of an edge a source standard declared about another standard's term (declared identity, the
 // same IRI; declared correspondence, a different IRI by a published predicate). Authored: the source named the target.
-const MAPPING_SOURCE_FAMILY = Object.freeze({ BRIDGE: 'bridge', CROSSWALK: 'crosswalk', STANDARD: 'standard', DECLARED: 'declared' });
+// ⟪mappingLayers ML1-b, 2026-10-24; D-PROFILE⟫ CURATED: a named person or curator asserted it in a published mapping layer (a frozen
+// SSSOM set). IMPORTED: an outside mapping set entered as a layer; another party asserted it, so it is authored from our side.
+const MAPPING_SOURCE_FAMILY = Object.freeze({ BRIDGE: 'bridge', CROSSWALK: 'crosswalk', STANDARD: 'standard', DECLARED: 'declared', CURATED: 'curated', IMPORTED: 'imported' });
 const MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY = Object.freeze({
 	[MAPPING_SOURCE_FAMILY.BRIDGE]: MAPPING_KIND.INFERRED,
 	[MAPPING_SOURCE_FAMILY.CROSSWALK]: MAPPING_KIND.AUTHORED,
 	[MAPPING_SOURCE_FAMILY.STANDARD]: MAPPING_KIND.AUTHORED,
 	[MAPPING_SOURCE_FAMILY.DECLARED]: MAPPING_KIND.AUTHORED,
+	[MAPPING_SOURCE_FAMILY.CURATED]: MAPPING_KIND.AUTHORED,
+	[MAPPING_SOURCE_FAMILY.IMPORTED]: MAPPING_KIND.AUTHORED,
 });
 const MAPPING_SOURCE_FAMILY_LIST = Object.freeze(Object.keys(MAPPING_KIND_BY_MAPPING_SOURCE_FAMILY));
 // the authored family a SPECIFIED record's matchBasis names; 'derived' has none, so a specified record in a derived block
@@ -891,6 +900,7 @@ const DECLARED_CORRESPONDENCE_PROPERTIES = Object.freeze({
 	MAPPING_SOURCE: MAPPING_PROPERTIES.MAPPING_SOURCE,
 	DECISION_BLOCK_HASH: MAPPING_PROPERTIES.DECISION_BLOCK_HASH,
 	MATCH_ID: MAPPING_PROPERTIES.MATCH_ID,
+	ASSERTION_ID: MAPPING_PROPERTIES.ASSERTION_ID, // ⟪ML1-a⟫ the same public identity a match edge carries
 	SUBJECT_SOURCE: MAPPING_PROPERTIES.SUBJECT_SOURCE,
 	SUBJECT_VERSION: MAPPING_PROPERTIES.SUBJECT_VERSION,
 	OBJECT_SOURCE: MAPPING_PROPERTIES.OBJECT_SOURCE,
@@ -904,6 +914,18 @@ const MAPPING_PROPERTY_NAME_LIST = Object.freeze(Object.keys(MAPPING_PROPERTIES)
 // provenanceTier's place on mapping edges (lane P, 2026-10-04). The producer kinds a mapping block may have, which
 // conflictDetector read off the first table's keys, are declared here in their own right.
 const MAPPING_PRODUCER_KIND_LIST = Object.freeze(['authored', 'inferred']);
+// ⟪mappingLayers ML1-b, 2026-10-24; R-2 ruled by BRONZE_CROWN⟫ the producer kinds of a MAPPING LAYER block (a frozen SSSOM set in the
+// decision store): curated (a person or curator) and imported (an outside set). DELIBERATELY NOT in MAPPING_PRODUCER_KIND_LIST: the
+// conflict detector reads that list to find SIBLING blocks whose disagreement drops edges, and a mapping layer is a PEER of Jev,
+// never its conflict. DECISION_BLOCK_PRODUCER_KIND_LIST is every kind the decision store may hold.
+const LAYER_PRODUCER_KIND = Object.freeze({ CURATED: 'curated', IMPORTED: 'imported' });
+const LAYER_PRODUCER_KIND_LIST = Object.freeze([LAYER_PRODUCER_KIND.CURATED, LAYER_PRODUCER_KIND.IMPORTED]);
+const DECISION_BLOCK_PRODUCER_KIND_LIST = Object.freeze(MAPPING_PRODUCER_KIND_LIST.concat(LAYER_PRODUCER_KIND_LIST));
+// ⟪ML1-b; D-PROFILE, R-3 ruled⟫ the matchBasis a curated layer's edges will carry (README_BridgeProfile.md §3.1, row of 2026-10-24).
+// Declared here now; bridgePluginContract MATCH_BASIS_LIST and its acquisition row gain it with the first curated materialisation (ML2).
+const LAYER_MATCH_BASIS = Object.freeze({ CURATED: 'curated' });
+// the SSSOM version an export declares when it carries a 1.1 slot (record_id); a 1.0 export carries no sssom_version line
+const SSSOM_VERSION_FOR_ONE_ONE_SLOTS = '1.1';
 // STANDARD_KIND — what kind of standard a StandardDefinition card describes (lane P, 2026-10-04; TQ via VIOLET_VALLEY): a data
 // standard (elements that map to the hub) or a classification taxonomy (codes that classify, CIP / SOC). Every current
 // standard is a dataStandard. ⟪lane R, 2026-10-05; TQ⟫ DECLARED by each standard's forge declaration (standardKind, beside its
@@ -1382,6 +1404,11 @@ const vocabulary = {
 	SSSOM_COLUMN_BY_EDGE_PROPERTY,
 	CONFIDENCE_BAND_TABLE,
 	MAPPING_PRODUCER_KIND_LIST,
+	LAYER_PRODUCER_KIND,
+	LAYER_PRODUCER_KIND_LIST,
+	DECISION_BLOCK_PRODUCER_KIND_LIST,
+	LAYER_MATCH_BASIS,
+	SSSOM_VERSION_FOR_ONE_ONE_SLOTS,
 	STANDARD_KIND,
 	STANDARD_KIND_LIST,
 	STANDARD_FAMILY,

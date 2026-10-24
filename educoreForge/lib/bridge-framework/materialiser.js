@@ -19,6 +19,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 //   materialiseBlock({ block, decisionBlockHash, writer, sourceStandardName, sourceVersion, hubName, hubVersion,
 //                      mappingProviderUrl, subjectMatchField, objectMatchField, runWindowMark }, cb)
+// ⟪mappingLayers ML1-a, 2026-10-24 (D-ASSERTID, ruled by BRONZE_CROWN)⟫ every match edge and declared correspondence also carries
+// assertionId, the PUBLIC identity of its assertion (lib/edc-uri/assertionIdentity.js): the edc assertion IRI over this block's hash and
+// sha256 of the expanded subject (the from-node: the instance under fan-out), predicate and object IRIs. matchId is untouched (C6). A
+// record whose assertion id cannot be computed is refused by name before any edge is written.
 // (debugMark is no longer an argument: a debug judge's edges are marked by WHO judged them, read from each frozen record's
 // judge identity, so the mark cannot be lost on replay. Lane P, 2026-10-04.)
 //     → { edgesWritten, writtenEdgeList }   (a written edge's subjectStableId is its from-node: the instance under fan-out)
@@ -31,6 +35,7 @@ const { RENDERER_VERSION } = require('./evidenceRenderer');
 const { providerNameForJudgeModel, FIXED_MAPPING_CONFIDENCE_BY_PROVIDER_NAME } = require(path.join(__dirname, '..', '..', 'apps', 'graph-builder', 'apps', 'bridge-maker', 'lib', 'judgeProviderRegistry'));
 
 const { SOURCE_ACQUISITION_REGISTRY } = require('./bridgePluginContract');
+const assertionIdentity = require(path.join(__dirname, '..', 'edc-uri', 'assertionIdentity'));
 const { EDGE_TYPES, PROVENANCE_TIER, DECLARED_CORRESPONDENCE_PROPERTIES } = vocabularyLib;
 const { SKOS_EDGE_TYPES, MAPPING_PROPERTIES, MAPPING_KIND_BY_RESOLUTION, MAPPING_SOURCE_FAMILY, MAPPING_SOURCE_FAMILY_BY_AUTHORED_MATCH_BASIS, composeMappingSource, JUDGE_SUMMARY_EDGE_PROPERTY_LIST, judgeSummaryRefusal } = vocabularyLib;
 
@@ -115,6 +120,20 @@ const mappingSourceFor = ({ record, block }) => {
 		: sourceRow({ record, block });
 };
 
+// assertionIdFor — the public assertion identity of one planned edge: the from-node is the instance under fan-out, the predicate is the
+// edge shape's SSSOM predicate_id (skos:<relation>, or a declared CURIE verbatim), and both ends expand by their standard and version
+const assertionIdFor = ({ record, instanceStableId, predicateCurie, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion }) =>
+	assertionIdentity.assertionIdFor({
+		decisionBlockHash,
+		subjectStableId: instanceStableId === undefined ? record.subjectStableId : instanceStableId,
+		subjectStandardName: sourceStandardName,
+		subjectStandardVersion: sourceVersion,
+		predicateCurie,
+		objectStableId: record.objectStableId,
+		objectStandardName: hubName,
+		objectStandardVersion: hubVersion,
+	});
+
 // edgePropertiesFor — assembled from the record + the run's identity; camelCase; the CLOSED set
 const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion, mappingProviderUrl, subjectMatchField, objectMatchField }) => {
 	const edgeProperties = {
@@ -162,6 +181,8 @@ const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash,
 		edgeProperties[MAPPING_PROPERTIES.JUDGED_SUBJECT_STABLE_ID] = record.subjectStableId;
 		edgeProperties[MAPPING_PROPERTIES.MATCH_ID] = sha256Hex(`${decisionBlockHash}\n${record.subjectStableId}\n${record.predicate}\n${record.objectStableId}\n${instanceStableId}`);
 	}
+	// ⟪ML1-a⟫ undefined only for a record materialiseBlock has already refused by name (the pre-write assertion check)
+	edgeProperties[MAPPING_PROPERTIES.ASSERTION_ID] = assertionIdFor({ record, instanceStableId, predicateCurie: EDGE_SHAPE_REGISTRY.skosMatchToHubCard.sssomPredicateIdFor(record.predicate), decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion }).assertionId;
 	// ⟪campaign P3⟫ W-B-2: the duplicate `confidence` is no longer written (mappingConfidence is the one judged-edge
 	// confidence). W-B-1: judgeIdentity / rendererVersion. W-B-3 (G7): the judge's own numbers, all three or none, read
 	// from the frozen record's judgeSummary. W-B-4 (V1-C06): the judge's recorded text, when the record carries it.
@@ -184,7 +205,7 @@ const edgePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash,
 // ⟪ctdlHub P6⟫ declaredCorrespondencePropertiesFor — a DECLARED_CORRESPONDENCE edge's closed property set: the record's predicate
 // VERBATIM as sourcePredicate, the source standard as declaredBy, spec-authoritative, and the run identity a mapping edge also
 // carries. No provider, no match field, no confidence: it is not a match edge (graphSeamRules.declaredCorrespondenceEdgeRefusal).
-const declaredCorrespondencePropertiesFor = ({ record, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion }) => ({
+const declaredCorrespondencePropertiesFor = ({ record, instanceStableId, block, decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion }) => ({
 	[DECLARED_CORRESPONDENCE_PROPERTIES.SOURCE_PREDICATE]: record.predicate,
 	[DECLARED_CORRESPONDENCE_PROPERTIES.DECLARED_BY]: sourceStandardName,
 	[DECLARED_CORRESPONDENCE_PROPERTIES.PROVENANCE_TIER]: PROVENANCE_TIER.SPEC_AUTHORITATIVE,
@@ -195,6 +216,7 @@ const declaredCorrespondencePropertiesFor = ({ record, block, decisionBlockHash,
 	[DECLARED_CORRESPONDENCE_PROPERTIES.MAPPING_SOURCE]: mappingSourceFor({ record, block }).mappingSource,
 	[DECLARED_CORRESPONDENCE_PROPERTIES.DECISION_BLOCK_HASH]: decisionBlockHash,
 	[DECLARED_CORRESPONDENCE_PROPERTIES.MATCH_ID]: sha256Hex(`${decisionBlockHash}\n${record.subjectStableId}\n${record.predicate}\n${record.objectStableId}`),
+	[DECLARED_CORRESPONDENCE_PROPERTIES.ASSERTION_ID]: assertionIdFor({ record, instanceStableId, predicateCurie: EDGE_SHAPE_REGISTRY.declaredCorrespondenceToBaseNode.sssomPredicateIdFor(record.predicate), decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion }).assertionId,
 	[DECLARED_CORRESPONDENCE_PROPERTIES.SUBJECT_SOURCE]: sourceStandardName,
 	[DECLARED_CORRESPONDENCE_PROPERTIES.SUBJECT_VERSION]: sourceVersion,
 	[DECLARED_CORRESPONDENCE_PROPERTIES.OBJECT_SOURCE]: hubName,
@@ -287,6 +309,14 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 		return;
 	}
 	const { edgeShapeRow } = shapeLookup;
+	// ⟪ML1-a⟫ every planned edge must be able to name its assertion; one that cannot is refused, naming it, before ANY edge is written
+	const unidentifiedPlanned = orderedList
+		.map((onePlanned) => ({ onePlanned, identified: assertionIdFor({ record: onePlanned.record, instanceStableId: onePlanned.instanceStableId, predicateCurie: edgeShapeRow.sssomPredicateIdFor(onePlanned.record.predicate), decisionBlockHash, sourceStandardName, sourceVersion, hubName, hubVersion }) }))
+		.find((oneCheck) => oneCheck.identified.error);
+	if (unidentifiedPlanned !== undefined) {
+		callback(`${moduleName}: edge ${unidentifiedPlanned.onePlanned.fromStableId} → ${unidentifiedPlanned.onePlanned.record.objectStableId}: assertionId: ${unidentifiedPlanned.identified.error}`);
+		return;
+	}
 	const writtenEdgeList = [];
 	let edgeIndex = 0;
 	const nextEdge = () => {
@@ -314,4 +344,4 @@ const materialiseBlock = ({ block, decisionBlockHash, writer, sourceStandardName
 	nextEdge();
 };
 
-module.exports = { materialiseBlock, EDGE_SHAPE_REGISTRY, edgeShapeRowFor, declaredCorrespondencePropertiesFor, edgePropertiesFor, mappingSourceFor, MAPPING_SOURCE_BY_RESOLUTION, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, mappingConfidenceFor, METHOD_BY_RESOLUTION, moduleName };
+module.exports = { materialiseBlock, assertionIdFor, EDGE_SHAPE_REGISTRY, edgeShapeRowFor, declaredCorrespondencePropertiesFor, edgePropertiesFor, mappingSourceFor, MAPPING_SOURCE_BY_RESOLUTION, edgeUniquenessRefusal, pickedRecordList, plannedEdgeList, mappingConfidenceFor, METHOD_BY_RESOLUTION, moduleName };

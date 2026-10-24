@@ -114,6 +114,7 @@ A mapping carries three independent properties. None may be inferred from anothe
 | `standard` | the parameters come from the standard's own specification |
 | `crosswalk` | the parameters come from a non-standard document |
 | `derived` | no specification exists; the parameters are derived from other properties |
+| `curated` | a named person or curator asserted the mapping in a published mapping layer (a frozen SSSOM set in the decision store, producerKind `curated`); added 2026-10-24 (mappingLayers ML1-b, D-PROFILE, ruled by BRONZE_CROWN for TQ). Vocabulary `LAYER_MATCH_BASIS.CURATED`; the bridge plugin contract's `MATCH_BASIS_LIST` gains it with the first curated materialisation (ML2) |
 
 `[design]` `matchBasis` is not an SSSOM slot. SSSOM offers no source-category enum. It is computed
 from `mapping_provider` and `mapping_tool` (§4.3), MUST be derivable from them, and MUST NOT

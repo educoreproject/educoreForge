@@ -7,7 +7,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 //   nodeIriFor({ stableId, standardName, standardVersion }) → { iri } | { error }
 //       a stableId that is already an absolute IRI (uriScheme.json absoluteIriPrefixList: hub cards, CEDS terms) is its own
-//       IRI; every other stableId is a CURIE-shaped key and expands to the edc element IRI of its standard version
+//       IRI; a vocabulary term (vocabularyIriByCurie: sssom:NoTermFound, an abstention's object) is its declared IRI; every
+//       other stableId is a CURIE-shaped key and expands to the edc element IRI of its standard version
 //   predicateIriFor(predicateCurie) → { iri } | { error }        through uriScheme.json predicatePrefixExpansion
 //   assertionIdFor({ decisionBlockHash, subjectStableId, subjectStandardName, subjectStandardVersion, predicateCurie,
 //                    objectStableId, objectStandardName, objectStandardVersion })
@@ -54,6 +55,9 @@ const nodeIriFor = ({ stableId, standardName, standardVersion } = {}) => {
 	}
 	if (isAbsoluteIri(stableId)) {
 		return { iri: stableId };
+	}
+	if (typeof URI_SCHEME.vocabularyIriByCurie[stableId] === 'string' && stableId !== 'about') {
+		return { iri: URI_SCHEME.vocabularyIriByCurie[stableId] };
 	}
 	const minted = edcUri.mint({ kind: 'element', standardName, standardVersion, elementStableId: stableId });
 	return minted.error ? { error: minted.error } : { iri: minted.uri };

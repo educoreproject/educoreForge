@@ -255,6 +255,7 @@ const TERM_DEFINITIONS = {
 		judgeTopProbability: 'Judged edges whose judge reports numbers (Jev): the probability the judge gave the option it chose.',
 		judgeRunnerUpMargin: 'Judged edges whose judge reports numbers (Jev): judgeTopProbability minus the largest probability over the other options offered (NONE included).',
 		mappingRationale: 'Judged edges of a plugin that records the judge\'s configuration: the judge\'s text for this pick, verbatim from the frozen record. For a judge that reports probabilities and not reasons (Jev) it is a sentence its client composed from the numbers, and says so. Evidence of the judgment, not an explanation of the mapping.',
+		assertionId: 'Every match edge and declared correspondence: the public identity of the assertion the edge makes, the edc assertion IRI over the decision block that holds it and sha256 of the expanded subject, predicate and object IRIs (lib/edc-uri/assertionIdentity.js). Exported as SSSOM record_id; matchId stays internal.',
 	},
 	// the confidence bands (vocabulary CONFIDENCE_BAND_TABLE), member value '<category>:<band>'
 	confidenceBand: {
