@@ -1076,7 +1076,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postZbA2rSeamDiffEmpty-102326 -> postNsK0SeamDiffEmpty-102326, tag cut ON this commit. CENSUS over this gate's paths: lib/forge-framework as (iii)
 // (test-gStandardMetadata.js 13/0) and apps/graph-builder/apps/replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 3/1 (its (e)
 // pre-fix twin admits the wave's families; granted). No forge entry, declaration or hooks file; no build, forger or replay source.
-const PHASE3_ANCHOR_TAG = 'postNsK0SeamDiffEmpty-102326'; // re-anchored by AZURE_MARBLE (nextStandards K0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (AZURE_MARBLE; nextStandards-102326 A1-A3, the new Open Badges forge; BRONZE_CROWN's grant) ═══ PHASE3_ANCHOR_TAG
+// postNsK0SeamDiffEmpty-102326 -> postNsASeamDiffEmpty-102326, tag cut ON this commit. CENSUS over this gate's paths: forges/openbadges/forgeOpenbadges.js
+// 26/0, lib/openbadgesForgeDeclaration.js 61/0, lib/openbadgesHooks.js 9/0 (a NEW forge's entry, declaration and hooks: the lane C1 coupling).
+// No existing forge, no framework, build, forger or replay source.
+const PHASE3_ANCHOR_TAG = 'postNsASeamDiffEmpty-102326'; // re-anchored by AZURE_MARBLE (nextStandards A1-A3; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

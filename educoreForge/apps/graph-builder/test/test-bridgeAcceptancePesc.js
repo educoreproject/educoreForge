@@ -1072,7 +1072,10 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // No bridge-framework or bridge-maker source; the proxy fingerprints of all 16 existing forges are unchanged (laneA/k0/proxyBefore/After).
 // ═══ RE-ANCHOR AGAIN, 2026-10-23 (AZURE_MARBLE; BRONZE_CROWN's grant) ═══ postNsK0PescCompose-102326 -> postNsK0bPescCompose-102326, tag cut
 // ON this commit. CENSUS over this gate's paths from the previous tag: lib/vocabulary/test/test-sifEdgeVocabulary.js (schema view 343 -> 344) only.
-const P1_BASELINE_COMMIT = 'postNsK0bPescCompose-102326'; // re-anchored by AZURE_MARBLE (census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (AZURE_MARBLE; nextStandards-102326 A2; BRONZE_CROWN's grant) ═══ postNsK0bPescCompose-102326 -> postNsAPescCompose-102326,
+// tag cut ON this commit. CENSUS over this gate's paths: the four roster tests' lane-A rows only (lib/bridge-framework/test/test-bgDecl.js 5/2,
+// test-bgJudgeSlot.js 4/0, test-bridgeComposer.js 6/0, test-hubBridging.js 5/2). No bridge-framework or bridge-maker source.
+const P1_BASELINE_COMMIT = 'postNsAPescCompose-102326'; // re-anchored by AZURE_MARBLE (census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
