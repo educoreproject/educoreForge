@@ -1097,7 +1097,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ═══ RE-ANCHOR, 2026-10-24 (QUIET_GATE; nextStandards-102326 wave 2 lane D0; pre-granted by BRONZE_CROWN) ═══ postW1PescCompose-102426 ->
 // postNsV2PescCompose-102426, tag cut ON this commit. CENSUS over this gate's paths: lib/vocabulary/graph-contract.js 3/2 and
 // lib/vocabulary/vocabulary.js 4/1 (the wave-2 vocabulary move). No bridge-framework or bridge-maker source.
-const P1_BASELINE_COMMIT = 'postNsV2PescCompose-102426'; // re-anchored by QUIET_GATE (census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (STEEL_BRIDGE; mappingLayers-102326 ML1, granted by BRONZE_CROWN at merge) ═══ postNsV2PescCompose-102426 ->
+// postMl1PescCompose-102426, tag cut ON this commit. CENSUS over this gate's paths (numstat from the wave-2 D0 tag): lib/bridge-framework/
+// materialiser.js 32/2 (the one property, assertionId, refused by name before any write when it cannot be computed), lib/bridge-framework/
+// sssomExporter.js 98/8 (record_id, sssom_version 1.1, the NoTermFound rows, the curated/imported set-slot rows, the census fix), lib/bridge-
+// framework/test/test-bgFanoutConsumers.js 38/12, test-bgMaterialiseFanout.js 6/2, test-bgP7.js 6/3 (the granted ML1-shape oracle edits),
+// test-bgNosub.js (the (ii) re-anchor, in this same commit), lib/vocabulary/ 38/5 (the ML1 vocabulary commit; census in test-bgNosub's (ii)
+// block). No bridge-maker source.
+const P1_BASELINE_COMMIT = 'postMl1PescCompose-102426'; // re-anchored by STEEL_BRIDGE (census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

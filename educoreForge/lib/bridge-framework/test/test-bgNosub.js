@@ -243,7 +243,13 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // graph-contract.js 3/2 (standardFamily meaning names CLR, CASE, EduAPI, SEDM; producer-local stems Clr, Case, Eduapi, Sedm), vocabulary.js 4/1
 // (STANDARD_FAMILY.CLR, .CASE, .EDUAPI, .SEDM). graph-contract.js is outside (ii)'s allowed vocabulary.js+tests, as C0's, K0's, D0's and P5's
 // rows were. Allowed-path list NOT widened.
-const POST_D1_BASE_TAG = 'postNsV2VocabularyIi-102426'; // re-anchored by QUIET_GATE (nextStandards wave 2 D0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (STEEL_BRIDGE; mappingLayers-102326 ML1, granted by BRONZE_CROWN at merge) ═══ (ii)
+// postNsV2VocabularyIi-102426 -> postMl1VocabularyIi-102426, tag cut ON this commit. CENSUS (lib/vocabulary/, numstat from the wave-2 D0 tag):
+// vocabulary.js 28/1 (MAPPING_PROPERTIES.ASSERTION_ID and its declared-correspondence twin, record_id, the curated/imported families,
+// LAYER_PRODUCER_KIND(_LIST), DECISION_BLOCK_PRODUCER_KIND_LIST, LAYER_MATCH_BASIS, SSSOM_VERSION_FOR_ONE_ONE_SLOTS), vocabulary-definitions.js
+// 1/0 (the one schema-view term matchEdgeProperty:assertionId), test/test-mappingProperties.js 6/3 (26 -> 27 names), test/test-sifEdgeVocabulary.js
+// 3/1 (schema view +1). vocabulary-definitions.js is outside (ii)'s allowed vocabulary.js+tests, as D3's row was. Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postMl1VocabularyIi-102426'; // re-anchored by STEEL_BRIDGE (mappingLayers ML1; census in the block above); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
