@@ -71,7 +71,9 @@ const declaredRuleMismatchList = (declaredEntryList, hubRuleList) => declaredEnt
 	return !sameText(oneEntry.bridgeDeclaration.declaredTargetRuleList, expectedRuleList);
 }).map((oneEntry) => `${oneEntry.bridgeName}(${pairRuleValueOf(oneEntry)})`);
 // frozen: the declared plugins toward each hub (ctdl→ceds and pescld→ceds; ctdlasn→ctdl and pescld→ctdl)
-const DECLARED_PLUGIN_COUNT_BY_HUB_TOKEN = Object.freeze({ ceds: 2, ctdl: 2 });
+// ⟪nextStandards-102326 wave 2 lane G, 2026-10-24 (RUBY_PORTAL)⟫ ADDED, in this lane's own table: SEDM's declared identity toward CEDS
+const NEXT_STANDARDS_WAVE2_LANE_G_DECLARED_CEDS_PLUGIN_NAME_LIST = Object.freeze(['sedmCedsDeclaredIdentity']);
+const DECLARED_PLUGIN_COUNT_BY_HUB_TOKEN = Object.freeze({ ceds: 2 + NEXT_STANDARDS_WAVE2_LANE_G_DECLARED_CEDS_PLUGIN_NAME_LIST.length, ctdl: 2 });
 
 harness.section('(b) the loader, by declared location');
 const cedsLoaded = loaderLib.loadHubBridging({ forgesDirPath: FORGES_DIR_PATH, hubToken: 'ceds' });

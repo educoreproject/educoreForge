@@ -80,6 +80,11 @@ const ADDED_NEXT_STANDARDS_LANE_C = Object.freeze({
 const ADDED_NEXT_STANDARDS_WAVE2_LANE_E = Object.freeze({
 	caseCedsDerivedPlugin: { standardKey: 'case', targetHub: 'ceds', declarationDigest: '6d27c3b1a373d5714f48e1f5e5ea8f9bff1dd97b2ea717bcfaf81c494f14fd9a', hookNameList: [], reason: 'nextStandards wave 2 E2: every CASE property judged toward the CEDS hub (forges/case)' },
 	caseCtdlDerivedPlugin: { standardKey: 'case', targetHub: 'ctdl', declarationDigest: '5bd23eefbc26fbb5add924eb9f6971282511a1763524fa0db82ae8811f47f20b', hookNameList: [], reason: 'nextStandards wave 2 E2: every CASE property judged toward the CTDL hub (forges/case)' },
+// ⟪nextStandards-102326 wave 2 lane G, 2026-10-24 (RUBY_PORTAL)⟫ ADDED, in this lane's own table: SEDM's two facets, declared identity
+// toward the CEDS hub (the working documents' Global ID column) and the judged Element facet toward the CTDL hub (forges/sedm)
+const ADDED_NEXT_STANDARDS_WAVE2_LANE_G = Object.freeze({
+	sedmCedsDeclaredIdentity: { standardKey: 'sedm', targetHub: 'ceds', declarationDigest: '290cd39cabbd9ffd19f26b9d5b954c4c120104f499a17073bb9b73bc2367eac5', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'nextStandards wave 2 G2: SEDM declared identity to the CEDS hub, its stableIdTemplate rules only (forges/sedm)' },
+	sedmElementCtdlDerivedPlugin: { standardKey: 'sedm', targetHub: 'ctdl', declarationDigest: 'fac42e2028d37628aa5b5562990ca2277bf0a9f62a9d8c3e34afbdc916192f32', hookNameList: [], reason: 'nextStandards wave 2 G2: every SEDM element judged toward the CTDL hub (forges/sedm)' },
 });
 const ADDED_SINCE_R3_START = Object.freeze({
 	pescldCtdlDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '61c6c9cda1b1f7cbca25ecf77f50bdf316c8f685d4447bcc9df5a418c7672ff7', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C2: PESC_LD declared identity to the CTDL hub (forges/pescld)' },
@@ -93,6 +98,7 @@ const ADDED_SINCE_R3_START = Object.freeze({
 	...ADDED_NEXT_STANDARDS_LANE_B,
 	...ADDED_NEXT_STANDARDS_LANE_C,
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_E,
+	...ADDED_NEXT_STANDARDS_WAVE2_LANE_G,
 });
 // a bridge whose declaration moved since the start: both digests, so the entry is anchored to the roster it departs from
 const RE_KEYED_SINCE_R3_START = Object.freeze({

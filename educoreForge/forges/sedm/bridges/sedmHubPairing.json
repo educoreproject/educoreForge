@@ -1,0 +1,28 @@
+{
+	"pairingNote": "The hubs SEDM's two facets pair with, as DATA, so the bridging code names no hub (nextStandards-102326 wave 2, lane G; DESIGN-G0-sedm-102426.md §7-8; BRONZE_CROWN ruling 3, 2026-10-24, option A). The DECLARED-IDENTITY facet ('') pairs with the CEDS hub only and takes its stableIdTemplate rules ('fromHubStableIdTemplateRules': the CEDS list opens with a memberByNotation rule for its CTDL seam, which declared identity does not admit). The JUDGED facet ('Element') pairs with the CTDL hub only.",
+	"declaredTargetRuleListByHubToken": {
+		"ceds": "fromHubStableIdTemplateRules"
+	},
+	"declaredIdentifierFormNote": "PROVENANCE: the CSV's own column header 'Global ID (CEDS)' (sheet 6, 'CEDS Map', of SEDM Logical Model and Maps; forges/sedm snapshot 01) says each cell is a CEDS element's Global ID. The forge carries the cell verbatim as globalIdText; this file states how such a cell is written as the CURIE the CEDS hub's term rules resolve (the hub's rule ^ceds:(P\\d{6})$, its property term): six digits d -> ceds:Pd. A cell the pattern does not match is refused by name, save the declared absent sentinels (an empty cell; 'Proposed', the working group's word for an element CEDS does not yet have). The bare form ceds:<six digits> is NOT used: the hub resolves it to a CLASS term, the CTDL seam's form, and a SEDM element is never mapped to a class card (BRONZE_CROWN ruling 3).",
+	"declaredIdentifierFormByHubToken": {
+		"ceds": {
+			"sourcePropertyName": "globalIdText",
+			"rawValuePatternSource": "^(\\d{6})$",
+			"curieTemplate": "ceds:P{1}",
+			"absentTargetSentinelList": ["", "Proposed"]
+		}
+	},
+	"declaredMappingProvider": {
+		"url": "https://ceds-sedm.org/",
+		"verifiedBy": {
+			"sessionName": "RUBY_PORTAL",
+			"date": "2026-10-24",
+			"note": "the SEDM working group's address, HTTP 200 by curl -L on 2026-10-24 (it redirects to a Google Doc titled 'CEDS-SEDM.org'). The working group's CEDS Map sheet (forges/sedm snapshot 01, working documents, no published version) names, per element, the CEDS element it annotates in its 'Global ID (CEDS)' column; that column is read verbatim."
+		}
+	},
+	"declaredAssertedBy": {
+		"documentName": "SEDM Logical Model and Maps, sheet 6 'CEDS Map' (working documents of the SEDM working group; forges/sedm/assets/standardSourceData/01)",
+		"citation": "Each SEDM element row names the CEDS element it is, by that element's Global ID in the column 'Global ID (CEDS)': the sheet is SEDM's annotation of CEDS elements. Identity of element is the assertion, not a judgment of meaning."
+	},
+	"judgedHubTokenList": ["ctdl"]
+}

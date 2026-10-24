@@ -1,0 +1,23 @@
+{
+  // sedmBridged — nextStandards-102326 wave 2 lane G phase 2: SEDM beside both hubs with BOTH its facets: declared identity toward
+  // CEDS (facet ''; the working documents' Global ID column, nothing judged) and the judged facet toward CTDL (facet 'Element'; every
+  // SedmElement a subject, retrieval by the forge's text nodes, the judge Jev jev-1.13.0 naming the relation). Rehearsed under
+  // --useDebugJudge, then the real judge; pre-declared spend $0.10 (321 units x the CTDL hub), STOP at $0.93 (BRONZE_CROWN, G0 ruling).
+  "schemaVersion": "1.0.0",
+  "recipeName": "sedmBridged",
+  "kind": "dev",
+  "description": "SEDM beside the CEDS and CTDL hubs: declared identity to CEDS, the judged Element facet to CTDL (phase 2).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "sedm", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "sedm", "facet": "", "hubs": ["ceds"], "dependencies": ["sedm", "ceds"] },
+    { "source": "sedm", "facet": "Element", "hubs": ["ctdl"], "dependencies": ["sedm", "ctdl"] }
+  ]
+}
