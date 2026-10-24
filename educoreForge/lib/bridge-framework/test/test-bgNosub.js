@@ -238,7 +238,12 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // postNsK0VocabularyIi-102326 -> postNsCVocabularyIi-102326, tag cut ON this commit. CENSUS (lib/vocabulary/, numstat from the K0 tag):
 // graph-contract.js 2/2 (standardFamily meaning names LIF; producer-local stem Lif), vocabulary.js 3/1 (STANDARD_FAMILY.LIF). graph-contract.js
 // is outside (ii)'s allowed vocabulary.js+tests, as K0's, D0's and P5's rows were. Allowed-path list NOT widened.
-const POST_D1_BASE_TAG = 'postNsCVocabularyIi-102326'; // re-anchored by STEEL_MIRROR (nextStandards C0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (QUIET_GATE; nextStandards-102326 wave 2 lane D0, the wave's one vocabulary move; pre-granted by BRONZE_CROWN) ═══ (ii)
+// postNsCVocabularyIi-102326 -> postNsV2VocabularyIi-102426, tag cut ON this commit. CENSUS (lib/vocabulary/, numstat from the C0 tag):
+// graph-contract.js 3/2 (standardFamily meaning names CLR, CASE, EduAPI, SEDM; producer-local stems Clr, Case, Eduapi, Sedm), vocabulary.js 4/1
+// (STANDARD_FAMILY.CLR, .CASE, .EDUAPI, .SEDM). graph-contract.js is outside (ii)'s allowed vocabulary.js+tests, as C0's, K0's, D0's and P5's
+// rows were. Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postNsV2VocabularyIi-102426'; // re-anchored by QUIET_GATE (nextStandards wave 2 D0; census in the block above); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -526,7 +531,11 @@ const POST_D1_BASE_TAG = 'postNsCVocabularyIi-102326'; // re-anchored by STEEL_M
 // ═══ RE-ANCHOR, 2026-10-24 (STEEL_MIRROR; nextStandards-102326 lane C0; pre-granted by BRONZE_CROWN) ═══ PHASE0_ANCHOR_TAG
 // postNsK0ForgeFrameworkIii-102326 -> postNsCForgeFrameworkIii-102326, tag cut ON this commit. CENSUS over this gate's paths:
 // lib/forge-framework/test/test-gStandardMetadata.js 6/0 (conjunct r: the LIF family admitted, and its twin). No framework source.
-const PHASE0_ANCHOR_TAG = 'postNsCForgeFrameworkIii-102326'; // re-anchored by STEEL_MIRROR (nextStandards C0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (QUIET_GATE; nextStandards-102326 wave 2 lane D0; pre-granted by BRONZE_CROWN) ═══ PHASE0_ANCHOR_TAG
+// postNsCForgeFrameworkIii-102326 -> postNsV2ForgeFrameworkIii-102426, tag cut ON this commit. CENSUS over this gate's paths:
+// lib/forge-framework/test/test-gStandardMetadata.js 21/0 (conjuncts s, t, u, v: the CLR, CASE, EduAPI and SEDM families admitted, and their
+// twins). No framework source.
+const PHASE0_ANCHOR_TAG = 'postNsV2ForgeFrameworkIii-102426'; // re-anchored by QUIET_GATE (nextStandards wave 2 D0; census in the block above); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -1105,7 +1114,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // ═══ RE-ANCHOR, 2026-10-24 (SUNSET_SIGNAL; nextStandards-102326 W2.2, the work order's test-fixture fix) ═══ PHASE3_ANCHOR_TAG
 // postNsC1bSeamDiffEmpty-102326 -> postW1SeamDiffEmpty-102426, tag cut ON this commit. CENSUS over this gate's paths:
 // apps/graph-builder/apps/replay-manager/test/test-provisionPortRace.js 43/15 (909b19b2: the per-run stress purpose and its twin). No replay-manager source.
-const PHASE3_ANCHOR_TAG = 'postW1SeamDiffEmpty-102426'; // re-anchored by SUNSET_SIGNAL (nextStandards W2.2; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (QUIET_GATE; nextStandards-102326 wave 2 lane D0; pre-granted by BRONZE_CROWN) ═══ PHASE3_ANCHOR_TAG
+// postW1SeamDiffEmpty-102426 -> postNsV2SeamDiffEmpty-102426, tag cut ON this commit. CENSUS over this gate's paths: lib/forge-framework as (iii)
+// (test-gStandardMetadata.js 21/0) and apps/graph-builder/apps/replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 2/1 (its (e)
+// pre-fix twin admits Clr*, Case*, Eduapi*, Sedm* residue). No forge entry, declaration or hooks file; no build, forger or replay source.
+const PHASE3_ANCHOR_TAG = 'postNsV2SeamDiffEmpty-102426'; // re-anchored by QUIET_GATE (nextStandards wave 2 D0; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
