@@ -141,6 +141,9 @@ SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_LANE_B_PLUGIN_LIST);
 // ⟪nextStandards-102326 lane C2, 2026-10-24 (STEEL_MIRROR)⟫ ADDED: LIF 2.0's one judged facet toward both hubs, the same judgeSlot-v1 form
 const NEXT_STANDARDS_LANE_C_PLUGIN_LIST = ['ceds', 'ctdl'].map((hubStem) => ({ bridgeName: `lif${hubStem.charAt(0).toUpperCase()}${hubStem.slice(1)}DerivedPlugin`, composedFromBridgingFilePath: 'forges/lif/bridges/lifBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL }));
 SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_LANE_C_PLUGIN_LIST);
+// ⟪nextStandards wave 2 lane E2, 2026-10-24 (HIDDEN_EMBER)⟫ ADDED: CASE 1.1's one judged facet toward both hubs, the same judgeSlot-v1 form
+const NEXT_STANDARDS_WAVE2_LANE_E_PLUGIN_LIST = ['ceds', 'ctdl'].map((hubStem) => ({ bridgeName: `case${hubStem.charAt(0).toUpperCase()}${hubStem.slice(1)}DerivedPlugin`, composedFromBridgingFilePath: 'forges/case/bridges/caseBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL }));
+SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_WAVE2_LANE_E_PLUGIN_LIST);
 
 // ---------------------------------------------------------------------
 // module loading: the real module, or a double carrying the scenario's mutations
