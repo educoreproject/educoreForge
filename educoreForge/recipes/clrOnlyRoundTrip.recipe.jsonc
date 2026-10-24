@@ -1,0 +1,16 @@
+{
+  // clrOnlyRoundTrip — CLR 2.0 alone with the RT-13 round-trip stage: the nextStandards-102326 wave 2 lane D1 certification recipe.
+  "schemaVersion": "1.0.0",
+  "recipeName": "clrOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the CLR 2.0 standard base and round-trip-validate the materialized product (RT-13 stage).",
+  "roundTripStage": true,
+  "standards": [
+    {
+      "token": "clr",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

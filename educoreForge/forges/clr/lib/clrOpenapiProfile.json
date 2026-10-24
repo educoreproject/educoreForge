@@ -1,0 +1,17 @@
+{
+	"profileNote": "CLR 2.0 (1EdTech) on lib/openapi-forge (nextStandards-102326 wave 2 D1). All 34 components.schemas are forged, including the ten API-plumbing schemas (OpenApi*, Imsx_*, ServiceDescriptionDocument, GetClrCredentialsResponse, Proof), as Open Badges: components.schemas round-trips whole. The 28 schemas CLR shares by name with Open Badges 3.0 are CLR's own copies (their persistent ids are in CLR's namespace) and are forged under clr:.",
+	"sourceLayout": "referencedSingleFile",
+	"sourceFileName": "clr_v2p0_oas.json",
+	"sourceFormat": "json",
+	"stableIdPrefix": "clr:",
+	"rootStableId": "clr:root",
+	"perStandardLabelByRole": {
+		"DmeClass": "ClrSchema",
+		"DmeProperty": "ClrProperty",
+		"DmeOptionSet": "ClrEnum",
+		"DmeOptionValue": "ClrEnumValue"
+	},
+	"schemaExclusionList": [],
+	"listValuedVendorExtensionNameList": [],
+	"enumMemberTextDeclarationList": []
+}
