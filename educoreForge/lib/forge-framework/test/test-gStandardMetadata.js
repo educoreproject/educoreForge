@@ -140,6 +140,11 @@ const conjunctJudgeByRefId = {
 		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'JEDx' }));
 		return { pass: message === '', detail: message || "standardFamily 'JEDx' admitted" };
 	},
+	// ⟪nextStandards-102326 lane C, C0⟫ LIF (lane C's forges/lif) is its own family
+	r_lifFamilyAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'LIF' }));
+		return { pass: message === '', detail: message || "standardFamily 'LIF' admitted" };
+	},
 	i_blankReleaseLabelRefused: (mutationList) => {
 		const message = validationMessageFor(mutationList, withChange({ releaseLabel: ' ' }));
 		return { pass: /forgeDeclaration 'releaseLabel'/.test(message), detail: message || 'accepted a blank releaseLabel' };
@@ -212,6 +217,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'o_pescldFamilyAdmitted', twinName: 'familyListWithoutPescld', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'PESCLD') })," },
 	{ conjunctRefId: 'p_openbadgesFamilyAdmitted', twinName: 'familyListWithoutOpenbadges', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'OpenBadges') })," },
 	{ conjunctRefId: 'q_jedxFamilyAdmitted', twinName: 'familyListWithoutJedx', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'JEDx') })," },
+	{ conjunctRefId: 'r_lifFamilyAdmitted', twinName: 'familyListWithoutLif', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'LIF') })," },
 	{ conjunctRefId: 'i_blankReleaseLabelRefused', twinName: 'labelOptional', modulePath: CONTRACT_PATH, find: "releaseLabel: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "releaseLabel: Object.freeze({ required: true, kind: 'nonEmptyString' })," },
 	{ conjunctRefId: 'j_rootCarriesFamilyAndLabel', twinName: 'rootDropsFamily', modulePath: ROOT_PATH, find: '\t\tstandardFamily,\n\t\treleaseLabel,\n', replace: '\t\treleaseLabel,\n' },
 	{ conjunctRefId: 'l_missingOrBlankDescriptionSourceRefused', twinName: 'descriptionSourceOptional', modulePath: CONTRACT_PATH, find: "descriptionSource: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "descriptionSource: Object.freeze({ required: false, kind: 'nonEmptyString' })," },

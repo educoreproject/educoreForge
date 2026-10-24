@@ -61,7 +61,7 @@ const LIST_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 // ⟪lane DES, 2026-10-12⟫ '^StandardLayer$' joins '^StandardBase$': it names every node of a layer block.
 // ⟪ctdlHub P1⟫ Ctdl, Ctdlasn and Ctdlqdata are the three CTDL-family forges' per-standard label stems (CtdlClass, CtdlasnClass, …).
 // ⟪nextStandards-102326 K0⟫ OpenBadges (lane A's forges/openbadges: OpenBadgesSchema, OpenBadgesProperty, …) and Jedx (lane B's forges/jedx).
-const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif|Sif260928|Pesc[A-Za-z0-9]+|Ctdl|Ctdlasn|Ctdlqdata|OpenBadges|Jedx)[A-Z]', '^StandardBase$', '^StandardLayer$', '^BridgedRelation_']);
+const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif|Sif260928|Pesc[A-Za-z0-9]+|Ctdl|Ctdlasn|Ctdlqdata|OpenBadges|Jedx|Lif)[A-Z]', '^StandardBase$', '^StandardLayer$', '^BridgedRelation_']);
 // names that END in List / Keys but are JSON strings or literals by declaration: the name-rule test exempts exactly these
 const LIST_NAME_RULE_EXEMPTION_BY_NAME = Object.freeze({
 	importList: 'JSON string (pesc-release-forge walk.js)',
@@ -235,7 +235,7 @@ const STANDARD_DEFINITION_FIELD_LIST = Object.freeze([
 	{ name: 'unkindedMappingEdgeCount', type: 'integer', required: false, meaning: 'match edges carrying no mappingKind' },
 	{ name: 'standardKind', type: 'string', required: true, meaning: 'what kind of standard it is, as its forge declares' },
 	{ name: 'standardUsageTips', type: 'string', required: false, meaning: 'how to read the standard in this graph, as its forge declares; absent when the forge declares null (forgeDeclarationContract allows it: sif, pesc260805)' },
-	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC, CTDL, CTDLASN, CTDLQData, PESCLD, OpenBadges, JEDx), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
+	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC, CTDL, CTDLASN, CTDLQData, PESCLD, OpenBadges, JEDx, LIF), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
 	{ name: 'releaseLabel', type: 'string', required: true, meaning: 'which member of its family the standard is, version-free (CollegeTranscript, not CollegeTranscript-1.8.0); a one-member family repeats the family name' },
 	{ name: 'descriptionSource', type: 'string', required: true, meaning: 'where in the standard\'s SOURCE its description text is read from (PESC xs:documentation, CEDS dc:description, ...), declared by its forge (lane FIX, Fix 3)' },
 	// ⟪zeroBacklog lane D, D0-4, 2026-10-22⟫ RESERVED for lane A2 (census row 10), which stamps it on every standard and makes it required

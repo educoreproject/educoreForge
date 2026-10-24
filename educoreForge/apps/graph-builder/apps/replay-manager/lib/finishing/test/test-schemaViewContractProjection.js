@@ -162,7 +162,8 @@ const preFixResidue = forgeFamilyResidueFor(require(COVERAGE_PATH)({ vocabulary:
 // ⟪zeroBacklog lane D, D3-6 follower, 2026-10-22⟫ the old SIF forge (rootLabel SifRoot) retired to codeAttic, so no declaration mints a
 // Sif* label any more; the same pre-fix list now leaves the three CTDL families' labels as residue, which is what keeps this twin red
 // ⟪nextStandards-102326 K0⟫ and the wave-1 families the pre-fix list never knew either (OpenBadges; Jedx once lane B's forge lands)
-harness.ok('(e) observed RED with the pre-fix pattern list (families it never declared: today the CTDL ones and the nextStandards wave)', preFixResidue.length > 0 && preFixResidue.every((oneLabel) => /^(Ctdl|OpenBadges|Jedx)/.test(oneLabel)), preFixResidue.join(', '));
+// ⟪nextStandards-102326 lane C⟫ and LIF (Lif*, once lane C's forges/lif declaration lands)
+harness.ok('(e) observed RED with the pre-fix pattern list (families it never declared: today the CTDL ones and the nextStandards wave)', preFixResidue.length > 0 && preFixResidue.every((oneLabel) => /^(Ctdl|OpenBadges|Jedx|Lif)/.test(oneLabel)), preFixResidue.join(', '));
 harness.note(`RED-OBSERVED e twin='oldSifFamilyUndeclared' → residue [${preFixResidue.join(', ')}]`);
 
 harness.report();
