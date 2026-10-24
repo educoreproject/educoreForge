@@ -1102,7 +1102,10 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // ═══ RE-ANCHOR, 2026-10-24 (STEEL_MIRROR; nextStandards-102326 C1 follow-up, BRONZE_CROWN's grant) ═══ PHASE3_ANCHOR_TAG
 // postNsC1SeamDiffEmpty-102326 -> postNsC1bSeamDiffEmpty-102326, tag cut ON this commit. CENSUS over this gate's paths:
 // apps/graph-builder/apps/forger/test/test-forger.js 5/2 (its no-bundle fixture 'lif' -> 'zztestonlynokit', granted). No forger source.
-const PHASE3_ANCHOR_TAG = 'postNsC1bSeamDiffEmpty-102326'; // re-anchored by STEEL_MIRROR (nextStandards C1 follow-up; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (SUNSET_SIGNAL; nextStandards-102326 W2.2, the work order's test-fixture fix) ═══ PHASE3_ANCHOR_TAG
+// postNsC1bSeamDiffEmpty-102326 -> postW1SeamDiffEmpty-102426, tag cut ON this commit. CENSUS over this gate's paths:
+// apps/graph-builder/apps/replay-manager/test/test-provisionPortRace.js 43/15 (909b19b2: the per-run stress purpose and its twin). No replay-manager source.
+const PHASE3_ANCHOR_TAG = 'postW1SeamDiffEmpty-102426'; // re-anchored by SUNSET_SIGNAL (nextStandards W2.2; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

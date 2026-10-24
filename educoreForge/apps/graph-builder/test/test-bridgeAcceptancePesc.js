@@ -1091,7 +1091,10 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // ═══ RE-ANCHOR, 2026-10-24 (STEEL_MIRROR; nextStandards-102326 C1 follow-up) ═══ postNsC2bPescCompose-102326 -> postNsC2cPescCompose-102326,
 // tag cut ON this commit. CENSUS over this gate's paths: lib/bridge-framework/test/test-bgNosub.js 4/1 (the seamDiffEmpty re-anchor for the
 // granted test-forger fixture rename, 4fb20141). No bridge-framework or bridge-maker source.
-const P1_BASELINE_COMMIT = 'postNsC2cPescCompose-102326'; // re-anchored by STEEL_MIRROR (census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (SUNSET_SIGNAL; nextStandards-102326 W2.2) ═══ postNsC2cPescCompose-102326 -> postW1PescCompose-102426, tag cut
+// ON this commit. CENSUS over this gate's paths: lib/bridge-framework/test/test-bgNosub.js 4/1 (the seamDiffEmpty re-anchor for the
+// test-provisionPortRace fix, in this same commit). No bridge-framework or bridge-maker source.
+const P1_BASELINE_COMMIT = 'postW1PescCompose-102426'; // re-anchored by SUNSET_SIGNAL (census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
