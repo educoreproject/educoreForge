@@ -1,0 +1,62 @@
+{
+  // goldWave1 — nextStandards wave-1 assembly (WORKORDER-assembly-wave1-102426, Programmer W / SUNSET_SIGNAL for BRONZE_CROWN,
+  // 2026-10-24). It is goldZeroBacklog (the recipe of GOLD_EVAL_261023_zeroBacklog) with Open Badges 3.0 (lane A), JEDx
+  // (lane B) and LIF 2.0 (lane C) APPENDED, each with its one judged facet paired with both hubs exactly as in its lane's
+  // *Bridged recipe. Every goldZeroBacklog entry keeps its position (the inventory gate's appended-never-reordered rule).
+  // Built with --judgeCacheOnly=true --embeddingCacheOnly=true over a COPY of the zeroBacklog gold's store with the three
+  // lanes' caches folded in, so no judge or embedder is asked. kind 'golden' so -stampPromotion may name its graph GOLD_EVAL_*.
+  "schemaVersion": "1.0.0",
+  "recipeName": "goldWave1",
+  "kind": "golden",
+  "description": "The wave-1 gold: goldZeroBacklog (CEDS and CTDL hubs, CEDS layers, Ed-Fi, SIF 260928, eight PESC releases, the CTDL family, PESC_LD, every derived bridge judged against both hubs) PLUS Open Badges 3.0, JEDx and LIF 2.0, each with its judged facet to both hubs.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sif260928", "version": "current" },
+    { "token": "pesccollegetranscript1v8v0", "version": "current" },
+    { "token": "pesccollegetranscript1v7v0", "version": "current" },
+    { "token": "peschighschooltranscript1v6v0", "version": "current" },
+    { "token": "pesctestscorereport1v1v0", "version": "current" },
+    { "token": "pesclearningrecord1v0v0", "version": "current" },
+    { "token": "pescdocumentrequest1v0v0", "version": "current" },
+    { "token": "pescdocumentresponse1v0v0", "version": "current" },
+    { "token": "pescacademiceportfolio1v0v0", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "ctdlasn", "version": "current" },
+    { "token": "ctdlqdata", "version": "current" },
+    { "token": "pescld", "version": "current" },
+    { "token": "openbadges", "version": "current" },
+    { "token": "jedx", "version": "current" },
+    { "token": "lif", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "layers": [
+    { "standard": "ceds", "layer": "guide" },
+    { "standard": "ceds", "layer": "textRepair" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hubs": ["ceds", "ctdl"], "dependencies": ["edfi", "ceds", "ctdl"] },
+    { "source": "sif260928", "hubs": ["ceds", "ctdl"], "dependencies": ["sif260928", "ceds", "ctdl"] },
+    { "source": "pesccollegetranscript1v8v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesccollegetranscript1v8v0", "ceds", "ctdl"] },
+    { "source": "pesccollegetranscript1v7v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesccollegetranscript1v7v0", "ceds", "ctdl"] },
+    { "source": "peschighschooltranscript1v6v0", "hubs": ["ceds", "ctdl"], "dependencies": ["peschighschooltranscript1v6v0", "ceds", "ctdl"] },
+    { "source": "pesctestscorereport1v1v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesctestscorereport1v1v0", "ceds", "ctdl"] },
+    { "source": "pesclearningrecord1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesclearningrecord1v0v0", "ceds", "ctdl"] },
+    { "source": "pescdocumentrequest1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescdocumentrequest1v0v0", "ceds", "ctdl"] },
+    { "source": "pescdocumentresponse1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescdocumentresponse1v0v0", "ceds", "ctdl"] },
+    { "source": "pescacademiceportfolio1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescacademiceportfolio1v0v0", "ceds", "ctdl"] },
+    { "source": "ctdl", "hubs": ["ceds"], "dependencies": ["ctdl", "ceds"] },
+    { "source": "ctdlasn", "hubs": ["ctdl"], "dependencies": ["ctdlasn", "ctdl"] },
+    { "source": "ctdl", "familyStandards": ["ctdl", "ctdlasn", "ctdlqdata"], "bridge": "ctdlFamilyStructure", "dependencies": ["ctdl", "ctdlasn", "ctdlqdata"] },
+    { "source": "pescld", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "pescld", "facet": "PescTermRow", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "pescld", "facet": "PescTermShape", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "openbadges", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["openbadges", "ceds", "ctdl"] },
+    { "source": "jedx", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["jedx", "ceds", "ctdl"] },
+    { "source": "lif", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["lif", "ceds", "ctdl"] }
+  ],
+  "roundTripStage": true
+}
