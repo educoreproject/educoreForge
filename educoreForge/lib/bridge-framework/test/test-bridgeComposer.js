@@ -73,8 +73,8 @@ const ADDED_NEXT_STANDARDS_LANE_A = Object.freeze({
 });
 // ⟪nextStandards-102326 lane C2, 2026-10-24 (STEEL_MIRROR)⟫ ADDED, in this lane's own table: LIF 2.0's one judged facet
 const ADDED_NEXT_STANDARDS_LANE_C = Object.freeze({
-	lifCedsDerivedPlugin: { standardKey: 'lif', targetHub: 'ceds', declarationDigest: 'c1bce89d1f5111f0df055d90f9d27aa9f3a34c3b83ead357c86b6ecafc20e7cd', hookNameList: [], reason: 'nextStandards C2: every LIF property judged toward the CEDS hub (forges/lif)' },
-	lifCtdlDerivedPlugin: { standardKey: 'lif', targetHub: 'ctdl', declarationDigest: '02ebe47045b48bb936d9113d3f61f365a68a27db431d33579db562510b6366ee', hookNameList: [], reason: 'nextStandards C2: every LIF property judged toward the CTDL hub (forges/lif)' },
+	lifCedsDerivedPlugin: { standardKey: 'lif', targetHub: 'ceds', declarationDigest: '38acfdada0035b00617f3181224b210f212d44025766b1dc9e3ee52242ae59d7', hookNameList: [], reason: 'nextStandards C2: every LIF property judged toward the CEDS hub (forges/lif)' },
+	lifCtdlDerivedPlugin: { standardKey: 'lif', targetHub: 'ctdl', declarationDigest: '8ed9604ab24a1d2c63e0ad49b62eb038b3e2e975a7fc0a6fb7f1894fa03613c9', hookNameList: [], reason: 'nextStandards C2: every LIF property judged toward the CTDL hub (forges/lif)' },
 });
 const ADDED_SINCE_R3_START = Object.freeze({
 	pescldCtdlDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '61c6c9cda1b1f7cbca25ecf77f50bdf316c8f685d4447bcc9df5a418c7672ff7', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C2: PESC_LD declared identity to the CTDL hub (forges/pescld)' },
