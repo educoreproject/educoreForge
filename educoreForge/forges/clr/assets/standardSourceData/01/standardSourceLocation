@@ -1,0 +1,7 @@
+standard: CLR 2.0 (1EdTech Comprehensive Learner Record), OpenAPI 3.0 schema
+publishedVersion: 2.0
+publishedVersionEvidence: the document's own info.version "2.0" with x-status "Final" (and the URL's v2p0 segment)
+upstreamUrl: https://purl.imsglobal.org/spec/clr/v2p0/schema/openapi/clr_v2p0_oas.json
+publisher: 1EdTech Consortium
+acquiredDate: 2026-10-24
+note: EDITING WARNING. deriveVersionStamp (lib/snapshot-provenance) takes THE ENTIRE REST OF the publishedVersion line as the version, so keep that line bare; citations belong on publishedVersionEvidence.
