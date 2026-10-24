@@ -51,8 +51,8 @@ const statedLayerRegistry = () => ({
 	registrationAuthorityIri: ORGANISATION_IRI,
 	registrarIri: ORGANISATION_IRI,
 	layerList: [
-		{ layerKey: 'toyCurated', displayName: 'a toy curated layer', layerKind: 'curated', authorAgentIri: AUTHOR_IRI, ...sourceListsFor(), versionList: [] },
-		{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI, ...sourceListsFor(), versionList: [] },
+		{ layerKey: 'toyCurated', displayName: 'a toy curated layer', layerKind: 'curated', authorAgentIri: AUTHOR_IRI, ...sourceListsFor(), versionList: [], statusChangeList: [] },
+		{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI, ...sourceListsFor(), versionList: [], statusChangeList: [] },
 	],
 });
 // the set: two ToyA rows (one a NoTermFound), one ToyB row; source slots per row, hub at set level

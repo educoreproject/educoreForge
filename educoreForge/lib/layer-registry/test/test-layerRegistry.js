@@ -71,6 +71,7 @@ const statedLayerRegistry = () => ({
 				versionFor({ letter: 'a', versionTag: 'r1', registrationStatus: 'Standard', publishedAt: '2026-10-01T00:00:00Z' }),
 				versionFor({ letter: 'b', versionTag: 'r2', registrationStatus: 'Candidate', publishedAt: '2026-10-02T00:00:00Z' }),
 			],
+			statusChangeList: [],
 		},
 	],
 });
@@ -122,11 +123,32 @@ harness.section('the seeded registry (recipes/layers.json, recipes/agents.json)'
 const seeded = loadRegistry({ layerRegistryFilePath: path.join(TREE_ROOT, 'recipes', 'layers.json'), agentRegistryFilePath: path.join(TREE_ROOT, 'recipes', 'agents.json') });
 harness.ok('the seeded registry loads', seeded.error === undefined, seeded.error);
 const jevLayer = seeded.registry.layerFor('jev').layer;
-harness.equal('layer jev carries the two Jev configurations of the gold, tagged by their cfg- tail', jevLayer.versionList.map((oneVersion) => oneVersion.administrationRecord.versionTag).sort().join(','), 'cfg-03f64470322c,cfg-cf8d41f82791');
+// the seed (the zeroBacklog gold's two configurations) and the wave-1 append (BRONZE_CROWN 2026-10-24): JEDx, LIF and Open Badges were
+// judged under cfg-cf8d…, so a new version spans its 12 blocks and the 6-block one is Superseded by an APPENDED change, its row untouched
+harness.equal('layer jev carries three versions: the two seeded configurations and the wave-1 append', jevLayer.versionList.map((oneVersion) => oneVersion.administrationRecord.versionTag).join(','), 'cfg-03f64470322c,cfg-cf8d41f82791,cfg-cf8d41f82791.wave1-261024');
 jevLayer.versionList.forEach((oneVersion) => {
 	harness.equal(`jev ${oneVersion.administrationRecord.versionTag}: contentId = sha256 of its ${oneVersion.memberBlockList.length} sorted member hashes (R-1)`, oneVersion.administrationRecord.contentId, contentIdForMemberBlockList(oneVersion.memberBlockList));
-	harness.equal(`jev ${oneVersion.administrationRecord.versionTag}: status Standard`, oneVersion.registrationStatus, 'Standard');
+	harness.equal(`jev ${oneVersion.administrationRecord.versionTag}: the row keeps the status it was published with (Standard)`, oneVersion.registrationStatus, 'Standard');
 });
+harness.equal('jev cfg-cf8d41f82791 is EFFECTIVELY Superseded, by the appended change', seeded.registry.effectiveStatusFor({ layerKey: 'jev', versionTag: 'cfg-cf8d41f82791' }).registrationStatus, 'Superseded');
+harness.equal('…and its successor is the wave-1 version', jevLayer.statusChangeList[0].supersededByVersionTag, 'cfg-cf8d41f82791.wave1-261024');
+harness.ok('the wave-1 version holds every one of the superseded version\'s blocks, plus six', (() => { const oldSet = new Set(jevLayer.versionList[1].memberBlockList.map((oneMember) => oneMember.decisionBlockHash)); const newList = jevLayer.versionList[2].memberBlockList.map((oneMember) => oneMember.decisionBlockHash); return newList.length === oldSet.size + 6 && Array.from(oldSet).every((oneHash) => newList.indexOf(oneHash) !== -1); })());
+
+// =====================================================================
+harness.section('status changes: appended, never edited into a version; each refusal by name');
+// =====================================================================
+
+const changeFor = (overrides) => ({ versionTag: 'r1', registrationStatus: 'Superseded', changedAt: '2026-10-03T00:00:00Z', changedBy: ORGANISATION_IRI, supersededByVersionTag: 'r2', ...overrides });
+const promoted = registryFor({ layerRegistry: { ...statedLayerRegistry(), layerList: statedLayerRegistry().layerList.map((oneLayer) => ({ ...oneLayer, statusChangeList: [changeFor({ versionTag: 'r2', registrationStatus: 'Standard', supersededByVersionTag: undefined }), changeFor({ changedAt: '2026-10-04T00:00:00Z' })] })) }, agentRegistry });
+harness.ok('a promotion and a supersession, appended in time order, are accepted', promoted.error === undefined, promoted.error);
+harness.equal('the floating layer now follows the promoted r2, not the superseded r1', promoted.registry.currentStandardVersionFor('toyCurated').version.administrationRecord.versionTag, 'r2');
+harness.equal("…while r1's row still says the status it was published with", promoted.registry.versionFor({ layerKey: 'toyCurated', versionTag: 'r1' }).version.registrationStatus, 'Standard');
+harness.match('a layer with no statusChangeList is refused (stated, never assumed)', faultedRegistry((oneLayer) => { delete oneLayer.statusChangeList; }).error, /has no statusChangeList/);
+harness.match('a change naming a version the layer lacks is refused', faultedRegistry((oneLayer) => { oneLayer.statusChangeList = [changeFor({ versionTag: 'r9' })]; }).error, /names version "r9", which the layer does not have/);
+harness.match('Superseded without a successor is refused', faultedRegistry((oneLayer) => { oneLayer.statusChangeList = [changeFor({ supersededByVersionTag: undefined })]; }).error, /a Superseded version names its successor/);
+harness.match('a change to a status outside the 11179 list is refused', faultedRegistry((oneLayer) => { oneLayer.statusChangeList = [changeFor({ registrationStatus: 'Deprecated' })]; }).error, /"Deprecated" is not an ISO\/IEC 11179-6 lifecycle status/);
+harness.match('a change out of time order is refused', faultedRegistry((oneLayer) => { oneLayer.statusChangeList = [changeFor({ changedAt: '2026-10-05T00:00:00Z' }), changeFor({ changedAt: '2026-10-04T00:00:00Z' })]; }).error, /dated before the change above it/);
+harness.match('a change by an unregistered agent is refused', faultedRegistry((oneLayer) => { oneLayer.statusChangeList = [changeFor({ changedBy: 'https://w3id.org/EDUcore/agent/u-9999' })]; }).error, /changedBy a registered agent/);
 
 // =====================================================================
 harness.section('R-2 and R-3: the vocabulary rows this registry relies on');

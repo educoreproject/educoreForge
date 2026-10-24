@@ -11,12 +11,18 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   registry.layerFor(layerKey)                               → { layer } | { error }      an unknown layerKey refused by name
 //   registry.versionFor({ layerKey, versionTag })             → { version } | { error }
 //   registry.currentStandardVersionFor(layerKey)              → { version } | { error }    the latest-published STANDARD version
+//   registry.effectiveStatusFor({ layerKey, versionTag })     → { registrationStatus } | { error }  after the layer's status changes
+//   registry.withAppendedStatusChange({ layerKey, statusChange }) → { layerRegistry } | { error }  a NEW registry; the version row untouched
 //   registry.withAppendedVersion({ layerKey, version })       → { layerRegistry } | { error }  a NEW registry object; nothing mutated
 //   contentIdForMemberBlockList(memberBlockList)              → sha256 of the sorted, '\n'-joined member decisionBlockHashes (R-1)
 //
 // A version is refused by name when: its status is outside the ISO/IEC 11179 list; its administration record lacks a field; its
 // tag is used by another version of the same layer (a tag is NEVER reassigned); its content id does not match its basis; or an
 // agent it names is not in the agent registry. A floating layer follows its Standard version, never merely its newest (SPEC §5.3).
+// STATUS CHANGES ARE APPENDED, NEVER EDITED INTO A VERSION (BRONZE_CROWN 2026-10-24: "never edit the old row"; SPEC §4.4's append-only
+// rule for published manifests, applied to layer versions): a version row keeps the status it was published with; the layer's
+// statusChangeList records each later change { versionTag, registrationStatus, changedAt, changedBy, supersededByVersionTag? }, and a
+// version's EFFECTIVE status is its latest change. Superseded names its successor, which must be a version of the same layer.
 
 const crypto = require('crypto');
 const fs = require('fs');
@@ -128,6 +134,9 @@ const layerRefusal = ({ layer, agentIriSet }) => {
 	if (!Array.isArray(layer.versionList)) {
 		return `layer '${layer.layerKey}' has no versionList (an empty list is stated, never assumed)`;
 	}
+	if (!Array.isArray(layer.statusChangeList)) {
+		return `layer '${layer.layerKey}' has no statusChangeList (an empty list is stated, never assumed)`;
+	}
 	const contentIdByTag = {};
 	for (let versionIndex = 0; versionIndex < layer.versionList.length; versionIndex++) {
 		const oneVersion = layer.versionList[versionIndex];
@@ -140,6 +149,25 @@ const layerRefusal = ({ layer, agentIriSet }) => {
 			return `layer '${layer.layerKey}': tag '${versionTag}' is REASSIGNED (content ${contentIdByTag[versionTag]} and ${contentId}); a tag is never reused`;
 		}
 		contentIdByTag[versionTag] = contentId;
+	}
+	for (let changeIndex = 0; changeIndex < layer.statusChangeList.length; changeIndex++) {
+		const oneChange = layer.statusChangeList[changeIndex];
+		const changeLabel = `layer '${layer.layerKey}' status change ${changeIndex + 1}`;
+		if (!isPlainObject(oneChange) || contentIdByTag[oneChange.versionTag] === undefined) {
+			return `${changeLabel} names version ${JSON.stringify(oneChange && oneChange.versionTag)}, which the layer does not have`;
+		}
+		if (LAYER_REGISTRY_SCHEMA.registrationStatusList.indexOf(oneChange.registrationStatus) === -1) {
+			return `${changeLabel}: registrationStatus ${JSON.stringify(oneChange.registrationStatus)} is not an ISO/IEC 11179-6 lifecycle status (${LAYER_REGISTRY_SCHEMA.registrationStatusList.join(', ')})`;
+		}
+		if (!new RegExp(LAYER_REGISTRY_SCHEMA.publishedAtPattern).test(String(oneChange.changedAt)) || !agentIriSet.has(oneChange.changedBy)) {
+			return `${changeLabel}: changedAt must be an ISO UTC instant and changedBy a registered agent (got ${oneChange.changedAt}, ${oneChange.changedBy})`;
+		}
+		if (oneChange.registrationStatus === 'Superseded' && (contentIdByTag[oneChange.supersededByVersionTag] === undefined || oneChange.supersededByVersionTag === oneChange.versionTag)) {
+			return `${changeLabel}: a Superseded version names its successor (supersededByVersionTag ${JSON.stringify(oneChange.supersededByVersionTag)} is not another version of this layer)`;
+		}
+		if (changeIndex > 0 && String(oneChange.changedAt) < String(layer.statusChangeList[changeIndex - 1].changedAt)) {
+			return `${changeLabel} is dated before the change above it; the list is appended in time order`;
+		}
 	}
 	return '';
 };
@@ -182,12 +210,21 @@ const registryFor = ({ layerRegistry, agentRegistry } = {}) => {
 		const version = found.layer.versionList.find((oneVersion) => oneVersion.administrationRecord.versionTag === versionTag);
 		return version === undefined ? { error: refusalText(`layer '${layerKey}' has no version tagged ${JSON.stringify(versionTag)}`, 'recipes/layers.json') } : { version };
 	};
+	// the effective status: the version's latest appended change, else the status it was published with
+	const effectiveStatusOf = (layer, versionTag) => {
+		const changeList = layer.statusChangeList.filter((oneChange) => oneChange.versionTag === versionTag);
+		return changeList.length ? changeList[changeList.length - 1].registrationStatus : layer.versionList.find((oneVersion) => oneVersion.administrationRecord.versionTag === versionTag).registrationStatus;
+	};
+	const effectiveStatusFor = ({ layerKey, versionTag }) => {
+		const found = versionFor({ layerKey, versionTag });
+		return found.error ? found : { registrationStatus: effectiveStatusOf(layerByLayerKey[layerKey], versionTag) };
+	};
 	const currentStandardVersionFor = (layerKey) => {
 		const found = layerFor(layerKey);
 		if (found.error) {
 			return found;
 		}
-		const standardList = found.layer.versionList.filter((oneVersion) => oneVersion.registrationStatus === 'Standard').sort((leftVersion, rightVersion) => (leftVersion.administrationRecord.publishedAt < rightVersion.administrationRecord.publishedAt ? -1 : leftVersion.administrationRecord.publishedAt > rightVersion.administrationRecord.publishedAt ? 1 : 0));
+		const standardList = found.layer.versionList.filter((oneVersion) => effectiveStatusOf(found.layer, oneVersion.administrationRecord.versionTag) === 'Standard').sort((leftVersion, rightVersion) => (leftVersion.administrationRecord.publishedAt < rightVersion.administrationRecord.publishedAt ? -1 : leftVersion.administrationRecord.publishedAt > rightVersion.administrationRecord.publishedAt ? 1 : 0));
 		return standardList.length === 0 ? { error: refusalText(`layer '${layerKey}' has no Standard version`, 'a floating layer follows its Standard version, never merely its newest (SPEC §5.3)') } : { version: standardList[standardList.length - 1] };
 	};
 	const withAppendedVersion = ({ layerKey, version }) => {
@@ -199,7 +236,16 @@ const registryFor = ({ layerRegistry, agentRegistry } = {}) => {
 		const checked = registryFor({ layerRegistry: candidateRegistry, agentRegistry });
 		return checked.error ? { error: checked.error } : { layerRegistry: candidateRegistry };
 	};
-	return { registry: { layerFor, versionFor, currentStandardVersionFor, withAppendedVersion, layerRegistry, agentRegistry } };
+	const withAppendedStatusChange = ({ layerKey, statusChange }) => {
+		const found = layerFor(layerKey);
+		if (found.error) {
+			return found;
+		}
+		const candidateRegistry = { ...layerRegistry, layerList: layerRegistry.layerList.map((oneLayer) => (oneLayer.layerKey === layerKey ? { ...oneLayer, statusChangeList: oneLayer.statusChangeList.concat([statusChange]) } : oneLayer)) };
+		const checked = registryFor({ layerRegistry: candidateRegistry, agentRegistry });
+		return checked.error ? { error: checked.error } : { layerRegistry: candidateRegistry };
+	};
+	return { registry: { layerFor, versionFor, effectiveStatusFor, currentStandardVersionFor, withAppendedVersion, withAppendedStatusChange, layerRegistry, agentRegistry } };
 };
 
 // readJsonFile(filePath) → { parsedJson } | { error }: a missing or malformed registry is refused by name, never defaulted
