@@ -109,6 +109,9 @@ const run = spawnSync(
 
 const combinedOutput = `${run.stdout || ''}\n${run.stderr || ''}`;
 const tail = combinedOutput.split('\n').slice(-15).join('\n');
+// the run's own ledger line, so a suite log says what the gate spent (priced by the FIXTURE table: voyage-4-large at $0.10/M tokens,
+// where the real table's list rate is $0.12/M)
+harness.note(combinedOutput.split('\n').filter((oneLine) => /^\[spendLedger\]/.test(oneLine)).join('\n') || '(no [spendLedger] line)');
 
 harness.ok(
 	'graphBuilder -build (embedded, cold) exits 0',
