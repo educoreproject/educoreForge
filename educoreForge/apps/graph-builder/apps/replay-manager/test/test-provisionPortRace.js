@@ -31,7 +31,8 @@
 //   (j) ⟪lane FIX⟫ LIVE STRESS: 3 rounds of 6 concurrent provisions in 6 processes all come up, and docker's own 'die' events
 //       over the run show no container dying with any exit code but the 137 of our own removal (testSupport/provisionStress.js)
 // RED TWINS: (h) base64urlPassword (the generator before the fix); (i) logsNotRead (the dispose reads nothing first, as before);
-// (j) oneLeadingDashPerRound (one child per round launched with the old failure's credential shape);
+// (j) oneLeadingDashPerRound (one child per round launched with the old failure's credential shape), sharedPurposeBesideConcurrentRun
+// (two stress runs at once under the one constant purpose: another suite's containers counted as ours, as in two slots before W1);
 // (a) checkAccepted (the check passes anything); (b) lockNotExclusive (mkdir's refusal ignored); (c)
 // staleNeverBroken; (g) withoutExitWatchdog (the child starts none; the twin removes the orphan it observed); (f) volumesKept (dispose back to a plain rm -f; the twin removes the volume it leaked); (e) livenessUnwatched (create waits on readiness alone); (d) withoutPortLock — the two children run with the lock replaced by one always granted (the code
 // before the fix): they choose the same pair, and they do not both succeed on distinct ports.
@@ -64,6 +65,13 @@ const crypto = require('crypto');
 const PASSWORD_DRAW_COUNT = 100000;
 const STRESS_ROUND_COUNT = 3;
 const STRESS_CONCURRENCY = 6;
+// ⟪nextStandards W1, 2026-10-24: two full suites in the two Docker slots failed (j) and each passed alone (lanes B and C)⟫ (j)
+// counts docker's 'die' events by the container-name prefix DEV_gb_<purpose>_, and the purpose was the constant 'stressGate', so a
+// concurrent suite's stress containers were counted as this run's. The purpose now carries THIS run's pid, spelt in letters
+// (replayManager's purpose is letters only), so two runs on one daemon never share a prefix ('_' ends it: no run's prefix is
+// another's). RED TWIN sharedPurposeBesideConcurrentRun: two runs at once under the old constant.
+const SHARED_STRESS_PURPOSE = 'stressGate';
+const STRESS_PURPOSE = `${SHARED_STRESS_PURPOSE}${String(process.pid).replace(/[0-9]/g, (oneDigit) => 'abcdefghij'[Number(oneDigit)])}`;
 // long enough that the second child's search lands inside the first's pause, short beside a neo4j start
 const PAUSE_AFTER_SEARCH_MS = 4000;
 const managerModuleFor = (mutationList) => (mutationList.length === 0 ? require(REPLAY_MANAGER_PATH) : loadBuildJsDouble({ buildJsPath: REPLAY_MANAGER_PATH, mutationList }));
@@ -244,20 +252,39 @@ const conjunctJudgeByRefId = {
 	},
 	j_concurrentProvisionsNoDeath: (mutationList, done) => {
 		const oneLeadingDashPerRound = mutationList.some((oneMutation) => oneMutation.childLeadingDashPassword === true);
-		runProvisionStress(
-			{ roundCount: STRESS_ROUND_COUNT, concurrency: STRESS_CONCURRENCY, purpose: 'stressGate', childArgListFor: (roundIndex, childIndex) => (oneLeadingDashPerRound && childIndex === 0 ? ['--leadingDashPassword=true'] : []) },
-			(stressErr, report) => {
-				if (stressErr) {
-					done({ pass: false, detail: stressErr });
-					return;
-				}
-				const expectedCount = STRESS_ROUND_COUNT * STRESS_CONCURRENCY;
-				done({
-					pass: report.provisionCount === expectedCount && report.failedResultList.length === 0 && report.deathEventList.length === 0 && report.dieCount === expectedCount,
-					detail: `${report.provisionCount} provision(s), ${report.failedResultList.length} failed, ${report.dieCount} die event(s), ${report.deathEventList.length} death(s) at start${report.deathEventList.length ? ` (${report.deathEventList.map((oneDie) => `${oneDie.containerName} exit ${oneDie.exitCode}`).join(', ')})` : ''}; ${report.roundSummaryList.join('; ')}${report.failedResultList.length ? `; first failure: ${String(report.failedResultList[0].error).replace(/\s+/g, ' ').slice(0, 300)}` : ''}`,
-				});
-			},
-		);
+		const besideSharedPurposeRun = mutationList.some((oneMutation) => oneMutation.sharedPurposeBesideConcurrentRun === true);
+		// the twin: two stress runs AT ONCE under the one constant purpose the gate used before W1 (two suites in two slots), small
+		// so the pair stays inside the slot's memory; each run's die-event filter then counts the other run's containers too
+		const stressSpec = besideSharedPurposeRun ? { roundCount: 1, concurrency: 3, purpose: SHARED_STRESS_PURPOSE } : { roundCount: STRESS_ROUND_COUNT, concurrency: STRESS_CONCURRENCY, purpose: STRESS_PURPOSE };
+		const childArgListFor = (roundIndex, childIndex) => (oneLeadingDashPerRound && childIndex === 0 ? ['--leadingDashPassword=true'] : []);
+		const judgeStress = (stressErr, report) => {
+			if (stressErr) {
+				done({ pass: false, detail: stressErr });
+				return;
+			}
+			const expectedCount = stressSpec.roundCount * stressSpec.concurrency;
+			done({
+				pass: report.provisionCount === expectedCount && report.failedResultList.length === 0 && report.deathEventList.length === 0 && report.dieCount === expectedCount,
+				detail: `purpose '${stressSpec.purpose}': ${report.provisionCount} provision(s), ${report.failedResultList.length} failed, ${report.dieCount} die event(s) (expected ${expectedCount}), ${report.deathEventList.length} death(s) at start${report.deathEventList.length ? ` (${report.deathEventList.map((oneDie) => `${oneDie.containerName} exit ${oneDie.exitCode}`).join(', ')})` : ''}; ${report.roundSummaryList.join('; ')}${report.failedResultList.length ? `; first failure: ${String(report.failedResultList[0].error).replace(/\s+/g, ' ').slice(0, 300)}` : ''}`,
+			});
+		};
+		if (!besideSharedPurposeRun) {
+			runProvisionStress({ ...stressSpec, childArgListFor }, judgeStress);
+			return;
+		}
+		let judgedReport = null;
+		let finishedCount = 0;
+		const onStressDone = (isJudged) => (stressErr, report) => {
+			if (isJudged) {
+				judgedReport = { stressErr, report };
+			}
+			finishedCount += 1;
+			if (finishedCount === 2) {
+				judgeStress(judgedReport.stressErr, judgedReport.report);
+			}
+		};
+		runProvisionStress({ ...stressSpec, childArgListFor }, onStressDone(true));
+		runProvisionStress({ ...stressSpec, childArgListFor }, onStressDone(false));
 	},
 	d_twoProcessesTwoPorts: (mutationList, done) => {
 		const withoutPortLock = mutationList.some((oneMutation) => oneMutation.childWithoutPortLock === true);
@@ -295,6 +322,7 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'h_passwordNeverOptionLike', twinName: 'base64urlPassword', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: "crypto.randomBytes(SCRATCH_PASSWORD_BYTE_COUNT).toString('hex')", replace: "crypto.randomBytes(SCRATCH_PASSWORD_BYTE_COUNT).toString('base64url')" }] },
 	{ conjunctRefId: 'i_deathEvidenceReadBeforeDispose', twinName: 'logsNotRead', mutationList: [{ modulePath: REPLAY_MANAGER_PATH, find: 'const readContainerLogTail = ({ runDockerCommand, graphName }, callback) => {', replace: "const readContainerLogTail = ({ runDockerCommand, graphName }, callback) => { callback('docker logs were not read'); return;" }] },
 	{ conjunctRefId: 'j_concurrentProvisionsNoDeath', twinName: 'oneLeadingDashPerRound', mutationList: [{ childLeadingDashPassword: true }] },
+	{ conjunctRefId: 'j_concurrentProvisionsNoDeath', twinName: 'sharedPurposeBesideConcurrentRun', mutationList: [{ sharedPurposeBesideConcurrentRun: true }] },
 ];
 
 const refIdList = Object.keys(conjunctJudgeByRefId);
