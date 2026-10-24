@@ -1,0 +1,7 @@
+{
+	"name": "forge-case",
+	"version": "1.0.0",
+	"main": "forgeCase.js",
+	"description": "CASE 1.1 forge bundle — the 1EdTech OpenAPI 3.0 YAML document's components.schemas on lib/openapi-forge: schemas, properties, enums, every $ref as a REFERENCES edge. It does no bridging.",
+	"private": true
+}

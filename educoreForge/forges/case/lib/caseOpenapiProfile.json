@@ -1,0 +1,20 @@
+{
+	"profileNote": "CASE 1.1 (1EdTech Competencies and Academic Standards Exchange Service) on lib/openapi-forge (nextStandards wave 2 lane E). The publisher's OpenAPI 3.0 YAML, read by the kit's YAML reader (K2a). All 39 components.schemas are forged, the five imsx_* and Link* plumbing schemas included (the Open Badges precedent). Two vendor extensions hold a list of strings on the 13 *ExtensionDType schemas and are declared list-valued (K2c); caseVersion's one enum member is the unquoted YAML number 1.1 in two schemas, carried as the text '1.1' the property's description and the JSON sibling state (K2d).",
+	"sourceLayout": "referencedSingleFile",
+	"sourceFileName": "imscasev1p1_openapi3_v1p0.yaml",
+	"sourceFormat": "yaml",
+	"stableIdPrefix": "case:",
+	"rootStableId": "case:root",
+	"perStandardLabelByRole": {
+		"DmeClass": "CaseSchema",
+		"DmeProperty": "CaseProperty",
+		"DmeOptionSet": "CaseEnum",
+		"DmeOptionValue": "CaseEnumValue"
+	},
+	"schemaExclusionList": [],
+	"listValuedVendorExtensionNameList": ["x-1edtech-privacy", "x-1edtech-confidentiality-normal"],
+	"enumMemberTextDeclarationList": [
+		{ "enumObjectPointer": "CFDocumentDType/properties/caseVersion", "statedValue": 1.1, "carriedText": "1.1" },
+		{ "enumObjectPointer": "CFPckgDocumentDType/properties/caseVersion", "statedValue": 1.1, "carriedText": "1.1" }
+	]
+}

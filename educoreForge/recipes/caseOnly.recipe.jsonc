@@ -1,0 +1,15 @@
+{
+  // caseOnly — CASE 1.1 alone (stage off): the forge's base block, no hub, no bridge (nextStandards wave 2 lane E).
+  "schemaVersion": "1.0.0",
+  "recipeName": "caseOnly",
+  "kind": "dev",
+  "description": "Forge the CASE 1.1 standard base only - proves the new CASE bundle forges on the OpenAPI kit (YAML source).",
+  "standards": [
+    {
+      "token": "case",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

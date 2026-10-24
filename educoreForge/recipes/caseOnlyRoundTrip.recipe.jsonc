@@ -1,0 +1,16 @@
+{
+  // caseOnlyRoundTrip — CASE 1.1 alone with the RT-13 round-trip stage: the nextStandards wave 2 lane E certification recipe.
+  "schemaVersion": "1.0.0",
+  "recipeName": "caseOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the CASE 1.1 standard base and round-trip-validate the materialized product (RT-13 stage).",
+  "roundTripStage": true,
+  "standards": [
+    {
+      "token": "case",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

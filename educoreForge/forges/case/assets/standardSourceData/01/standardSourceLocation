@@ -1,0 +1,7 @@
+standard: CASE 1.1 (1EdTech Competencies and Academic Standards Exchange Service), OpenAPI 3.0 schema, YAML
+publishedVersion: 1.1
+publishedVersionEvidence: the document's own info.version "1.1" (and the URL's v1p1 segment); the spec page https://www.imsglobal.org/spec/case/v1p1/ reads Final Release, issued 2025-01-24
+upstreamUrl: https://purl.imsglobal.org/spec/case/v1p1/schema/openapi/imscasev1p1_openapi3_v1p0.yaml
+publisher: 1EdTech Consortium
+acquiredDate: 2026-10-24
+note: EDITING WARNING. deriveVersionStamp (lib/snapshot-provenance) takes THE ENTIRE REST OF the publishedVersion line as the version, so keep that line bare; citations belong on publishedVersionEvidence. imscasev1p1_openapi3_v1p0.json (the publisher's JSON sibling at the same purl directory) is stored for reference only; the forge never reads it, and its content differs from the YAML (README_PROVENANCE.md).

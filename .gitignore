@@ -44,3 +44,9 @@ educoreForge/forges/openbadges/assets/standardSourceData/01/*.json
 educoreForge/forges/jedx/assets/standardSourceData/01/*.csv
 educoreForge/forges/jedx/assets/standardSourceData/02/licence/
 educoreForge/forges/jedx/assets/standardSourceData/02/transportObjects/
+
+# forge-case snapshot 01 (nextStandards wave 2 lane E): the 1EdTech publisher bytes (the YAML the forge reads and its JSON sibling) are
+# never committed (TQ ruling 2026-10-24: "Leave it out of git"). SHA256SUMS, README_PROVENANCE.md and standardSourceLocation stay
+# tracked; they say where to fetch the bytes and how to check them.
+educoreForge/forges/case/assets/standardSourceData/01/*.yaml
+educoreForge/forges/case/assets/standardSourceData/01/*.json
