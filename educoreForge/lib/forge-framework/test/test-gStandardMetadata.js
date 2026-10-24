@@ -145,6 +145,23 @@ const conjunctJudgeByRefId = {
 		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'LIF' }));
 		return { pass: message === '', detail: message || "standardFamily 'LIF' admitted" };
 	},
+	// ⟪nextStandards-102326 wave 2, lane D⟫ wave 2's four families: CLR (lane D), CASE (lane E), EduAPI (lane F), SEDM (lane G), each its own family
+	s_clrFamilyAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'CLR' }));
+		return { pass: message === '', detail: message || "standardFamily 'CLR' admitted" };
+	},
+	t_caseFamilyAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'CASE' }));
+		return { pass: message === '', detail: message || "standardFamily 'CASE' admitted" };
+	},
+	u_eduapiFamilyAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'EduAPI' }));
+		return { pass: message === '', detail: message || "standardFamily 'EduAPI' admitted" };
+	},
+	v_sedmFamilyAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'SEDM' }));
+		return { pass: message === '', detail: message || "standardFamily 'SEDM' admitted" };
+	},
 	i_blankReleaseLabelRefused: (mutationList) => {
 		const message = validationMessageFor(mutationList, withChange({ releaseLabel: ' ' }));
 		return { pass: /forgeDeclaration 'releaseLabel'/.test(message), detail: message || 'accepted a blank releaseLabel' };
@@ -218,6 +235,10 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'p_openbadgesFamilyAdmitted', twinName: 'familyListWithoutOpenbadges', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'OpenBadges') })," },
 	{ conjunctRefId: 'q_jedxFamilyAdmitted', twinName: 'familyListWithoutJedx', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'JEDx') })," },
 	{ conjunctRefId: 'r_lifFamilyAdmitted', twinName: 'familyListWithoutLif', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'LIF') })," },
+	{ conjunctRefId: 's_clrFamilyAdmitted', twinName: 'familyListWithoutClr', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'CLR') })," },
+	{ conjunctRefId: 't_caseFamilyAdmitted', twinName: 'familyListWithoutCase', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'CASE') })," },
+	{ conjunctRefId: 'u_eduapiFamilyAdmitted', twinName: 'familyListWithoutEduapi', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'EduAPI') })," },
+	{ conjunctRefId: 'v_sedmFamilyAdmitted', twinName: 'familyListWithoutSedm', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'SEDM') })," },
 	{ conjunctRefId: 'i_blankReleaseLabelRefused', twinName: 'labelOptional', modulePath: CONTRACT_PATH, find: "releaseLabel: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "releaseLabel: Object.freeze({ required: true, kind: 'nonEmptyString' })," },
 	{ conjunctRefId: 'j_rootCarriesFamilyAndLabel', twinName: 'rootDropsFamily', modulePath: ROOT_PATH, find: '\t\tstandardFamily,\n\t\treleaseLabel,\n', replace: '\t\treleaseLabel,\n' },
 	{ conjunctRefId: 'l_missingOrBlankDescriptionSourceRefused', twinName: 'descriptionSourceOptional', modulePath: CONTRACT_PATH, find: "descriptionSource: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "descriptionSource: Object.freeze({ required: false, kind: 'nonEmptyString' })," },

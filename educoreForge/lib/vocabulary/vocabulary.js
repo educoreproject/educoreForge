@@ -924,7 +924,10 @@ const STANDARD_KIND_LIST = Object.freeze([STANDARD_KIND.DATA_STANDARD, STANDARD_
 // forges/jedx, named by SILVER_SPIRE and confirmed by BRONZE_CROWN).
 // ⟪nextStandards-102326 lane C, C0, 2026-10-24⟫ LIF (the LIF Initiative's Learner Information Framework, lane C's forges/lif; 'LIF' is
 // the July _source name, so the inventory oracle's name matches).
-const STANDARD_FAMILY = Object.freeze({ CEDS: 'CEDS', EDFI: 'EdFi', SIF: 'SIF', PESC: 'PESC', CTDL: 'CTDL', CTDLASN: 'CTDLASN', CTDLQDATA: 'CTDLQData', PESCLD: 'PESCLD', OPENBADGES: 'OpenBadges', JEDX: 'JEDx', LIF: 'LIF', TOY: 'Toy' });
+// ⟪nextStandards-102326 wave 2, lane D, 2026-10-24⟫ wave 2's four families, in ONE commit for the wave: CLR (CLR 2.0, lane D's forges/clr),
+// CASE (CASE 1.1, lane E's forges/case), EDUAPI (EduAPI 1.0, lane F's forges/eduapi) and SEDM (lane G's forges/sedm). Each value is the July
+// _source name (GOLD_EVAL_260718.inventory.json and the pre-reset parserDescriptor.ini standardName agree), so the inventory oracle's names match.
+const STANDARD_FAMILY = Object.freeze({ CEDS: 'CEDS', EDFI: 'EdFi', SIF: 'SIF', PESC: 'PESC', CTDL: 'CTDL', CTDLASN: 'CTDLASN', CTDLQDATA: 'CTDLQData', PESCLD: 'PESCLD', OPENBADGES: 'OpenBadges', JEDX: 'JEDx', LIF: 'LIF', CLR: 'CLR', CASE: 'CASE', EDUAPI: 'EduAPI', SEDM: 'SEDM', TOY: 'Toy' });
 const STANDARD_FAMILY_LIST = Object.freeze(Object.keys(STANDARD_FAMILY).map((oneMember) => STANDARD_FAMILY[oneMember]));
 // BUILD_ATTESTATION_VERDICT — the words a :BuildAttestation row's verdict may be (lane R, 2026-10-05; FINDING 5-A of 2026-09-01).
 //   pass                 the gate ran and found nothing wrong
