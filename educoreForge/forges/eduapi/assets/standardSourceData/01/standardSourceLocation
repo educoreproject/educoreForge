@@ -1,0 +1,8 @@
+standard: EduAPI 1.0 (1EdTech Edu-API), OpenAPI 3.0 schema
+publishedVersion: 1.0
+publishedVersionEvidence: the document's own info.version "1.0" with x-status "Candidate Final"
+upstreamUrl: https://purl.imsglobal.org/spec/eduapi/v1p0/schema/openapi/eduapi_v1p0_openapi3.json
+publisher: 1EdTech Consortium (the document's info.contact reads IMS Global)
+acquiredDate: 2026-05-28
+copiedFrom: git 88336881:educoreForge/forges/eduapi/assets/standardSourceData/01/eduapi_v1p0_openapi3.json (restored 2026-10-24)
+status: RECORD ONLY, SUPERSEDED. Not the pin (defaultSnapshot=02); no hooks read it. Kept as the record of what the July graph held (Candidate Final, 37 schemas, 381,592 bytes). Superseded by snapshot 02, the same purl fetched 2026-10-24 and now x-status Final (work order wave 2: the latest publisher artefact).

@@ -1,0 +1,17 @@
+{
+	"profileNote": "EduAPI 1.0 (1EdTech Edu-API) on lib/openapi-forge (nextStandards wave 2 lane F). All 39 components.schemas are forged, including the three Imsx_* status-envelope schemas the pre-reset parser dropped and the eight empty <entity>Extensions extension points (BRONZE_CROWN ruled 2026-10-24, the Open Badges precedent): components.schemas round-trips whole.",
+	"sourceLayout": "referencedSingleFile",
+	"sourceFileName": "eduapi_v1p0_openapi3.json",
+	"sourceFormat": "json",
+	"stableIdPrefix": "eduapi:",
+	"rootStableId": "eduapi:root",
+	"perStandardLabelByRole": {
+		"DmeClass": "EduapiSchema",
+		"DmeProperty": "EduapiProperty",
+		"DmeOptionSet": "EduapiEnum",
+		"DmeOptionValue": "EduapiEnumValue"
+	},
+	"schemaExclusionList": [],
+	"listValuedVendorExtensionNameList": [],
+	"enumMemberTextDeclarationList": []
+}

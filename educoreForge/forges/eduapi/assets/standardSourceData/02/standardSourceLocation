@@ -1,0 +1,7 @@
+standard: EduAPI 1.0 (1EdTech Edu-API), OpenAPI 3.0 schema
+publishedVersion: 1.0
+publishedVersionEvidence: the document's own info.version "1.0" with x-status "Final" (and the URL's v1p0 segment); HTTP Last-Modified 2026-08-31 11:54:34 GMT
+upstreamUrl: https://purl.imsglobal.org/spec/eduapi/v1p0/schema/openapi/eduapi_v1p0_openapi3.json
+publisher: 1EdTech Consortium (the document's info.contact still reads IMS Global)
+acquiredDate: 2026-10-24
+note: EDITING WARNING. deriveVersionStamp (lib/snapshot-provenance) takes THE ENTIRE REST OF the publishedVersion line as the version, so keep that line bare; citations belong on publishedVersionEvidence.

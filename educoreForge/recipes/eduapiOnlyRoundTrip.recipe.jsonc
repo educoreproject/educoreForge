@@ -1,0 +1,16 @@
+{
+  // eduapiOnlyRoundTrip — EduAPI 1.0 alone with the RT-13 round-trip stage: the nextStandards wave 2 lane F1 certification recipe.
+  "schemaVersion": "1.0.0",
+  "recipeName": "eduapiOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the EduAPI 1.0 standard base and round-trip-validate the materialized product (RT-13 stage).",
+  "roundTripStage": true,
+  "standards": [
+    {
+      "token": "eduapi",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

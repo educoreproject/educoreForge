@@ -1,0 +1,7 @@
+{
+	"name": "forge-eduapi",
+	"version": "1.0.0",
+	"main": "forgeEduapi.js",
+	"description": "EduAPI 1.0 forge bundle — the 1EdTech Edu-API OpenAPI 3.0 document's components.schemas on lib/openapi-forge: schemas, properties, enums, every $ref as a REFERENCES edge. It does no bridging.",
+	"private": true
+}

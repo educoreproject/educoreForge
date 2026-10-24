@@ -56,3 +56,8 @@ educoreForge/forges/case/assets/standardSourceData/01/*.json
 # standardSourceLocation stay tracked; README_PROVENANCE.md says how to recover the bytes and check them.
 educoreForge/forges/sedm/assets/standardSourceData/01/*.csv
 educoreForge/forges/sedm/assets/standardSourceData/01/sedm-domain-structures.json
+
+# forge-eduapi snapshots 01/02 (nextStandards wave 2 lane F): the 1EdTech publisher bytes are never committed (TQ ruling
+# 2026-10-24: "Leave it out of git"). SHA256SUMS, README_PROVENANCE.md and standardSourceLocation stay tracked.
+educoreForge/forges/eduapi/assets/standardSourceData/01/*.json
+educoreForge/forges/eduapi/assets/standardSourceData/02/*.json
