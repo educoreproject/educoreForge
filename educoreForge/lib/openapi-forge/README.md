@@ -1,0 +1,21 @@
+# lib/openapi-forge — the OpenAPI kit
+
+Forges an OpenAPI 3 data model (`components.schemas`) into the DME roles. Designs: `system/management/zNotesPlansDocs/nextStandards-102326/`
+`DESIGN-K0-openapiKit-102326.md` (K0, `$ref`-based single file) and `DESIGN-K1-openapiKitDereferenced-102326.md` (K1, dereferenced, multi-file).
+
+## A bundle supplies
+
+1. **A profile JSON** (`openapiProfileContract.js`; every field required for its layout, unknown refused): `profileNote`, `sourceLayout`
+   (`referencedSingleFile` | `dereferencedMultiFile`), `sourceFileName` (first layout) or `sourceFileNameList` (second), `sourceFormat`
+   (`json`), `stableIdPrefix`, `rootStableId`, `perStandardLabelByRole`, `schemaExclusionList`.
+2. **A forge declaration** whose `stableIdPattern` is `openapiIdentity.stableIdPatternFor(profile)` and whose `additionalSourceInputList` names
+   `standardSourceLocation` (it must be in `SHA256SUMS`, and its `upstreamUrl:` line a bare URL: the root's `sourceUrl` is read from it).
+3. **A hooks module**: one line, `require('lib/openapi-forge/openapiHooks')({ openapiProfile })`.
+4. **A round-trip pair module through the layout table**: `require('lib/openapi-forge/openapiLayout').roundTripPairFor({ openapiProfile,
+   stableUriPropertyName, ruleModulePath })`. Never require a pair module by name: the pair must match the layout.
+
+## The kit owns
+
+The loader (`openapiLoader.js`), the walk per layout (`openapiWalk.js`, `openapiDereferencedWalk.js`), the keyword registries (DATA: an
+unlisted keyword at its position is refused by name), the identity rule (`openapiIdentity.js`), the pairs (`openapiRoundTripPair.js`,
+`openapiDereferencedRoundTripPair.js`) and the layout table (`openapiLayout.js`). Reference bundle: `forges/openbadges`.

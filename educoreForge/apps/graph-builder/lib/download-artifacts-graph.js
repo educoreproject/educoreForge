@@ -179,7 +179,7 @@ const openapiKitListingEmitterFor = ({ bundleToken }) => {
 		const bundleLibDirPath = path.join(treeRootPath, 'forges', bundleToken, 'lib');
 		const forgeDeclaration = require(path.join(bundleLibDirPath, listingRule.forgeDeclarationModuleName));
 		const openapiProfile = require(path.join(bundleLibDirPath, listingRule.openapiProfileFileName));
-		const roundTripPair = require(path.join(treeRootPath, 'lib', 'openapi-forge', 'openapiRoundTripPair'))({ openapiProfile, stableUriPropertyName: forgeDeclaration.stableUriPropertyName, ruleModulePath: 'lib/openapi-forge/openapiRoundTripPair.js' });
+		const roundTripPair = require(path.join(treeRootPath, 'lib', 'openapi-forge', 'openapiLayout')).roundTripPairFor({ openapiProfile, stableUriPropertyName: forgeDeclaration.stableUriPropertyName, ruleModulePath: 'lib/openapi-forge/openapiLayout.js' });
 		const { openGraphReader } = require(path.join(treeRootPath, 'lib', 'forge-framework', 'roundTripHarness', 'graphReader'));
 		openGraphReader({ boltUrl: boltTriple.boltUrl, user: boltTriple.user, password: boltTriple.password, standardSource: forgeDeclaration.standardSource }, (openError, reader) => {
 			if (openError) {
