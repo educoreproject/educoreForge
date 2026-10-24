@@ -101,6 +101,26 @@ const pushMutation = (scenario, modulePath, find, replace) => {
 const PLANNED_LIST_FIND = '\tconst plannedList = plannedEdgeList(decisionBlock.decisionRecordList);';
 // re-anchored campaign P3: the conditional columns (fan-out, and W-B-3/W-B-4's judge columns) are one list now
 const EXTENSION_LIST_FIND = 'const extensionSlotNameList = EXTENSION_SLOT_NAME_LIST.concat(conditionalColumnList);';
+// ⟪mappingLayers ML1, 2026-10-24 (STEEL_BRIDGE; test edits prepared under the deadline notice of IMCS seq 7, awaiting BRONZE_CROWN)⟫
+// ML1 adds to every export: record_id on every row, #sssom_version "1.1", and one sssom:NoTermFound row per card-less from-node
+// (with mapping_cardinality and comment). Those are SSSOM STANDARD slots, STATED here (never read from the exporter, so a dropped
+// one cannot hide). A captured pre-ML1 export is compared with the current export PROJECTED back to the pre-ML1 shape: the ML1 line,
+// columns and abstention rows removed, and nothing else touched. Edges gain assertionId, a function of the block id, masked with it.
+const ML1_STANDARD_COLUMN_LIST = ['record_id', 'mapping_cardinality', 'comment'];
+const ML1_STANDARD_HEADER_SLOT_LIST = ['sssom_version'];
+const NO_TERM_FOUND_OBJECT_ID = 'sssom:NoTermFound';
+const preMl1SssomText = (sssomText) => {
+	const lineList = sssomText.split('\n');
+	const headerLineList = lineList.filter((oneLine) => oneLine.startsWith('#') && !ML1_STANDARD_HEADER_SLOT_LIST.some((oneSlot) => oneLine.startsWith(`#${oneSlot}: `)));
+	const bodyLineList = lineList.filter((oneLine) => !oneLine.startsWith('#') && oneLine.length > 0);
+	const columnList = bodyLineList.length ? bodyLineList[0].split('\t') : [];
+	const keptIndexList = columnList.map((oneColumn, columnIndex) => (ML1_STANDARD_COLUMN_LIST.indexOf(oneColumn) === -1 ? columnIndex : -1)).filter((columnIndex) => columnIndex !== -1);
+	const objectIndex = columnList.indexOf('object_id');
+	const keptRowList = bodyLineList.slice(1).map((oneLine) => oneLine.split('\t')).filter((cellList) => cellList[objectIndex] !== NO_TERM_FOUND_OBJECT_ID);
+	const projected = [columnList].concat(keptRowList).map((cellList) => keptIndexList.map((columnIndex) => cellList[columnIndex]).join('\t'));
+	return `${headerLineList.join('\n')}\n${projected.join('\n')}${keptRowList.length ? '\n' : ''}`;
+};
+const mappedRowListOf = (parsed) => parsed.rowList.filter((oneRow) => oneRow.object_id !== NO_TERM_FOUND_OBJECT_ID);
 const sssomConjunctList = [
 	runConjunct({
 		conjunctId: 'a1_sssomRowsEqualEdges',
@@ -114,13 +134,13 @@ const sssomConjunctList = [
 			}
 			const edgeList = edgesOf(outcome);
 			const judgedSubjectByFromStableId = edgeList.reduce((soFar, oneEdge) => ({ ...soFar, [oneEdge.fromStableId]: oneEdge.properties.judgedSubjectStableId }), {});
-			const rowSubjectList = parsed.rowList.map((oneRow) => oneRow.subject_id).sort();
+			const rowSubjectList = mappedRowListOf(parsed).map((oneRow) => oneRow.subject_id).sort();
 			const edgeFromList = edgeList.map((oneEdge) => oneEdge.fromStableId).sort();
-			const judgedMismatchList = parsed.rowList.filter((oneRow) => oneRow[sssomExporterLib.JUDGED_SUBJECT_COLUMN] === undefined || oneRow[sssomExporterLib.JUDGED_SUBJECT_COLUMN] !== judgedSubjectByFromStableId[oneRow.subject_id]);
+			const judgedMismatchList = mappedRowListOf(parsed).filter((oneRow) => oneRow[sssomExporterLib.JUDGED_SUBJECT_COLUMN] === undefined || oneRow[sssomExporterLib.JUDGED_SUBJECT_COLUMN] !== judgedSubjectByFromStableId[oneRow.subject_id]);
 			const census = parsed.headerScalarOf('subject_census');
 			const censusObject = census === undefined ? {} : JSON.parse(census);
-			const pass = parsed.rowList.length === FANOUT_EDGE_COUNT && runReport.edgesWritten === FANOUT_EDGE_COUNT && JSON.stringify(rowSubjectList) === JSON.stringify(edgeFromList) && judgedMismatchList.length === 0 && censusObject.rowCount === 3 && censusObject.subjectCount === 3 && censusObject.judgedSubjectCount === 1;
-			return { pass, detail: `${parsed.rowList.length} row(s), edgesWritten ${runReport.edgesWritten}; rows ${JSON.stringify(rowSubjectList)}; ${judgedMismatchList.length} judged_subject_id mismatch(es); census ${census}` };
+			const pass = mappedRowListOf(parsed).length === FANOUT_EDGE_COUNT && runReport.edgesWritten === FANOUT_EDGE_COUNT && JSON.stringify(rowSubjectList) === JSON.stringify(edgeFromList) && judgedMismatchList.length === 0 && censusObject.rowCount === 3 && censusObject.subjectCount === 3 && censusObject.judgedSubjectCount === 1;
+			return { pass, detail: `${mappedRowListOf(parsed).length} mapped row(s) (${parsed.rowList.length} with abstentions), edgesWritten ${runReport.edgesWritten}; rows ${JSON.stringify(rowSubjectList)}; ${judgedMismatchList.length} judged_subject_id mismatch(es); census ${census}` };
 		}),
 	}),
 	runConjunct({
@@ -134,11 +154,13 @@ const sssomConjunctList = [
 				return { pass: false, detail: parsed.error };
 			}
 			const declaredList = parsed.headerLineList.filter((oneLine) => /^#  - slot_name: /.test(oneLine)).map((oneLine) => JSON.parse(oneLine.replace('#  - slot_name: ', '')));
-			const nonStandardColumnList = parsed.columnList.filter((oneColumn) => sssomExporterLib.COLUMN_LIST.indexOf(oneColumn) === -1 || sssomExporterLib.EXTENSION_SLOT_NAME_LIST.indexOf(oneColumn) !== -1);
+			const nonStandardColumnList = parsed.columnList.filter((oneColumn) => (sssomExporterLib.COLUMN_LIST.indexOf(oneColumn) === -1 && ML1_STANDARD_COLUMN_LIST.indexOf(oneColumn) === -1) || sssomExporterLib.EXTENSION_SLOT_NAME_LIST.indexOf(oneColumn) !== -1);
 			const undeclaredList = nonStandardColumnList.filter((oneColumn) => declaredList.indexOf(oneColumn) === -1);
 			const propertyDeclared = parsed.headerLineList.indexOf(`#    property: "${sssomExporterLib.EXTENSION_PROPERTY_BASE}${sssomExporterLib.JUDGED_SUBJECT_COLUMN}"`) !== -1;
-			const pass = parsed.columnList[parsed.columnList.length - 1] === sssomExporterLib.JUDGED_SUBJECT_COLUMN && undeclaredList.length === 0 && propertyDeclared;
-			return { pass, detail: `columns end ${parsed.columnList[parsed.columnList.length - 1]}; undeclared [${undeclaredList.join(', ')}]; property line ${propertyDeclared ? 'present' : 'ABSENT'}` };
+			// ⟪ML1⟫ the conditional extension columns are last but for the ML1 standard columns, which follow them
+			const lastExtensionColumn = parsed.columnList.filter((oneColumn) => ML1_STANDARD_COLUMN_LIST.indexOf(oneColumn) === -1).slice(-1)[0];
+			const pass = lastExtensionColumn === sssomExporterLib.JUDGED_SUBJECT_COLUMN && undeclaredList.length === 0 && propertyDeclared;
+			return { pass, detail: `columns end ${lastExtensionColumn} before the ML1 standard columns; undeclared [${undeclaredList.join(', ')}]; property line ${propertyDeclared ? 'present' : 'ABSENT'}` };
 		}),
 	}),
 ];
@@ -293,7 +315,7 @@ const prefixConjunctList = [
 		shape: (scenario) => (scenario.useUnprefixedField === true ? unprefixedFieldShape(scenario) : instanceShape(scenario)),
 		judge: succeeded((runReport, outcome) => {
 			const parsed = sssomExporterLib.parseSssomTsv(sssomTextOf(outcome));
-			const subjectList = parsed.error ? [] : parsed.rowList.map((oneRow) => oneRow.subject_id);
+			const subjectList = parsed.error ? [] : mappedRowListOf(parsed).map((oneRow) => oneRow.subject_id);
 			const pass = !parsed.error && subjectList.length === FANOUT_EDGE_COUNT && subjectList.every((subjectId) => subjectId.indexOf('toy:field/') === 0);
 			return { pass, detail: parsed.error || `subject_id ${JSON.stringify(subjectList)}` };
 		}),
@@ -400,8 +422,12 @@ const maskedTextOf = (frozenText) => {
 };
 // the values that are functions of a block id, which frameworkFingerprint moves
 // properties compared in sorted-name order: lane P's fields land at a different position in the materialiser's object
-const maskedEdgeListText = (edgeList) => canonicalEdgeListText(edgeList, ['decisionBlockHash', 'matchId']);
-const maskedSssomText = (sssomText) => sssomText.replace(MAPPING_SET_ID_TEXT_RE, 'urn:educore:decisionBlock:MASKED');
+// ⟪ML1⟫ assertionId is a function of the block id too: the CURRENT edge must carry it (its absence is refused here, never masked
+// into agreement) and both sides are compared without it
+const withoutAssertionIdList = (edgeList) => edgeList.map((oneEdge) => { const { assertionId: unusedAssertionId, ...otherProperties } = oneEdge.properties; return { ...oneEdge, properties: otherProperties }; });
+const maskedEdgeListText = (edgeList) => canonicalEdgeListText(withoutAssertionIdList(edgeList), ['decisionBlockHash', 'matchId']);
+const everyEdgeCarriesAssertionId = (edgeList) => edgeList.length > 0 && edgeList.every((oneEdge) => typeof oneEdge.properties.assertionId === 'string' && oneEdge.properties.assertionId.indexOf('https://w3id.org/EDUcore/assertion/') === 0);
+const maskedSssomText = (sssomText) => preMl1SssomText(sssomText).replace(MAPPING_SET_ID_TEXT_RE, 'urn:educore:decisionBlock:MASKED');
 const maskedReviewText = (reviewRecord) => JSON.stringify(reviewRecord === undefined ? null : { ...reviewRecord, record: { ...reviewRecord.record, conflictList: reviewRecord.record.conflictList.map((oneConflict) => ({ ...oneConflict, siblingDecisionBlockHash: 'MASKED' })) } });
 const differingHeaderNameList = (leftBlock, rightBlock) => {
 	const nameList = Array.from(new Set(Object.keys(leftBlock.header).concat(Object.keys(rightBlock.header)))).sort();
@@ -465,7 +491,7 @@ const oracleConjunctList = [
 		twinNameList: ['judgedColumnAlways', 'conflictViewListsEveryRecord'],
 		shape: derivedShape,
 		judge: succeeded((runReport, outcome) => {
-			const edgeEqual = maskedEdgeListText(edgesOf(outcome)) === maskedEdgeListText(branchCutEdgeList);
+			const edgeEqual = everyEdgeCarriesAssertionId(edgesOf(outcome)) && maskedEdgeListText(edgesOf(outcome)) === maskedEdgeListText(branchCutEdgeList);
 			const sssomEqual = maskedSssomText(sssomTextOf(outcome)) === maskedSssomText(branchCutSssomText);
 			return { pass: edgeEqual && sssomEqual, detail: `${edgesOf(outcome).length} vs ${branchCutEdgeList.length} edge(s), masked ${edgeEqual ? 'EQUAL' : 'DIFFER'}; SSSOM masked ${sssomEqual ? 'EQUAL' : 'DIFFER'}` };
 		}),
@@ -481,7 +507,7 @@ const oracleConjunctList = [
 					return;
 				}
 				const countsEqual = JSON.stringify(outcome.runReport.counts) === JSON.stringify(branchCutConflictCounts);
-				const edgeEqual = maskedEdgeListText(edgesOf(outcome)) === maskedEdgeListText(branchCutConflictEdgeList);
+				const edgeEqual = everyEdgeCarriesAssertionId(edgesOf(outcome)) && maskedEdgeListText(edgesOf(outcome)) === maskedEdgeListText(branchCutConflictEdgeList);
 				const sssomEqual = maskedSssomText(sssomTextOf(outcome)) === maskedSssomText(branchCutConflictSssomText);
 				const reviewEqual = maskedReviewText(mappingReviewOf(outcome)) === maskedReviewText(branchCutConflictReview);
 				callback('', { pass: countsEqual && edgeEqual && sssomEqual && reviewEqual, detail: `counts ${countsEqual ? 'EQUAL' : 'DIFFER'}; edges (${edgesOf(outcome).length}) ${edgeEqual ? 'EQUAL' : 'DIFFER'}; SSSOM ${sssomEqual ? 'EQUAL' : 'DIFFER'}; MappingReview ${reviewEqual ? 'EQUAL' : 'DIFFER'}` });

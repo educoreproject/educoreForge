@@ -303,7 +303,11 @@ const maskedTextOf = (frozenText) => {
 };
 // the two edge properties that are functions of the block id, which frameworkFingerprint moves
 // properties compared in sorted-name order: lane P's fields land at a different position in the materialiser's object
-const maskedEdgeListText = (edgeList) => canonicalEdgeListText(edgeList, ['decisionBlockHash', 'matchId']);
+// ⟪mappingLayers ML1, 2026-10-24 (STEEL_BRIDGE; prepared under IMCS seq 7, awaiting BRONZE_CROWN)⟫ assertionId is a function of the
+// block id too: the CURRENT edge must carry it (refused here when absent, never masked into agreement) and both sides compare without it
+const withoutAssertionIdList = (edgeList) => edgeList.map((oneEdge) => { const { assertionId: unusedAssertionId, ...otherProperties } = oneEdge.properties; return { ...oneEdge, properties: otherProperties }; });
+const maskedEdgeListText = (edgeList) => canonicalEdgeListText(withoutAssertionIdList(edgeList), ['decisionBlockHash', 'matchId']);
+const everyEdgeCarriesAssertionId = (edgeList) => edgeList.length > 0 && edgeList.every((oneEdge) => typeof oneEdge.properties.assertionId === 'string' && oneEdge.properties.assertionId.indexOf('https://w3id.org/EDUcore/assertion/') === 0);
 const fourLineMatchIdOf = (oneEdge) => sha256Hex(`${oneEdge.properties.decisionBlockHash}\n${oneEdge.fromStableId}\n${oneEdge.properties.predicate}\n${oneEdge.toStableId}`);
 const differingHeaderNameList = (leftBlock, rightBlock) => {
 	const nameList = Array.from(new Set(Object.keys(leftBlock.header).concat(Object.keys(rightBlock.header)))).sort();
@@ -352,7 +356,7 @@ const oracleConjunctList = [
 		shape: derivedShape,
 		judge: succeeded((runReport, outcome) => {
 			const edgeList = edgesOf(outcome);
-			const maskedEqual = maskedEdgeListText(edgeList) === maskedEdgeListText(branchCutEdgeList);
+			const maskedEqual = everyEdgeCarriesAssertionId(edgeList) && maskedEdgeListText(edgeList) === maskedEdgeListText(branchCutEdgeList);
 			const matchIdMismatchCount = edgeList.filter((oneEdge) => oneEdge.properties.matchId !== fourLineMatchIdOf(oneEdge)).length;
 			return { pass: edgeList.length === branchCutEdgeList.length && maskedEqual && matchIdMismatchCount === 0, detail: `${edgeList.length} vs ${branchCutEdgeList.length} edge(s); masked lists ${maskedEqual ? 'EQUAL' : 'DIFFER'}; ${matchIdMismatchCount} matchId(s) not the four-line form` };
 		}),
