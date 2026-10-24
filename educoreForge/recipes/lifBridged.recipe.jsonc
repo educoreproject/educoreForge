@@ -1,0 +1,21 @@
+{
+  // lifBridged — nextStandards-102326 lane C2: LIF 2.0 beside both hubs with its ONE judged facet (every property a subject; retrieval
+  // by the forge's text nodes, the judge Jev jev-1.13.0 naming the relation). Rehearsed under --useDebugJudge, then the real judge;
+  // pre-declared spend $0.81 (1,393 units x 2 hubs x $0.00029), STOP at $1.00 (BRONZE_CROWN, C0 ruling 3).
+  "schemaVersion": "1.0.0",
+  "recipeName": "lifBridged",
+  "kind": "dev",
+  "description": "LIF 2.0 beside the CEDS and CTDL hubs with its one judged facet (C2).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "lif", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "lif", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["lif", "ceds", "ctdl"] }
+  ]
+}
