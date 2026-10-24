@@ -1,0 +1,15 @@
+{
+  // sedmOnly — SEDM alone (stage off): the forge's base block, no hub, no bridge (nextStandards-102326 wave 2, lane G, phase 1).
+  "schemaVersion": "1.0.0",
+  "recipeName": "sedmOnly",
+  "kind": "dev",
+  "description": "Forge the SEDM standard base only - proves the SEDM bundle forges from its working documents (snapshot 01).",
+  "standards": [
+    {
+      "token": "sedm",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

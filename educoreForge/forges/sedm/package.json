@@ -1,0 +1,7 @@
+{
+	"name": "forge-sedm",
+	"version": "1.0.0",
+	"main": "forgeSedm.js",
+	"description": "SEDM forge bundle — the Special Education Data Model from the working group's working documents (the CEDS Map CSV and the domain structures JSON): entities, elements, option sets, and the IDEA compliance structures. It does no bridging.",
+	"private": true
+}

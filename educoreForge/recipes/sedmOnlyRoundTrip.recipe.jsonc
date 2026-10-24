@@ -1,0 +1,16 @@
+{
+  // sedmOnlyRoundTrip — SEDM alone with the RT-13 round-trip stage: the nextStandards-102326 wave 2 lane G phase-1 certification recipe.
+  "schemaVersion": "1.0.0",
+  "recipeName": "sedmOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the SEDM standard base and round-trip-validate the materialized product (RT-13 stage).",
+  "roundTripStage": true,
+  "standards": [
+    {
+      "token": "sedm",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

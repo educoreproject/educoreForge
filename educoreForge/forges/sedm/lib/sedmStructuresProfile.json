@@ -1,0 +1,143 @@
+{
+	"profileNote": "How sedm-domain-structures.json is read (nextStandards-102326 wave 2, lane G; DESIGN-G0-sedm-102426.md §4; BRONZE_CROWN ruling 5: the JSON's constructs are DmeSupport). One row per section that mints nodes: where its item list sits (itemListPathList), its support kind and label, the field that is its identity, its name and its description, every other field and how it is carried (form: text, number, boolean, jsonList, jsonObject; a field not listed in a section is REFUSED), the fields that are references to another support node (an edge REFERENCES with the row's locator), and an optional subItem row for the items nested inside each item (a subtype list of plain texts, or a list of objects). omittedPathList names the parts of the file carried nowhere, each with its omission kind; declaredOptionSetSection is the code-list section, read by its own rule. A top-level section named by neither is REFUSED.",
+	"sectionList": [
+		{
+			"itemListPathList": ["ontologicalClasses"],
+			"supportKind": "ontologyClass",
+			"perStandardLabel": "SedmOntologyClass",
+			"identityFieldName": "name",
+			"nameFieldName": "name",
+			"descriptionFieldName": "definition",
+			"carriedFieldList": [],
+			"referenceFieldList": [],
+			"subItem": { "fieldName": "subtypes", "itemForm": "text", "perStandardLabel": "SedmOntologyClass", "locator": "subtypeOf" }
+		},
+		{
+			"itemListPathList": ["complianceCategories"],
+			"supportKind": "complianceCategory",
+			"perStandardLabel": "SedmComplianceCategory",
+			"identityFieldName": "number",
+			"nameFieldName": "name",
+			"descriptionFieldName": "description",
+			"carriedFieldList": [
+				{ "fieldName": "id", "propertyName": "complianceCategorySourceIdentifier", "form": "text" },
+				{ "fieldName": "number", "propertyName": "complianceCategoryNumber", "form": "number" },
+				{ "fieldName": "ideaIndicators", "propertyName": "ideaIndicatorNumberList", "form": "jsonList" },
+				{ "fieldName": "ideaStatuteRef", "propertyName": "ideaStatuteReference", "form": "text" }
+			],
+			"referenceFieldList": [],
+			"subItem": null
+		},
+		{
+			"itemListPathList": ["ideaIndicators"],
+			"supportKind": "ideaIndicator",
+			"perStandardLabel": "SedmIdeaIndicator",
+			"identityFieldName": "number",
+			"nameFieldName": "name",
+			"descriptionFieldName": "description",
+			"carriedFieldList": [
+				{ "fieldName": "number", "propertyName": "ideaIndicatorNumber", "form": "number" },
+				{ "fieldName": "dataSource", "propertyName": "dataSource", "form": "text" }
+			],
+			"referenceFieldList": [{ "fieldName": "complianceCategory", "targetSupportKind": "complianceCategory", "locator": "complianceCategory" }],
+			"subItem": null
+		},
+		{
+			"itemListPathList": ["standardEventMilestones", "milestoneTypes"],
+			"supportKind": "eventMilestone",
+			"perStandardLabel": "SedmEventMilestone",
+			"identityFieldName": "number",
+			"nameFieldName": "name",
+			"descriptionFieldName": null,
+			"carriedFieldList": [
+				{ "fieldName": "number", "propertyName": "eventMilestoneNumber", "form": "number" },
+				{ "fieldName": "ideaRequired", "propertyName": "ideaRequired", "form": "boolean" }
+			],
+			"referenceFieldList": [{ "fieldName": "complianceCategory", "targetSupportKind": "complianceCategory", "locator": "complianceCategory" }],
+			"subItem": null
+		},
+		{
+			"itemListPathList": ["iepComponents"],
+			"supportKind": "iepComponent",
+			"perStandardLabel": "SedmIepComponent",
+			"identityFieldName": "number",
+			"nameFieldName": "name",
+			"descriptionFieldName": "description",
+			"carriedFieldList": [
+				{ "fieldName": "number", "propertyName": "iepComponentNumber", "form": "number" },
+				{ "fieldName": "abbreviation", "propertyName": "abbreviation", "form": "text" },
+				{ "fieldName": "ageRequirement", "propertyName": "ageRequirement", "form": "text" },
+				{ "fieldName": "dataNeeded", "propertyName": "dataNeededList", "form": "jsonList" }
+			],
+			"referenceFieldList": [],
+			"subItem": {
+				"fieldName": "subcomponents",
+				"itemForm": "object",
+				"perStandardLabel": "SedmIepComponent",
+				"locator": "subcomponentOf",
+				"identityFieldName": "name",
+				"nameFieldName": "name",
+				"descriptionFieldName": "note",
+				"carriedFieldList": [{ "fieldName": "fields", "propertyName": "fieldNameList", "form": "jsonList" }]
+			}
+		},
+		{
+			"itemListPathList": ["entityHierarchy", "relationships"],
+			"supportKind": "entityHierarchy",
+			"perStandardLabel": "SedmEntityHierarchy",
+			"identityFieldName": "parent",
+			"nameFieldName": "parent",
+			"descriptionFieldName": null,
+			"carriedFieldList": [
+				{ "fieldName": "children", "propertyName": "childNameList", "form": "jsonList" },
+				{ "fieldName": "properties", "propertyName": "propertyNameList", "form": "jsonList" }
+			],
+			"referenceFieldList": [],
+			"subItem": null
+		},
+		{
+			"itemListPathList": ["useCases"],
+			"supportKind": "useCase",
+			"perStandardLabel": "SedmUseCase",
+			"identityFieldName": "id",
+			"nameFieldName": "name",
+			"descriptionFieldName": "description",
+			"carriedFieldList": [
+				{ "fieldName": "id", "propertyName": "useCaseSourceIdentifier", "form": "text" },
+				{ "fieldName": "edFactsCode", "propertyName": "edFactsCode", "form": "text" },
+				{ "fieldName": "dataGroup", "propertyName": "dataGroup", "form": "text" },
+				{ "fieldName": "requiredElementCount", "propertyName": "requiredElementCount", "form": "number" },
+				{ "fieldName": "reportingLevel", "propertyName": "reportingLevelList", "form": "jsonList" },
+				{ "fieldName": "totalPermutations", "propertyName": "totalPermutationsJson", "form": "jsonObject" },
+				{ "fieldName": "sourceFile", "propertyName": "sourceFileName", "form": "text" }
+			],
+			"referenceFieldList": [],
+			"subItem": null
+		},
+		{
+			"itemListPathList": ["generateEtlTemplates"],
+			"supportKind": "etlTemplate",
+			"perStandardLabel": "SedmEtlTemplate",
+			"identityFieldName": "name",
+			"nameFieldName": "name",
+			"descriptionFieldName": null,
+			"carriedFieldList": [{ "fieldName": "csvColumn", "propertyName": "csvColumnName", "form": "text" }],
+			"referenceFieldList": [],
+			"subItem": null
+		}
+	],
+	"declaredOptionSetSection": {
+		"sectionName": "optionSets",
+		"valueListFieldName": "values",
+		"restatedElementNameFieldName": "cedsElementName",
+		"valueCodeFieldName": "code",
+		"valueNameFieldName": "name",
+		"valueDescriptionFieldName": "description"
+	},
+	"omittedPathList": [
+		{ "pathList": ["_meta"], "omittedKind": "extractionMetadata" },
+		{ "pathList": ["standardEventMilestones", "description"], "omittedKind": "groupDescription" },
+		{ "pathList": ["standardEventMilestones", "proposedElements"], "omittedKind": "restatedCsvElement" },
+		{ "pathList": ["entityHierarchy", "description"], "omittedKind": "groupDescription" }
+	]
+}

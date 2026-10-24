@@ -1,0 +1,366 @@
+{
+	"profileNote": "The SEDM snapshot 01 source profile (nextStandards-102326 wave 2, lane G; DESIGN-G0-sedm-102426.md, BRONZE_CROWN rulings 2026-10-24). The CSV header repeats column names, so every column is addressed by POSITION and its header text is checked at that position. carriage, one per column: identityEntity / identityCategory / identityName (the element's identity: its entity, its category, its name), description (the element's definition), optionSet (the element's inline code list), text (carried verbatim under propertyName), textList (the distinct texts of the element's records, carried under propertyName as a JSON list), membership (the column that makes a record SEDM; also carried as text), etlTemplate (a CIID Generate ETL template flag: a REFERENCES edge to that template), derivedAnyEtlTemplate (omitted: the OR of the etlTemplate columns, proven by the round trip), omittedRestatedMetadata (omitted: CEDS's own per-element metadata the export restates), omittedVendorExtract (omitted: a vendor student-extract crosswalk on four records), declaredEmpty (must be empty in EVERY record, else refused).",
+	"csvFileName": "SEDM Logical Model and Maps - 6. CEDS Map.csv",
+	"structuresFileName": "sedm-domain-structures.json",
+	"columnList": [
+		{
+			"position": 0,
+			"columnName": "Domain",
+			"carriage": "textList",
+			"propertyName": "domainList"
+		},
+		{
+			"position": 1,
+			"columnName": "Entity",
+			"carriage": "identityEntity"
+		},
+		{
+			"position": 2,
+			"columnName": "Category",
+			"carriage": "identityCategory",
+			"propertyName": "category"
+		},
+		{
+			"position": 3,
+			"columnName": "Global ID (CEDS)",
+			"carriage": "text",
+			"propertyName": "globalIdText"
+		},
+		{
+			"position": 4,
+			"columnName": "Element Name",
+			"carriage": "identityName"
+		},
+		{
+			"position": 5,
+			"columnName": "Definition",
+			"carriage": "description"
+		},
+		{
+			"position": 6,
+			"columnName": "Option Set",
+			"carriage": "optionSet"
+		},
+		{
+			"position": 7,
+			"columnName": "Format",
+			"carriage": "text",
+			"propertyName": "format"
+		},
+		{
+			"position": 8,
+			"columnName": "Ed-Fi Map",
+			"carriage": "text",
+			"propertyName": "edfiMapText"
+		},
+		{
+			"position": 9,
+			"columnName": "Source",
+			"carriage": "text",
+			"propertyName": "sedmDataSource"
+		},
+		{
+			"position": 10,
+			"columnName": "Scope",
+			"carriage": "textList",
+			"propertyName": "sedmScopeList"
+		},
+		{
+			"position": 11,
+			"columnName": "SEDM",
+			"carriage": "membership",
+			"propertyName": "sedmFlag"
+		},
+		{
+			"position": 12,
+			"columnName": "SSEM",
+			"carriage": "text",
+			"propertyName": "ssemFlag"
+		},
+		{
+			"position": 13,
+			"columnName": "Use Case / Connection",
+			"carriage": "omittedRestatedMetadata"
+		},
+		{
+			"position": 14,
+			"columnName": "Element Change Status",
+			"carriage": "omittedRestatedMetadata"
+		},
+		{
+			"position": 15,
+			"columnName": "Change Notes",
+			"carriage": "omittedRestatedMetadata"
+		},
+		{
+			"position": 16,
+			"columnName": "Usage Notes",
+			"carriage": "omittedRestatedMetadata"
+		},
+		{
+			"position": 17,
+			"columnName": "Data Model ID (CEDS)",
+			"carriage": "omittedRestatedMetadata"
+		},
+		{
+			"position": 18,
+			"columnName": "New Association",
+			"carriage": "omittedRestatedMetadata"
+		},
+		{
+			"position": 19,
+			"columnName": "URL",
+			"carriage": "omittedRestatedMetadata"
+		},
+		{
+			"position": 20,
+			"columnName": "Alternate Name",
+			"carriage": "omittedRestatedMetadata"
+		},
+		{
+			"position": 21,
+			"columnName": "TQ's IEP Model",
+			"carriage": "declaredEmpty"
+		},
+		{
+			"position": 22,
+			"columnName": "",
+			"carriage": "declaredEmpty"
+		},
+		{
+			"position": 23,
+			"columnName": "Assessment ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 24,
+			"columnName": "Base IDEA ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 25,
+			"columnName": "Charter ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 26,
+			"columnName": "Child Count ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 27,
+			"columnName": "Directory ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 28,
+			"columnName": "Directory Lite ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 29,
+			"columnName": "Discipline ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 30,
+			"columnName": "Exiting ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 31,
+			"columnName": "Membership ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 32,
+			"columnName": "NorD Participation ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 33,
+			"columnName": "OESE ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 34,
+			"columnName": "Personnel ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 35,
+			"columnName": "Title I ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 36,
+			"columnName": "Title III ETL",
+			"carriage": "etlTemplate"
+		},
+		{
+			"position": 37,
+			"columnName": "In any ETL template?",
+			"carriage": "derivedAnyEtlTemplate"
+		},
+		{
+			"position": 38,
+			"columnName": "Technical Name",
+			"carriage": "omittedRestatedMetadata"
+		},
+		{
+			"position": 39,
+			"columnName": "Attr Group",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 40,
+			"columnName": "Attribute",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 41,
+			"columnName": "Description",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 42,
+			"columnName": "Ordinality",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 43,
+			"columnName": "Data Type",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 44,
+			"columnName": "Example",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 45,
+			"columnName": "Note",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 46,
+			"columnName": "EdPlan Stub",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 47,
+			"columnName": "ECATS",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 48,
+			"columnName": "Extract File Name",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 49,
+			"columnName": "ID",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 50,
+			"columnName": "Header",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 51,
+			"columnName": "Field",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 52,
+			"columnName": "Required (Yes or No)",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 53,
+			"columnName": "Size",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 54,
+			"columnName": "Type",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 55,
+			"columnName": "Description",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 56,
+			"columnName": "Example",
+			"carriage": "omittedVendorExtract"
+		},
+		{
+			"position": 57,
+			"columnName": "Indicator 9 and 10 - Identificaiton Disproportionality",
+			"carriage": "text",
+			"propertyName": "ideaIndicator9And10Flag"
+		},
+		{
+			"position": 58,
+			"columnName": "In an NC ECATS File",
+			"carriage": "text",
+			"propertyName": "ncEcatsFileFlag"
+		},
+		{
+			"position": 59,
+			"columnName": "SC Provisioning",
+			"carriage": "declaredEmpty"
+		},
+		{
+			"position": 60,
+			"columnName": "In SC Import",
+			"carriage": "text",
+			"propertyName": "scImportFlag"
+		},
+		{
+			"position": 61,
+			"columnName": "In SC Export",
+			"carriage": "text",
+			"propertyName": "scExportFlag"
+		},
+		{
+			"position": 62,
+			"columnName": "In ETL or Import?",
+			"carriage": "text",
+			"propertyName": "etlOrImportFlag"
+		},
+		{
+			"position": 63,
+			"columnName": "SEDM Compliance",
+			"carriage": "text",
+			"propertyName": "sedmComplianceFlag"
+		},
+		{
+			"position": 64,
+			"columnName": "SEDM IEP",
+			"carriage": "text",
+			"propertyName": "sedmIepFlag"
+		},
+		{
+			"position": 65,
+			"columnName": "MWTM",
+			"carriage": "text",
+			"propertyName": "mwtmFlag"
+		},
+		{
+			"position": 66,
+			"columnName": "HI",
+			"carriage": "text",
+			"propertyName": "hiFlag"
+		}
+	],
+	"etlTemplateCellTextList": [
+		"Y"
+	],
+	"noOptionSetCellText": "None",
+	"optionLinePatternSource": "^(.+?)\\s+-\\s+(.+)$",
+	"lineSeparator": "\n"
+}

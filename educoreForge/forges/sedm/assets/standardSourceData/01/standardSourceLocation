@@ -1,0 +1,8 @@
+standard: SEDM (the Special Education Data Model), working documents of the SEDM working group: the CEDS Map sheet of "SEDM Logical Model and Maps" (CSV) and the domain structures extracted from the SEDM Conceptual Model (JSON)
+publishedVersion: unknown
+publishedVersionEvidence: SEDM has NO published version. These are working documents (TQ ruling 2026-10-23, PLAN-nextStandards-102326 section 12: "yes, attic"). The JSON's _meta.version 1.0 is the version of its extraction from "SEDM Conceptual Model.md" (extractedDate 2026-04-01), not of SEDM; the CSV states no version. When a published SEDM artefact appears it replaces these as a new snapshot.
+publisher: the SEDM working group (PCG / AEM / Education Analytics, through Ed3 and Data Standards United; CENSUS-candidateStandards-102326 row 6). No public URL is recorded for these files.
+licence: none stated. The held files carry no licence line; the A4L decks mark SEDM artefacts CC BY 4.0, but no published artefact exists. Downloads are WITHHELD (both facets).
+copiedFrom: educoreForge git commit 88336881 (the tree before the 2026-08-15 reset), educoreForge/forges/sedm/assets/standardSourceData/01/, harvested there on 2026-06-23 from educoreForgeOLD/system/code/cli/lib.d/forge-sedm/assets/standardSourceData/01
+copiedDate: 2026-10-24
+note: EDITING WARNING. deriveVersionStamp (lib/snapshot-provenance) takes THE ENTIRE REST OF the publishedVersion line as the version, so keep that line bare; citations belong on publishedVersionEvidence. The CSV's column "TQ's IEP Model" is EMPTY in all 4,465 records (measured 2026-10-24), so nothing of it is carried.
