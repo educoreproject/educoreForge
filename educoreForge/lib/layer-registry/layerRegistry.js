@@ -148,6 +148,10 @@ const layerRefusal = ({ layer, agentIriSet }) => {
 		if (contentIdByTag[versionTag] !== undefined) {
 			return `layer '${layer.layerKey}': tag '${versionTag}' is REASSIGNED (content ${contentIdByTag[versionTag]} and ${contentId}); a tag is never reused`;
 		}
+		const sameContentTag = Object.keys(contentIdByTag).find((oneTag) => contentIdByTag[oneTag] === contentId);
+		if (sameContentTag !== undefined) {
+			return `layer '${layer.layerKey}': tags '${sameContentTag}' and '${versionTag}' name the same content ${contentId}; one version, one tag`;
+		}
 		contentIdByTag[versionTag] = contentId;
 	}
 	for (let changeIndex = 0; changeIndex < layer.statusChangeList.length; changeIndex++) {

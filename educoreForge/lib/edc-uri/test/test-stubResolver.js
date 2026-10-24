@@ -42,26 +42,29 @@ const decisionBlockHash = crypto.createHash('sha256').update(frozenText, 'utf8')
 const blockTextForHash = (requestedHash, done) => done('', requestedHash === decisionBlockHash ? frozenText : null);
 const memberBlockList = [{ pairKey: 'toyhub@1.0::toy@1.2.3::toyDerivedPlugin::inferred', decisionBlockHash }];
 const contentId = crypto.createHash('sha256').update(decisionBlockHash, 'utf8').digest('hex');
-const versionFor = ({ versionTag, registrationStatus, publishedAt }) => ({
-	administrationRecord: { registrationAuthority: ORGANISATION_IRI, registrar: ORGANISATION_IRI, submitter: ORGANISATION_IRI, publishedAt, contentId, versionTag },
+// v0 is an EARLIER version over another block (its own content); v1 is the block above
+const earlierMemberBlockList = [{ pairKey: 'toyhub@1.0::toy@1.2.3::toyDerivedPlugin::inferred', decisionBlockHash: 'e'.repeat(64) }];
+const versionFor = ({ versionTag, registrationStatus, publishedAt, versionMemberBlockList = memberBlockList }) => ({
+	administrationRecord: { registrationAuthority: ORGANISATION_IRI, registrar: ORGANISATION_IRI, submitter: ORGANISATION_IRI, publishedAt, contentId: crypto.createHash('sha256').update(versionMemberBlockList.map((oneMember) => oneMember.decisionBlockHash).sort().join('\n'), 'utf8').digest('hex'), versionTag },
 	registrationStatus,
 	authorAgentIri: JUDGE_IRI,
 	contentIdBasis: 'sortedMemberBlockHashList',
-	memberBlockList,
+	memberBlockList: versionMemberBlockList,
 });
 const { registry } = registryFor({
 	agentRegistry: { agentList: [{ agentIri: ORGANISATION_IRI, agentKind: 'organisation', displayName: 'EDUcore' }, { agentIri: JUDGE_IRI, agentKind: 'judge', displayName: 'the debug judge' }] },
 	layerRegistry: {
 		registrationAuthorityIri: ORGANISATION_IRI,
 		registrarIri: ORGANISATION_IRI,
-		layerList: [{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [versionFor({ versionTag: 'v1', registrationStatus: 'Standard', publishedAt: '2026-10-01T00:00:00Z' })], statusChangeList: [] }],
+		layerList: [{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [versionFor({ versionTag: 'v0', registrationStatus: 'Standard', publishedAt: '2026-09-01T00:00:00Z', versionMemberBlockList: earlierMemberBlockList }), versionFor({ versionTag: 'v1', registrationStatus: 'Standard', publishedAt: '2026-10-01T00:00:00Z' })], statusChangeList: [{ versionTag: 'v0', registrationStatus: 'Superseded', changedAt: '2026-10-02T00:00:00Z', changedBy: ORGANISATION_IRI, supersededByVersionTag: 'v1' }] }],
 	},
 });
 const fanOutAssertionId = assertionIdentity.assertionIdFor({ decisionBlockHash, subjectStableId: 'toy:field/Two', subjectStandardName: 'Toy', subjectStandardVersion: '1.2.3', predicateCurie: 'skos:closeMatch', objectStableId: 'https://w3id.org/EDUcore/ToyHub/hub/1.0/bbbb', objectStandardName: 'ToyHub', objectStandardVersion: '1.0' }).assertionId;
 
 const caseList = [
 	{ label: 'a floating layer answers its Standard version', uriOrPath: '/EDUcore/layer/toyJudge', judge: (resolved) => resolved.httpStatus === 200 && resolved.body.currentStandardVersion.administrationRecord.versionTag === 'v1' && resolved.body.currentStandardVersionUri === 'https://w3id.org/EDUcore/layer/toyJudge/v1' },
-	{ label: 'a version answers by tag', uriOrPath: '/EDUcore/layer/toyJudge/v1', judge: (resolved) => resolved.httpStatus === 200 && resolved.body.version.administrationRecord.contentId === contentId },
+	{ label: 'a version answers by tag, with its effective status', uriOrPath: '/EDUcore/layer/toyJudge/v1', judge: (resolved) => resolved.httpStatus === 200 && resolved.body.version.administrationRecord.contentId === contentId && resolved.body.effectiveRegistrationStatus === 'Standard' },
+	{ label: 'a superseded version answers its EFFECTIVE status (Superseded) beside the row it was published with (Standard)', uriOrPath: '/EDUcore/layer/toyJudge/v0', judge: (resolved) => resolved.httpStatus === 200 && resolved.body.effectiveRegistrationStatus === 'Superseded' && resolved.body.version.registrationStatus === 'Standard' },
 	{ label: 'a version answers by content', uriOrPath: `edc:layer/toyJudge/sha256/${contentId}`, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.version.administrationRecord.versionTag === 'v1' },
 	{ label: 'an unknown version is 404 with its reason', uriOrPath: '/EDUcore/layer/toyJudge/v9', judge: (resolved) => resolved.httpStatus === 404 && /no version tagged "v9"/.test(resolved.body.error) },
 	{ label: 'a fan-out assertion answers its instance and the judged subject', uriOrPath: fanOutAssertionId, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.assertion.subjectStableId === 'toy:field/Two' && resolved.body.assertion.judgedSubjectStableId === 'toy:question/Q' },

@@ -78,12 +78,13 @@ const RESOLUTION_BY_KIND = Object.freeze({
 	},
 	layerVersion: ({ partByName, registry }, done) => {
 		const found = registry.versionFor({ layerKey: partByName.layerKey, versionTag: partByName.versionTag });
-		done(found.error ? answer(404, { error: found.error }) : answer(200, { kind: 'layerVersion', layerKey: partByName.layerKey, version: found.version }));
+		// the row keeps the status it was published with; the EFFECTIVE status (after appended changes) is answered beside it
+		done(found.error ? answer(404, { error: found.error }) : answer(200, { kind: 'layerVersion', layerKey: partByName.layerKey, effectiveRegistrationStatus: registry.effectiveStatusFor({ layerKey: partByName.layerKey, versionTag: partByName.versionTag }).registrationStatus, version: found.version }));
 	},
 	layerVersionByContent: ({ partByName, registry }, done) => {
 		const found = registry.layerFor(partByName.layerKey);
 		const version = found.error ? undefined : found.layer.versionList.find((oneVersion) => oneVersion.administrationRecord.contentId === partByName.contentId);
-		done(version === undefined ? answer(404, { error: found.error || `layer '${partByName.layerKey}' has no version with content ${partByName.contentId}` }) : answer(200, { kind: 'layerVersionByContent', layerKey: partByName.layerKey, version }));
+		done(version === undefined ? answer(404, { error: found.error || `layer '${partByName.layerKey}' has no version with content ${partByName.contentId}` }) : answer(200, { kind: 'layerVersionByContent', layerKey: partByName.layerKey, effectiveRegistrationStatus: registry.effectiveStatusFor({ layerKey: partByName.layerKey, versionTag: version.administrationRecord.versionTag }).registrationStatus, version }));
 	},
 	assertion: ({ partByName, iri, blockTextForHash }, done) => {
 		blockTextForHash(partByName.decisionBlockHash, (readError, frozenText) => {
