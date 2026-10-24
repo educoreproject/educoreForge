@@ -11,5 +11,6 @@
 		"DmeOptionSet": "OpenBadgesEnum",
 		"DmeOptionValue": "OpenBadgesEnumValue"
 	},
-	"schemaExclusionList": []
+	"schemaExclusionList": [],
+	"listValuedVendorExtensionNameList": [], "enumMemberTextDeclarationList": []
 }

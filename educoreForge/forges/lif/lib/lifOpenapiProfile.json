@@ -15,5 +15,6 @@
 	"statementOmissionDeclaration": {
 		"emptyValueKeywordList": ["description", "format", "use_recommendations", "example", "required"],
 		"enumMemberRepeatList": [{ "enumObjectPointer": "Person/properties/Consent/properties/lifEntities", "memberText": "Image" }]
-	}
+	},
+	"listValuedVendorExtensionNameList": [], "enumMemberTextDeclarationList": []
 }
