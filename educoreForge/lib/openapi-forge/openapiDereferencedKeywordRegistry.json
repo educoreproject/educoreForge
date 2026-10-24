@@ -1,0 +1,79 @@
+{
+	"registryNote": "lib/openapi-forge keyword registry for the dereferencedMultiFile layout (nextStandards-102326 K1, ruled 2026-10-24). DATA, the K0 registry's form: which keyword is carried at which position and under what node property name; a keyword absent from its position's table is REFUSED BY NAME. Positions: 'class' (a component that is an object/composition, a datatype component, or an inline object matching no component), 'codeList' (an enum-only component), 'site' (a property's own shape when it is neither a component copy nor an inline object), 'items' (a site's items when not a copy or inline object), 'branch' (a composition branch that is neither). A site, items or branch that EQUALS a component (canonical JSON minus its top description) is a reference and is not read against these tables. Carriages: nodeProperty (a scalar under propertyName, of valueKind; allowedValueList when given), jsonText (any JSON value, carried as a JSON string), requiredList, propertyMap, definitionMap, items, composition, enum, enumNames (aligned with the same object's enum).",
+	"compositionConstructList": ["oneOf", "anyOf", "allOf"],
+	"complexKeywordList": ["properties", "allOf", "anyOf", "oneOf", "definitions"],
+	"complexTypeValueList": ["object"],
+	"carriageByPosition": {
+		"class": {
+			"$schema": { "carriage": "nodeProperty", "propertyName": "jsonSchemaDialect", "valueKind": "string" },
+			"version": { "carriage": "nodeProperty", "propertyName": "schemaVersion", "valueKind": "string" },
+			"title": { "carriage": "nodeProperty", "propertyName": "schemaTitle", "valueKind": "string" },
+			"description": { "carriage": "nodeProperty", "propertyName": "description", "valueKind": "string" },
+			"type": { "carriage": "nodeProperty", "propertyName": "dataType", "valueKind": "string", "allowedValueList": ["object", "string", "number", "integer", "boolean", "array"] },
+			"format": { "carriage": "nodeProperty", "propertyName": "dataFormat", "valueKind": "string" },
+			"pattern": { "carriage": "nodeProperty", "propertyName": "valuePattern", "valueKind": "string" },
+			"minimum": { "carriage": "nodeProperty", "propertyName": "minimum", "valueKind": "number" },
+			"maximum": { "carriage": "nodeProperty", "propertyName": "maximum", "valueKind": "number" },
+			"exclusiveMinimum": { "carriage": "nodeProperty", "propertyName": "exclusiveMinimum", "valueKind": "booleanOrNumber" },
+			"minProperties": { "carriage": "nodeProperty", "propertyName": "minProperties", "valueKind": "integer" },
+			"hropenFormat": { "carriage": "nodeProperty", "propertyName": "hropenFormat", "valueKind": "string" },
+			"links": { "carriage": "jsonText", "propertyName": "linkDescriptions" },
+			"additionalProperties": { "carriage": "nodeProperty", "propertyName": "additionalPropertiesAllowed", "valueKind": "boolean" },
+			"required": { "carriage": "requiredList" },
+			"properties": { "carriage": "propertyMap" },
+			"definitions": { "carriage": "definitionMap" },
+			"items": { "carriage": "items" },
+			"allOf": { "carriage": "composition" },
+			"anyOf": { "carriage": "composition" },
+			"oneOf": { "carriage": "composition" }
+		},
+		"codeList": {
+			"$schema": { "carriage": "nodeProperty", "propertyName": "jsonSchemaDialect", "valueKind": "string" },
+			"version": { "carriage": "nodeProperty", "propertyName": "schemaVersion", "valueKind": "string" },
+			"title": { "carriage": "nodeProperty", "propertyName": "schemaTitle", "valueKind": "string" },
+			"description": { "carriage": "nodeProperty", "propertyName": "description", "valueKind": "string" },
+			"type": { "carriage": "nodeProperty", "propertyName": "dataType", "valueKind": "string", "allowedValueList": ["string", "number", "integer"] },
+			"links": { "carriage": "jsonText", "propertyName": "linkDescriptions" },
+			"enum": { "carriage": "enum" },
+			"enumNames": { "carriage": "enumNames" }
+		},
+		"site": {
+			"$schema": { "carriage": "nodeProperty", "propertyName": "jsonSchemaDialect", "valueKind": "string" },
+			"version": { "carriage": "nodeProperty", "propertyName": "schemaVersion", "valueKind": "string" },
+			"title": { "carriage": "nodeProperty", "propertyName": "schemaTitle", "valueKind": "string" },
+			"description": { "carriage": "nodeProperty", "propertyName": "description", "valueKind": "string" },
+			"type": { "carriage": "nodeProperty", "propertyName": "dataType", "valueKind": "string", "allowedValueList": ["string", "number", "integer", "boolean", "array"] },
+			"format": { "carriage": "nodeProperty", "propertyName": "dataFormat", "valueKind": "string" },
+			"pattern": { "carriage": "nodeProperty", "propertyName": "valuePattern", "valueKind": "string" },
+			"minimum": { "carriage": "nodeProperty", "propertyName": "minimum", "valueKind": "number" },
+			"maximum": { "carriage": "nodeProperty", "propertyName": "maximum", "valueKind": "number" },
+			"exclusiveMinimum": { "carriage": "nodeProperty", "propertyName": "exclusiveMinimum", "valueKind": "booleanOrNumber" },
+			"minItems": { "carriage": "nodeProperty", "propertyName": "minItems", "valueKind": "integer" },
+			"hropenFormat": { "carriage": "nodeProperty", "propertyName": "hropenFormat", "valueKind": "string" },
+			"links": { "carriage": "jsonText", "propertyName": "linkDescriptions" },
+			"items": { "carriage": "items" },
+			"enum": { "carriage": "enum" },
+			"enumNames": { "carriage": "enumNames" }
+		},
+		"items": {
+			"$schema": { "carriage": "nodeProperty", "propertyName": "itemsJsonSchemaDialect", "valueKind": "string" },
+			"version": { "carriage": "nodeProperty", "propertyName": "itemsSchemaVersion", "valueKind": "string" },
+			"title": { "carriage": "nodeProperty", "propertyName": "itemsSchemaTitle", "valueKind": "string" },
+			"description": { "carriage": "nodeProperty", "propertyName": "itemsDescription", "valueKind": "string" },
+			"type": { "carriage": "nodeProperty", "propertyName": "itemsDataType", "valueKind": "string", "allowedValueList": ["string", "number", "integer", "boolean"] },
+			"format": { "carriage": "nodeProperty", "propertyName": "itemsDataFormat", "valueKind": "string" },
+			"pattern": { "carriage": "nodeProperty", "propertyName": "itemsValuePattern", "valueKind": "string" },
+			"enum": { "carriage": "enum" },
+			"enumNames": { "carriage": "enumNames" }
+		},
+		"branch": {
+			"$schema": { "carriage": "nodeProperty", "propertyName": "jsonSchemaDialect", "valueKind": "string" },
+			"version": { "carriage": "nodeProperty", "propertyName": "schemaVersion", "valueKind": "string" },
+			"title": { "carriage": "nodeProperty", "propertyName": "schemaTitle", "valueKind": "string" },
+			"description": { "carriage": "nodeProperty", "propertyName": "description", "valueKind": "string" },
+			"type": { "carriage": "nodeProperty", "propertyName": "dataType", "valueKind": "string", "allowedValueList": ["string", "number", "integer", "boolean"] },
+			"format": { "carriage": "nodeProperty", "propertyName": "dataFormat", "valueKind": "string" },
+			"pattern": { "carriage": "nodeProperty", "propertyName": "valuePattern", "valueKind": "string" }
+		}
+	}
+}

@@ -49,6 +49,7 @@ const openapiRoundTripPairFactory = require(path.join(__dirname, '..', 'openapiR
 const SOURCE_FILE_NAME = 'synth_oas.json';
 const syntheticProfile = Object.freeze({
 	profileNote: 'A synthetic OpenAPI profile for the kit test.',
+	sourceLayout: 'referencedSingleFile',
 	sourceFileName: SOURCE_FILE_NAME,
 	sourceFormat: 'json',
 	stableIdPrefix: 'synthapi:',

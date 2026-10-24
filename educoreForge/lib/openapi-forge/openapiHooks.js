@@ -8,7 +8,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // jsonLdVocabularyHooks.js form); what differs between OpenAPI standards is profile DATA only.
 
 const openapiLoaderFactory = require('./openapiLoader');
-const openapiWalkFactory = require('./openapiWalk');
+const openapiLayout = require('./openapiLayout');
 
 const LOADER_NAME = Object.freeze({ OPENAPI_DOCUMENT: 'openapiDocument', SOURCE_LOCATION: 'sourceLocation' });
 const SOURCE_FORMAT_PREFIX = 'openapi-';
@@ -19,14 +19,15 @@ const moduleFunction =
 	({ moduleName } = {}) =>
 	({ openapiProfile }) => {
 		const openapiLoader = openapiLoaderFactory({ openapiProfile });
-		const openapiWalk = openapiWalkFactory({ openapiProfile });
+		// ⟪K1⟫ the walk is the profile's layout's (openapiLayout.js), the K0 walk for referencedSingleFile
+		const openapiWalk = openapiLayout.walkFor({ openapiProfile });
 
 		// describeSource — PURE. The document states its own version (info.version), so selfDescribedVersion is that text;
 		// `version` is omitted so the root takes the framework's stamp.
 		const describeSource = ({ parsed }) => ({
 			selfDescribedVersion: parsed[LOADER_NAME.OPENAPI_DOCUMENT].document.info.version,
 			sourceFormat: `${SOURCE_FORMAT_PREFIX}${openapiProfile.sourceFormat}`,
-			sourceFiles: [parsed[LOADER_NAME.OPENAPI_DOCUMENT].sourceFileName],
+			sourceFiles: parsed[LOADER_NAME.OPENAPI_DOCUMENT].sourceFileNameList,
 			sourceUrl: parsed[LOADER_NAME.SOURCE_LOCATION].upstreamUrl,
 		});
 
