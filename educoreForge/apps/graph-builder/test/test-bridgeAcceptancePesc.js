@@ -1070,7 +1070,9 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // 4/1 (STANDARD_FAMILY gains OPENBADGES and JEDX, wave 1's one vocabulary move) and lib/vocabulary/graph-contract.js 5/3 (the standardFamily
 // meaning text names both; minItems joins INTEGER_VALUED_PROPERTY_NAME_LIST; PRODUCER_LOCAL_LABEL_PATTERN gains the OpenBadges and Jedx stems).
 // No bridge-framework or bridge-maker source; the proxy fingerprints of all 16 existing forges are unchanged (laneA/k0/proxyBefore/After).
-const P1_BASELINE_COMMIT = 'postNsK0PescCompose-102326'; // re-anchored by AZURE_MARBLE (census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR AGAIN, 2026-10-23 (AZURE_MARBLE; BRONZE_CROWN's grant) ═══ postNsK0PescCompose-102326 -> postNsK0bPescCompose-102326, tag cut
+// ON this commit. CENSUS over this gate's paths from the previous tag: lib/vocabulary/test/test-sifEdgeVocabulary.js (schema view 343 -> 344) only.
+const P1_BASELINE_COMMIT = 'postNsK0bPescCompose-102326'; // re-anchored by AZURE_MARBLE (census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

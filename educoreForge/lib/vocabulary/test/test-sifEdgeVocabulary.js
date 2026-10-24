@@ -110,7 +110,9 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // ⟪zeroBacklog lane D, D0, 2026-10-22 (INDIGO_COMPASS)⟫ +2 more, unrelated to V1: the passport's structuralVersion (one passportField
 // member) and StandardDefinition.nativeIdentifierPropertyName (one selfDocField member, reserved for lane A2); measured 341 -> 343 by the
 // D0 full suite, the declared consequence of the contract commit.
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13 + 5 + 5 + 1 + 1 + 1 + 1;
+// ⟪nextStandards-102326 K0, 2026-10-23 (AZURE_MARBLE)⟫ +1 more, unrelated to V1: minItems joins INTEGER_VALUED_PROPERTY_NAME_LIST (the
+// OpenAPI kit's array minimum), projected as one integerValuedProperty member; measured 343 -> 344 by diffing the member lists main vs K0.
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13 + 5 + 5 + 1 + 1 + 1 + 1 + 1;
 // ⟪campaign P3, W-C-2⟫ rows RETIRED from V1's own five: the real registry is AFTER_V1 + added − retired, and the pre-V1
 // reading (the remaining V1 rows removed) is BEFORE_V1 + added, unchanged.
 const SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1 = RETIRED_V1_EDGE_TYPE_NAME_LIST.length;

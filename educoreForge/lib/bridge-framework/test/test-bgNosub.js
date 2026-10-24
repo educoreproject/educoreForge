@@ -228,7 +228,13 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // from the D0 tag): vocabulary-definitions.js 3/1 (D3-7: REFERENCES' definition says one standard FAMILY, measured 227 cross-_source edges
 // inside CTDL; graph-contract sha unchanged), test/test-sifVocabularyInvariance.js 2/1 and testSupport/pureProxyFingerprintProbe.js 1/1
 // (D3-6). vocabulary-definitions.js is outside (ii)'s allowed vocabulary.js+tests. Allowed-path list NOT widened.
-const POST_D1_BASE_TAG = 'postZeroBacklogD3bVocabularyIi-102226'; // re-anchored by INDIGO_COMPASS (zeroBacklog D3-7; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (AZURE_MARBLE; nextStandards-102326 K0, wave 1's one vocabulary move; BRONZE_CROWN's grant) ═══ (ii)
+// postZeroBacklogD3bVocabularyIi-102226 -> postNsK0VocabularyIi-102326, tag cut ON this commit. CENSUS (lib/vocabulary/, numstat from the D3b tag):
+// graph-contract.js 5/3 (standardFamily meaning names OpenBadges and JEDx; minItems integer-valued; producer-local stems OpenBadges, Jedx),
+// vocabulary.js 4/1 (STANDARD_FAMILY.OPENBADGES, .JEDX), test/test-sifEdgeVocabulary.js (schema view 343 -> 344, this commit) and
+// test/test-sifVocabularyInvariance.js (already on main). graph-contract.js is outside (ii)'s allowed vocabulary.js+tests, as D0's and P5's
+// rows were. Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postNsK0VocabularyIi-102326'; // re-anchored by AZURE_MARBLE (nextStandards K0; census in the block above); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -510,7 +516,10 @@ const POST_D1_BASE_TAG = 'postZeroBacklogD3bVocabularyIi-102226'; // re-anchored
 // postZbBForgeFrameworkIii-102226 -> postZbA2rForgeFrameworkIii-102326, tag cut ON this commit. CENSUS over this gate's paths: lib/forge-framework/ forgeDeclarationContract.js 40/22 (A2-1 anchor maps, A2-2 four keys, the sentinel retired, A2-3 nativeIdentifierPropertyName),
 // rootNode.js 4/1 (A2-3 stamp), and its tests: expectedFingerprints.json 5/5 (toy and three forge proxies, ruled moves), the G-JSONKEYS fixture 55/10,
 // the toy declaration 5/5, test-gDecl.js 17/23. No other lib/forge-framework file.
-const PHASE0_ANCHOR_TAG = 'postZbA2rForgeFrameworkIii-102326'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A2; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (AZURE_MARBLE; nextStandards-102326 K0; BRONZE_CROWN's grant) ═══ PHASE0_ANCHOR_TAG
+// postZbA2rForgeFrameworkIii-102326 -> postNsK0ForgeFrameworkIii-102326, tag cut ON this commit. CENSUS over this gate's paths:
+// lib/forge-framework/test/test-gStandardMetadata.js 13/0 (conjuncts p and q: the OpenBadges and JEDx families admitted). No framework source.
+const PHASE0_ANCHOR_TAG = 'postNsK0ForgeFrameworkIii-102326'; // re-anchored by AZURE_MARBLE (nextStandards K0; census in the block above); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -1063,7 +1072,11 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // nativeIdentifierPropertyName; pescld 7/5 also carries the lane A x lane C merge resolution), forgeCedsContractGraph.js 2/3 (a stale comment), the CEDS guide layer forge 3/0 + guideLayerUsageTips.json 4/0
 // (layerUsageTips), the StandardDefinition finisher 4/1 (carries nativeIdentifierPropertyName), sif260928Bridging.js 20/18 (A2-5's judgmentPartition onto the ceds row, plus lane B's
 // hitsPerText-40 row 26768721, merged to main after this tag was cut on lane C's branch), and lib/forge-framework as (iii). (i-live): no shape moved.
-const PHASE3_ANCHOR_TAG = 'postZbA2rSeamDiffEmpty-102326'; // re-anchored by PEARL_CIPHER (zeroBacklog lane A2; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-23 (AZURE_MARBLE; nextStandards-102326 K0; BRONZE_CROWN's grant) ═══ PHASE3_ANCHOR_TAG
+// postZbA2rSeamDiffEmpty-102326 -> postNsK0SeamDiffEmpty-102326, tag cut ON this commit. CENSUS over this gate's paths: lib/forge-framework as (iii)
+// (test-gStandardMetadata.js 13/0) and apps/graph-builder/apps/replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 3/1 (its (e)
+// pre-fix twin admits the wave's families; granted). No forge entry, declaration or hooks file; no build, forger or replay source.
+const PHASE3_ANCHOR_TAG = 'postNsK0SeamDiffEmpty-102326'; // re-anchored by AZURE_MARBLE (nextStandards K0; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
