@@ -387,8 +387,13 @@ const registryDocumentText = ({ layer, registry, localNameByVersionTag, publicFi
 		return layerMint;
 	}
 	const referenceLineList = [];
-	for (let versionIndex = 0; versionIndex < layer.versionList.length; versionIndex++) {
-		const oneVersion = layer.versionList[versionIndex];
+	// a COMPLETE registry lists every version (each must have its set); a PUBLIC one lists only the versions whose filtered set has rows
+	const listedVersionList = publicFilter === undefined ? layer.versionList : layer.versionList.filter((oneVersion) => isNonEmptyString(localNameByVersionTag[oneVersion.administrationRecord.versionTag]));
+	if (listedVersionList.length === 0) {
+		return { error: refusalText(`layer '${layer.layerKey}' has no version to list`, 'a registry document lists at least one version; the caller omits a layer with none') };
+	}
+	for (let versionIndex = 0; versionIndex < listedVersionList.length; versionIndex++) {
+		const oneVersion = listedVersionList[versionIndex];
 		const { versionTag, contentId, publishedAt } = oneVersion.administrationRecord;
 		const versionMint = versionUriFor(layer, oneVersion);
 		const contentMint = mintUri({ kind: 'layerVersionByContent', layerKey: layer.layerKey, contentId });

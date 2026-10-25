@@ -194,7 +194,7 @@ const importLayer = ({ sssomText, sssomPath, slug, versionTag, authorIri, prefix
 			return;
 		}
 		const contentId = sha256Hex(sssomText);
-		const importRecord = { prefixMapDeclarationSha256: sha256Hex(JSON.stringify(prefixMapDeclaration)), goldContainerName: goldCapture.goldContainerName, goldManifestRefId: goldCapture.manifestRefId, rowCount: resolved.rowCount, acceptedRowCount: resolved.acceptedList.length, refusedRowCount: resolved.refusalList.length, refusalCountByReasonCode: resolved.refusalList.reduce((soFar, oneRefusal) => ({ ...soFar, [oneRefusal.reasonCode]: (soFar[oneRefusal.reasonCode] || 0) + 1 }), {}), sssomPyVerdict };
+		const importRecord = { prefixMapDeclarationSha256: sha256Hex(JSON.stringify(prefixMapDeclaration)), prefixExpansion: prefixMapDeclaration.prefixExpansion, goldContainerName: goldCapture.goldContainerName, goldManifestRefId: goldCapture.manifestRefId, rowCount: resolved.rowCount, acceptedRowCount: resolved.acceptedList.length, refusedRowCount: resolved.refusalList.length, refusalCountByReasonCode: resolved.refusalList.reduce((soFar, oneRefusal) => ({ ...soFar, [oneRefusal.reasonCode]: (soFar[oneRefusal.reasonCode] || 0) + 1 }), {}), sssomPyVerdict };
 		const report = { layerKey, contentId, acceptedRowCount: resolved.acceptedList.length, refusedRowCount: resolved.refusalList.length, refusalList: resolved.refusalList, importRecord };
 		const existingLayer = registry.layerFor(layerKey);
 		const existingVersionList = existingLayer.error ? [] : existingLayer.layer.versionList;
