@@ -162,6 +162,15 @@ const conjunctJudgeByRefId = {
 		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'SEDM' }));
 		return { pass: message === '', detail: message || "standardFamily 'SEDM' admitted" };
 	},
+	// ⟪nextStandards-102326 wave 3, lane H⟫ wave 3's two families: OneRoster (lane H), MedBiquitous (lane I)
+	w_onerosterFamilyAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'OneRoster' }));
+		return { pass: message === '', detail: message || "standardFamily 'OneRoster' admitted" };
+	},
+	x_medbiqFamilyAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'MedBiquitous' }));
+		return { pass: message === '', detail: message || "standardFamily 'MedBiquitous' admitted" };
+	},
 	i_blankReleaseLabelRefused: (mutationList) => {
 		const message = validationMessageFor(mutationList, withChange({ releaseLabel: ' ' }));
 		return { pass: /forgeDeclaration 'releaseLabel'/.test(message), detail: message || 'accepted a blank releaseLabel' };
@@ -239,6 +248,8 @@ const TWIN_LIST = [
 	{ conjunctRefId: 't_caseFamilyAdmitted', twinName: 'familyListWithoutCase', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'CASE') })," },
 	{ conjunctRefId: 'u_eduapiFamilyAdmitted', twinName: 'familyListWithoutEduapi', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'EduAPI') })," },
 	{ conjunctRefId: 'v_sedmFamilyAdmitted', twinName: 'familyListWithoutSedm', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'SEDM') })," },
+	{ conjunctRefId: 'w_onerosterFamilyAdmitted', twinName: 'familyListWithoutOneroster', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'OneRoster') })," },
+	{ conjunctRefId: 'x_medbiqFamilyAdmitted', twinName: 'familyListWithoutMedbiq', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'MedBiquitous') })," },
 	{ conjunctRefId: 'i_blankReleaseLabelRefused', twinName: 'labelOptional', modulePath: CONTRACT_PATH, find: "releaseLabel: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "releaseLabel: Object.freeze({ required: true, kind: 'nonEmptyString' })," },
 	{ conjunctRefId: 'j_rootCarriesFamilyAndLabel', twinName: 'rootDropsFamily', modulePath: ROOT_PATH, find: '\t\tstandardFamily,\n\t\treleaseLabel,\n', replace: '\t\treleaseLabel,\n' },
 	{ conjunctRefId: 'l_missingOrBlankDescriptionSourceRefused', twinName: 'descriptionSourceOptional', modulePath: CONTRACT_PATH, find: "descriptionSource: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "descriptionSource: Object.freeze({ required: false, kind: 'nonEmptyString' })," },
