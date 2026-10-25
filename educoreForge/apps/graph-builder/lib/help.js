@@ -42,6 +42,10 @@ SYNOPSIS
      graphBuilder   -publishLayer --layerKey=<key> --versionTag=<tag> --sssomPath=<set.sssom.tsv>
                                    --decisionStoreFilePath=<path> --sssomValidatorPath=<sssom-py's sssom binary>
                                    [--authorIri=<edc agent IRI>] [--layerRegistryFilePath=<path>] [--agentRegistryFilePath=<path>]
+     graphBuilder   -importLayer --slug=<slug> --versionTag=<tag> --authorIri=<edc agent IRI> --sssomPath=<outside.sssom.tsv>
+                                   --prefixMapPath=<declared prefix map .json> --goldCapturePath=<layerPublicationCli capture>
+                                   --decisionStoreFilePath=<path> --sssomValidatorPath=<sssom-py's sssom binary>
+                                   --importReportPath=<report .json> [--layerRegistryFilePath=<path>] [--agentRegistryFilePath=<path>]
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -499,6 +503,22 @@ OPTIONS
                   curated set whose #mapping_provider is not its author, a row source the layer does not list.
                   --layerRegistryFilePath and --agentRegistryFilePath default to the tree's recipes/layers.json and
                   recipes/agents.json; every other parameter is required. Lists no library and touches no manifest.
+
+     -importLayer
+                  WRITES. Makes an OUTSIDE SSSOM/TSV set a new version of the layer imported-<slug> (mappingLayers ML3-c):
+                  the real sssom-py validates it ('sssom validate') and parses it ('sssom parse'; its row count is recorded,
+                  since a dropped row does not fail validate); every row then resolves, or is REFUSED BY NAME with its own
+                  reason: subject_id through the DECLARED prefix map (--prefixMapPath: { "prefixExpansion": { <prefix>:
+                  <IRI> } }, never the file's own curie_map) to an EDUcore element IRI whose element the gold holds, at the
+                  gold's version; object_id to a HubReference card of the gold (or sssom:NoTermFound); predicate_id to a
+                  predicate lib/layer-import/importRules.json admits; record_id unique. The gold is read from a capture
+                  file (layerPublicationCli -captureGold), never live. The file's EXACT bytes are frozen in the decision
+                  store under layerSet::imported-<slug> (sha256 = the version id); the layer (first time) and the version
+                  (Candidate) are appended to the registry. Prints accepted N, refused M; --importReportPath lists every
+                  refusal with its reason. IDEMPOTENT: identical bytes report alreadyPresent. A tag holding other bytes,
+                  an unregistered author and a file sssom-py rejects are refused. Creates no relationship schema block and
+                  touches no graph. --layerRegistryFilePath and --agentRegistryFilePath default to the tree's
+                  recipes/layers.json and recipes/agents.json, as for -publishLayer; every other parameter is required.
 
      -spendLedger
                   WHAT THE BUILDS SPENT (spend ledger lane R1, 2026-10-21). READ-ONLY and FREE.

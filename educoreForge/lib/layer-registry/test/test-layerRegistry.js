@@ -163,6 +163,38 @@ harness.match('a change out of time order is refused', faultedRegistry((oneLayer
 harness.match('a change by an unregistered agent is refused', faultedRegistry((oneLayer) => { oneLayer.statusChangeList = [changeFor({ changedBy: 'https://w3id.org/EDUcore/agent/u-9999' })]; }).error, /changedBy a registered agent/);
 
 // =====================================================================
+harness.section('ML3-b: scoreList and copiedFromLayerVersion are validated, each refusal by name (the ML2 hand-off)');
+// =====================================================================
+
+// a second STATED layer that re-registers toyCurated/r1 under a new key and scores it against toyCurated/r2
+const TOY_R1_URI = 'https://w3id.org/EDUcore/layer/toyCurated/r1';
+const TOY_R2_URI = 'https://w3id.org/EDUcore/layer/toyCurated/r2';
+const scoreEntryFor = (overrideByField) => ({ againstLayerVersion: TOY_R2_URI, metric: 'hitRateWhereBothPicked', value: 0.75, coverage: 12, reportPath: 'educoreForge/system/dataStores/toy/report.json', ...overrideByField });
+const copiedRegistryWith = (mutateCopy) => {
+	const layerRegistry = statedLayerRegistry();
+	const copyVersion = { ...versionFor({ letter: 'a', versionTag: 'base', registrationStatus: 'Standard', publishedAt: '2026-10-06T00:00:00Z' }), copiedFromLayerVersion: TOY_R1_URI, scoreList: [scoreEntryFor({})] };
+	const copyLayer = { ...statedLayerRegistry().layerList[0], layerKey: 'toyCopy', versionList: [copyVersion], statusChangeList: [] };
+	mutateCopy(copyVersion);
+	layerRegistry.layerList.push(copyLayer);
+	return registryFor({ layerRegistry, agentRegistry });
+};
+const copied = copiedRegistryWith(() => {});
+harness.ok('a copy of a registered version, with a well-formed scoreList, is accepted', copied.error === undefined, copied.error);
+harness.ok('an unregistered comparator named as a decision block is accepted (ML2 Ed-Fi a60a667b)', copiedRegistryWith((oneVersion) => { oneVersion.scoreList = [scoreEntryFor({ againstLayerVersion: 'decision block a60a667be67e (Ed-Fi -> CEDS; in no registered version)' })]; }).error === undefined);
+harness.match('an empty scoreList is refused (absent says "not measured")', copiedRegistryWith((oneVersion) => { oneVersion.scoreList = []; }).error, /scoreList, when present, is a non-empty list/);
+harness.match('a score entry with an unknown field is refused', copiedRegistryWith((oneVersion) => { oneVersion.scoreList = [scoreEntryFor({ significance: 0.05 })]; }).error, /unknown field 'significance'/);
+harness.match('a score entry lacking a field is refused', copiedRegistryWith((oneVersion) => { const entry = scoreEntryFor({}); delete entry.coverage; oneVersion.scoreList = [entry]; }).error, /lacks 'coverage'/);
+harness.match('a score against free text is refused', copiedRegistryWith((oneVersion) => { oneVersion.scoreList = [scoreEntryFor({ againstLayerVersion: 'the raters, roughly' })]; }).error, /neither a registered layer-version URI nor an unregistered decision block/);
+harness.match('a score against an unregistered layer-version URI is refused', copiedRegistryWith((oneVersion) => { oneVersion.scoreList = [scoreEntryFor({ againstLayerVersion: 'https://w3id.org/EDUcore/layer/toyCurated/r9' })]; }).error, /neither a registered layer-version URI/);
+harness.match('a non-numeric score value is refused', copiedRegistryWith((oneVersion) => { oneVersion.scoreList = [scoreEntryFor({ value: '75%' })]; }).error, /finite numeric value/);
+harness.match('a fractional coverage is refused', copiedRegistryWith((oneVersion) => { oneVersion.scoreList = [scoreEntryFor({ coverage: 12.5 })]; }).error, /whole-number coverage/);
+harness.match('an absolute reportPath is refused', copiedRegistryWith((oneVersion) => { oneVersion.scoreList = [scoreEntryFor({ reportPath: '/tmp/report.json' })]; }).error, /reportPath "\/tmp\/report.json" does not match/);
+harness.match('copiedFromLayerVersion that is not a layerVersion URI is refused', copiedRegistryWith((oneVersion) => { oneVersion.copiedFromLayerVersion = 'https://w3id.org/EDUcore/layer/toyCurated'; }).error, /is not a layerVersion URI \(layer\)/);
+harness.match('copiedFromLayerVersion naming its own layer is refused', copiedRegistryWith((oneVersion) => { oneVersion.copiedFromLayerVersion = 'https://w3id.org/EDUcore/layer/toyCopy/base'; }).error, /names a version of its own layer/);
+harness.match('copiedFromLayerVersion naming an unregistered version is refused', copiedRegistryWith((oneVersion) => { oneVersion.copiedFromLayerVersion = 'https://w3id.org/EDUcore/layer/toyCurated/r9'; }).error, /is not a version this registry holds/);
+harness.match('a "copy" whose content differs is refused', copiedRegistryWith((oneVersion) => { oneVersion.copiedFromLayerVersion = TOY_R2_URI; }).error, /a copy that differs is not a copy/);
+
+// =====================================================================
 harness.section('R-2 and R-3: the vocabulary rows this registry relies on');
 // =====================================================================
 

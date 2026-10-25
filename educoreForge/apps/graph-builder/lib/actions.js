@@ -2060,6 +2060,98 @@ const publishLayerAction = (callback) => {
 	});
 };
 
+// ⟪mappingLayers ML3-c, 2026-10-25 (MYSTIC_DREAM)⟫ -importLayer — an outside SSSOM/TSV set becomes a version of an imported-<slug> layer
+// (lib/layer-import/layerImport.js): the REAL sssom-py validates it and parses it (its parsed row count is recorded beside ours: sssom-py
+// silently drops a malformed row and still exits 0, measured), every row resolves through the DECLARED prefix map (--prefixMapPath) and
+// the gold capture (--goldCapturePath, from layerPublicationCli -captureGold) or is refused BY NAME into the refusal list written to
+// --importReportPath; the file's exact bytes are frozen under layerSet::imported-<slug> (sha256 = the version id) and the layer and
+// its version (Candidate) are appended through the registry's own append path, written last by temp file and rename as -publishLayer
+// writes it. Identical bytes report alreadyPresent. Creates no relationship schema block and touches no graph.
+const importLayerAction = (callback) => {
+	const { xLog, commandLineParameters } = process.global;
+	const { spawnSync } = require('child_process');
+	const os = require('os');
+	const layerRegistryLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-registry', 'layerRegistry'));
+	const layerImportLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-import', 'layerImport'));
+	const importRules = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-import', 'importRules.json'));
+	const requiredParameterNameList = ['slug', 'versionTag', 'authorIri', 'sssomPath', 'prefixMapPath', 'goldCapturePath', 'decisionStoreFilePath', 'sssomValidatorPath', 'importReportPath'];
+	const missingParameterList = requiredParameterNameList.filter((parameterName) => !firstValue(commandLineParameters, parameterName));
+	if (missingParameterList.length) {
+		callback(`graphBuilder -importLayer: ${missingParameterList.map((parameterName) => `--${parameterName}`).join(', ')} REQUIRED, with no default — an import names what it reads, how its prefixes resolve, against which gold, where it freezes and the validator that reads it`);
+		return;
+	}
+	const absentPathParameter = ['sssomPath', 'prefixMapPath', 'goldCapturePath', 'sssomValidatorPath'].find((parameterName) => !fs.existsSync(firstValue(commandLineParameters, parameterName)));
+	if (absentPathParameter !== undefined) {
+		callback(`graphBuilder -importLayer: REFUSED — --${absentPathParameter} ${firstValue(commandLineParameters, absentPathParameter)} does not exist`);
+		return;
+	}
+	const sssomPath = path.resolve(firstValue(commandLineParameters, 'sssomPath'));
+	const sssomValidatorPath = firstValue(commandLineParameters, 'sssomValidatorPath');
+	const registryPathByParameterName = Object.keys(PUBLISH_LAYER_REGISTRY_DEFAULT_PATH_BY_PARAMETER_NAME).reduce((soFar, parameterName) => ({ ...soFar, [parameterName]: firstValue(commandLineParameters, parameterName) || PUBLISH_LAYER_REGISTRY_DEFAULT_PATH_BY_PARAMETER_NAME[parameterName] }), {});
+	const loaded = layerRegistryLib.loadRegistry(registryPathByParameterName);
+	if (loaded.error) {
+		callback(`graphBuilder -importLayer: ${loaded.error}`);
+		return;
+	}
+	// the REAL validator twice: 'validate' (exit 0 is a pass) and 'parse' (its row count, because a dropped row does not fail validate)
+	const validateWithSssomPy = (validatedPath, validatedCallback) => {
+		const validatorRun = spawnSync(sssomValidatorPath, ['validate', validatedPath], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+		if (validatorRun.status !== 0) {
+			validatedCallback(`exit ${validatorRun.status}: ${`${validatorRun.stdout}\n${validatorRun.stderr}`.trim().slice(-2000)}`);
+			return;
+		}
+		const parsedFilePath = path.join(os.tmpdir(), `importLayer-${process.pid}.parsed.sssom.tsv`);
+		const parseRun = spawnSync(sssomValidatorPath, ['parse', validatedPath, '-o', parsedFilePath], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+		if (parseRun.status !== 0 || !fs.existsSync(parsedFilePath)) {
+			validatedCallback(`sssom parse exit ${parseRun.status}: ${`${parseRun.stdout}\n${parseRun.stderr}`.trim().slice(-2000)}`);
+			return;
+		}
+		const sssomPyRowCount = fs.readFileSync(parsedFilePath, 'utf8').split('\n').filter((oneLine) => oneLine.length > 0 && !oneLine.startsWith('#')).length - 1;
+		fs.unlinkSync(parsedFilePath);
+		xLog.status(`graphBuilder: [importLayer] sssom validate ${validatedPath}: exit 0; sssom parse kept ${sssomPyRowCount} row(s)`);
+		validatedCallback('', { validateExit: 0, sssomPyRowCount });
+	};
+	requireDecisionStore()().open({ databaseFilePath: firstValue(commandLineParameters, 'decisionStoreFilePath') }, (openError, decisionStore) => {
+		if (openError) {
+			callback(`graphBuilder -importLayer: ${openError}`);
+			return;
+		}
+		const importArgs = {
+			sssomText: fs.readFileSync(sssomPath, 'utf8'),
+			sssomPath,
+			slug: firstValue(commandLineParameters, 'slug'),
+			versionTag: firstValue(commandLineParameters, 'versionTag'),
+			authorIri: firstValue(commandLineParameters, 'authorIri'),
+			prefixMapDeclaration: JSON.parse(fs.readFileSync(firstValue(commandLineParameters, 'prefixMapPath'), 'utf8')),
+			goldCapture: JSON.parse(fs.readFileSync(firstValue(commandLineParameters, 'goldCapturePath'), 'utf8')),
+			registry: loaded.registry,
+			decisionStore,
+			publishedAt: new Date().toISOString(),
+			validateWithSssomPy,
+			importRules,
+		};
+		layerImportLib.importLayer(importArgs, (importError, imported) => {
+			const importReportPath = firstValue(commandLineParameters, 'importReportPath');
+			if (imported !== undefined) {
+				const { layerRegistry, ...reported } = imported;
+				fs.writeFileSync(importReportPath, `${JSON.stringify(reported, null, 2)}\n`);
+			}
+			if (importError) {
+				callback(`graphBuilder -importLayer: ${importError}`);
+				return;
+			}
+			if (imported.layerRegistry !== null) {
+				const registryFilePath = registryPathByParameterName.layerRegistryFilePath;
+				const temporaryFilePath = `${registryFilePath}.importLayer-${process.pid}.tmp`;
+				fs.writeFileSync(temporaryFilePath, layerRegistryLib.registryText(imported.layerRegistry));
+				fs.renameSync(temporaryFilePath, registryFilePath);
+			}
+			xLog.status(`graphBuilder: [importLayer] ${imported.alreadyPresent ? 'alreadyPresent' : 'imported'} ${imported.layerVersionUri} contentId ${imported.contentId}: accepted ${imported.acceptedRowCount}, refused ${imported.refusedRowCount} (report ${importReportPath})`);
+			callback('', { exitCode: 0, resultText: JSON.stringify({ layerKey: imported.layerKey, layerVersionUri: imported.layerVersionUri, contentId: imported.contentId, alreadyPresent: imported.alreadyPresent, acceptedRowCount: imported.acceptedRowCount, refusedRowCount: imported.refusedRowCount, importReportPath }, null, 2) });
+		});
+	});
+};
+
 return {
 	build,
 	validate,
@@ -2074,6 +2166,7 @@ return {
 	stampPromotion: stampPromotionAction,
 	spendLedger: spendLedgerAction,
 	publishLayer: publishLayerAction,
+	importLayer: importLayerAction,
 	scanAvailableForges,
 	// exported for the hermetic gates: the no-default refusal is the phase's headline claim, and a
 	// claim provable only by launching a whole build is a claim nobody re-checks.

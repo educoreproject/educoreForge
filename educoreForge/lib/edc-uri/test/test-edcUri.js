@@ -67,6 +67,8 @@ const PART_BY_NAME_BY_KIND = {
 	agentPerson: { userRefId: 'f3c1a9e0-0000-4000-8000-000000000005' },
 	agentJudge: { judgeIdentity },
 	agentOrganisation: { organisationSlug: 'educore' },
+	siteLayerRegistry: {}, // ⟪ML3-b⟫ the site registry: a template of literals only
+	vocabularyTerm: { termName: 'bestMatch' }, // ⟪ML3-a⟫ the r1 rater sets' own predicate, spelled as already registered
 };
 
 // =====================================================================
@@ -155,7 +157,13 @@ harness.equal('assertionId is the edc assertion IRI over (decisionBlockHash, ass
 harness.equal('the declared CURIE object (ceterms:) expands to an element IRI of its standard version', assertionIdentity.nodeIriFor({ stableId: declaredCurieEdge.objectStableId, standardName: declaredCurieEdge.objectSource, standardVersion: declaredCurieEdge.objectVersion }).iri, `https://w3id.org/EDUcore/CTDL/Release%2020260927/${declaredCurieEdge.objectStableId}`);
 harness.equal('an abstention object (sssom:NoTermFound) is its declared vocabulary IRI, never an element', assertionIdentity.nodeIriFor({ stableId: 'sssom:NoTermFound', standardName: 'ToyHub', standardVersion: '1.0' }).iri, 'https://w3id.org/sssom/NoTermFound');
 harness.equal('owl:equivalentClass expands verbatim', assertionIdentity.predicateIriFor('owl:equivalentClass').iri, 'http://www.w3.org/2002/07/owl#equivalentClass');
-harness.match('an unexpandable predicate prefix is refused by name', assertionIdentity.predicateIriFor('edc:bestMatch').error, /predicate prefix 'edc' .* has no expansion/);
+harness.match('an unexpandable predicate prefix is refused by name', assertionIdentity.predicateIriFor('rdfs:seeAlso').error, /predicate prefix 'rdfs' .* has no expansion/);
+// ⟪ML3-a⟫ the edc predicates now expand (a curated row's record_id hashes them), to the spelling the r1 sets' curie_map already gives
+harness.equal('ML3-a: edc:bestMatch expands to the registered spelling', assertionIdentity.predicateIriFor('edc:bestMatch').iri, 'https://w3id.org/EDUcore/bestMatch');
+harness.equal('ML3-a: edc:alsoAcceptable expands to the registered spelling', assertionIdentity.predicateIriFor('edc:alsoAcceptable').iri, 'https://w3id.org/EDUcore/alsoAcceptable');
+harness.match('ML3-a: an undeclared vocabulary term is refused at mint', mint({ kind: 'vocabularyTerm', termName: 'worstMatch' }).error, /takes only bestMatch, alsoAcceptable/);
+harness.match('ML3-a: an undeclared vocabulary term matches no kind at parse', parse('https://w3id.org/EDUcore/worstMatch').error, /matches no kind/);
+harness.equal('ML3-a: every closed term has a definition, and every definition a closed term', Object.keys(URI_SCHEME.vocabularyTermDefinitionByName).filter((oneName) => oneName !== 'about').sort().join(','), URI_SCHEME.kindList.find((oneRow) => oneRow.kind === 'vocabularyTerm').closedValueListByPartName.termName.slice().sort().join(','));
 harness.match('a non-hex block hash is refused', assertionIdentity.assertionIdFor({ ...KNOWN_TRIPLE, decisionBlockHash: 'abc' }).error, /not a 64-hex id/);
 harness.ok('a different block gives a different assertionId for the same triple, the same assertionHash', (() => {
 	const other = assertionIdentity.assertionIdFor({ ...KNOWN_TRIPLE, decisionBlockHash: 'b'.repeat(64) });

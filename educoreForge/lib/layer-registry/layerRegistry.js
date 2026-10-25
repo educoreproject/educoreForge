@@ -14,6 +14,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   registry.effectiveStatusFor({ layerKey, versionTag })     → { registrationStatus } | { error }  after the layer's status changes
 //   registry.withAppendedStatusChange({ layerKey, statusChange }) → { layerRegistry } | { error }  a NEW registry; the version row untouched
 //   registry.withAppendedVersion({ layerKey, version })       → { layerRegistry } | { error }  a NEW registry object; nothing mutated
+//   registry.withAppendedLayer({ layer })                     → { layerRegistry } | { error }  ⟪ML3-c⟫ a new layer; a known key refused
 //   contentIdForMemberBlockList(memberBlockList)              → sha256 of the sorted, '\n'-joined member decisionBlockHashes (R-1)
 //
 // A version is refused by name when: its status is outside the ISO/IEC 11179 list; its administration record lacks a field; its
@@ -176,6 +177,69 @@ const layerRefusal = ({ layer, agentIriSet }) => {
 	return '';
 };
 
+// ⟪ML3-b, the ML2 hand-off⟫ crossVersionRefusal(layerList) → '' | reason: the two version fields that point at ANOTHER version, checked
+// once every layer is valid on its own. scoreList is optional, but present means a non-empty list of closed-field rows; copiedFromLayerVersion
+// is optional, but present means a registered version of another layer with the same content.
+const crossVersionRefusal = (layerList) => {
+	const { scoreEntry, copiedFromLayerVersion: copiedFromRule } = LAYER_REGISTRY_SCHEMA;
+	const contentIdByVersionUri = layerList.reduce(
+		(soFar, oneLayer) => oneLayer.versionList.reduce((soFarInner, oneVersion) => ({ ...soFarInner, [edcUri.mint({ kind: 'layerVersion', layerKey: oneLayer.layerKey, versionTag: oneVersion.administrationRecord.versionTag }).uri]: oneVersion.administrationRecord.contentId }), soFar),
+		{},
+	);
+	const scoreEntryRefusal = (oneEntry) => {
+		if (!isPlainObject(oneEntry)) {
+			return `a score entry ${JSON.stringify(oneEntry)} is not an object`;
+		}
+		const unknownField = Object.keys(oneEntry).find((oneField) => scoreEntry.fieldList.indexOf(oneField) === -1);
+		const absentField = scoreEntry.fieldList.find((oneField) => oneEntry[oneField] === undefined || oneEntry[oneField] === null || oneEntry[oneField] === '');
+		if (unknownField !== undefined || absentField !== undefined) {
+			return `a score entry ${unknownField !== undefined ? `carries the unknown field '${unknownField}'` : `lacks '${absentField}'`} (fields: ${scoreEntry.fieldList.join(', ')})`;
+		}
+		if (contentIdByVersionUri[oneEntry.againstLayerVersion] === undefined && !new RegExp(scoreEntry.unregisteredComparatorPattern).test(oneEntry.againstLayerVersion)) {
+			return `score entry againstLayerVersion ${JSON.stringify(oneEntry.againstLayerVersion)} is neither a registered layer-version URI nor an unregistered decision block named as such (${scoreEntry.unregisteredComparatorPattern})`;
+		}
+		if (!isNonEmptyString(oneEntry.metric) || typeof oneEntry.value !== 'number' || !Number.isFinite(oneEntry.value) || !Number.isInteger(oneEntry.coverage) || oneEntry.coverage < 0) {
+			return `score entry '${oneEntry.metric}' needs a metric name, a finite numeric value and a whole-number coverage (got ${JSON.stringify(oneEntry.value)}, ${JSON.stringify(oneEntry.coverage)})`;
+		}
+		if (typeof oneEntry.reportPath !== 'string' || !new RegExp(scoreEntry.reportPathPattern).test(oneEntry.reportPath)) {
+			return `score entry '${oneEntry.metric}' reportPath ${JSON.stringify(oneEntry.reportPath)} does not match ${scoreEntry.reportPathPattern} (a relative path to the evidence JSON)`;
+		}
+		return '';
+	};
+	for (let layerIndex = 0; layerIndex < layerList.length; layerIndex++) {
+		const oneLayer = layerList[layerIndex];
+		for (let versionIndex = 0; versionIndex < oneLayer.versionList.length; versionIndex++) {
+			const oneVersion = oneLayer.versionList[versionIndex];
+			const label = `layer '${oneLayer.layerKey}' version '${oneVersion.administrationRecord.versionTag}'`;
+			if (oneVersion.scoreList !== undefined) {
+				if (!Array.isArray(oneVersion.scoreList) || oneVersion.scoreList.length === 0) {
+					return `${label}: scoreList, when present, is a non-empty list (an absent field says "not measured")`;
+				}
+				const scoreReason = oneVersion.scoreList.map(scoreEntryRefusal).find((oneReason) => oneReason !== '');
+				if (scoreReason !== undefined) {
+					return `${label}: ${scoreReason}`;
+				}
+			}
+			if (oneVersion.copiedFromLayerVersion !== undefined) {
+				const parsed = typeof oneVersion.copiedFromLayerVersion === 'string' ? edcUri.parse(oneVersion.copiedFromLayerVersion) : { error: 'not a string' };
+				if (parsed.error || parsed.kind !== copiedFromRule.uriKind) {
+					return `${label}: copiedFromLayerVersion ${JSON.stringify(oneVersion.copiedFromLayerVersion)} is not a ${copiedFromRule.uriKind} URI (${parsed.error || parsed.kind})`;
+				}
+				if (parsed.partByName.layerKey === oneLayer.layerKey) {
+					return `${label}: copiedFromLayerVersion names a version of its own layer; a copy re-registers ANOTHER layer's version`;
+				}
+				if (contentIdByVersionUri[oneVersion.copiedFromLayerVersion] === undefined) {
+					return `${label}: copiedFromLayerVersion ${oneVersion.copiedFromLayerVersion} is not a version this registry holds`;
+				}
+				if (contentIdByVersionUri[oneVersion.copiedFromLayerVersion] !== oneVersion.administrationRecord.contentId) {
+					return `${label}: copiedFromLayerVersion ${oneVersion.copiedFromLayerVersion} has content ${contentIdByVersionUri[oneVersion.copiedFromLayerVersion]}, not this version's ${oneVersion.administrationRecord.contentId}; a copy that differs is not a copy`;
+				}
+			}
+		}
+	}
+	return '';
+};
+
 const registryFor = ({ layerRegistry, agentRegistry } = {}) => {
 	if (!isPlainObject(agentRegistry) || !Array.isArray(agentRegistry.agentList)) {
 		return { error: refusalText('the agent registry has no agentList', 'recipes/agents.json') };
@@ -203,6 +267,10 @@ const registryFor = ({ layerRegistry, agentRegistry } = {}) => {
 	const layerByLayerKey = layerRegistry.layerList.reduce((soFar, oneLayer) => ({ ...soFar, [oneLayer.layerKey]: oneLayer }), {});
 	if (Object.keys(layerByLayerKey).length !== layerRegistry.layerList.length) {
 		return { error: refusalText('the layer registry lists one layerKey twice', 'recipes/layers.json') };
+	}
+	const crossVersionReason = crossVersionRefusal(layerRegistry.layerList);
+	if (crossVersionReason) {
+		return { error: refusalText(crossVersionReason, 'recipes/layers.json (layerRegistrySchema.json scoreEntry, copiedFromLayerVersion)') };
 	}
 	const layerFor = (layerKey) =>
 		layerByLayerKey[layerKey] === undefined ? { error: refusalText(`layerKey ${JSON.stringify(layerKey)} is not in the registry`, `recipes/layers.json (${Object.keys(layerByLayerKey).join(', ')}); a layer is registered before it is published to`) } : { layer: layerByLayerKey[layerKey] };
@@ -240,6 +308,15 @@ const registryFor = ({ layerRegistry, agentRegistry } = {}) => {
 		const checked = registryFor({ layerRegistry: candidateRegistry, agentRegistry });
 		return checked.error ? { error: checked.error } : { layerRegistry: candidateRegistry };
 	};
+	// ⟪ML3-c⟫ a NEW layer (an imported-<slug> layer the first time its set is imported); an existing layerKey is refused, never replaced
+	const withAppendedLayer = ({ layer }) => {
+		if (!isPlainObject(layer) || layerByLayerKey[layer.layerKey] !== undefined) {
+			return { error: refusalText(`layer ${JSON.stringify(layer && layer.layerKey)} is already registered (or not a layer)`, 'a layer is appended once; its versions are appended to it') };
+		}
+		const candidateRegistry = { ...layerRegistry, layerList: layerRegistry.layerList.concat([layer]) };
+		const checked = registryFor({ layerRegistry: candidateRegistry, agentRegistry });
+		return checked.error ? { error: checked.error } : { layerRegistry: candidateRegistry };
+	};
 	const withAppendedStatusChange = ({ layerKey, statusChange }) => {
 		const found = layerFor(layerKey);
 		if (found.error) {
@@ -249,7 +326,7 @@ const registryFor = ({ layerRegistry, agentRegistry } = {}) => {
 		const checked = registryFor({ layerRegistry: candidateRegistry, agentRegistry });
 		return checked.error ? { error: checked.error } : { layerRegistry: candidateRegistry };
 	};
-	return { registry: { layerFor, versionFor, effectiveStatusFor, currentStandardVersionFor, withAppendedVersion, withAppendedStatusChange, layerRegistry, agentRegistry } };
+	return { registry: { layerFor, versionFor, effectiveStatusFor, currentStandardVersionFor, withAppendedVersion, withAppendedLayer, withAppendedStatusChange, layerRegistry, agentRegistry } };
 };
 
 // readJsonFile(filePath) → { parsedJson } | { error }: a missing or malformed registry is refused by name, never defaulted

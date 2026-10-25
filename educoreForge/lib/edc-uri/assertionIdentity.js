@@ -15,6 +15,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //       → { assertionId, assertionHash, subjectIri, predicateIri, objectIri } | { error }
 //       assertionHash = sha256(subjectIri \n predicateIri \n objectIri); assertionId = the edc assertion IRI over
 //       (decisionBlockHash, assertionHash). Under fan-out the caller passes the INSTANCE as the subject.
+//   curatedAssertionIdFor({ ...the same, authorIdList })  → the same | { error }
+//       ⟪ML3-a, ruling R-c' by BRONZE_CROWN 2026-10-25⟫ a CURATED row's id: the same kind, scoped by the stored curated block's hash,
+//       with the row's ONE author appended to the hash input: sha256(subjectIri \n predicateIri \n objectIri \n authorIri). Two raters
+//       asserting one triple are two records with one sameness (measured: 2 such pairs in the pooled raters r1 set), so record_id
+//       must tell them apart and the MSI must not. A row with zero or several authors is REFUSED by name, never defaulted. A machine
+//       row has no row-level author (its judge authors the whole block), so the machine recipe (s p o) is untouched.
 //   mappingSamenessIdFor({ subjectIriList, predicateIri, objectIriList, isNegative })
 //       → { mappingSamenessId } | { error }
 //       the MSI of ts4nfdi.github.io/mapping-sameness-identifier (read 2026-10-24): subjects sorted by code point and joined
@@ -75,7 +81,8 @@ const predicateIriFor = (predicateCurie) => {
 	return { iri: `${expansion}${predicateCurie.slice(prefix.length + 1)}` };
 };
 
-const assertionIdFor = ({ decisionBlockHash, subjectStableId, subjectStandardName, subjectStandardVersion, predicateCurie, objectStableId, objectStandardName, objectStandardVersion } = {}) => {
+// assertionIdOver — the shared body; authorIri is undefined for a machine row and one absolute IRI for a curated row
+const assertionIdOver = ({ decisionBlockHash, subjectStableId, subjectStandardName, subjectStandardVersion, predicateCurie, objectStableId, objectStandardName, objectStandardVersion, authorIri }) => {
 	if (typeof decisionBlockHash !== 'string' || !/^[0-9a-f]{64}$/.test(decisionBlockHash)) {
 		return { error: refuse.byName({ moduleName, what: `decisionBlockHash ${JSON.stringify(decisionBlockHash)} is not a 64-hex id`, where: 'an assertion is scoped by the decision block that holds it (R-1)' }).message };
 	}
@@ -91,12 +98,23 @@ const assertionIdFor = ({ decisionBlockHash, subjectStableId, subjectStandardNam
 	if (object.error) {
 		return { error: `${moduleName}: object: ${object.error}` };
 	}
-	const assertionHash = sha256Hex([subject.iri, predicate.iri, object.iri].join(ASSERTION_HASH_SEPARATOR));
+	const assertionHash = sha256Hex([subject.iri, predicate.iri, object.iri].concat(authorIri === undefined ? [] : [authorIri]).join(ASSERTION_HASH_SEPARATOR));
 	const minted = edcUri.mint({ kind: 'assertion', decisionBlockHash, assertionHash });
 	if (minted.error) {
 		return { error: minted.error };
 	}
 	return { assertionId: minted.uri, assertionHash, subjectIri: subject.iri, predicateIri: predicate.iri, objectIri: object.iri };
+};
+
+// assertionIdFor — a MACHINE assertion (no author term); the signature is unchanged since ML1, so every stored assertionId stays byte-identical
+const assertionIdFor = ({ decisionBlockHash, subjectStableId, subjectStandardName, subjectStandardVersion, predicateCurie, objectStableId, objectStandardName, objectStandardVersion } = {}) =>
+	assertionIdOver({ decisionBlockHash, subjectStableId, subjectStandardName, subjectStandardVersion, predicateCurie, objectStableId, objectStandardName, objectStandardVersion, authorIri: undefined });
+
+const curatedAssertionIdFor = ({ decisionBlockHash, subjectStableId, subjectStandardName, subjectStandardVersion, predicateCurie, objectStableId, objectStandardName, objectStandardVersion, authorIdList } = {}) => {
+	if (!Array.isArray(authorIdList) || authorIdList.length !== 1 || !isNonEmptyString(authorIdList[0]) || !isAbsoluteIri(authorIdList[0])) {
+		return { error: refuse.byName({ moduleName, what: `a curated row carries author_id ${JSON.stringify(authorIdList)}, not exactly one absolute IRI`, where: "ruling R-c': the author term enters the hash only for a row with ONE row-level author_id; zero or several is refused, never defaulted" }).message };
+	}
+	return assertionIdOver({ decisionBlockHash, subjectStableId, subjectStandardName, subjectStandardVersion, predicateCurie, objectStableId, objectStandardName, objectStandardVersion, authorIri: authorIdList[0] });
 };
 
 const mappingSamenessIdFor = ({ subjectIriList, predicateIri, objectIriList, isNegative } = {}) => {
@@ -115,4 +133,4 @@ const mappingSamenessIdFor = ({ subjectIriList, predicateIri, objectIriList, isN
 	return { mappingSamenessId: `${MAPPING_SAMENESS_ID_PREFIX}${sha256Hex(hashedText)}${isNegative ? MAPPING_SAMENESS_NEGATIVE_SUFFIX : ''}` };
 };
 
-module.exports = { nodeIriFor, predicateIriFor, assertionIdFor, mappingSamenessIdFor, ASSERTION_HASH_SEPARATOR, MAPPING_SAMENESS_ID_PREFIX, moduleName };
+module.exports = { nodeIriFor, predicateIriFor, assertionIdFor, curatedAssertionIdFor, mappingSamenessIdFor, ASSERTION_HASH_SEPARATOR, MAPPING_SAMENESS_ID_PREFIX, moduleName };

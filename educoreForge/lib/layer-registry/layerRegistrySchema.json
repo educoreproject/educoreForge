@@ -16,5 +16,15 @@
 	"layerKeyPattern": "^[a-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*$",
 	"versionTagPattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
 	"contentIdPattern": "^[0-9a-f]{64}$",
-	"publishedAtPattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+	"publishedAtPattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+	"scoreEntry": {
+		"about": "(mappingLayers ML3-b, the ML2 hand-off) one row of a version's optional scoreList: a measurement of this version AGAINST another layer version. The field list is closed. againstLayerVersion is either a pinned layer-version URI the registry holds, or a decision block named honestly as unregistered (ML2's Ed-Fi cfg-cf8d comparator a60a667b is in no registered version); any other text is refused. reportPath is relative to the webdev root, where the evidence lives.",
+		"fieldList": ["againstLayerVersion", "metric", "value", "coverage", "reportPath"],
+		"unregisteredComparatorPattern": "^decision block [0-9a-f]{12,64} \\(.+\\)$",
+		"reportPathPattern": "^[A-Za-z0-9_][A-Za-z0-9_./-]*\\.json$"
+	},
+	"copiedFromLayerVersion": {
+		"about": "(mappingLayers ML3-b, the ML2 hand-off) a version that re-registers another layer's version under a new layerKey (PLAN section 8: one layerKey per judge configuration) names that version by its pinned URI. It must parse as a layerVersion URI, name a version the registry holds in ANOTHER layer, and carry the same contentId: a copy that differs in content is not a copy.",
+		"uriKind": "layerVersion"
+	}
 }

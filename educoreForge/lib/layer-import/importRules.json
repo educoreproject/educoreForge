@@ -1,0 +1,27 @@
+{
+	"about": "What -importLayer (mappingLayers ML3-c; SPEC §2 'Import', §4.2, D-PROFILE) accepts, as DATA. layerKeyPattern: an imported layer is always imported-<slug>. builtInPrefixExpansion: the prefixes SSSOM itself defines (sssom-py's built-in map), which a declared prefix map need not repeat. predicateIriList: the ONLY predicates an imported row may carry, by full IRI: the SKOS mapping relations, the two OWL equivalences our declared bridges already carry, and EDUcore's own declared vocabulary terms (lib/edc-uri/uriScheme.json vocabularyTerm). noTermFoundIri: SSSOM's 'no term found' object (an abstention row). Anything else is refused by name, never mapped.",
+	"layerKeyPattern": "^imported-[a-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*$",
+	"layerKind": "imported",
+	"initialRegistrationStatus": "Candidate",
+	"builtInPrefixExpansion": {
+		"skos": "http://www.w3.org/2004/02/skos/core#",
+		"owl": "http://www.w3.org/2002/07/owl#",
+		"rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+		"semapv": "https://w3id.org/semapv/vocab/",
+		"sssom": "https://w3id.org/sssom/"
+	},
+	"predicateIriList": [
+		"http://www.w3.org/2004/02/skos/core#exactMatch",
+		"http://www.w3.org/2004/02/skos/core#closeMatch",
+		"http://www.w3.org/2004/02/skos/core#broadMatch",
+		"http://www.w3.org/2004/02/skos/core#narrowMatch",
+		"http://www.w3.org/2004/02/skos/core#relatedMatch",
+		"http://www.w3.org/2004/02/skos/core#mappingRelation",
+		"http://www.w3.org/2002/07/owl#equivalentClass",
+		"http://www.w3.org/2002/07/owl#equivalentProperty",
+		"https://w3id.org/EDUcore/bestMatch",
+		"https://w3id.org/EDUcore/alsoAcceptable"
+	],
+	"noTermFoundIri": "https://w3id.org/sssom/NoTermFound",
+	"refusalReasonList": ["unknownPrefix", "subjectNotAnElementIri", "subjectAbsentFromGold", "objectNotAHubReference", "malformedPredicate", "predicateNotAdmitted", "duplicateRecordId", "missingMandatoryCell"]
+}

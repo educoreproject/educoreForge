@@ -92,6 +92,12 @@ const schemeLoadRefusal = () => {
 		if (strayVerbatim !== undefined) {
 			return `kind '${kindRow.kind}' lists verbatim part '${strayVerbatim}' that its template does not carry`;
 		}
+		// ⟪ML3-a⟫ a kind may close a part to a listed set of values (the vocabularyTerm kind: only declared terms are minted or parsed)
+		const closedValueListByPartName = kindRow.closedValueListByPartName === undefined ? {} : kindRow.closedValueListByPartName;
+		const strayClosed = Object.keys(closedValueListByPartName).find((onePartName) => compiled.partNameList.indexOf(onePartName) === -1 || !Array.isArray(closedValueListByPartName[onePartName]) || closedValueListByPartName[onePartName].length === 0);
+		if (strayClosed !== undefined) {
+			return `kind '${kindRow.kind}' closes part '${strayClosed}', which its template does not carry or whose list is empty`;
+		}
 	}
 	return '';
 };
@@ -170,6 +176,12 @@ const pathTextFor = (uriOrCurie) => {
 	return { error: refuse.byName({ moduleName, what: `'${uriOrCurie}' is neither under ${URI_SCHEME.baseIri} nor a '${curieHead}' CURIE`, where: 'uriScheme.json baseIri / curiePrefix' }).message };
 };
 
+// closedValueRefusal(kindRow, partName, partText) → '' | reason: a closed part takes only its listed values
+const closedValueRefusal = (kindRow, partName, partText) => {
+	const closedValueList = kindRow.closedValueListByPartName === undefined ? undefined : kindRow.closedValueListByPartName[partName];
+	return closedValueList === undefined || closedValueList.indexOf(partText) !== -1 ? '' : `kind '${kindRow.kind}' part '${partName}' takes only ${closedValueList.join(', ')} (got ${JSON.stringify(partText)})`;
+};
+
 // matchKind(kindRow, segmentTextList) → { partByName } | null
 const matchKind = (kindRow, segmentTextList) => {
 	if (kindRow.segmentList.length !== segmentTextList.length) {
@@ -194,7 +206,7 @@ const matchKind = (kindRow, segmentTextList) => {
 				continue;
 			}
 			const decoded = decodeSegment(encodedText);
-			if (decoded.error) {
+			if (decoded.error || closedValueRefusal(kindRow, onePartName, decoded.text)) {
 				return null;
 			}
 			partByName[onePartName] = decoded.text;
@@ -231,6 +243,10 @@ const mint = ({ kind, ...partByName } = {}) => {
 	const absentPartName = kindRow.partNameList.find((onePartName) => typeof partByName[onePartName] !== 'string' || partByName[onePartName].length === 0);
 	if (absentPartName !== undefined) {
 		return { error: refuse.byName({ moduleName, what: `kind '${kind}' needs part '${absentPartName}' (got ${JSON.stringify(partByName[absentPartName])})`, where: `template '${kindRow.template}'; no part is ever defaulted` }).message };
+	}
+	const closedReason = kindRow.partNameList.map((onePartName) => closedValueRefusal(kindRow, onePartName, partByName[onePartName])).find((oneReason) => oneReason !== '');
+	if (closedReason !== undefined) {
+		return { error: refuse.byName({ moduleName, what: closedReason, where: 'uriScheme.json closedValueListByPartName' }).message };
 	}
 	const segmentTextList = [];
 	for (let segmentIndex = 0; segmentIndex < kindRow.segmentList.length; segmentIndex++) {

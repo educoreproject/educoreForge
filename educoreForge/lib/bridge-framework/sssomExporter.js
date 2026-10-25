@@ -115,6 +115,139 @@ const SSSOM_SET_SLOT_DISPOSITION_BY_PRODUCER_KIND = Object.freeze({
 const prefixOf = (curie) => (typeof curie === 'string' && curie.indexOf(':') > 0 ? curie.slice(0, curie.indexOf(':')) : null);
 const tsvCell = (value) => (value === undefined || value === null ? '' : String(value).replace(/[\t\r\n]/g, ' '));
 
+// blockRowsFor — the rows of ONE decision block, as plain objects keyed by column, exactly as the per-block export writes them (⟪ML3-a⟫
+// extracted from toSssomTsv, unchanged in behaviour, so the layer-version renderer lib/layer-registry/layerPublication.js builds its rows
+// through the SAME code: the G-2 lesson, one expression per fact, never a parallel copy). PURE.
+//   → { rowList, noTermFoundPlannedList, subjectSet, judgedSubjectSet, isFannedOut, conditionalColumnList } | { error }
+const blockRowsFor = ({ decisionBlock, decisionBlockHash, cardByStableId, setLevelSlots, subjectCuriePrefixList, exportProducerKind, subjectSourceIri, objectSourceIri }) => {
+	const refusalTextFor = (what, where) => refuse.byName({ moduleName, what, where }).message;
+	const rowList = [];
+	const subjectSet = new Set();
+	const judgedSubjectSet = new Set();
+	// one row per edge the materialiser writes: subject_id is the edge's from-node, which under fan-out is the instance
+	const isFannedOut = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.instanceStableIdList !== undefined);
+	const carriesJudgeSummary = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.judge !== undefined && oneRecord.judge.judgeSummary !== undefined);
+	const carriesRationale = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.judge !== undefined && oneRecord.judge.rationale !== undefined);
+	const conditionalColumnList = (isFannedOut ? [JUDGED_SUBJECT_COLUMN] : []).concat(carriesJudgeSummary ? JUDGE_SUMMARY_COLUMN_LIST : []).concat(carriesRationale ? [MAPPING_RATIONALE_COLUMN] : []);
+	// ⟪ML1-a⟫ the card-less records, one planned abstention row per from-node; the standard columns are not extensions
+	const noTermFoundPlannedList = decisionBlock.decisionRecordList
+		.filter((oneRecord) => !(typeof oneRecord.objectStableId === 'string' && oneRecord.objectStableId.length > 0))
+		.slice()
+		.sort((leftRecord, rightRecord) => (leftRecord.subjectStableId < rightRecord.subjectStableId ? -1 : leftRecord.subjectStableId > rightRecord.subjectStableId ? 1 : 0))
+		.reduce((soFar, oneRecord) => soFar.concat((oneRecord.instanceStableIdList === undefined ? [oneRecord.subjectStableId] : oneRecord.instanceStableIdList).map((fromStableId) => ({ record: oneRecord, fromStableId, instanceStableId: oneRecord.instanceStableIdList === undefined ? undefined : fromStableId }))), []);
+	const plannedList = plannedEdgeList(decisionBlock.decisionRecordList);
+	const recordIdFor = ({ record, instanceStableId, predicateCurie }) =>
+		materialiserLib.assertionIdFor({ record, instanceStableId, predicateCurie, decisionBlockHash, sourceStandardName: setLevelSlots.subjectSource, sourceVersion: setLevelSlots.subjectSourceVersion, hubName: setLevelSlots.objectSource, hubVersion: setLevelSlots.objectSourceVersion });
+	// ⟪ctdlHub P6⟫ predicate_id per the block's edge shape: skos:<relation> for a match edge, the source's own CURIE verbatim for a
+	// declared correspondence (owl:equivalentClass is a lawful SSSOM predicate_id; it is never rewritten into a skos match)
+	const shapeLookup = edgeShapeRowFor(decisionBlock);
+	if (shapeLookup.error) {
+		return { error: shapeLookup.error };
+	}
+	for (let edgeIndex = 0; edgeIndex < plannedList.length; edgeIndex++) {
+		const { record: oneRecord, fromStableId, instanceStableId } = plannedList[edgeIndex];
+		// ⟪G-2, adversarial review D4 2026-08-17⟫ RECORD-FIRST, byte-identical to the expression in
+		// materialiser.js. Reading the table first relabelled every derived row as CompositeMatching — the
+		// justification for "an algorithm chose among candidates", which says nothing about HOW the candidates
+		// were proposed — while the block and the graph both carried SemanticSimilarityThresholdMatching. All 520
+		// rows disagreed with the artifact they describe. The parallel-table comment two files away claimed the
+		// edge and the export "cannot drift into disagreeing about the same fact"; they drifted because only ONE
+		// of the two consulted the record. Documentary producers are unaffected: their records carry exactly the
+		// table's values, so the two expressions agree byte for byte there.
+		const justification = oneRecord.mappingMethod === undefined || oneRecord.mappingMethod === null ? METHOD_BY_RESOLUTION[oneRecord.resolution] : oneRecord.mappingMethod;
+		const justificationRefusal = sssomJustificationRefusal(justification);
+		if (justificationRefusal) {
+			return { error: refusalTextFor(justificationRefusal, 'Profile §4.2') };
+		}
+		const card = cardByStableId[oneRecord.objectStableId];
+		if (!card || !isNonEmptyString(card.uri) || !isNonEmptyString(card.name)) {
+			return { error: refusalTextFor(`objectStableId ${oneRecord.objectStableId} has no card with uri and name`, 'object_id is the card uri and object_label its name (MUST)') };
+		}
+		// subject_id IS the forged stableId VERBATIM — a forged id already carries its standard's prefix
+		// (`toy:property/…`, `<standard>:property/…`); prepending would double it (RULING BR2). A stableId that does NOT
+		// begin with the declared subjectCuriePrefix is a contract violation and is REFUSED by name, never repaired.
+		if (!subjectCuriePrefixList.some((onePrefix) => fromStableId.indexOf(`${onePrefix}:`) === 0)) {
+			return { error: refusalTextFor(`subjectStableId '${fromStableId}' does not begin with the declared subjectCuriePrefix '${subjectCuriePrefixList.map((onePrefix) => `${onePrefix}:`).join("' or '")}'`, 'subject_id is the forged stableId verbatim (RULING BR2); the prefix is never prepended and never repaired') };
+		}
+		const predicateId = shapeLookup.edgeShapeRow.sssomPredicateIdFor(oneRecord.predicate);
+		const recordIdentity = recordIdFor({ record: oneRecord, instanceStableId, predicateCurie: predicateId });
+		if (recordIdentity.error) {
+			return { error: refusalTextFor(`record_id for ${fromStableId} → ${oneRecord.objectStableId}: ${recordIdentity.error}`, 'every row carries record_id, all-or-none (SSSOM 1.1)') };
+		}
+		subjectSet.add(fromStableId);
+		judgedSubjectSet.add(oneRecord.subjectStableId);
+		rowList.push({
+			[RECORD_ID_COLUMN]: recordIdentity.assertionId,
+			subject_id: fromStableId,
+			predicate_id: predicateId,
+			object_id: card.uri,
+			mapping_justification: justification,
+			object_label: card.name,
+			confidence: oneRecord.resolution === 'judged' ? oneRecord.confidence : '',
+			subject_source: subjectSourceIri,
+			subject_source_version: setLevelSlots.subjectSourceVersion,
+			object_source: objectSourceIri,
+			object_source_version: setLevelSlots.objectSourceVersion,
+			subject_match_field: setLevelSlots.subjectMatchField,
+			object_match_field: setLevelSlots.objectMatchField,
+			mapping_tool: oneRecord.resolution === 'judged' ? oneRecord.judge.judgeModel : '',
+			mapping_tool_version: oneRecord.resolution === 'judged' ? oneRecord.judge.rendererVersion : '',
+			predicate_asserted_by: oneRecord.predicateAssertedBy,
+			source_label: oneRecord.sourceLabel === null || oneRecord.sourceLabel === undefined ? '' : oneRecord.sourceLabel,
+			[JUDGED_SUBJECT_COLUMN]: oneRecord.subjectStableId,
+			...JUDGE_SUMMARY_EDGE_PROPERTY_LIST.reduce((soFar, onePropertyName) => ({ ...soFar, [SSSOM_COLUMN_BY_EDGE_PROPERTY[onePropertyName]]: oneRecord.judge !== undefined && oneRecord.judge.judgeSummary !== undefined ? oneRecord.judge.judgeSummary[onePropertyName] : '' }), {}),
+			[MAPPING_RATIONALE_COLUMN]: oneRecord.judge !== undefined && oneRecord.judge.rationale !== undefined ? oneRecord.judge.rationale : '',
+		});
+	}
+	// ⟪ML1-a⟫ the abstention rows: what the producer looked for and did not find, never dropped
+	for (let abstentionIndex = 0; abstentionIndex < noTermFoundPlannedList.length; abstentionIndex++) {
+		const { record: oneRecord, fromStableId, instanceStableId } = noTermFoundPlannedList[abstentionIndex];
+		const resolution = oneRecord.resolution === undefined || oneRecord.resolution === null ? RESOLUTION_BY_PRODUCER_KIND[exportProducerKind] : oneRecord.resolution;
+		const justification = oneRecord.mappingMethod === undefined || oneRecord.mappingMethod === null ? METHOD_BY_RESOLUTION[resolution] : oneRecord.mappingMethod;
+		const justificationRefusal = sssomJustificationRefusal(justification);
+		if (justificationRefusal) {
+			return { error: refusalTextFor(`abstention row for ${fromStableId}: ${justificationRefusal}`, 'Profile §4.2; a card-less record of a layer producer names its own method') };
+		}
+		const declaredSubjectPrefix = subjectCuriePrefixList.find((onePrefix) => fromStableId.indexOf(`${onePrefix}:`) === 0);
+		if (declaredSubjectPrefix === undefined) {
+			return { error: refusalTextFor(`abstention subject '${fromStableId}' does not begin with the declared subjectCuriePrefix`, 'subject_id is the forged stableId verbatim (RULING BR2)') };
+		}
+		const recordIdentity = recordIdFor({ record: { ...oneRecord, objectStableId: NO_TERM_FOUND_OBJECT_ID }, instanceStableId, predicateCurie: NO_TERM_FOUND_PREDICATE_ID });
+		if (recordIdentity.error) {
+			return { error: refusalTextFor(`record_id for the abstention of ${fromStableId}: ${recordIdentity.error}`, 'every row carries record_id, all-or-none (SSSOM 1.1)') };
+		}
+		const isJudged = resolution === 'judged' && oneRecord.judge !== undefined;
+		rowList.push({
+			[RECORD_ID_COLUMN]: recordIdentity.assertionId,
+			['subject_id']: fromStableId,
+			predicate_id: NO_TERM_FOUND_PREDICATE_ID,
+			object_id: NO_TERM_FOUND_OBJECT_ID,
+			mapping_justification: justification,
+			object_label: '',
+			confidence: '',
+			subject_source: subjectSourceIri,
+			subject_source_version: setLevelSlots.subjectSourceVersion,
+			object_source: objectSourceIri,
+			object_source_version: setLevelSlots.objectSourceVersion,
+			subject_match_field: setLevelSlots.subjectMatchField,
+			object_match_field: setLevelSlots.objectMatchField,
+			mapping_tool: isJudged ? oneRecord.judge.judgeModel : '',
+			mapping_tool_version: isJudged ? oneRecord.judge.rendererVersion : '',
+			predicate_asserted_by: '',
+			source_label: oneRecord.sourceLabel === null || oneRecord.sourceLabel === undefined ? '' : oneRecord.sourceLabel,
+			[JUDGED_SUBJECT_COLUMN]: oneRecord.subjectStableId,
+			mapping_cardinality: NO_TERM_FOUND_CARDINALITY,
+			comment: oneRecord.abstained === true ? 'abstained: the producer judged that no offered card answers this subject' : `no card: ${oneRecord.classification === undefined ? 'unclassified' : oneRecord.classification}${oneRecord.reason === undefined || oneRecord.reason === null ? '' : ` (${oneRecord.reason})`}`,
+		});
+	}
+	// ⟪ML1-a⟫ the exporter's own all-or-none check: every row has a record_id, and no two rows share one
+	const recordIdList = rowList.map((oneRow) => oneRow[RECORD_ID_COLUMN]);
+	if (recordIdList.some((oneRecordId) => !isNonEmptyString(oneRecordId)) || new Set(recordIdList).size !== recordIdList.length) {
+		return { error: refusalTextFor(`record_id is not on every row or not unique (${recordIdList.length} rows, ${new Set(recordIdList).size} distinct)`, 'SSSOM 1.1: record_id is all-or-none within a set and unique') };
+	}
+	return { rowList, noTermFoundPlannedList, subjectSet, judgedSubjectSet, isFannedOut, conditionalColumnList };
+};
+
 const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap, setLevelSlots, outputPath } = {}, callback) => {
 	const refuseWith = (what, where) => callback(refuse.byName({ moduleName, what, where }).message);
 	if (!decisionBlock || !decisionBlock.header || !Array.isArray(decisionBlock.decisionRecordList)) {
@@ -211,142 +344,15 @@ const toSssomTsv = ({ decisionBlock, decisionBlockHash, cardByStableId, curieMap
 	const mappingSetId = `${MAPPING_SET_ID_URN_BASE}${decisionBlockHash}`;
 	const usesUrnScheme = Object.keys(curieMap).some((onePrefix) => /^urn:/i.test(String(curieMap[onePrefix]))) || /^urn:/i.test(mappingSetId);
 	const effectiveCurieMap = usesUrnScheme && curieMap[URN_SCHEME_PREFIX] === undefined ? { ...curieMap, [URN_SCHEME_PREFIX]: URN_SCHEME_EXPANSION } : curieMap;
-	const rowList = [];
-	const subjectSet = new Set();
-	const judgedSubjectSet = new Set();
-	// one row per edge the materialiser writes: subject_id is the edge's from-node, which under fan-out is the instance
-	const isFannedOut = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.instanceStableIdList !== undefined);
-	const carriesJudgeSummary = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.judge !== undefined && oneRecord.judge.judgeSummary !== undefined);
-	const carriesRationale = decisionBlock.decisionRecordList.some((oneRecord) => oneRecord.judge !== undefined && oneRecord.judge.rationale !== undefined);
-	const conditionalColumnList = (isFannedOut ? [JUDGED_SUBJECT_COLUMN] : []).concat(carriesJudgeSummary ? JUDGE_SUMMARY_COLUMN_LIST : []).concat(carriesRationale ? [MAPPING_RATIONALE_COLUMN] : []);
-	// ⟪ML1-a⟫ the card-less records, one planned abstention row per from-node; the standard columns are not extensions
-	const noTermFoundPlannedList = decisionBlock.decisionRecordList
-		.filter((oneRecord) => !(typeof oneRecord.objectStableId === 'string' && oneRecord.objectStableId.length > 0))
-		.slice()
-		.sort((leftRecord, rightRecord) => (leftRecord.subjectStableId < rightRecord.subjectStableId ? -1 : leftRecord.subjectStableId > rightRecord.subjectStableId ? 1 : 0))
-		.reduce((soFar, oneRecord) => soFar.concat((oneRecord.instanceStableIdList === undefined ? [oneRecord.subjectStableId] : oneRecord.instanceStableIdList).map((fromStableId) => ({ record: oneRecord, fromStableId, instanceStableId: oneRecord.instanceStableIdList === undefined ? undefined : fromStableId }))), []);
+	const blockRows = blockRowsFor({ decisionBlock, decisionBlockHash, cardByStableId, setLevelSlots, subjectCuriePrefixList, exportProducerKind, subjectSourceIri, objectSourceIri });
+	if (blockRows.error) {
+		callback(blockRows.error);
+		return;
+	}
+	const { rowList, noTermFoundPlannedList, subjectSet, judgedSubjectSet, isFannedOut, conditionalColumnList } = blockRows;
 	const standardColumnList = [RECORD_ID_COLUMN].concat(noTermFoundPlannedList.length ? NO_TERM_FOUND_COLUMN_LIST : []);
 	const columnList = COLUMN_LIST.concat(conditionalColumnList, standardColumnList);
 	const extensionSlotNameList = EXTENSION_SLOT_NAME_LIST.concat(conditionalColumnList);
-	const plannedList = plannedEdgeList(decisionBlock.decisionRecordList);
-	const recordIdFor = ({ record, instanceStableId, predicateCurie }) =>
-		materialiserLib.assertionIdFor({ record, instanceStableId, predicateCurie, decisionBlockHash, sourceStandardName: setLevelSlots.subjectSource, sourceVersion: setLevelSlots.subjectSourceVersion, hubName: setLevelSlots.objectSource, hubVersion: setLevelSlots.objectSourceVersion });
-	// ⟪ctdlHub P6⟫ predicate_id per the block's edge shape: skos:<relation> for a match edge, the source's own CURIE verbatim for a
-	// declared correspondence (owl:equivalentClass is a lawful SSSOM predicate_id; it is never rewritten into a skos match)
-	const shapeLookup = edgeShapeRowFor(decisionBlock);
-	if (shapeLookup.error) {
-		callback(shapeLookup.error);
-		return;
-	}
-	for (let edgeIndex = 0; edgeIndex < plannedList.length; edgeIndex++) {
-		const { record: oneRecord, fromStableId, instanceStableId } = plannedList[edgeIndex];
-		// ⟪G-2, adversarial review D4 2026-08-17⟫ RECORD-FIRST, byte-identical to the expression in
-		// materialiser.js. Reading the table first relabelled every derived row as CompositeMatching — the
-		// justification for "an algorithm chose among candidates", which says nothing about HOW the candidates
-		// were proposed — while the block and the graph both carried SemanticSimilarityThresholdMatching. All 520
-		// rows disagreed with the artifact they describe. The parallel-table comment two files away claimed the
-		// edge and the export "cannot drift into disagreeing about the same fact"; they drifted because only ONE
-		// of the two consulted the record. Documentary producers are unaffected: their records carry exactly the
-		// table's values, so the two expressions agree byte for byte there.
-		const justification = oneRecord.mappingMethod === undefined || oneRecord.mappingMethod === null ? METHOD_BY_RESOLUTION[oneRecord.resolution] : oneRecord.mappingMethod;
-		const justificationRefusal = sssomJustificationRefusal(justification);
-		if (justificationRefusal) {
-			refuseWith(justificationRefusal, 'Profile §4.2');
-			return;
-		}
-		const card = cardByStableId[oneRecord.objectStableId];
-		if (!card || !isNonEmptyString(card.uri) || !isNonEmptyString(card.name)) {
-			refuseWith(`objectStableId ${oneRecord.objectStableId} has no card with uri and name`, 'object_id is the card uri and object_label its name (MUST)');
-			return;
-		}
-		// subject_id IS the forged stableId VERBATIM — a forged id already carries its standard's prefix
-		// (`toy:property/…`, `<standard>:property/…`); prepending would double it (RULING BR2). A stableId that does NOT
-		// begin with the declared subjectCuriePrefix is a contract violation and is REFUSED by name, never repaired.
-		if (!subjectCuriePrefixList.some((onePrefix) => fromStableId.indexOf(`${onePrefix}:`) === 0)) {
-			refuseWith(`subjectStableId '${fromStableId}' does not begin with the declared subjectCuriePrefix '${subjectCuriePrefixList.map((onePrefix) => `${onePrefix}:`).join("' or '")}'`, 'subject_id is the forged stableId verbatim (RULING BR2); the prefix is never prepended and never repaired');
-			return;
-		}
-		const predicateId = shapeLookup.edgeShapeRow.sssomPredicateIdFor(oneRecord.predicate);
-		const recordIdentity = recordIdFor({ record: oneRecord, instanceStableId, predicateCurie: predicateId });
-		if (recordIdentity.error) {
-			refuseWith(`record_id for ${fromStableId} → ${oneRecord.objectStableId}: ${recordIdentity.error}`, 'every row carries record_id, all-or-none (SSSOM 1.1)');
-			return;
-		}
-		subjectSet.add(fromStableId);
-		judgedSubjectSet.add(oneRecord.subjectStableId);
-		rowList.push({
-			[RECORD_ID_COLUMN]: recordIdentity.assertionId,
-			subject_id: fromStableId,
-			predicate_id: predicateId,
-			object_id: card.uri,
-			mapping_justification: justification,
-			object_label: card.name,
-			confidence: oneRecord.resolution === 'judged' ? oneRecord.confidence : '',
-			subject_source: subjectSourceIri,
-			subject_source_version: setLevelSlots.subjectSourceVersion,
-			object_source: objectSourceIri,
-			object_source_version: setLevelSlots.objectSourceVersion,
-			subject_match_field: setLevelSlots.subjectMatchField,
-			object_match_field: setLevelSlots.objectMatchField,
-			mapping_tool: oneRecord.resolution === 'judged' ? oneRecord.judge.judgeModel : '',
-			mapping_tool_version: oneRecord.resolution === 'judged' ? oneRecord.judge.rendererVersion : '',
-			predicate_asserted_by: oneRecord.predicateAssertedBy,
-			source_label: oneRecord.sourceLabel === null || oneRecord.sourceLabel === undefined ? '' : oneRecord.sourceLabel,
-			[JUDGED_SUBJECT_COLUMN]: oneRecord.subjectStableId,
-			...JUDGE_SUMMARY_EDGE_PROPERTY_LIST.reduce((soFar, onePropertyName) => ({ ...soFar, [SSSOM_COLUMN_BY_EDGE_PROPERTY[onePropertyName]]: oneRecord.judge !== undefined && oneRecord.judge.judgeSummary !== undefined ? oneRecord.judge.judgeSummary[onePropertyName] : '' }), {}),
-			[MAPPING_RATIONALE_COLUMN]: oneRecord.judge !== undefined && oneRecord.judge.rationale !== undefined ? oneRecord.judge.rationale : '',
-		});
-	}
-	// ⟪ML1-a⟫ the abstention rows: what the producer looked for and did not find, never dropped
-	for (let abstentionIndex = 0; abstentionIndex < noTermFoundPlannedList.length; abstentionIndex++) {
-		const { record: oneRecord, fromStableId, instanceStableId } = noTermFoundPlannedList[abstentionIndex];
-		const resolution = oneRecord.resolution === undefined || oneRecord.resolution === null ? RESOLUTION_BY_PRODUCER_KIND[exportProducerKind] : oneRecord.resolution;
-		const justification = oneRecord.mappingMethod === undefined || oneRecord.mappingMethod === null ? METHOD_BY_RESOLUTION[resolution] : oneRecord.mappingMethod;
-		const justificationRefusal = sssomJustificationRefusal(justification);
-		if (justificationRefusal) {
-			refuseWith(`abstention row for ${fromStableId}: ${justificationRefusal}`, 'Profile §4.2; a card-less record of a layer producer names its own method');
-			return;
-		}
-		const declaredSubjectPrefix = subjectCuriePrefixList.find((onePrefix) => fromStableId.indexOf(`${onePrefix}:`) === 0);
-		if (declaredSubjectPrefix === undefined) {
-			refuseWith(`abstention subject '${fromStableId}' does not begin with the declared subjectCuriePrefix`, 'subject_id is the forged stableId verbatim (RULING BR2)');
-			return;
-		}
-		const recordIdentity = recordIdFor({ record: { ...oneRecord, objectStableId: NO_TERM_FOUND_OBJECT_ID }, instanceStableId, predicateCurie: NO_TERM_FOUND_PREDICATE_ID });
-		if (recordIdentity.error) {
-			refuseWith(`record_id for the abstention of ${fromStableId}: ${recordIdentity.error}`, 'every row carries record_id, all-or-none (SSSOM 1.1)');
-			return;
-		}
-		const isJudged = resolution === 'judged' && oneRecord.judge !== undefined;
-		rowList.push({
-			[RECORD_ID_COLUMN]: recordIdentity.assertionId,
-			['subject_id']: fromStableId,
-			predicate_id: NO_TERM_FOUND_PREDICATE_ID,
-			object_id: NO_TERM_FOUND_OBJECT_ID,
-			mapping_justification: justification,
-			object_label: '',
-			confidence: '',
-			subject_source: subjectSourceIri,
-			subject_source_version: setLevelSlots.subjectSourceVersion,
-			object_source: objectSourceIri,
-			object_source_version: setLevelSlots.objectSourceVersion,
-			subject_match_field: setLevelSlots.subjectMatchField,
-			object_match_field: setLevelSlots.objectMatchField,
-			mapping_tool: isJudged ? oneRecord.judge.judgeModel : '',
-			mapping_tool_version: isJudged ? oneRecord.judge.rendererVersion : '',
-			predicate_asserted_by: '',
-			source_label: oneRecord.sourceLabel === null || oneRecord.sourceLabel === undefined ? '' : oneRecord.sourceLabel,
-			[JUDGED_SUBJECT_COLUMN]: oneRecord.subjectStableId,
-			mapping_cardinality: NO_TERM_FOUND_CARDINALITY,
-			comment: oneRecord.abstained === true ? 'abstained: the producer judged that no offered card answers this subject' : `no card: ${oneRecord.classification === undefined ? 'unclassified' : oneRecord.classification}${oneRecord.reason === undefined || oneRecord.reason === null ? '' : ` (${oneRecord.reason})`}`,
-		});
-	}
-	// ⟪ML1-a⟫ the exporter's own all-or-none check: every row has a record_id, and no two rows share one
-	const recordIdList = rowList.map((oneRow) => oneRow[RECORD_ID_COLUMN]);
-	if (recordIdList.some((oneRecordId) => !isNonEmptyString(oneRecordId)) || new Set(recordIdList).size !== recordIdList.length) {
-		refuseWith(`record_id is not on every row or not unique (${recordIdList.length} rows, ${new Set(recordIdList).size} distinct)`, 'SSSOM 1.1: record_id is all-or-none within a set and unique');
-		return;
-	}
 	// ⟪B2 DEFECT #3 found by sssom-py on the first REAL export — RULING SABLE_RIVER 2026-08-16 (B3, "sssomExporter validator
 	// conformance")⟫ the metadata header is YAML: (i) EVERY scalar is QUOTED (yamlScalar — a value ending in ':' or containing
 	// ': ' broke the scanner: `EDUcoreHub: urn:educore:hub:CEDS:`); (ii) mapping_set_id is a URI (urn:educore:decisionBlock:<id>),
@@ -473,4 +479,4 @@ const parseSssomTsv = (text) => {
 	return { headerLineList, columnList, rowList, headerScalarOf: (name) => { const line = headerLineList.find((oneLine) => oneLine.startsWith(`#${name}: `)); return line === undefined ? undefined : JSON.parse(line.replace(`#${name}: `, '')); } };
 };
 
-module.exports = { toSssomTsv, parseSssomTsv, COLUMN_LIST, RECORD_ID_COLUMN, NO_TERM_FOUND_OBJECT_ID, NO_TERM_FOUND_PREDICATE_ID, ONE_ONE_SLOT_COLUMN_LIST, SSSOM_SET_SLOT_DISPOSITION_BY_PRODUCER_KIND, JUDGED_SUBJECT_COLUMN, BUILT_IN_PREFIX_LIST, EXTENSION_SLOT_NAME_LIST, EXTENSION_PROPERTY_BASE, MAPPING_SET_ID_URN_BASE, URN_SCHEME_PREFIX, yamlScalar, moduleName };
+module.exports = { toSssomTsv, blockRowsFor, parseSssomTsv, COLUMN_LIST, RECORD_ID_COLUMN, NO_TERM_FOUND_OBJECT_ID, NO_TERM_FOUND_PREDICATE_ID, ONE_ONE_SLOT_COLUMN_LIST, SSSOM_SET_SLOT_DISPOSITION_BY_PRODUCER_KIND, JUDGED_SUBJECT_COLUMN, BUILT_IN_PREFIX_LIST, EXTENSION_SLOT_NAME_LIST, EXTENSION_PROPERTY_BASE, MAPPING_SET_ID_URN_BASE, URN_SCHEME_PREFIX, yamlScalar, moduleName };
