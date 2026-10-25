@@ -33,7 +33,6 @@ const { NO_TERM_FOUND_PREDICATE_ID, NO_TERM_FOUND_OBJECT_ID } = require(path.joi
 
 const JUDGE_RATER_CATEGORY_LIST = Object.freeze(['hit', 'miss', 'agreedAbsence', 'judgePickedRaterNoMatch', 'judgeAbstainedRaterPicked']);
 const VERSION_CATEGORY_LIST = Object.freeze(['stable', 'predicateChanged', 'flipped', 'newlyPicked', 'newlyAbstained']);
-const UNKNOWN_ELEMENT_KIND = 'kindNotSupplied';
 
 const isNonEmptyString = (candidate) => typeof candidate === 'string' && candidate.length > 0;
 const refusalText = (what, where) => refuse.byName({ moduleName, what, where }).message;
@@ -123,14 +122,14 @@ const groupedBy = (itemList, groupTextOf) => {
 const sortedObjectOf = (unsortedObject) => Object.keys(unsortedObject).sort(byText).reduce((soFar, oneName) => ({ ...soFar, [oneName]: unsortedObject[oneName] }), {});
 
 const compareJudgeAgainstRater = ({ judgeAssertionList, raterAssertionList, raterUnsureList, elementKindByStableId, standardNameByStandardKey, hubName, judgeLabel, raterLabel, raterPredicateExpansionByPrefix, raterBestPredicateId } = {}) => {
-	if (!Array.isArray(judgeAssertionList) || !Array.isArray(raterAssertionList) || !Array.isArray(raterUnsureList) || !elementKindByStableId || !standardNameByStandardKey || !isNonEmptyString(hubName) || !isNonEmptyString(judgeLabel) || !isNonEmptyString(raterLabel) || !isNonEmptyString(raterBestPredicateId)) {
-		return { error: refusalText('judgeAssertionList, raterAssertionList, raterUnsureList, elementKindByStableId, standardNameByStandardKey, hubName, judgeLabel, raterLabel and raterBestPredicateId are required', 'compareJudgeAgainstRater({ … }); nothing is defaulted') };
+	if (!Array.isArray(judgeAssertionList) || !Array.isArray(raterAssertionList) || !Array.isArray(raterUnsureList) || !elementKindByStableId || !standardNameByStandardKey || !isNonEmptyString(hubName) || !isNonEmptyString(judgeLabel) || !isNonEmptyString(raterLabel) || !isNonEmptyString(raterBestPredicateId) || !raterPredicateExpansionByPrefix) {
+		return { error: refusalText('judgeAssertionList, raterAssertionList, raterUnsureList, elementKindByStableId, standardNameByStandardKey, hubName, judgeLabel, raterLabel, raterPredicateExpansionByPrefix and raterBestPredicateId are required', 'compareJudgeAgainstRater({ … }); nothing is defaulted') };
 	}
 	const unauthoredRow = raterAssertionList.find((oneAssertion) => !isNonEmptyString(oneAssertion.authorIri));
 	if (unauthoredRow !== undefined) {
 		return { error: refusalText(`rater row for ${unauthoredRow.fromStableId} carries no author_id`, 'an answer unit is (rater, element); the pooled rater set names its rater on every row') };
 	}
-	const { elementIriOf, msiPairFor } = msiToolkitFor({ standardNameByStandardKey, extraPredicateExpansionByPrefix: raterPredicateExpansionByPrefix || {} });
+	const { elementIriOf, msiPairFor } = msiToolkitFor({ standardNameByStandardKey, extraPredicateExpansionByPrefix: raterPredicateExpansionByPrefix });
 	const judgeByFromNode = groupedBy(judgeAssertionList, (oneAssertion) => oneAssertion.fromStableId);
 	const judgeByJudgedSubject = groupedBy(judgeAssertionList, (oneAssertion) => oneAssertion.judgedSubjectStableId);
 	const raterByUnit = groupedBy(raterAssertionList, (oneAssertion) => `${oneAssertion.authorIri}\u001f${oneAssertion.fromStableId}`);
@@ -143,6 +142,9 @@ const compareJudgeAgainstRater = ({ judgeAssertionList, raterAssertionList, rate
 		const elementIri = elementIriOf({ elementStableId, standardKey, standardVersion });
 		if (elementIri.error) {
 			return { error: elementIri.error };
+		}
+		if (!isNonEmptyString(elementKindByStableId[elementStableId])) {
+			return { error: refusalText(`rated element ${elementStableId} has no kind`, 'elementKindByStableId covers every rated element (the rater tool\'s sample.json kind); a kind is never guessed') };
 		}
 		const judgeUnitAssertionList = judgeByFromNode[elementStableId] || judgeByJudgedSubject[elementStableId];
 		if (judgeUnitAssertionList === undefined) {
@@ -170,7 +172,7 @@ const compareJudgeAgainstRater = ({ judgeAssertionList, raterAssertionList, rate
 			authorIri,
 			standardKey,
 			hubName,
-			elementKind: elementKindByStableId[elementStableId] === undefined ? UNKNOWN_ELEMENT_KIND : elementKindByStableId[elementStableId],
+			elementKind: elementKindByStableId[elementStableId],
 			category,
 			bestHit: category === 'hit' && sharedCount(judgeAnswer.objectIdList, raterBestObjectIdList) > 0,
 			fullPredicateAgreement: sharedCount(judgeAnswer.fullMsiList, raterAnswer.fullMsiList) > 0,

@@ -99,7 +99,7 @@ const compareArgsFor = (overrides = {}) => ({
 	judgeAssertionList: edfiRead.assertionList.concat(pescRead.assertionList),
 	raterAssertionList: raterRead.assertionList,
 	raterUnsureList: [{ authorIri: RATER_TWO, elementStableId: 'edfi:property/domainEntity.Toy.Unsure' }],
-	elementKindByStableId: { [EDFI_PICKED_A.subjectStableId]: 'code' },
+	elementKindByStableId: { [EDFI_PICKED_A.subjectStableId]: 'code', [EDFI_PICKED_B.subjectStableId]: 'code', [EDFI_ABSTAINED.subjectStableId]: 'freeText', [PESC_PICKED.instanceStableIdList[0]]: 'identifier', [PESC_ABSTAINED.subjectStableId]: 'freeText', 'edfi:property/domainEntity.Toy.NotJudged': 'number' },
 	standardNameByStandardKey,
 	hubName: 'CEDS',
 	judgeLabel: 'stated judge',
@@ -128,7 +128,7 @@ harness.equal('full-predicate MSI agrees ONLY on the two agreed absences (edc: n
 harness.equal('overall cells', JSON.stringify([compared.overall.hit, compared.overall.miss, compared.overall.agreedAbsence, compared.overall.judgePickedRaterNoMatch, compared.overall.judgeAbstainedRaterPicked, compared.overall.bestHit]), JSON.stringify([3, 1, 2, 1, 1, 2]));
 harness.equal('rates', `${compared.overall.hitRateWhereBothPicked} ${compared.overall.absenceAgreementRate}`, '0.75 0.5');
 harness.equal('per standard', JSON.stringify(Object.keys(compared.byStandard)), JSON.stringify(['edfi', 'pesccollegetranscript1v7v0']));
-harness.equal('per element kind: a kind not supplied is named, never guessed', JSON.stringify(Object.keys(compared.byElementKind)), JSON.stringify(['code', 'kindNotSupplied']));
+harness.equal('per element kind', JSON.stringify(Object.keys(compared.byElementKind)), JSON.stringify(['code', 'freeText', 'identifier']));
 harness.equal('a re-run is byte-identical', JSON.stringify(compareJudgeAgainstRater(compareArgsFor())), JSON.stringify(compared));
 harness.equal('shuffled inputs give the same report', JSON.stringify(compareJudgeAgainstRater(compareArgsFor({ judgeAssertionList: edfiRead.assertionList.concat(pescRead.assertionList).reverse(), raterAssertionList: raterRead.assertionList.slice().reverse() }))), JSON.stringify(compared));
 
@@ -152,6 +152,7 @@ harness.rejects('a rater row with no author_id', [compareJudgeAgainstRater(compa
 harness.rejects('a standard with no name', [compareJudgeAgainstRater(compareArgsFor({ standardNameByStandardKey: { edfi: 'EdFi' } })).error].filter(Boolean), /standard 'pesccollegetranscript1v7v0' .* has no standardName/);
 harness.rejects('an object that is neither a card nor NoTermFound', [compareJudgeAgainstRater(compareArgsFor({ raterAssertionList: raterRead.assertionList.map((one) => ({ ...one, objectId: 'toy:notAnIri' })) })).error].filter(Boolean), /is neither a card IRI nor sssom:NoTermFound/);
 harness.rejects('an answer both picked and abstained', [compareJudgeAgainstRater(compareArgsFor({ raterAssertionList: raterRead.assertionList.concat([{ ...raterRead.assertionList[0], predicateId: NO_TERM_FOUND_PREDICATE_ID, objectId: NO_TERM_FOUND_OBJECT_ID, isAbstention: true }]) })).error].filter(Boolean), /both picked and abstained/);
+harness.rejects('a rated element with no kind (never guessed)', [compareJudgeAgainstRater(compareArgsFor({ elementKindByStableId: { [EDFI_PICKED_A.subjectStableId]: 'code' } })).error].filter(Boolean), /rated element .* has no kind/);
 harness.rejects('an absent required input', [compareJudgeAgainstRater(compareArgsFor({ raterBestPredicateId: undefined })).error].filter(Boolean), /raterBestPredicateId are required/);
 harness.rejects('a set the exporter\'s reader refuses', [assertionsFromSssomText({ sssomText: 'subject_id\tpredicate_id\n', sourceLabel: 'broken' }).error].filter(Boolean), /fails parseSssomTsv/);
 
