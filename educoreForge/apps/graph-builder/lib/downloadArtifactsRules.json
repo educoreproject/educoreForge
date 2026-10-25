@@ -13,6 +13,7 @@
 		{ "bundleToken": "lif", "forgeDeclarationRelativePath": "lib/lifForgeDeclaration.js", "groupName": "LIF", "graphEmissionKind": "statementListing", "layerTokenList": [], "descriptionText": "LIF 2.0 (the LIF Initiative's Learner Information Framework): the OpenAPI 3.0 data model (components.schemas: entities, inline objects, properties, enumerations), Apache License 2.0 (its LICENSE is in the source download)" },
 		{ "bundleToken": "case", "forgeDeclarationRelativePath": "lib/caseForgeDeclaration.js", "groupName": "CASE", "graphEmissionKind": "statementListing", "layerTokenList": [], "descriptionText": "CASE 1.1 (1EdTech Competencies and Academic Standards Exchange): the OpenAPI 3.0 data model from the publisher's YAML (components.schemas: schemas, properties, enumerations)" },
 		{ "bundleToken": "sedm", "forgeDeclarationRelativePath": "lib/sedmForgeDeclaration.js", "groupName": "SEDM", "graphEmissionKind": "statementListing", "layerTokenList": [], "descriptionText": "SEDM (the Special Education Data Model), from the working group's working documents (no published version): the element map sheet's SEDM-flagged elements with their option sets, and the IDEA compliance structures" },
+		{ "bundleToken": "eduapi", "forgeDeclarationRelativePath": "lib/eduapiForgeDeclaration.js", "groupName": "EduAPI", "graphEmissionKind": "statementListing", "layerTokenList": [], "descriptionText": "EduAPI 1.0 (1EdTech Edu-API): the OpenAPI 3.0 data model (components.schemas: schemas, properties, enumerations)" },
 		{ "bundleToken": "pesccollegetranscript1v8v0", "forgeDeclarationRelativePath": "lib/declaration.js", "groupName": "College Transcript", "graphEmissionKind": "regeneratedXsdDirectory", "layerTokenList": [], "descriptionText": "PESC College Transcript message schema with the library schemas it imports" },
 		{ "bundleToken": "pesccollegetranscript1v7v0", "forgeDeclarationRelativePath": "lib/declaration.js", "groupName": "College Transcript", "graphEmissionKind": "regeneratedXsdDirectory", "layerTokenList": [], "descriptionText": "PESC College Transcript message schema with the library schemas it imports" },
 		{ "bundleToken": "peschighschooltranscript1v6v0", "forgeDeclarationRelativePath": "lib/declaration.js", "groupName": "High School Transcript", "graphEmissionKind": "regeneratedXsdDirectory", "layerTokenList": [], "descriptionText": "PESC High School Transcript message schema with the library schemas it imports" },
@@ -53,6 +54,12 @@
 			"facetList": ["source", "graph"],
 			"unavailableReason": "Withheld: the held SEDM files are WORKING DOCUMENTS of the SEDM working group, not a published release, and they carry no licence line (forges/sedm/assets/standardSourceData/01/README_PROVENANCE.md). The A4L decks mark SEDM artefacts CC BY 4.0, but no published SEDM artefact exists to which that licence attaches. The round trip was still run against this graph; its totals are shown.",
 			"rulingText": "TQ 2026-10-23 (PLAN-nextStandards-102326 section 12, via BRONZE_CROWN): SEDM forged from the attic working documents, downloads held because the held files carry no licence line"
+		},
+		{
+			"bundleToken": "eduapi",
+			"facetList": ["source", "graph"],
+			"unavailableReason": "Withheld under the 1EdTech Specification Document License (https://www.imsglobal.org/license.html; the document's own info.license, 'IMS Global Specification Document License'): its §4 licenses using the Specification to develop and distribute PRODUCTS that implement it, and §5 grants no right to create modifications or derivatives of 1EdTech documents, so neither the specification's bytes nor a graph derived from them is redistributed here. The round trip was still run against this graph; its totals are shown.",
+			"rulingText": "TQ 2026-10-23 (plan nextStandards-102326 Q-N1, via BRONZE_CROWN; wave-2 work order 2026-10-24): 1EdTech standards are treated like Ed-Fi, forged and bridged with both download facets withheld"
 		}
 	],
 	"snapshotCompanionFileNameList": ["README_PROVENANCE.md", "SHA256SUMS", "standardSourceLocation", "layerSourceLocation", "LICENSE", "manifest.json"],
