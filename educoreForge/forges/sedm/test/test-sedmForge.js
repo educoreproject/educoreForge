@@ -20,6 +20,10 @@ DESCRIPTION
      Runs the bundle's round-trip validator over the harness graph double and observes it RED on perturbations of the graph and of
      the source. Writes only under os.tmpdir().
 
+FILES
+     forges/sedm/assets/standardSourceData/01/{SEDM Logical Model and Maps - 6. CEDS Map.csv, sedm-domain-structures.json}   git-ignored;
+     see 01/README_PROVENANCE.md to acquire. A tree without them is REFUSED BY NAME in section 1 (the JEDx / CASE form), never a raw ENOENT.
+
 EXIT STATUS
      0 every assertion passed;  1 otherwise.
 `;
@@ -115,13 +119,25 @@ const validateDouble = ({ forgeResult, caseName, snapshotPath }, callback) => {
 	validator.validateWithReader({ reader: roundTripHarness.graphDoubleFrom({ forgeResult }), snapshotPath: snapshotPath === undefined ? SNAPSHOT_DIR_PATH : snapshotPath, outputPath }, callback);
 };
 
+// the two git-ignored working documents (01/README_PROVENANCE.md has the acquisition recipe)
+const SOURCE_FILE_NAME_LIST = Object.freeze([sourceProfile.csvFileName, sourceProfile.structuresFileName]);
+const absentSourceFileList = SOURCE_FILE_NAME_LIST.filter((oneFileName) => !fs.existsSync(path.join(SNAPSHOT_DIR_PATH, oneFileName)));
+
 const taskList = new taskListPlus();
 
 // -----------------------------------------------------------------
 // SECTION 1 — the real snapshot: counts and carriage
 // -----------------------------------------------------------------
-taskList.push((args, next) => forgeSnapshot({ sourcePath: SNAPSHOT_DIR_PATH }, (forgeError, forgeResult) => {
+taskList.push((args, next) => {
 	harness.section('SECTION 1 — snapshot 01 forged in process: the measured counts and the declared rules');
+	harness.accepts('the two git-ignored source files are present (else run the recipe in 01/README_PROVENANCE.md)', absentSourceFileList.map((oneFileName) => `absent: ${oneFileName}`));
+	if (absentSourceFileList.length !== 0) {
+		next('the SEDM working documents are absent: run the acquisition recipe in forges/sedm/assets/standardSourceData/01/README_PROVENANCE.md', args);
+		return;
+	}
+	next('', args);
+});
+taskList.push((args, next) => forgeSnapshot({ sourcePath: SNAPSHOT_DIR_PATH }, (forgeError, forgeResult) => {
 	harness.accepts('the real snapshot forges', forgeError ? [forgeError] : []);
 	if (forgeError) {
 		next(forgeError, args);

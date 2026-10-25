@@ -79,7 +79,16 @@ const scenarioFor = ({ forgedNodeList }) => {
 	return scenario;
 };
 
-bundle.forge({ sourcePath: SNAPSHOT_DIR_PATH, owner: 'test', skipEmbedding: true }, (forgeError, forgeResult) => {
+// the two git-ignored working documents (01/README_PROVENANCE.md has the acquisition recipe): absent, the suite refuses BY NAME
+const fs = require('fs');
+const sourceProfile = require(path.join(__dirname, '..', 'lib', 'sedmSourceProfile.json'));
+const absentSourceFileList = [sourceProfile.csvFileName, sourceProfile.structuresFileName].filter((oneFileName) => !fs.existsSync(path.join(SNAPSHOT_DIR_PATH, oneFileName)));
+
+if (absentSourceFileList.length !== 0) {
+	harness.section('SECTION 1 — the shipped bridge, composed');
+	harness.accepts('the two git-ignored source files are present (else run the recipe in forges/sedm/assets/standardSourceData/01/README_PROVENANCE.md)', absentSourceFileList.map((oneFileName) => `absent: ${oneFileName}`));
+	harness.report();
+} else bundle.forge({ sourcePath: SNAPSHOT_DIR_PATH, owner: 'test', skipEmbedding: true }, (forgeError, forgeResult) => {
 	harness.section('SECTION 1 — the shipped bridge, composed');
 	harness.accepts('the snapshot forges', forgeError ? [forgeError] : []);
 	if (forgeError) {
