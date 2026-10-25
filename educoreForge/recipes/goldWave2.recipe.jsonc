@@ -1,0 +1,73 @@
+{
+  // goldWave2 — nextStandards wave-2 assembly (WORKORDER-assembly-wave2-102426, Programmer W2A / MIDNIGHT_STONE for
+  // BRONZE_CROWN, 2026-10-24). It is goldWave1 (the recipe of GOLD_EVAL_261024_wave1) with CLR 2.0 (lane D), CASE 1.1
+  // (lane E), EduAPI (lane F) and SEDM (lane G) APPENDED, each bridged exactly as in its lane's *Bridged recipe: CLR, CASE
+  // and EduAPI one judged facet to both hubs; SEDM its declared CEDS bridge (facet '') and its judged Element facet to CTDL.
+  // Every goldWave1 entry keeps its position (the inventory gate's appended-never-reordered rule).
+  // Built with --judgeCacheOnly=true --embeddingCacheOnly=true over a COPY of the wave-1 gold's store with the four lanes'
+  // judgment caches and the wave-2 shared vector cache folded in, so no judge or embedder is asked.
+  // kind 'golden' so -stampPromotion may name its graph GOLD_EVAL_*.
+  "schemaVersion": "1.0.0",
+  "recipeName": "goldWave2",
+  "kind": "golden",
+  "description": "The wave-2 gold: goldWave1 (CEDS and CTDL hubs, CEDS layers, Ed-Fi, SIF 260928, eight PESC releases, the CTDL family, PESC_LD, Open Badges 3.0, JEDx, LIF 2.0, every derived bridge judged against both hubs) PLUS CLR 2.0, CASE 1.1 and EduAPI, each with its judged facet to both hubs, and SEDM with its declared CEDS bridge and its judged Element facet to CTDL.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sif260928", "version": "current" },
+    { "token": "pesccollegetranscript1v8v0", "version": "current" },
+    { "token": "pesccollegetranscript1v7v0", "version": "current" },
+    { "token": "peschighschooltranscript1v6v0", "version": "current" },
+    { "token": "pesctestscorereport1v1v0", "version": "current" },
+    { "token": "pesclearningrecord1v0v0", "version": "current" },
+    { "token": "pescdocumentrequest1v0v0", "version": "current" },
+    { "token": "pescdocumentresponse1v0v0", "version": "current" },
+    { "token": "pescacademiceportfolio1v0v0", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "ctdlasn", "version": "current" },
+    { "token": "ctdlqdata", "version": "current" },
+    { "token": "pescld", "version": "current" },
+    { "token": "openbadges", "version": "current" },
+    { "token": "jedx", "version": "current" },
+    { "token": "lif", "version": "current" },
+    { "token": "clr", "version": "current" },
+    { "token": "case", "version": "current" },
+    { "token": "eduapi", "version": "current" },
+    { "token": "sedm", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "layers": [
+    { "standard": "ceds", "layer": "guide" },
+    { "standard": "ceds", "layer": "textRepair" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hubs": ["ceds", "ctdl"], "dependencies": ["edfi", "ceds", "ctdl"] },
+    { "source": "sif260928", "hubs": ["ceds", "ctdl"], "dependencies": ["sif260928", "ceds", "ctdl"] },
+    { "source": "pesccollegetranscript1v8v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesccollegetranscript1v8v0", "ceds", "ctdl"] },
+    { "source": "pesccollegetranscript1v7v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesccollegetranscript1v7v0", "ceds", "ctdl"] },
+    { "source": "peschighschooltranscript1v6v0", "hubs": ["ceds", "ctdl"], "dependencies": ["peschighschooltranscript1v6v0", "ceds", "ctdl"] },
+    { "source": "pesctestscorereport1v1v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesctestscorereport1v1v0", "ceds", "ctdl"] },
+    { "source": "pesclearningrecord1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesclearningrecord1v0v0", "ceds", "ctdl"] },
+    { "source": "pescdocumentrequest1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescdocumentrequest1v0v0", "ceds", "ctdl"] },
+    { "source": "pescdocumentresponse1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescdocumentresponse1v0v0", "ceds", "ctdl"] },
+    { "source": "pescacademiceportfolio1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescacademiceportfolio1v0v0", "ceds", "ctdl"] },
+    { "source": "ctdl", "hubs": ["ceds"], "dependencies": ["ctdl", "ceds"] },
+    { "source": "ctdlasn", "hubs": ["ctdl"], "dependencies": ["ctdlasn", "ctdl"] },
+    { "source": "ctdl", "familyStandards": ["ctdl", "ctdlasn", "ctdlqdata"], "bridge": "ctdlFamilyStructure", "dependencies": ["ctdl", "ctdlasn", "ctdlqdata"] },
+    { "source": "pescld", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "pescld", "facet": "PescTermRow", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "pescld", "facet": "PescTermShape", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "openbadges", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["openbadges", "ceds", "ctdl"] },
+    { "source": "jedx", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["jedx", "ceds", "ctdl"] },
+    { "source": "lif", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["lif", "ceds", "ctdl"] },
+    { "source": "clr", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["clr", "ceds", "ctdl"] },
+    { "source": "case", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["case", "ceds", "ctdl"] },
+    { "source": "eduapi", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["eduapi", "ceds", "ctdl"] },
+    { "source": "sedm", "facet": "", "hubs": ["ceds"], "dependencies": ["sedm", "ceds"] },
+    { "source": "sedm", "facet": "Element", "hubs": ["ctdl"], "dependencies": ["sedm", "ctdl"] }
+  ],
+  "roundTripStage": true
+}
