@@ -1,0 +1,17 @@
+{
+	"profileNote": "OneRoster 1.2 Rostering (1EdTech) on lib/openapi-forge (nextStandards-102326 wave 3 H1). All 40 components.schemas are forged, including the 17 API-plumbing schemas (the Single* and *Set response wrappers, imsx_*), as Open Badges and CLR: components.schemas round-trips whole. A schema whose name also occurs in another OneRoster 1.2 service is this service's own copy (its persistent ids are in the org.1edtech.orrostering.v1p2 namespace) and is forged under onerosterrostering:.",
+	"sourceLayout": "referencedSingleFile",
+	"sourceFileName": "orrostering_v1p2_openapi3.json",
+	"sourceFormat": "json",
+	"stableIdPrefix": "onerosterrostering:",
+	"rootStableId": "onerosterrostering:root",
+	"perStandardLabelByRole": {
+		"DmeClass": "OnerosterRosteringSchema",
+		"DmeProperty": "OnerosterRosteringProperty",
+		"DmeOptionSet": "OnerosterRosteringEnum",
+		"DmeOptionValue": "OnerosterRosteringEnumValue"
+	},
+	"schemaExclusionList": [],
+	"listValuedVendorExtensionNameList": [],
+	"enumMemberTextDeclarationList": []
+}

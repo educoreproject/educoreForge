@@ -1,0 +1,25 @@
+{
+  // onerosterBridged — nextStandards-102326 wave 3 lane H2: OneRoster 1.2's three standards (Rostering, Gradebook, Resources) beside both
+  // hubs, each with its ONE judged facet (every property a subject; retrieval by the forge's text nodes, the judge Jev jev-1.13.0 naming the
+  // relation). Rehearsed under --useDebugJudge, then the real judge; pre-declared spend $0.18 for the three (BRONZE_CROWN), STOP at $1.
+  "schemaVersion": "1.0.0",
+  "recipeName": "onerosterBridged",
+  "kind": "dev",
+  "description": "OneRoster 1.2's three standards beside the CEDS and CTDL hubs, each with its one judged facet (H2).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "onerosterrostering", "version": "current" },
+    { "token": "onerostergradebook", "version": "current" },
+    { "token": "onerosterresources", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "onerosterrostering", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["onerosterrostering", "ceds", "ctdl"] },
+    { "source": "onerostergradebook", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["onerostergradebook", "ceds", "ctdl"] },
+    { "source": "onerosterresources", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["onerosterresources", "ceds", "ctdl"] }
+  ]
+}

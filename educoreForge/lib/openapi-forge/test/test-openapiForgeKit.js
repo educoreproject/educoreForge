@@ -463,6 +463,45 @@ YAML_REFUSAL_CASE_LIST.forEach((oneCase) => taskList.push((args, next) => {
 	});
 }));
 
+// -----------------------------------------------------------------
+// SECTION 7 — K4a (wave 3 lane H, OneRoster Gradebook, ruled by BRONZE_CROWN 2026-10-24): an enum member holding a character outside
+// [A-Za-z0-9@_$.:-] (Gradebook's 'fully graded') is minted percent-encoded by memberSegmentOf, so the referencedSingleFile stableIdPattern
+// must admit '%' in a member segment, as the dereferenced layout's always has. The node's name stays verbatim and the round trip is clean.
+// -----------------------------------------------------------------
+const ENCODED_MEMBER_DOCUMENT = Object.freeze({
+	...FIXTURE_DOCUMENT,
+	components: {
+		...FIXTURE_DOCUMENT.components,
+		schemas: {
+			...FIXTURE_DOCUMENT.components.schemas,
+			Party: { ...FIXTURE_DOCUMENT.components.schemas.Party, properties: { ...FIXTURE_DOCUMENT.components.schemas.Party.properties, scoreStatus: { description: 'A status with spaced members.', anyOf: [{ type: 'string', enum: ['fully graded', 'not submitted', 'exempt'] }, { type: 'string', pattern: '(ext:)[a-z]+' }] } } },
+		},
+	},
+});
+const ENCODED_MEMBER_SNAPSHOT_PATH = snapshotOf({ caseName: 'encodedMember', document: ENCODED_MEMBER_DOCUMENT });
+taskList.push((args, next) => bundle.forge({ sourcePath: path.join(ENCODED_MEMBER_SNAPSHOT_PATH, SOURCE_FILE_NAME), owner: 'test', skipEmbedding: true }, (forgeError, forgeResult) => {
+	harness.section('SECTION 7 — K4a: a member needing percent-encoding forges under referencedSingleFile');
+	harness.accepts('K4a: a document with spaced enum members forges', forgeError ? [forgeError] : []);
+	if (forgeError) {
+		next('', args);
+		return;
+	}
+	const nodeById = forgeResult.nodes.reduce((byId, oneNode) => ({ ...byId, [oneNode.stableId]: oneNode }), {});
+	const encodedNode = nodeById['synthapi:Party/scoreStatus/enum/fully%20graded'];
+	harness.equal('K4a: the member id is percent-encoded and its name verbatim', `${Boolean(encodedNode)}|${encodedNode && encodedNode.properties.name}`, 'true|fully graded');
+	const outputPath = path.join(scratchRootPath, 'verdict-encodedMember');
+	fs.mkdirSync(outputPath, { recursive: true });
+	validator.validateWithReader({ reader: roundTripHarness.graphDoubleFrom({ forgeResult }), snapshotPath: ENCODED_MEMBER_SNAPSHOT_PATH, outputPath }, (validateError, verdict) => {
+		harness.equal('K4a: the round trip over the encoded members is clean', validateError ? `${validateError}` : `${verdict.inventedTotal}|${verdict.lostTotal}|${verdict.roundTripClean}`, '0|0|true');
+		next('', args);
+	});
+}));
+taskList.push((args, next) => {
+	const pattern = new RegExp(openapiIdentity.stableIdPatternFor(syntheticProfile).pattern);
+	harness.ok('K4a: an encoded member id outside the safe set is still refused (no raw space)', pattern.test('synthapi:Party/scoreStatus/enum/fully%20graded') && !pattern.test('synthapi:Party/scoreStatus/enum/fully graded'));
+	next('', args);
+});
+
 pipeRunner(taskList.getList(), {}, (pipeError) => {
 	if (pipeError) {
 		harness.ok('the suite ran to the end', false, pipeError);

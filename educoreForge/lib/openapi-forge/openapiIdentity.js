@@ -21,6 +21,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // stableIdPatternFor builds the forge declaration's stableIdPattern for the profile's layout, so a bundle restates none of it. A name the
 // pattern does not admit is refused by the framework kit at mint, never repaired.
+// ⟪K4a, wave 3 lane H, ruled by BRONZE_CROWN 2026-10-24⟫ both layouts admit an ENCODED member segment ('%'): the walk always minted members
+// through memberSegmentOf, so K0's unencoded alternative refused the first member needing encoding (OneRoster Gradebook's 'fully graded').
+// A member that needs no encoding has the same id under either alternative.
 
 const NAME_PATTERN_SOURCE = '[A-Za-z@_$][A-Za-z0-9@_$.-]*';
 const MEMBER_PATTERN_SOURCE = '[A-Za-z0-9@_$.:-]+';
@@ -60,7 +63,7 @@ const stableIdPatternFor = ({ stableIdPrefix, rootStableId, sourceLayout }) => {
 		});
 	}
 	return Object.freeze({
-		pattern: `^(${rootAlternative}|${prefix}${NAME_PATTERN_SOURCE}(/${NAME_PATTERN_SOURCE}(/${ENUM_SEGMENT}(/${MEMBER_PATTERN_SOURCE})?)?)?)$`,
+		pattern: `^(${rootAlternative}|${prefix}${NAME_PATTERN_SOURCE}(/${NAME_PATTERN_SOURCE}(/${ENUM_SEGMENT}(/${ENCODED_MEMBER_PATTERN_SOURCE})?)?)?)$`,
 		trimmed: true,
 	});
 };

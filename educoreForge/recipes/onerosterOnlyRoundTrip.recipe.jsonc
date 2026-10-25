@@ -1,0 +1,16 @@
+{
+  // onerosterOnlyRoundTrip — OneRoster 1.2's three standards with the RT-13 round-trip stage: the nextStandards-102326 wave 3 lane H1
+  // certification recipe.
+  "schemaVersion": "1.0.0",
+  "recipeName": "onerosterOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the three OneRoster 1.2 standard bases and round-trip-validate the materialized product (RT-13 stage).",
+  "roundTripStage": true,
+  "standards": [
+    { "token": "onerosterrostering", "version": "current" },
+    { "token": "onerostergradebook", "version": "current" },
+    { "token": "onerosterresources", "version": "current" }
+  ],
+  "hubs": [],
+  "bridges": []
+}

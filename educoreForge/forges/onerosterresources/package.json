@@ -1,0 +1,7 @@
+{
+	"name": "forge-onerosterresources",
+	"version": "1.0.0",
+	"main": "forgeOnerosterResources.js",
+	"description": "OneRoster 1.2 Resources forge bundle \u2014 the 1EdTech OneRoster Resources Service OpenAPI 3.0 document's components.schemas on lib/openapi-forge: schemas, properties, enums, every $ref as a REFERENCES edge. One of the three OneRoster 1.2 standards (family OneRoster). It does no bridging.",
+	"private": true
+}

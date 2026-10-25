@@ -1,0 +1,7 @@
+standard: OneRoster 1.2 Resources Service (1EdTech), OpenAPI 3.0 schema
+publishedVersion: 1.2
+publishedVersionEvidence: the document's own info.version "1.2" with x-status "Final" (and the URL's v1p2 segment); carried inside the publisher's orresources-v1p2.zip as assets/schema/openapi/orresources_v1p2_openapi3.json
+upstreamUrl: https://purl.imsglobal.org/spec/orresources/v1p2/skill/orresources-v1p2.zip
+publisher: 1EdTech Consortium
+acquiredDate: 2026-10-24
+note: EDITING WARNING. deriveVersionStamp (lib/snapshot-provenance) takes THE ENTIRE REST OF the publishedVersion line as the version, so keep that line bare; citations belong on publishedVersionEvidence.

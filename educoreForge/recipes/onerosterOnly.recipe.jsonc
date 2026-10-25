@@ -1,0 +1,15 @@
+{
+  // onerosterOnly — OneRoster 1.2's three standards alone (stage off): Rostering, Gradebook and Resources base blocks, no hub, no bridge
+  // (nextStandards-102326 wave 3 lane H1; three standards in family OneRoster, BRONZE_CROWN ruling R2).
+  "schemaVersion": "1.0.0",
+  "recipeName": "onerosterOnly",
+  "kind": "dev",
+  "description": "Forge the three OneRoster 1.2 standard bases only - proves the three bundles forge on the OpenAPI kit.",
+  "standards": [
+    { "token": "onerosterrostering", "version": "current" },
+    { "token": "onerostergradebook", "version": "current" },
+    { "token": "onerosterresources", "version": "current" }
+  ],
+  "hubs": [],
+  "bridges": []
+}
