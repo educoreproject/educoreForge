@@ -194,9 +194,16 @@ const moduleFunction =
 				optionValueListByElementName[elementName] = (optionValueListByElementName[elementName] || []).concat([JSON.stringify(valueList.map((oneValue) => [oneValue.codeText, oneValue.valueName]))]);
 			});
 
-			// the structures: every profile section, its sub-items, its references
+			// the structures: every profile section, its sub-items, its references. A section the profile reads and the file lacks is
+			// refused here, never read as empty (the instrument's own check, not the walk's)
+			const absentSection = structuresProfile.sectionList.find((oneSection) => !Array.isArray(valueAtPath({ structures, pathList: oneSection.itemListPathList })));
+			const declaredSetByName = structures[structuresProfile.declaredOptionSetSection.sectionName];
+			if (absentSection !== undefined || !isPlainObject(declaredSetByName)) {
+				callback(`${moduleName} REFUSED: '${sourceProfile.structuresFileName}' has no ${absentSection !== undefined ? `list at ${absentSection.itemListPathList.join('.')}` : `object at ${structuresProfile.declaredOptionSetSection.sectionName}`}`);
+				return;
+			}
 			structuresProfile.sectionList.forEach((oneSection) => {
-				const itemList = valueAtPath({ structures, pathList: oneSection.itemListPathList }) || [];
+				const itemList = valueAtPath({ structures, pathList: oneSection.itemListPathList });
 				itemList.forEach((item) => {
 					const identityText = `${item[oneSection.identityFieldName]}`;
 					const itemPrefix = `support|${oneSection.supportKind}|${identityText}`;
@@ -226,7 +233,7 @@ const moduleFunction =
 			});
 			// the code lists: one restating an element is omitted ONLY where it equals that element's set (a single distinct set)
 			const sectionRow = structuresProfile.declaredOptionSetSection;
-			Object.keys(structures[sectionRow.sectionName] || {}).forEach((optionSetName) => {
+			Object.keys(declaredSetByName).forEach((optionSetName) => {
 				const declaredSet = structures[sectionRow.sectionName][optionSetName];
 				const restatedElementName = declaredSet[sectionRow.restatedElementNameFieldName];
 				if (restatedElementName !== undefined) {

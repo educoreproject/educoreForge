@@ -41,6 +41,7 @@ const SNAPSHOT_DIR_PATH = path.join(BUNDLE_DIR_PATH, 'assets', 'standardSourceDa
 const bundle = require(path.join(BUNDLE_DIR_PATH, 'forgeSedm'))({ embedder: null });
 const validator = require(path.join(BUNDLE_DIR_PATH, 'roundTripValidator'));
 const sourceProfile = require(path.join(BUNDLE_DIR_PATH, 'lib', 'sedmSourceProfile.json'));
+const sedmRoundTripPair = require(path.join(BUNDLE_DIR_PATH, 'lib', 'sedmRoundTripPair'))({ ruleModulePath: 'forges/sedm/lib/sedmRoundTripPair.js' });
 
 // the measured expectation (snapshot 01, 2026-10-24; DESIGN-G0-sedm-102426.md), as data
 const EXPECTED = Object.freeze({
@@ -241,6 +242,14 @@ ROUND_TRIP_TWIN_LIST.forEach((oneTwin, twinIndex) => taskList.push((args, next) 
 		next('', args);
 	});
 }));
+// the instrument's own refusal: a structures section the profile reads and the file lacks is refused by the pair, never read as empty
+taskList.push((args, next) => {
+	const snapshotPath = perturbedSnapshotPath({ caseName: 'pairSectionAbsent', fileName: sourceProfile.structuresFileName, perturbText: editedStructuresText((structures) => { delete structures.useCases; }) });
+	sedmRoundTripPair.canonicalizeSource({ snapshotPath, verifiedFileList: [] }, (canonicalizeError) => {
+		harness.match('RED-OBSERVED: the pair refuses a structures file lacking a section it reads', String(canonicalizeError), /has no list at useCases/);
+		next('', args);
+	});
+});
 // the SOURCE perturbed: the derived column made to disagree with the 14 it summarises. The walk does not read it; the round trip must.
 taskList.push((args, next) => {
 	const snapshotPath = perturbedSnapshotPath({ caseName: 'derivedDisagrees', fileName: sourceProfile.csvFileName, perturbText: editedCsvText(({ recordList }) => { firstInScope(recordList, (oneRecord) => oneRecord.cellList[POSITION.anyEtl] === '').cellList[POSITION.anyEtl] = 'Y'; }) });
