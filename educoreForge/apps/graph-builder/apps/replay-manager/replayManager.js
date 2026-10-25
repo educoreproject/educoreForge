@@ -118,6 +118,17 @@ const NEO4J_CONTAINER_SECURITY_ENV_LIST = Object.freeze([
 	'NEO4J_internal_dbms_cypher__ip__blocklist=0.0.0.0/0,::/0',
 ]);
 
+// THE SCRATCH VOLUME LABEL ⟪EC1, build-store economy, VELVET_RIDGE for BRONZE_CROWN 2026-10-25⟫. The neo4j image declares two
+// data volumes; a scratch container now mounts each one explicitly, still ANONYMOUS (so `docker rm -v` still removes it) but
+// LABELLED with its graph's name. Before this, a volume orphaned by someone else's plain `docker rm -f` (the wave 2 wrappers'
+// disposal of retained graphs: 24 volumes, ~16 GB in an hour) carried no mark of whose it was, so nothing could ever find it
+// again. A dangling volume with this label is a scratch graph's leftover by construction, and create sweeps them (below).
+// The destination list is the image's declared VOLUME list; test-scratchVolumeLeak (m) refuses an unlabelled mount if it grows.
+const SCRATCH_VOLUME_LABEL_NAME = 'educoreForge.scratchGraph';
+const SCRATCH_VOLUME_DESTINATION_LIST = Object.freeze(['/data', '/logs']);
+const scratchVolumeMountArgsFor = (graphName) =>
+	SCRATCH_VOLUME_DESTINATION_LIST.reduce((soFar, destinationPath) => soFar.concat(['--mount', `type=volume,dst=${destinationPath},volume-label=${SCRATCH_VOLUME_LABEL_NAME}=${graphName}`]), []);
+
 // THE DECLARED CONSERVATION EXEMPTION (WORKORDER-sifViaConservation-090226, JOB 2).
 // harvest REFUSES a spec that carries no conservationExpectation at all, because an absent field
 // would make "nobody threaded the loaded set" indistinguishable from "there is legitimately nothing
@@ -565,6 +576,29 @@ const disposeScratchGraph = (
 	});
 };
 
+// sweepLeakedScratchVolumes — ⟪EC1⟫ remove every DANGLING volume carrying the scratch label: a volume no container references
+// any more (a running, stopped or retained graph still references its own, so it is never dangling) whose label says a scratch
+// graph made it. Removed by exact name; never a prune, never an unlabelled or named volume. create runs it first, so whatever
+// leaked since the last provision is gone before the next one adds to the disk. Reports ('', removedVolumeNameList) or a note
+// the caller logs: a failed sweep must not stop a build, and must not pass unseen either.
+const sweepLeakedScratchVolumes = ({ runDockerCommand }, callback) => {
+	runDockerCommand(['volume', 'ls', '-q', '--filter', 'dangling=true', '--filter', `label=${SCRATCH_VOLUME_LABEL_NAME}`], (listErr, stdout, stderr) => {
+		if (listErr) {
+			callback(`listing leaked scratch volumes failed: ${listErr.message}${stderr ? `\n${stderr}` : ''}`, []);
+			return;
+		}
+		const leakedVolumeNameList = String(stdout || '').split('\n').map((oneLine) => oneLine.trim()).filter(Boolean);
+		if (leakedVolumeNameList.length === 0) {
+			callback('', []);
+			return;
+		}
+		runDockerCommand(['volume', 'rm', ...leakedVolumeNameList], (removeErr, removeStdout, removeStderr) => {
+			// a second process sweeping at the same moment removes some first: docker reports those, and the rest are still gone
+			callback(removeErr ? `removing leaked scratch volume(s) ${leakedVolumeNameList.join(', ')}: ${removeErr.message}${removeStderr ? `\n${removeStderr}` : ''}` : '', leakedVolumeNameList);
+		});
+	});
+};
+
 // -----
 // defaultWaitForReadiness — bolt TCP open, then an authenticated cypher round-trip. Injectable so a
 // create-failure test can force a readiness timeout without a real container.
@@ -659,7 +693,7 @@ const compareRestoreConservation = ({ graphName, loadedConservationSummary, grap
 // detached shell that outlives the process, polls `kill -0 <pid>`, and on its end removes what the file still names.
 const SCRATCH_REGISTRY_FILE_PATH = path.join(os.tmpdir(), `educoreForge-scratchContainers-${process.pid}.list`);
 const EXIT_WATCHDOG_POLL_SECONDS = 2;
-const EXIT_WATCHDOG_SCRIPT_TEXT = [
+const EXIT_WATCHDOG_BODY_TEXT = [
 	'ownerPid="$1"; registryFilePath="$2"',
 	`while kill -0 "$ownerPid" 2>/dev/null; do sleep ${EXIT_WATCHDOG_POLL_SECONDS}; done`,
 	'if [ -f "$registryFilePath" ]; then',
@@ -668,6 +702,16 @@ const EXIT_WATCHDOG_SCRIPT_TEXT = [
 	'  done < "$registryFilePath"',
 	'  rm -f "$registryFilePath"',
 	'fi',
+].join('\n');
+// THE WATCHDOG IS NOBODY'S CHILD ⟪EC1⟫. The lane wrappers' memory guard stops a run with `pkill -TERM -P <run pid>; kill -TERM
+// <run pid>`; when the run pid was graphBuilder's own, pkill -P found the watchdog among its children and killed it, and the
+// scratch containers outlived the process (measured: test-scratchVolumeLeak (k) red on cfbfdff8, container and both volumes
+// still there after 40 s). The launcher ignores TERM, INT and HUP (an ignored signal stays ignored across exec), starts the body
+// in the background and exits, so the body is reparented away from this process before any wrapper looks for children.
+const EXIT_WATCHDOG_LAUNCHER_TEXT = [
+	"trap '' TERM INT HUP",
+	'/bin/sh -c "$1" educoreForgeScratchWatchdog "$2" "$3" &',
+	'exit 0',
 ].join('\n');
 const registeredScratchContainerNameSet = new Set();
 let exitWatchdogStarted = false;
@@ -678,7 +722,7 @@ const startExitWatchdog = () => {
 		return;
 	}
 	exitWatchdogStarted = true;
-	spawn('/bin/sh', ['-c', EXIT_WATCHDOG_SCRIPT_TEXT, 'educoreForgeScratchWatchdog', String(process.pid), SCRATCH_REGISTRY_FILE_PATH], { detached: true, stdio: 'ignore' }).unref();
+	spawn('/bin/sh', ['-c', EXIT_WATCHDOG_LAUNCHER_TEXT, 'educoreForgeScratchWatchdogLauncher', EXIT_WATCHDOG_BODY_TEXT, String(process.pid), SCRATCH_REGISTRY_FILE_PATH], { detached: true, stdio: 'ignore' }).unref();
 };
 // startWatchdog is create's (injectable for the kill gate's red twin only, deps.startExitWatchdog)
 const registerScratchContainer = (containerName, startWatchdog) => {
@@ -924,8 +968,8 @@ const moduleFunction =
 
 	// -----
 	// create — provision a throwaway DEV_* Neo4j container; hand back the graph handle. The
-	// credential is generated here and lives ONLY in the handle (no registry, no file). No
-	// docker volume: the data's lifetime IS the container's lifetime.
+	// credential is generated here and lives ONLY in the handle (no registry, no file). No NAMED
+	// docker volume: the data's lifetime IS the container's lifetime (its anonymous volumes carry the scratch label, EC1).
 	//
 	// FAILURE DISPOSES WHAT IT STARTED (Item 4). Once `docker run` has succeeded, the container is
 	// live; if readiness then times out (the common failure on a memory-tight box, which is exactly
@@ -950,6 +994,18 @@ const moduleFunction =
 		let containerLaunched = false;
 		let portLockHeld = false;
 		const taskList = new taskListPlus();
+
+		// ⟪EC1⟫ before adding a container, remove what earlier scratch graphs leaked (a note, never a stop: see the sweep's header)
+		taskList.push((args, next) => {
+			sweepLeakedScratchVolumes({ runDockerCommand }, (sweepNote, removedVolumeNameList) => {
+				if (sweepNote) {
+					xLog.error(`[replayManager] leaked-volume sweep before '${graphName}': ${sweepNote}`);
+				} else if (removedVolumeNameList.length > 0) {
+					xLog.status(`[replayManager] removed ${removedVolumeNameList.length} leaked scratch volume(s) before '${graphName}': ${removedVolumeNameList.join(', ')}`);
+				}
+				next('', args);
+			});
+		});
 
 		// the port search, the run and its verification happen under ONE cross-process lock (see the lock's header)
 		taskList.push((args, next) => {
@@ -976,6 +1032,7 @@ const moduleFunction =
 				'-e',
 				`NEO4J_AUTH=${NEO4J_USER}/${password}`,
 				...NEO4J_CONTAINER_SECURITY_ENV_LIST.reduce((soFar, oneEnv) => soFar.concat(['-e', oneEnv]), []),
+				...scratchVolumeMountArgsFor(graphName),
 				settings.neo4jImage,
 			];
 			xLog.status(
@@ -1689,6 +1746,11 @@ module.exports.watchContainerLiveness = watchContainerLiveness;
 module.exports.generateScratchPassword = generateScratchPassword;
 module.exports.readContainerLogTail = readContainerLogTail;
 module.exports.SCRATCH_REGISTRY_FILE_PATH = SCRATCH_REGISTRY_FILE_PATH;
+// ⟪EC1⟫ the volume label, the sweep and the watchdog body, exported so test-scratchVolumeLeak drives the real ones (and its
+// signal twin can launch the body the pre-EC1 way)
+module.exports.SCRATCH_VOLUME_LABEL_NAME = SCRATCH_VOLUME_LABEL_NAME;
+module.exports.sweepLeakedScratchVolumes = sweepLeakedScratchVolumes;
+module.exports.EXIT_WATCHDOG_BODY_TEXT = EXIT_WATCHDOG_BODY_TEXT;
 module.exports.findAvailablePortPair = findAvailablePortPair;
 module.exports.PORT_ALLOCATION_LOCK_DIR_PATH = PORT_ALLOCATION_LOCK_DIR_PATH;
 module.exports.engineVersionsFor = engineVersionsFor;
