@@ -22,6 +22,9 @@ DESCRIPTION
 
 EXIT STATUS
      0 every assertion passed;  1 otherwise.
+
+FILES
+     forges/clr/assets/standardSourceData/01/clr_v2p0_oas.json   git-ignored; see 01/README_PROVENANCE.md to acquire
 `;
 
 const fs = require('fs');
@@ -60,8 +63,11 @@ const sortedText = (counts) => JSON.stringify(counts, Object.keys(counts).sort()
 const contentCountBy = (itemList, nameOf, roleOrTypeList) => countBy(itemList.filter((oneItem) => roleOrTypeList.indexOf(nameOf(oneItem)) !== -1), nameOf);
 const copyOfForgeResult = (forgeResult) => ({ nodes: forgeResult.nodes.map((oneNode) => ({ ...oneNode, properties: { ...oneNode.properties } })), edges: forgeResult.edges.map((oneEdge) => ({ ...oneEdge, properties: { ...oneEdge.properties } })) });
 const scratchRootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'clrForgeTest-'));
-const sourceDocument = JSON.parse(fs.readFileSync(path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME), 'utf8'));
-const sourceRequiredCount = Object.values(sourceDocument.components.schemas).reduce((total, oneSchema) => total + (oneSchema.required || []).length, 0);
+// The publisher's bytes are git-ignored (01/README_PROVENANCE.md has the acquisition recipe): a tree that has not run the recipe is REFUSED
+// BY NAME in section 1, the JEDx and CASE form, never a raw ENOENT.
+const sourceIsPresent = fs.existsSync(path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME));
+const sourceDocument = sourceIsPresent ? JSON.parse(fs.readFileSync(path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME), 'utf8')) : undefined;
+const sourceRequiredCount = sourceIsPresent ? Object.values(sourceDocument.components.schemas).reduce((total, oneSchema) => total + (oneSchema.required || []).length, 0) : undefined;
 
 const forgeSnapshot = (callback) => bundle.forge({ sourcePath: path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME), owner: 'test', skipEmbedding: true }, callback);
 const validateDouble = ({ forgeResult, caseName }, callback) => {
@@ -77,6 +83,11 @@ const taskList = new taskListPlus();
 // -----------------------------------------------------------------
 taskList.push((args, next) => {
 	harness.section('SECTION 1 — snapshot 01: the bytes, the pin, the declaration');
+	harness.accepts('the git-ignored publisher file is present (else run the recipe in 01/README_PROVENANCE.md)', sourceIsPresent ? [] : [`absent: ${SOURCE_FILE_NAME}`]);
+	if (!sourceIsPresent) {
+		next('the CLR publisher bytes are absent: run the acquisition recipe in forges/clr/assets/standardSourceData/01/README_PROVENANCE.md', args);
+		return;
+	}
 	harness.equal('clr_v2p0_oas.json sha256 is the 2026-05-28 held copy and the 2026-10-24 fetch', crypto.createHash('sha256').update(fs.readFileSync(path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME))).digest('hex'), EXPECTED.sourceSha256);
 	harness.equal('the source says openapi 3.0.1, info.version 2.0, x-status Final', `${sourceDocument.openapi}|${sourceDocument.info.version}|${sourceDocument.info['x-status']}`, '3.0.1|2.0|Final');
 	harness.equal('declaration names (wave 2 work order)', `${forgeDeclaration.standardKey}|${forgeDeclaration.standardSource}|${forgeDeclaration.standardFamily}|${forgeDeclaration.nativeIdentifierPropertyName}`, 'clr|CLR|CLR|null');

@@ -199,6 +199,7 @@ const OPENAPI_KIT_LISTING_RULE_BY_BUNDLE_TOKEN = Object.freeze({
 	lif: Object.freeze({ forgeDeclarationModuleName: 'lifForgeDeclaration', openapiProfileFileName: 'lifOpenapiProfile.json' }),
 	case: Object.freeze({ forgeDeclarationModuleName: 'caseForgeDeclaration', openapiProfileFileName: 'caseOpenapiProfile.json' }),
 	eduapi: Object.freeze({ forgeDeclarationModuleName: 'eduapiForgeDeclaration', openapiProfileFileName: 'eduapiOpenapiProfile.json' }),
+	clr: Object.freeze({ forgeDeclarationModuleName: 'clrForgeDeclaration', openapiProfileFileName: 'clrOpenapiProfile.json' }),
 });
 
 const openapiKitListingEmitterFor = ({ bundleToken }) => {
@@ -247,6 +248,7 @@ const statementListingEmitterByBundleToken = Object.freeze({
 	case: openapiKitListingEmitterFor({ bundleToken: 'case' }),
 	sedm: sedmListingEmitter,
 	eduapi: openapiKitListingEmitterFor({ bundleToken: 'eduapi' }),
+	clr: openapiKitListingEmitterFor({ bundleToken: 'clr' }),
 });
 
 module.exports = { installReadOnlyDriverGuard, statementListingEmitterByBundleToken };
