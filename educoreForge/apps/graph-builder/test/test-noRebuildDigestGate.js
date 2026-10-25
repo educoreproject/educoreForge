@@ -16,6 +16,8 @@
 //   (d) RED TWIN: a renamed bridge (the recipe names a name the registry lacks) → NOT_REGISTERED; a registry whose plugin
 //       bridgeName moved → PAIRKEY_ABSENT (the silent-zero case, trap T1)
 //   (e) the baseline is not touched: every decision store's bytes are unchanged
+//   (f) a source stating no version (versionSource 'unknown') takes its version from the capture ONLY when the capture says unknown;
+//       RED TWINS: a capture stating a real version, no capture entry, and any other stamp refusal each refuse by name
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = () => `
@@ -73,13 +75,37 @@ const recipeNamed = (recipeName) => {
 	}
 	return loaded.recipe;
 };
-const versionByTokenFor = (recipe) => recipe.standards.reduce((soFar, oneStandard) => {
-	const stamp = forger.getVersionStamp({ standard: oneStandard.token });
-	if (stamp.error) {
-		throw new Error(`${moduleName}: ${oneStandard.token}: ${stamp.error}`);
+// ⟪W2A, BRONZE_CROWN ruling 2026-10-25⟫ A standard whose publisher states no version (versionSource 'unknown', e.g. SEDM: its blocks
+// are sedm@unknown_01) cannot be stamped without forging, and getVersionStamp refuses it. Such a token takes the version 'unknown_<snap>'
+// ONLY when the recipe's CAPTURED standardBase subject for it says exactly that (<token>@unknown_<snap>_base); any other captured value,
+// or no captured entry, refuses by name. The gate still detects a change; it only stops demanding a forge for a version nobody states.
+const UNKNOWN_VERSION_SOURCE_REFUSAL = /derives versionSource 'unknown' from its snapshot alone/;
+const versionByTokenResultFor = ({ recipe, captureEntry, versionStampFor }) => recipe.standards.reduce((soFar, oneStandard) => {
+	if (soFar.error) {
+		return soFar;
 	}
-	return { ...soFar, [oneStandard.token]: buildStatics.explicitVersionFrom(stamp.value) };
-}, {});
+	const stamp = versionStampFor({ standard: oneStandard.token });
+	if (!stamp.error) {
+		return { versionByToken: { ...soFar.versionByToken, [oneStandard.token]: buildStatics.explicitVersionFrom(stamp.value) } };
+	}
+	if (!UNKNOWN_VERSION_SOURCE_REFUSAL.test(stamp.error)) {
+		return { error: `${moduleName}: ${oneStandard.token}: ${stamp.error}` };
+	}
+	const capturedBaseSubjectList = captureEntry ? captureEntry.memberList.filter((oneMember) => oneMember.kind === 'standardBase' && oneMember.subject.startsWith(`${oneStandard.token}@`)).map((oneMember) => oneMember.subject) : [];
+	const unknownMatch = capturedBaseSubjectList.length === 1 ? new RegExp(`^${oneStandard.token}@(unknown_[A-Za-z0-9]+)_base$`).exec(capturedBaseSubjectList[0]) : null;
+	if (!unknownMatch) {
+		return { error: `${moduleName}: ${oneStandard.token}: its source states no version (versionSource 'unknown'), and the captured standardBase subject is ${JSON.stringify(capturedBaseSubjectList)}, not exactly one '${oneStandard.token}@unknown_<snapshot>_base'; REFUSED rather than trusting a version the capture does not state as unknown` };
+	}
+	return { versionByToken: { ...soFar.versionByToken, [oneStandard.token]: unknownMatch[1] } };
+}, { versionByToken: {} });
+const captureEntryFor = (recipeName) => capture.recipeCaptureList.find((oneCapture) => oneCapture.recipeName === recipeName);
+const versionByTokenFor = (recipe, recipeName) => {
+	const versionResult = versionByTokenResultFor({ recipe, captureEntry: captureEntryFor(recipeName), versionStampFor: forger.getVersionStamp });
+	if (versionResult.error) {
+		throw new Error(versionResult.error);
+	}
+	return versionResult.versionByToken;
+};
 const decisionStorePathFor = (recipeName) => path.join(baselineDirectoryPath, recipeName, 'decisions.sqlite3');
 const sha256OfFile = (filePath) => crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 const shaBefore = capturedRecipeNameList.reduce((soFar, recipeName) => ({ ...soFar, [recipeName]: fs.statSync(decisionStorePathFor(recipeName)).mtimeMs }), {});
@@ -96,7 +122,7 @@ const frozenHeadersFor = (recipeName) => {
 };
 const gateFor = (recipeName, registryUnderTest, recipeUnderTest) => {
 	const recipe = recipeUnderTest || recipeNamed(recipeName);
-	return digestGateLib.digestGateFor({ recipe, registry: registryUnderTest || registry, versionByToken: versionByTokenFor(recipe), frozenHeaderByPairKey: frozenHeadersFor(recipeName) });
+	return digestGateLib.digestGateFor({ recipe, registry: registryUnderTest || registry, versionByToken: versionByTokenFor(recipe, recipeName), frozenHeaderByPairKey: frozenHeadersFor(recipeName) });
 };
 const rowText = (oneRow) => `${oneRow.bridgeName} ${oneRow.verdict}`;
 
@@ -131,6 +157,23 @@ harness.equal('a recipe naming an unregistered bridge → NOT_REGISTERED, named'
 const movedDeclaration = { ...registry.entryByBridgeName[twinBridgeName].bridgeDeclaration, bridgeName: `${twinBridgeName}Moved` };
 const moved = gateFor(twinRecipeName, registryWithEntry(twinBridgeName, { bridgeDeclaration: movedDeclaration, declarationCanonicalText: bridgePluginContractLib.canonicalJsonText(movedDeclaration) }));
 harness.equal('a plugin whose bridgeName moved → PAIRKEY_ABSENT (a plain build would write zero edges)', moved.rowList.filter((oneRow) => oneRow.verdict !== digestGateLib.VERDICT_PASS && oneRow.verdict !== digestGateLib.VERDICT_STRUCTURAL).map(rowText).join(','), `${twinBridgeName} ${digestGateLib.VERDICT_PAIRKEY_ABSENT}`);
+
+harness.section('(f) the unknown-version rule: a source that states no version takes it from the capture ONLY when the capture says unknown');
+// the population: every gated recipe whose capture holds an unknown-version standardBase (goldWave2: sedm@unknown_01_base)
+const unknownRecipeName = gateSet.gatedRecipeList.find((recipeName) => captureEntryFor(recipeName).memberList.some((oneMember) => oneMember.kind === 'standardBase' && /@unknown_[A-Za-z0-9]+_base$/.test(oneMember.subject)));
+harness.ok('a gated recipe holds an unknown-version standard (else this rule is untested)', unknownRecipeName !== undefined, JSON.stringify(gateSet.gatedRecipeList));
+if (unknownRecipeName !== undefined) {
+	const unknownRecipe = recipeNamed(unknownRecipeName);
+	const unknownCapture = captureEntryFor(unknownRecipeName);
+	const unknownBase = unknownCapture.memberList.find((oneMember) => oneMember.kind === 'standardBase' && /@unknown_[A-Za-z0-9]+_base$/.test(oneMember.subject));
+	const unknownToken = unknownBase.subject.split('@')[0];
+	harness.match(`precondition: getVersionStamp refuses ${unknownToken} on versionSource 'unknown' (the forge-demanding refusal this rule answers)`, String(forger.getVersionStamp({ standard: unknownToken }).error), UNKNOWN_VERSION_SOURCE_REFUSAL);
+	const statedCaptureWith = (subjectFor) => ({ ...unknownCapture, memberList: unknownCapture.memberList.map((oneMember) => (oneMember === unknownBase ? { ...oneMember, subject: subjectFor(oneMember.subject) } : oneMember)) });
+	harness.equal(`${unknownToken} takes '${unknownBase.subject.replace(/^[^@]+@/, '').replace(/_base$/, '')}' from the capture`, versionByTokenResultFor({ recipe: unknownRecipe, captureEntry: unknownCapture, versionStampFor: forger.getVersionStamp }).versionByToken[unknownToken], unknownBase.subject.replace(/^[^@]+@/, '').replace(/_base$/, ''));
+	harness.match('RED TWIN: a capture stating a REAL version for an unknown-source token → REFUSED by name', String(versionByTokenResultFor({ recipe: unknownRecipe, captureEntry: statedCaptureWith(() => `${unknownToken}@1_0_base`), versionStampFor: forger.getVersionStamp }).error), /states no version .* REFUSED/);
+	harness.match('RED TWIN: no capture entry for the recipe → REFUSED by name', String(versionByTokenResultFor({ recipe: unknownRecipe, captureEntry: undefined, versionStampFor: forger.getVersionStamp }).error), /states no version .* REFUSED/);
+	harness.match('RED TWIN: any OTHER getVersionStamp refusal is not answered from the capture', String(versionByTokenResultFor({ recipe: unknownRecipe, captureEntry: unknownCapture, versionStampFor: ({ standard }) => (standard === unknownToken ? { error: 'forger.getVersionStamp: bundle resolved no snapshot directory' } : forger.getVersionStamp({ standard })) }).error), /resolved no snapshot directory/);
+}
 
 harness.section('(e) the baseline is read, never written');
 harness.equal('every baseline decision store is unmodified (mtime)', capturedRecipeNameList.filter((recipeName) => fs.statSync(decisionStorePathFor(recipeName)).mtimeMs !== shaBefore[recipeName]).join(','), '');
