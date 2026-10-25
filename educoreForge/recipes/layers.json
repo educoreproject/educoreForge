@@ -269,6 +269,98 @@
 						}
 					],
 					"note": "appended by lane M (STEEL_BRIDGE) from the latest block of every pairKey in /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/nextStandards_102326/assembly/wave1/store/decisions.sqlite3 whose header judgeKind is jev:jev-1.13.0:data:cfg-cf8d41f82791 (the GOLD_EVAL_261024_wave1 store); BRONZE_CROWN ruling 2026-10-24"
+				},
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/org/educore",
+						"publishedAt": "2026-10-25T04:09:27Z",
+						"contentId": "79059518c9c9593f5f2f3f29611cd9b72053108bb855579404c99737936e9ec6",
+						"versionTag": "cfg-cf8d41f82791.wave2-261025"
+					},
+					"registrationStatus": "Standard",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-cf8d41f82791",
+					"contentIdBasis": "sortedMemberBlockHashList",
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::case@1.1::caseCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "03c14661ba2ad066f3253bea968bc85195964ecc450fd5061ed6bc37bd6ad0c8"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::clr@2.0::clrCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "14a9def4d03bb4406ff830d439ad773947a79320d091ff47713651abe32c75d9"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::eduapi@1.0::eduapiCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "1f5d7f0f298a50e2f59d35c5736ff8bf4e0e7893b0859e0107fcee3ba4ad5132"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::jedx@1.0.0::jedxCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "3f6047baf4fd79401e0b89117f0655b3f7c389cd04c1a79f9a0243c25582a38c"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::lif@2.0::lifCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "a94e106d01a93feac5bca920d8c0221fffe4328d9727e8ffee8819bdc892b54e"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::openbadges@3.0::openbadgesCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "24a8fd234e6741488d67e9ec191da13a6b0503e1e9be8a3197fb42a0e5d844b9"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermRowCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "ef33ba97ad95d4eddd7d3b43092a1a8b3d4d3c4cd68145d3fdbac066b27ceea3"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermShapeCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "50878e31578b2aed6a49e908142206f133d49aa6ec7a26130ee512037616e794"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::sif260928@4.3::sif260928CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::case@1.1::caseCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "e7170141198c4d6a4b425925f40c9af9e3ec1686c29358177979616a2b049659"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::clr@2.0::clrCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "aa5d5ee52b22575ead98ba03ea85cdce75fa5a8f33670706e8bd38846cc69005"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::eduapi@1.0::eduapiCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "27f104632f7929726460322820d2b8ea33d76a02900e3299d29aeaa6dcf589e7"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::jedx@1.0.0::jedxCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "d4f56a5f0bca9f11df411034b579e7501f24e57ffd842fdd1d43e183d659af6b"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::lif@2.0::lifCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "f71edc919907cb6c6437ab0a4f6cd06f5659cfe87154e61c7d0577b27b84b13f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::openbadges@3.0::openbadgesCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "b7beefa7514a2c4543ea2b4a1bcf7166b28a8754f1b04bb40a103f847743f6b0"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermRowCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "1df1ddb3d112787efe7279c22459b5ec294383465314953d2840559ccf1ddc2f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermShapeCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "e7248e75d720538f7eb6c8330b58897cbeb077402ab71804f31e387a385b150f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::sedm@unknown_01::sedmElementCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "2d9da34e3524f097f011c2779b71ee24e03c86c3607b69c3d38c932d3fcfef8d"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::sif260928@4.3::sif260928CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "4fbf473aca97ef69ac132eda524dac156b484ba13334e7b1afab4d33c589a8ee"
+						}
+					],
+					"note": "appended by W2A (MIDNIGHT_STONE) from the latest block of every pairKey in /Users/tqwhite/educoreForgeScratch/wave2/assembly/wave2/store/decisions.sqlite3 whose header judgeKind is jev:jev-1.13.0:data:cfg-cf8d41f82791 (the GOLD_EVAL_261025_wave2 store, manifest 0989c0a1); WORKORDER-assembly-wave2-102426 W2A-1.6"
 				}
 			],
 			"statusChangeList": [
@@ -279,6 +371,14 @@
 					"changedBy": "https://w3id.org/EDUcore/agent/org/educore",
 					"supersededByVersionTag": "cfg-cf8d41f82791.wave1-261024",
 					"note": "BRONZE_CROWN ruling 2026-10-24: the wave-1 gold judged JEDx, LIF and Open Badges under the same configuration"
+				},
+				{
+					"versionTag": "cfg-cf8d41f82791.wave1-261024",
+					"registrationStatus": "Superseded",
+					"changedAt": "2026-10-25T04:26:02Z",
+					"changedBy": "https://w3id.org/EDUcore/agent/org/educore",
+					"supersededByVersionTag": "cfg-cf8d41f82791.wave2-261025",
+					"note": "W2A (WORKORDER-assembly-wave2-102426 W2A-1.6): the wave-2 gold judged CLR, CASE, EduAPI and SEDM under the same configuration; the member set grew from 12 to 19"
 				}
 			]
 		}
