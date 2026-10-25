@@ -1121,7 +1121,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postNsV2FbPescCompose-102426 -> postNsD2ePescCompose-102426, tag cut ON this commit. CENSUS over this gate's paths: lib/bridge-framework/test/
 // test-bgNosub.js 6/1 (the D1 seamDiffEmpty re-anchor for the new CLR forge files) and lane D's ADDED roster rows: test-bridgeComposer.js 6/0,
 // test-hubBridging.js 5/2, test-bgJudgeSlot.js 3/0, test-bgDecl.js 5/2. No bridge-framework or bridge-maker source.
-const P1_BASELINE_COMMIT = 'postNsD2ePescCompose-102426'; // re-anchored by QUIET_GATE (census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-25 (INDIGO_GARDEN; nextStandards-102326 wave-3 ASSEMBLY W3A, the ONE re-anchor of the wave, pre-granted by
+// BRONZE_CROWN in WORKORDER-assembly-wave3-102526) ═══ postNsD2ePescCompose-102426 -> postW3PescCompose-102526, tag cut ON this commit.
+// Observed RED first on the integrated head e2e341e2 (25/26). CENSUS over this gate's paths (numstat from the D2e tag): both lanes' ADDED
+// roster tables, merged keep-both, lib/bridge-framework/test/test-bgDecl.js 8/2, test-bgJudgeSlot.js 7/0, test-bridgeComposer.js 17/0,
+// test-hubBridging.js 8/2; lane H's vocabulary commit (landed once) lib/vocabulary/graph-contract.js 3/2, vocabulary.js 5/1; and
+// lib/bridge-framework/test/test-bgNosub.js (this commit's own seam re-anchors). Exactly the paths lanes H and I reported. No bridge-framework or
+// bridge-maker source.
+const P1_BASELINE_COMMIT = 'postW3PescCompose-102526'; // re-anchored by INDIGO_GARDEN (nextStandards wave-3 assembly; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

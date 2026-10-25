@@ -249,7 +249,14 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // LAYER_PRODUCER_KIND(_LIST), DECISION_BLOCK_PRODUCER_KIND_LIST, LAYER_MATCH_BASIS, SSSOM_VERSION_FOR_ONE_ONE_SLOTS), vocabulary-definitions.js
 // 1/0 (the one schema-view term matchEdgeProperty:assertionId), test/test-mappingProperties.js 6/3 (26 -> 27 names), test/test-sifEdgeVocabulary.js
 // 3/1 (schema view +1). vocabulary-definitions.js is outside (ii)'s allowed vocabulary.js+tests, as D3's row was. Allowed-path list NOT widened.
-const POST_D1_BASE_TAG = 'postMl1VocabularyIi-102426'; // re-anchored by STEEL_BRIDGE (mappingLayers ML1; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-25 (INDIGO_GARDEN; nextStandards-102326 wave-3 ASSEMBLY W3A, the ONE re-anchor of the wave, pre-granted by
+// BRONZE_CROWN in WORKORDER-assembly-wave3-102526) ═══ (ii) postMl1VocabularyIi-102426 -> postW3VocabularyIi-102526, tag cut ON this commit.
+// Observed RED first on the integrated head e2e341e2 (55/64). CENSUS (lib/vocabulary/, numstat from the ML1 tag): graph-contract.js 3/2
+// (standardFamily meaning names ONEROSTER and MEDBIQ; producer-local stems Oneroster, Medbiq), vocabulary.js 5/1 (STANDARD_FAMILY.ONEROSTER,
+// .MEDBIQ): lane H's vocabulary commit 814c3be0, landed ONCE (lane I's cherry-pick ae46a76a is the identical patch). graph-contract.js is
+// outside (ii)'s allowed vocabulary.js+tests, as D0's, C0's, K0's and P5's rows were. Exactly the paths lanes H and I reported. Allowed-path
+// list NOT widened.
+const POST_D1_BASE_TAG = 'postW3VocabularyIi-102526'; // re-anchored by INDIGO_GARDEN (nextStandards wave-3 assembly; census in the block above); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -541,7 +548,11 @@ const POST_D1_BASE_TAG = 'postMl1VocabularyIi-102426'; // re-anchored by STEEL_B
 // postNsCForgeFrameworkIii-102326 -> postNsV2ForgeFrameworkIii-102426, tag cut ON this commit. CENSUS over this gate's paths:
 // lib/forge-framework/test/test-gStandardMetadata.js 21/0 (conjuncts s, t, u, v: the CLR, CASE, EduAPI and SEDM families admitted, and their
 // twins). No framework source.
-const PHASE0_ANCHOR_TAG = 'postNsV2ForgeFrameworkIii-102426'; // re-anchored by QUIET_GATE (nextStandards wave 2 D0; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-25 (INDIGO_GARDEN; nextStandards-102326 wave-3 ASSEMBLY W3A, the ONE re-anchor of the wave, pre-granted by
+// BRONZE_CROWN) ═══ PHASE0_ANCHOR_TAG postNsV2ForgeFrameworkIii-102426 -> postW3ForgeFrameworkIii-102526, tag cut ON this commit. Observed RED
+// first on the integrated head e2e341e2. CENSUS over this gate's paths: lib/forge-framework/test/test-gStandardMetadata.js 11/0 (lane H: the
+// ONEROSTER and MEDBIQ families admitted, and their twins). No framework source. Exactly the path lanes H and I reported.
+const PHASE0_ANCHOR_TAG = 'postW3ForgeFrameworkIii-102526'; // re-anchored by INDIGO_GARDEN (nextStandards wave-3 assembly; census in the block above); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -1141,7 +1152,17 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // postNsD1dSeamDiffEmpty-102426, tag cut ON this commit. CENSUS over this gate's paths: forges/clr/forgeClr.js 26/0, lib/clrForgeDeclaration.js
 // 62/0, lib/clrHooks.js 9/0 (a NEW forge's entry, declaration and hooks: the lane C1 coupling). No existing forge, no framework, build, forger or
 // replay source.
-const PHASE3_ANCHOR_TAG = 'postNsD1dSeamDiffEmpty-102426'; // re-anchored by QUIET_GATE (nextStandards wave 2 D1; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-25 (INDIGO_GARDEN; nextStandards-102326 wave-3 ASSEMBLY W3A, the ONE re-anchor of the wave for both lanes' new files,
+// pre-granted by BRONZE_CROWN) ═══ PHASE3_ANCHOR_TAG postNsD1dSeamDiffEmpty-102426 -> postW3SeamDiffEmpty-102526, tag cut ON this commit.
+// Observed RED first on the integrated head e2e341e2 (14 paths). CENSUS over this gate's paths: lane H, three NEW forges' entry, declaration
+// and hooks: forges/onerosterrostering/forgeOnerosterRostering.js 27/0, lib/onerosterrosteringForgeDeclaration.js 62/0,
+// lib/onerosterrosteringHooks.js 9/0; forges/onerostergradebook/forgeOnerosterGradebook.js 27/0, lib/onerostergradebookForgeDeclaration.js 62/0,
+// lib/onerostergradebookHooks.js 9/0; forges/onerosterresources/forgeOnerosterResources.js 27/0, lib/onerosterresourcesForgeDeclaration.js 62/0,
+// lib/onerosterresourcesHooks.js 9/0; plus apps/graph-builder/apps/replay-manager/lib/finishing/test/test-schemaViewContractProjection.js 2/1
+// (its (e) twin admits Oneroster*, Medbiq* residue) and lib/forge-framework/test/test-gStandardMetadata.js 11/0. Lane I, one NEW forge:
+// forges/medbiq/forgeMedbiq.js 26/0, lib/medbiqForgeDeclaration.js 60/0, lib/medbiqHooks.js 9/0. Exactly the paths lanes H and I reported. No
+// existing forge, no build, forger, replay or replay-manager source; lib/xsd-forge is not on this gate's path list. Allowed-path list NOT widened.
+const PHASE3_ANCHOR_TAG = 'postW3SeamDiffEmpty-102526'; // re-anchored by INDIGO_GARDEN (nextStandards wave-3 assembly; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
