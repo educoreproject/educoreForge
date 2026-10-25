@@ -1133,7 +1133,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // CENSUS over this gate's paths (numstat from the W3 tag): lib/bridge-framework/test/test-bgNosub.js 12/2 ONLY (EC's seam re-anchor at
 // 5cc6a0cb: PHASE3_ANCHOR_TAG and PHASE0_ANCHOR_TAG moved for EC1's replayManager.js move). No bridge-framework, bridge-maker, build,
 // interfaces or vocabulary source.
-const P1_BASELINE_COMMIT = 'postEcPescCompose-102526'; // re-anchored by VELVET_RIDGE (EC; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-25 (MYSTIC_DREAM; mappingLayers-102326 ML3, the lane's own file, granted in WORKORDER-ML3) ═══
+// postEcPescCompose-102526 -> postMl3PescCompose-102526, tag cut ON this commit. Observed RED first at ml/m3-sssom 169ab7ee (25/26).
+// CENSUS over this gate's paths (numstat from the EC tag): lib/bridge-framework/sssomExporter.js 123/117 ONLY (ML3-a: blockRowsFor, a PURE
+// extraction of the per-block export's row builder so the layer-version renderer shares it; the per-block export is byte-identical, and
+// test-bgP7 44/44, test-bgFanoutConsumers 40/40 with their oracles unchanged). No materialiser, bridge-maker, build, interfaces or vocabulary source.
+const P1_BASELINE_COMMIT = 'postMl3PescCompose-102526'; // re-anchored by MYSTIC_DREAM (ML3; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
