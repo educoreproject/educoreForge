@@ -112,6 +112,7 @@ harness.section('census: unsure counted, history counted, never rows');
 harness.equal('pooled: 6 answers read, 2 unsure', `${converted.censusByLayerKey.raters.answerReadCount} ${converted.censusByLayerKey.raters.unsureCount}`, '6 2');
 harness.equal('pooled: 3 history rows, 1 changed answer (rater-04 on Ed-Fi)', `${converted.censusByLayerKey.raters.historyRowCount} ${converted.censusByLayerKey.raters.changedAnswerCount}`, '3 1');
 harness.equal('the unsure subjects are listed, never scored', JSON.stringify(converted.censusByLayerKey['rater-05'].unsureSubjectList), JSON.stringify(['sif260928:field/Toys/Toy/Beta']));
+harness.equal('  …and as (author, element) units for the agreement tool', JSON.stringify(converted.censusByLayerKey.raters.unsureUnitList), JSON.stringify([{ authorIri: 'https://w3id.org/EDUcore/agent/refIdRater05', elementStableId: 'sif260928:field/Toys/Toy/Beta' }, { authorIri: 'https://w3id.org/EDUcore/agent/refIdRater07', elementStableId: 'sif260928:field/Toys/Toy/Beta' }]));
 
 // =====================================================================
 harness.section('determinism and locality');

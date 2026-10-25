@@ -825,6 +825,653 @@
 				}
 			],
 			"statusChangeList": []
+		},
+		{
+			"layerKey": "jev-cfg-03f64470322c",
+			"displayName": "Jev jev-1.13.0 under judge configuration cfg-03f64470322c (one layerKey per configuration: PLAN §8, ruled during ML1)",
+			"layerKind": "judge",
+			"authorAgentIri": "https://w3id.org/EDUcore/agent/org/educore",
+			"standardList": [
+				{
+					"standardKey": "edfi",
+					"standardName": "EdFi",
+					"sourceIri": "urn:educore:edfi:"
+				},
+				{
+					"standardKey": "pescacademiceportfolio1v0v0",
+					"standardName": "PESC-AcademicEportfolio-1.0.0",
+					"sourceIri": "urn:educore:pescacademiceportfolio1v0v0:"
+				},
+				{
+					"standardKey": "pesccollegetranscript1v7v0",
+					"standardName": "PESC-CollegeTranscript-1.7.0",
+					"sourceIri": "urn:educore:pesccollegetranscript1v7v0:"
+				},
+				{
+					"standardKey": "pesccollegetranscript1v8v0",
+					"standardName": "PESC-CollegeTranscript-1.8.0",
+					"sourceIri": "urn:educore:pesccollegetranscript1v8v0:"
+				},
+				{
+					"standardKey": "pescdocumentrequest1v0v0",
+					"standardName": "PESC-DocumentRequest-1.0.0",
+					"sourceIri": "urn:educore:pescdocumentrequest1v0v0:"
+				},
+				{
+					"standardKey": "pescdocumentresponse1v0v0",
+					"standardName": "PESC-DocumentResponse-1.0.0",
+					"sourceIri": "urn:educore:pescdocumentresponse1v0v0:"
+				},
+				{
+					"standardKey": "peschighschooltranscript1v6v0",
+					"standardName": "PESC-HighSchoolTranscript-1.6.0",
+					"sourceIri": "urn:educore:peschighschooltranscript1v6v0:"
+				},
+				{
+					"standardKey": "pescld",
+					"standardName": "PESCLD",
+					"sourceIri": "urn:educore:pescld:"
+				},
+				{
+					"standardKey": "pesclearningrecord1v0v0",
+					"standardName": "PESC-LearningRecord-1.0.0",
+					"sourceIri": "urn:educore:pesclearningrecord1v0v0:"
+				},
+				{
+					"standardKey": "pesctestscorereport1v1v0",
+					"standardName": "PESC-TestScoreReport-1.1.0",
+					"sourceIri": "urn:educore:pesctestscorereport1v1v0:"
+				},
+				{
+					"standardKey": "sif260928",
+					"standardName": "SIF260928",
+					"sourceIri": "urn:educore:sif260928:"
+				}
+			],
+			"hubList": [
+				{
+					"hubKey": "ceds",
+					"hubName": "CEDS",
+					"sourceIri": "urn:educore:hub:CEDS:"
+				},
+				{
+					"hubKey": "ctdl",
+					"hubName": "CTDL",
+					"sourceIri": "urn:educore:hub:CTDL:"
+				}
+			],
+			"versionList": [
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/org/educore",
+						"publishedAt": "2026-10-23T14:14:49Z",
+						"contentId": "4f3f4bb29c60f8fbe37342a378ada0192749da5c534d661cf70ad1a14d6fd400",
+						"versionTag": "base"
+					},
+					"registrationStatus": "Standard",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-03f64470322c",
+					"contentIdBasis": "sortedMemberBlockHashList",
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::edfi@5.2.0::edfiCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "1a1e9d161672c044778dbd92862263ea9b1a852109b8e65ff969d2699291e583"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescacademiceportfolio1v0v0@1.0.0::pescAcademicEportfolio1v0v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "255e62eac1bd497d20032a310c2ec9ccc4ee7416052eecdefb7eec0271759b69"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pesccollegetranscript1v7v0@1.7.0::pescCollegeTranscript1v7v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "86068c724035fbaa21b540b7c31da3bf793e63e2927d45de30974269568c4e3a"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pesccollegetranscript1v8v0@1.8.0::pescCollegeTranscript1v8v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "b79fb08e6837d17edf351996f890db508dbb84920baa5b2ebd9c2e1cb357aa47"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescdocumentrequest1v0v0@1.0.0::pescDocumentRequest1v0v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "3948d639a2a8386ef95e0a42e9cd2c10e4810e2a4657f081706a8cc378e92566"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescdocumentresponse1v0v0@1.0.0::pescDocumentResponse1v0v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "bfbc5fa2cb3d4e9f57227b04bcbed39dc8f5391b4579fe587d1953169fd90768"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::peschighschooltranscript1v6v0@1.6.0::pescHighSchoolTranscript1v6v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "d3d5d15c03f60269a3c15e512c04fb35a11ee7ad23ade7c48c7d61b0087c788b"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pesclearningrecord1v0v0@1.0.0::pescLearningRecord1v0v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "a3d17cf80014689b6868fd919693445e3f21e9da3781ff876ff70e3e7eda2543"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pesctestscorereport1v1v0@1.1.0::pescTestScoreReport1v1v0CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "662442cb385a90b2adf2cb9a9760a98e29e22736788ec6d51bf5e4a46781933a"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::edfi@5.2.0::edfiCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "af79edefbe26b5543bc008192f49a4704484c940bc3645cbe94c01f40a278fe3"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescacademiceportfolio1v0v0@1.0.0::pescAcademicEportfolio1v0v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "faa48e3965fd5a9c2e7725c1ddcc3613f06ab4ad4c901d85dddded0f12a591c4"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pesccollegetranscript1v7v0@1.7.0::pescCollegeTranscript1v7v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "0c45cf0d645d9fc153606c1ae1199632c78b23d746fe2934332153e632452002"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pesccollegetranscript1v8v0@1.8.0::pescCollegeTranscript1v8v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "56d2d9decf04ed78fbe246ecbbc8de2882125ef78deb95fb5c9368d539eba83d"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescdocumentrequest1v0v0@1.0.0::pescDocumentRequest1v0v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "58367bbc5e10cff9cdeedb44e6443426b8063ff8294111778a9ccab328f90204"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescdocumentresponse1v0v0@1.0.0::pescDocumentResponse1v0v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "8de1cceb95eadebc1f823b8ae83db948c8b223895451bb3faca099a2fa72a591"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::peschighschooltranscript1v6v0@1.6.0::pescHighSchoolTranscript1v6v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "cd642538f1c0fb10309429655e865372be088c0e9d7bce446f323cb1392f5f60"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pesclearningrecord1v0v0@1.0.0::pescLearningRecord1v0v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "b3b3b65916e453e4bb4171241fff7d1508a5521500b81cd081f010be507aa67d"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pesctestscorereport1v1v0@1.1.0::pescTestScoreReport1v1v0CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "a9926ce2dc9c2225c590ba0cb15fb2115722dc5506306d24b64f38719433293c"
+						}
+					],
+					"note": "seeded by lane M (STEEL_BRIDGE, ML1-b) from the latest block of every pairKey in /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/zeroBacklog_102226/laneA/goldZeroBacklog/store/decisions.sqlite3 whose header judgeKind is jev:jev-1.13.0:data:cfg-03f64470322c",
+					"copiedFromLayerVersion": "https://w3id.org/EDUcore/layer/jev/cfg-03f64470322c",
+					"scoreList": [
+						{
+							"againstLayerVersion": "https://w3id.org/EDUcore/layer/raters/r1",
+							"metric": "hitRateWhereBothPicked (object-level MSI: judge pick in the rater's best or same)",
+							"value": 0.7586,
+							"coverage": 29,
+							"reportPath": "educoreForge/system/dataStores/mappingLayers_102326/ml2/reports/jevVsRaters-cfg03.json"
+						},
+						{
+							"againstLayerVersion": "https://w3id.org/EDUcore/layer/raters/r1",
+							"metric": "absenceAgreementRate (agreed absence over all units where either side abstained)",
+							"value": 0.3684,
+							"coverage": 19,
+							"reportPath": "educoreForge/system/dataStores/mappingLayers_102326/ml2/reports/jevVsRaters-cfg03.json"
+						},
+						{
+							"againstLayerVersion": "https://w3id.org/EDUcore/layer/raters/r1",
+							"metric": "scoredAnswerUnitCount (rater, element) answered by both",
+							"value": 48,
+							"coverage": 48,
+							"reportPath": "educoreForge/system/dataStores/mappingLayers_102326/ml2/reports/jevVsRaters-cfg03.json"
+						},
+						{
+							"againstLayerVersion": "decision block a60a667be67e (Ed-Fi -> CEDS under cfg-cf8d41f82791; deCedsRefactor baseline store; in no registered version)",
+							"metric": "stableRate (identical full-MSI answer per Ed-Fi element)",
+							"value": 0.7936,
+							"coverage": 1904,
+							"reportPath": "educoreForge/system/dataStores/mappingLayers_102326/ml2/reports/jevVsJev-edfi-cfg03-vs-cfgcf.json"
+						}
+					]
+				}
+			],
+			"statusChangeList": []
+		},
+		{
+			"layerKey": "jev-cfg-cf8d41f82791",
+			"displayName": "Jev jev-1.13.0 under judge configuration cfg-cf8d41f82791 (one layerKey per configuration: PLAN §8, ruled during ML1)",
+			"layerKind": "judge",
+			"authorAgentIri": "https://w3id.org/EDUcore/agent/org/educore",
+			"standardList": [
+				{
+					"standardKey": "edfi",
+					"standardName": "EdFi",
+					"sourceIri": "urn:educore:edfi:"
+				},
+				{
+					"standardKey": "pescacademiceportfolio1v0v0",
+					"standardName": "PESC-AcademicEportfolio-1.0.0",
+					"sourceIri": "urn:educore:pescacademiceportfolio1v0v0:"
+				},
+				{
+					"standardKey": "pesccollegetranscript1v7v0",
+					"standardName": "PESC-CollegeTranscript-1.7.0",
+					"sourceIri": "urn:educore:pesccollegetranscript1v7v0:"
+				},
+				{
+					"standardKey": "pesccollegetranscript1v8v0",
+					"standardName": "PESC-CollegeTranscript-1.8.0",
+					"sourceIri": "urn:educore:pesccollegetranscript1v8v0:"
+				},
+				{
+					"standardKey": "pescdocumentrequest1v0v0",
+					"standardName": "PESC-DocumentRequest-1.0.0",
+					"sourceIri": "urn:educore:pescdocumentrequest1v0v0:"
+				},
+				{
+					"standardKey": "pescdocumentresponse1v0v0",
+					"standardName": "PESC-DocumentResponse-1.0.0",
+					"sourceIri": "urn:educore:pescdocumentresponse1v0v0:"
+				},
+				{
+					"standardKey": "peschighschooltranscript1v6v0",
+					"standardName": "PESC-HighSchoolTranscript-1.6.0",
+					"sourceIri": "urn:educore:peschighschooltranscript1v6v0:"
+				},
+				{
+					"standardKey": "pescld",
+					"standardName": "PESCLD",
+					"sourceIri": "urn:educore:pescld:"
+				},
+				{
+					"standardKey": "pesclearningrecord1v0v0",
+					"standardName": "PESC-LearningRecord-1.0.0",
+					"sourceIri": "urn:educore:pesclearningrecord1v0v0:"
+				},
+				{
+					"standardKey": "pesctestscorereport1v1v0",
+					"standardName": "PESC-TestScoreReport-1.1.0",
+					"sourceIri": "urn:educore:pesctestscorereport1v1v0:"
+				},
+				{
+					"standardKey": "sif260928",
+					"standardName": "SIF260928",
+					"sourceIri": "urn:educore:sif260928:"
+				}
+			],
+			"hubList": [
+				{
+					"hubKey": "ceds",
+					"hubName": "CEDS",
+					"sourceIri": "urn:educore:hub:CEDS:"
+				},
+				{
+					"hubKey": "ctdl",
+					"hubName": "CTDL",
+					"sourceIri": "urn:educore:hub:CTDL:"
+				}
+			],
+			"versionList": [
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/org/educore",
+						"publishedAt": "2026-10-23T14:27:20Z",
+						"contentId": "d79e312939f1167360d26446761f83e69030ef0dc8a6c89ec459baddad9c17a5",
+						"versionTag": "base"
+					},
+					"registrationStatus": "Standard",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-cf8d41f82791",
+					"contentIdBasis": "sortedMemberBlockHashList",
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermRowCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "ef33ba97ad95d4eddd7d3b43092a1a8b3d4d3c4cd68145d3fdbac066b27ceea3"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermShapeCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "50878e31578b2aed6a49e908142206f133d49aa6ec7a26130ee512037616e794"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::sif260928@4.3::sif260928CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermRowCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "1df1ddb3d112787efe7279c22459b5ec294383465314953d2840559ccf1ddc2f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermShapeCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "e7248e75d720538f7eb6c8330b58897cbeb077402ab71804f31e387a385b150f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::sif260928@4.3::sif260928CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "4fbf473aca97ef69ac132eda524dac156b484ba13334e7b1afab4d33c589a8ee"
+						}
+					],
+					"note": "seeded by lane M (STEEL_BRIDGE, ML1-b) from the latest block of every pairKey in /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/zeroBacklog_102226/laneA/goldZeroBacklog/store/decisions.sqlite3 whose header judgeKind is jev:jev-1.13.0:data:cfg-cf8d41f82791",
+					"copiedFromLayerVersion": "https://w3id.org/EDUcore/layer/jev/cfg-cf8d41f82791"
+				},
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/org/educore",
+						"publishedAt": "2026-10-24T17:06:26Z",
+						"contentId": "6bf03499f9b21f3d24fbfff8ff65e58af84787c773a317152519a960daefeec3",
+						"versionTag": "wave1-261024"
+					},
+					"registrationStatus": "Standard",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-cf8d41f82791",
+					"contentIdBasis": "sortedMemberBlockHashList",
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::jedx@1.0.0::jedxCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "3f6047baf4fd79401e0b89117f0655b3f7c389cd04c1a79f9a0243c25582a38c"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::lif@2.0::lifCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "a94e106d01a93feac5bca920d8c0221fffe4328d9727e8ffee8819bdc892b54e"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::openbadges@3.0::openbadgesCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "24a8fd234e6741488d67e9ec191da13a6b0503e1e9be8a3197fb42a0e5d844b9"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermRowCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "ef33ba97ad95d4eddd7d3b43092a1a8b3d4d3c4cd68145d3fdbac066b27ceea3"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermShapeCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "50878e31578b2aed6a49e908142206f133d49aa6ec7a26130ee512037616e794"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::sif260928@4.3::sif260928CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::jedx@1.0.0::jedxCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "d4f56a5f0bca9f11df411034b579e7501f24e57ffd842fdd1d43e183d659af6b"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::lif@2.0::lifCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "f71edc919907cb6c6437ab0a4f6cd06f5659cfe87154e61c7d0577b27b84b13f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::openbadges@3.0::openbadgesCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "b7beefa7514a2c4543ea2b4a1bcf7166b28a8754f1b04bb40a103f847743f6b0"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermRowCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "1df1ddb3d112787efe7279c22459b5ec294383465314953d2840559ccf1ddc2f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermShapeCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "e7248e75d720538f7eb6c8330b58897cbeb077402ab71804f31e387a385b150f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::sif260928@4.3::sif260928CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "4fbf473aca97ef69ac132eda524dac156b484ba13334e7b1afab4d33c589a8ee"
+						}
+					],
+					"note": "appended by lane M (STEEL_BRIDGE) from the latest block of every pairKey in /Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/nextStandards_102326/assembly/wave1/store/decisions.sqlite3 whose header judgeKind is jev:jev-1.13.0:data:cfg-cf8d41f82791 (the GOLD_EVAL_261024_wave1 store); BRONZE_CROWN ruling 2026-10-24",
+					"copiedFromLayerVersion": "https://w3id.org/EDUcore/layer/jev/cfg-cf8d41f82791.wave1-261024"
+				},
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/org/educore",
+						"publishedAt": "2026-10-25T04:09:27Z",
+						"contentId": "79059518c9c9593f5f2f3f29611cd9b72053108bb855579404c99737936e9ec6",
+						"versionTag": "wave2-261025"
+					},
+					"registrationStatus": "Standard",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-cf8d41f82791",
+					"contentIdBasis": "sortedMemberBlockHashList",
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::case@1.1::caseCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "03c14661ba2ad066f3253bea968bc85195964ecc450fd5061ed6bc37bd6ad0c8"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::clr@2.0::clrCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "14a9def4d03bb4406ff830d439ad773947a79320d091ff47713651abe32c75d9"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::eduapi@1.0::eduapiCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "1f5d7f0f298a50e2f59d35c5736ff8bf4e0e7893b0859e0107fcee3ba4ad5132"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::jedx@1.0.0::jedxCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "3f6047baf4fd79401e0b89117f0655b3f7c389cd04c1a79f9a0243c25582a38c"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::lif@2.0::lifCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "a94e106d01a93feac5bca920d8c0221fffe4328d9727e8ffee8819bdc892b54e"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::openbadges@3.0::openbadgesCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "24a8fd234e6741488d67e9ec191da13a6b0503e1e9be8a3197fb42a0e5d844b9"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermRowCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "ef33ba97ad95d4eddd7d3b43092a1a8b3d4d3c4cd68145d3fdbac066b27ceea3"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermShapeCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "50878e31578b2aed6a49e908142206f133d49aa6ec7a26130ee512037616e794"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::sif260928@4.3::sif260928CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::case@1.1::caseCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "e7170141198c4d6a4b425925f40c9af9e3ec1686c29358177979616a2b049659"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::clr@2.0::clrCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "aa5d5ee52b22575ead98ba03ea85cdce75fa5a8f33670706e8bd38846cc69005"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::eduapi@1.0::eduapiCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "27f104632f7929726460322820d2b8ea33d76a02900e3299d29aeaa6dcf589e7"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::jedx@1.0.0::jedxCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "d4f56a5f0bca9f11df411034b579e7501f24e57ffd842fdd1d43e183d659af6b"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::lif@2.0::lifCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "f71edc919907cb6c6437ab0a4f6cd06f5659cfe87154e61c7d0577b27b84b13f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::openbadges@3.0::openbadgesCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "b7beefa7514a2c4543ea2b4a1bcf7166b28a8754f1b04bb40a103f847743f6b0"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermRowCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "1df1ddb3d112787efe7279c22459b5ec294383465314953d2840559ccf1ddc2f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermShapeCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "e7248e75d720538f7eb6c8330b58897cbeb077402ab71804f31e387a385b150f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::sedm@unknown_01::sedmElementCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "2d9da34e3524f097f011c2779b71ee24e03c86c3607b69c3d38c932d3fcfef8d"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::sif260928@4.3::sif260928CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "4fbf473aca97ef69ac132eda524dac156b484ba13334e7b1afab4d33c589a8ee"
+						}
+					],
+					"note": "appended by W2A (MIDNIGHT_STONE) from the latest block of every pairKey in /Users/tqwhite/educoreForgeScratch/wave2/assembly/wave2/store/decisions.sqlite3 whose header judgeKind is jev:jev-1.13.0:data:cfg-cf8d41f82791 (the GOLD_EVAL_261025_wave2 store, manifest 0989c0a1); WORKORDER-assembly-wave2-102426 W2A-1.6",
+					"copiedFromLayerVersion": "https://w3id.org/EDUcore/layer/jev/cfg-cf8d41f82791.wave2-261025"
+				},
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/org/educore",
+						"publishedAt": "2026-10-25T08:51:25Z",
+						"contentId": "a377bb89bca8eacdcd7a3372ead51817cf01abf82370c5f8ae319ba3c761f578",
+						"versionTag": "wave3-261025"
+					},
+					"registrationStatus": "Standard",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-cf8d41f82791",
+					"contentIdBasis": "sortedMemberBlockHashList",
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::case@1.1::caseCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "03c14661ba2ad066f3253bea968bc85195964ecc450fd5061ed6bc37bd6ad0c8"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::clr@2.0::clrCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "14a9def4d03bb4406ff830d439ad773947a79320d091ff47713651abe32c75d9"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::eduapi@1.0::eduapiCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "1f5d7f0f298a50e2f59d35c5736ff8bf4e0e7893b0859e0107fcee3ba4ad5132"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::jedx@1.0.0::jedxCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "3f6047baf4fd79401e0b89117f0655b3f7c389cd04c1a79f9a0243c25582a38c"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::lif@2.0::lifCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "a94e106d01a93feac5bca920d8c0221fffe4328d9727e8ffee8819bdc892b54e"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::medbiq@unknown_02::medbiqCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "5b1c2b440e59d847e779d8918f2e88aeac779fae2b98cbba83eb8e9927a1d1ee"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::onerostergradebook@1.2::onerostergradebookCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "c095d42f36678997e0131254cd282e3810cd3605253f966766473148a3a5c3f7"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::onerosterresources@1.2::onerosterresourcesCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "55f23d90a6ae81eb5da9596d0a2906316d72910842561f63d8d1979b1c167d3a"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::onerosterrostering@1.2::onerosterrosteringCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "455d3fc486f232a01dcc1e0246e80f751764327dc5f7b14436147acfcbfe27b6"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::openbadges@3.0::openbadgesCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "24a8fd234e6741488d67e9ec191da13a6b0503e1e9be8a3197fb42a0e5d844b9"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermRowCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "ef33ba97ad95d4eddd7d3b43092a1a8b3d4d3c4cd68145d3fdbac066b27ceea3"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescld@0.0.2::pescldPescTermShapeCedsDerivedPlugin::inferred",
+							"decisionBlockHash": "50878e31578b2aed6a49e908142206f133d49aa6ec7a26130ee512037616e794"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::sif260928@4.3::sif260928CedsDerivedPlugin::inferred",
+							"decisionBlockHash": "19a9fe9da26acbabc3d60b0a119615df129eb36e9db9924b4f6e80f03341d9d7"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::case@1.1::caseCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "e7170141198c4d6a4b425925f40c9af9e3ec1686c29358177979616a2b049659"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::clr@2.0::clrCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "aa5d5ee52b22575ead98ba03ea85cdce75fa5a8f33670706e8bd38846cc69005"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::eduapi@1.0::eduapiCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "27f104632f7929726460322820d2b8ea33d76a02900e3299d29aeaa6dcf589e7"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::jedx@1.0.0::jedxCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "d4f56a5f0bca9f11df411034b579e7501f24e57ffd842fdd1d43e183d659af6b"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::lif@2.0::lifCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "f71edc919907cb6c6437ab0a4f6cd06f5659cfe87154e61c7d0577b27b84b13f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::medbiq@unknown_02::medbiqCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "5334b3f61cd2c34ca68ba6c9e6bad5a5f1ffd741aac994676a1532828d0e00f3"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::onerostergradebook@1.2::onerostergradebookCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "0ae13762226efae44da652d7bf6f98466cdb3d4f456430a1a7029635ea7a68e1"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::onerosterresources@1.2::onerosterresourcesCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "51b5bbf7967253ab71dacd345b59c761b49145123811c0daa40fa586bedbdec9"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::onerosterrostering@1.2::onerosterrosteringCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "70a4f4c93c9e03a563ffc53305fd4610b457d400521a5e0209e15cc2903164c3"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::openbadges@3.0::openbadgesCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "b7beefa7514a2c4543ea2b4a1bcf7166b28a8754f1b04bb40a103f847743f6b0"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermRowCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "1df1ddb3d112787efe7279c22459b5ec294383465314953d2840559ccf1ddc2f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::pescld@0.0.2::pescldPescTermShapeCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "e7248e75d720538f7eb6c8330b58897cbeb077402ab71804f31e387a385b150f"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::sedm@unknown_01::sedmElementCtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "2d9da34e3524f097f011c2779b71ee24e03c86c3607b69c3d38c932d3fcfef8d"
+						},
+						{
+							"pairKey": "ctdl@Release 20260927::sif260928@4.3::sif260928CtdlDerivedPlugin::inferred",
+							"decisionBlockHash": "4fbf473aca97ef69ac132eda524dac156b484ba13334e7b1afab4d33c589a8ee"
+						}
+					],
+					"note": "appended by W3A (INDIGO_GARDEN) from the latest block of every pairKey in /Users/tqwhite/educoreForgeScratch/wave3/assembly/wave3/store/decisions.sqlite3 whose header judgeKind is jev:jev-1.13.0:data:cfg-cf8d41f82791 (manifest 4303bbdb, the wave-3 gold): the 19 of cfg-cf8d41f82791.wave2-261025 plus OneRoster Rostering, Gradebook and Resources and MedBiquitous, each to both hubs (8)",
+					"copiedFromLayerVersion": "https://w3id.org/EDUcore/layer/jev/cfg-cf8d41f82791.wave3-261025",
+					"scoreList": [
+						{
+							"againstLayerVersion": "https://w3id.org/EDUcore/layer/raters/r1",
+							"metric": "hitRateWhereBothPicked (object-level MSI: judge pick in the rater's best or same)",
+							"value": 0.8462,
+							"coverage": 13,
+							"reportPath": "educoreForge/system/dataStores/mappingLayers_102326/ml2/reports/jevVsRaters-cfgcf.json"
+						},
+						{
+							"againstLayerVersion": "https://w3id.org/EDUcore/layer/raters/r1",
+							"metric": "absenceAgreementRate (agreed absence over all units where either side abstained)",
+							"value": 0.6667,
+							"coverage": 12,
+							"reportPath": "educoreForge/system/dataStores/mappingLayers_102326/ml2/reports/jevVsRaters-cfgcf.json"
+						},
+						{
+							"againstLayerVersion": "https://w3id.org/EDUcore/layer/raters/r1",
+							"metric": "scoredAnswerUnitCount (rater, element) answered by both",
+							"value": 25,
+							"coverage": 25,
+							"reportPath": "educoreForge/system/dataStores/mappingLayers_102326/ml2/reports/jevVsRaters-cfgcf.json"
+						}
+					]
+				}
+			],
+			"statusChangeList": [
+				{
+					"versionTag": "base",
+					"registrationStatus": "Superseded",
+					"changedAt": "2026-10-24T21:21:28Z",
+					"changedBy": "https://w3id.org/EDUcore/agent/org/educore",
+					"supersededByVersionTag": "wave1-261024",
+					"note": "BRONZE_CROWN ruling 2026-10-24: the wave-1 gold judged JEDx, LIF and Open Badges under the same configuration"
+				},
+				{
+					"versionTag": "wave1-261024",
+					"registrationStatus": "Superseded",
+					"changedAt": "2026-10-25T04:26:02Z",
+					"changedBy": "https://w3id.org/EDUcore/agent/org/educore",
+					"supersededByVersionTag": "wave2-261025",
+					"note": "W2A (WORKORDER-assembly-wave2-102426 W2A-1.6): the wave-2 gold judged CLR, CASE, EduAPI and SEDM under the same configuration; the member set grew from 12 to 19"
+				},
+				{
+					"versionTag": "wave2-261025",
+					"registrationStatus": "Superseded",
+					"changedAt": "2026-10-25T09:03:54Z",
+					"changedBy": "https://w3id.org/EDUcore/agent/org/educore",
+					"supersededByVersionTag": "wave3-261025",
+					"note": "W3A (WORKORDER-assembly-wave3-102526 W3A-1.6): the wave-3 gold judged OneRoster (three standards) and MedBiquitous under the same configuration; the member set grew from 19 to 27"
+				}
+			]
 		}
 	]
 }

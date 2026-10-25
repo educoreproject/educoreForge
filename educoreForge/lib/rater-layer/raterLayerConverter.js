@@ -126,6 +126,10 @@ const censusFor = ({ answerUnitList, historyRowList, raterUserNameList, excluded
 		subjectCount: new Set(rowList.map((oneRow) => oneRow.subject_id)).size,
 		unsureCount: answerUnitList.filter((oneUnit) => oneUnit.answerKind === 'unsure').length,
 		unsureSubjectList: answerUnitList.filter((oneUnit) => oneUnit.answerKind === 'unsure').map((oneUnit) => oneUnit.subjectStableId).sort(byCodePoint),
+		unsureUnitList: answerUnitList
+			.filter((oneUnit) => oneUnit.answerKind === 'unsure')
+			.map((oneUnit) => ({ authorIri: oneUnit.authorAgentIri, elementStableId: oneUnit.subjectStableId }))
+			.sort((leftUnit, rightUnit) => byCodePoint(leftUnit.authorIri, rightUnit.authorIri) || byCodePoint(leftUnit.elementStableId, rightUnit.elementStableId)),
 		historyRowCount: ownHistoryList.length,
 		changedAnswerCount: Object.keys(historyCountByPair).filter((pairText) => historyCountByPair[pairText] > 1).length,
 		excludedUnresolvedList,
@@ -175,7 +179,7 @@ const convertRaterStore = ({ answerRowList, raterRowList, historyRowList, sugges
 		if (answered.error) {
 			return { error: answered.error };
 		}
-		answerUnitListByRater[answerRow.raterUserName] = (answerUnitListByRater[answerRow.raterUserName] || []).concat([{ answerKind: answerParse.parsed.answerKind, subjectStableId: subject.subjectStableId, rowList: answered.rowList }]);
+		answerUnitListByRater[answerRow.raterUserName] = (answerUnitListByRater[answerRow.raterUserName] || []).concat([{ answerKind: answerParse.parsed.answerKind, subjectStableId: subject.subjectStableId, authorAgentIri, rowList: answered.rowList }]);
 	}
 	const setTextByLayerKey = {};
 	const censusByLayerKey = {};
