@@ -1,0 +1,30 @@
+{
+	"about": "What the rater-layer converter (mappingLayers ML2-a, DESIGN-ML2a-raterLayer-102526.md) may write, as DATA. standardVersionByStandardKey: the version of every standard the raters answered, keyed by the forged stableId's own CURIE prefix and measured from GOLD_EVAL_261025_wave3's decision pairKeys (2026-10-25); an unlisted prefix is refused by name. The hub: one, CEDS, whose card URIs must begin with hubCardUriPrefix. predicateIdByAnswerRole: D-RATERPRED (Best -> edc:bestMatch, Same -> edc:alsoAcceptable); the noMatch pair is NOT here, it is imported from sssomExporter so the two cannot drift (ML1 doubt 2). raterUserNamePattern: a rater account the converter writes; its one capture group is the rater number NN (layer rater-NN, display 'rater NN, survey X').",
+	"standardVersionByStandardKey": {
+		"edfi": "5.2.0",
+		"sif260928": "4.3",
+		"pescacademiceportfolio1v0v0": "1.0.0",
+		"pesccollegetranscript1v8v0": "1.8.0",
+		"pescdocumentrequest1v0v0": "1.0.0"
+	},
+	"standardSourceIriPattern": "urn:educore:{standardKey}:",
+	"hub": {
+		"hubKey": "ceds",
+		"hubName": "CEDS",
+		"hubVersion": "14.0.0.0",
+		"sourceIri": "urn:educore:hub:CEDS:",
+		"hubCardUriPrefix": "https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/"
+	},
+	"predicateIdByAnswerRole": {
+		"best": "edc:bestMatch",
+		"same": "edc:alsoAcceptable"
+	},
+	"mappingJustification": "semapv:ManualMappingCuration",
+	"edcCurieExpansion": "https://w3id.org/EDUcore/",
+	"agentIriBase": "https://w3id.org/EDUcore/agent/",
+	"pooledLayerKey": "raters",
+	"pooledAuthorAgentIri": "https://w3id.org/EDUcore/agent/org/educore",
+	"perRaterLayerKeyPattern": "rater-{raterNumber}",
+	"raterUserNamePattern": "^rater-([0-9]{2})$",
+	"predicateMeaningComment": "Rater layer: edc:bestMatch means the rater chose this card as Best for the element, and edc:alsoAcceptable that the rater ticked it as Same (also acceptable); raters were never asked a SKOS relation (D-RATERPRED). skos:mappingRelation to sssom:NoTermFound means the rater answered No match in CEDS. Unsure answers carry no row."
+}

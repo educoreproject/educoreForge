@@ -513,6 +513,318 @@
 					"note": "W3A (WORKORDER-assembly-wave3-102526 W3A-1.6): the wave-3 gold judged OneRoster (three standards) and MedBiquitous under the same configuration; the member set grew from 19 to 27"
 				}
 			]
+		},
+		{
+			"layerKey": "rater-02",
+			"displayName": "rater 02, survey B: that rater's CEDS answers",
+			"layerKind": "human",
+			"authorAgentIri": "https://w3id.org/EDUcore/agent/i0PuAgVSbcP6P7YquytU",
+			"standardList": [
+				{
+					"standardKey": "edfi",
+					"standardName": "EdFi",
+					"sourceIri": "urn:educore:edfi:"
+				},
+				{
+					"standardKey": "pescacademiceportfolio1v0v0",
+					"standardName": "PESC-AcademicEportfolio-1.0.0",
+					"sourceIri": "urn:educore:pescacademiceportfolio1v0v0:"
+				},
+				{
+					"standardKey": "pesccollegetranscript1v8v0",
+					"standardName": "PESC-CollegeTranscript-1.8.0",
+					"sourceIri": "urn:educore:pesccollegetranscript1v8v0:"
+				},
+				{
+					"standardKey": "pescdocumentrequest1v0v0",
+					"standardName": "PESC-DocumentRequest-1.0.0",
+					"sourceIri": "urn:educore:pescdocumentrequest1v0v0:"
+				},
+				{
+					"standardKey": "sif260928",
+					"standardName": "SIF260928",
+					"sourceIri": "urn:educore:sif260928:"
+				}
+			],
+			"hubList": [
+				{
+					"hubKey": "ceds",
+					"hubName": "CEDS",
+					"sourceIri": "urn:educore:hub:CEDS:"
+				}
+			],
+			"versionList": [
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/i0PuAgVSbcP6P7YquytU",
+						"publishedAt": "2026-10-25T15:34:27.333Z",
+						"contentId": "50c0f810f89e56030fb1a72bfcc2517a7db50be0548caee2b33d74fdc99ed547",
+						"versionTag": "r1"
+					},
+					"registrationStatus": "Candidate",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/i0PuAgVSbcP6P7YquytU",
+					"contentIdBasis": "frozenSetBytes",
+					"wholeSetBlock": {
+						"pairKey": "layerSet::rater-02",
+						"decisionBlockHash": "50c0f810f89e56030fb1a72bfcc2517a7db50be0548caee2b33d74fdc99ed547"
+					},
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::edfi@5.2.0::layer.rater-02::curated",
+							"decisionBlockHash": "50c0f810f89e56030fb1a72bfcc2517a7db50be0548caee2b33d74fdc99ed547"
+						}
+					],
+					"sssomPath": "/Users/tqwhite/educoreForgeScratch/ml2/raterSets/run1/rater-02.r1.sssom.tsv"
+				}
+			],
+			"statusChangeList": []
+		},
+		{
+			"layerKey": "rater-04",
+			"displayName": "rater 04, survey A: that rater's CEDS answers",
+			"layerKind": "human",
+			"authorAgentIri": "https://w3id.org/EDUcore/agent/wLU9K4XBscmGCKCJ5rhw",
+			"standardList": [
+				{
+					"standardKey": "edfi",
+					"standardName": "EdFi",
+					"sourceIri": "urn:educore:edfi:"
+				},
+				{
+					"standardKey": "pescacademiceportfolio1v0v0",
+					"standardName": "PESC-AcademicEportfolio-1.0.0",
+					"sourceIri": "urn:educore:pescacademiceportfolio1v0v0:"
+				},
+				{
+					"standardKey": "pesccollegetranscript1v8v0",
+					"standardName": "PESC-CollegeTranscript-1.8.0",
+					"sourceIri": "urn:educore:pesccollegetranscript1v8v0:"
+				},
+				{
+					"standardKey": "pescdocumentrequest1v0v0",
+					"standardName": "PESC-DocumentRequest-1.0.0",
+					"sourceIri": "urn:educore:pescdocumentrequest1v0v0:"
+				},
+				{
+					"standardKey": "sif260928",
+					"standardName": "SIF260928",
+					"sourceIri": "urn:educore:sif260928:"
+				}
+			],
+			"hubList": [
+				{
+					"hubKey": "ceds",
+					"hubName": "CEDS",
+					"sourceIri": "urn:educore:hub:CEDS:"
+				}
+			],
+			"versionList": [
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/wLU9K4XBscmGCKCJ5rhw",
+						"publishedAt": "2026-10-25T15:34:28.569Z",
+						"contentId": "ab4330520b00806d8611f7a2e81c2dfa979f510f8f3157a2a2824c9465299765",
+						"versionTag": "r1"
+					},
+					"registrationStatus": "Candidate",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/wLU9K4XBscmGCKCJ5rhw",
+					"contentIdBasis": "frozenSetBytes",
+					"wholeSetBlock": {
+						"pairKey": "layerSet::rater-04",
+						"decisionBlockHash": "ab4330520b00806d8611f7a2e81c2dfa979f510f8f3157a2a2824c9465299765"
+					},
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::edfi@5.2.0::layer.rater-04::curated",
+							"decisionBlockHash": "13fb860a944587fd0c76572d00f873e133047cb8999fcd7cdc5753eb2fa3ccca"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescacademiceportfolio1v0v0@1.0.0::layer.rater-04::curated",
+							"decisionBlockHash": "06cdd11b72dfd1fc5d303e27f093aa4e0f1b303eb2d7b35cba1c48d024a7849f"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescdocumentrequest1v0v0@1.0.0::layer.rater-04::curated",
+							"decisionBlockHash": "bcdb2eb0168edb682b688d32ebf42d1643fe772f9d6373055801fd268d9bfc23"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::sif260928@4.3::layer.rater-04::curated",
+							"decisionBlockHash": "d47b1975aaf58bdcaa45a775162e59c651a623573ced5decb9a02b6f22416d3f"
+						}
+					],
+					"sssomPath": "/Users/tqwhite/educoreForgeScratch/ml2/raterSets/run1/rater-04.r1.sssom.tsv"
+				}
+			],
+			"statusChangeList": []
+		},
+		{
+			"layerKey": "rater-05",
+			"displayName": "rater 05, survey B: that rater's CEDS answers",
+			"layerKind": "human",
+			"authorAgentIri": "https://w3id.org/EDUcore/agent/asIQEa1yTP5Y4LAvx9r8",
+			"standardList": [
+				{
+					"standardKey": "edfi",
+					"standardName": "EdFi",
+					"sourceIri": "urn:educore:edfi:"
+				},
+				{
+					"standardKey": "pescacademiceportfolio1v0v0",
+					"standardName": "PESC-AcademicEportfolio-1.0.0",
+					"sourceIri": "urn:educore:pescacademiceportfolio1v0v0:"
+				},
+				{
+					"standardKey": "pesccollegetranscript1v8v0",
+					"standardName": "PESC-CollegeTranscript-1.8.0",
+					"sourceIri": "urn:educore:pesccollegetranscript1v8v0:"
+				},
+				{
+					"standardKey": "pescdocumentrequest1v0v0",
+					"standardName": "PESC-DocumentRequest-1.0.0",
+					"sourceIri": "urn:educore:pescdocumentrequest1v0v0:"
+				},
+				{
+					"standardKey": "sif260928",
+					"standardName": "SIF260928",
+					"sourceIri": "urn:educore:sif260928:"
+				}
+			],
+			"hubList": [
+				{
+					"hubKey": "ceds",
+					"hubName": "CEDS",
+					"sourceIri": "urn:educore:hub:CEDS:"
+				}
+			],
+			"versionList": [
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/asIQEa1yTP5Y4LAvx9r8",
+						"publishedAt": "2026-10-25T15:34:29.765Z",
+						"contentId": "9d77b8523e9654a342b4c80a817dc117fd2332805b9889926892701f1b4fa510",
+						"versionTag": "r1"
+					},
+					"registrationStatus": "Candidate",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/asIQEa1yTP5Y4LAvx9r8",
+					"contentIdBasis": "frozenSetBytes",
+					"wholeSetBlock": {
+						"pairKey": "layerSet::rater-05",
+						"decisionBlockHash": "9d77b8523e9654a342b4c80a817dc117fd2332805b9889926892701f1b4fa510"
+					},
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::edfi@5.2.0::layer.rater-05::curated",
+							"decisionBlockHash": "55a5ccdf65e313d49226737663ca90488a901da0ca6afca5bcc5517b7700f0cd"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescacademiceportfolio1v0v0@1.0.0::layer.rater-05::curated",
+							"decisionBlockHash": "3ab80171442a2dd5fa886e51ec279f0ae571fcd7bf7ec5e653daf0dc226deb85"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pesccollegetranscript1v8v0@1.8.0::layer.rater-05::curated",
+							"decisionBlockHash": "cd41016f82e540a85bb475fd94a1368b1d8010aecbf5eb1ef91adadf90778877"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescdocumentrequest1v0v0@1.0.0::layer.rater-05::curated",
+							"decisionBlockHash": "18c0b8043b2ca94599d51fee8f4125afceb2d2b40069e5e63d1ed37c007b0fea"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::sif260928@4.3::layer.rater-05::curated",
+							"decisionBlockHash": "7614e0372e4efa1a8ec56584a2dc86613c34b03ff24c50cde9ce06b8f008f398"
+						}
+					],
+					"sssomPath": "/Users/tqwhite/educoreForgeScratch/ml2/raterSets/run1/rater-05.r1.sssom.tsv"
+				}
+			],
+			"statusChangeList": []
+		},
+		{
+			"layerKey": "raters",
+			"displayName": "the CEDS rater layer, pooled: every rater with a row (author_id per row names the rater)",
+			"layerKind": "human",
+			"authorAgentIri": "https://w3id.org/EDUcore/agent/org/educore",
+			"standardList": [
+				{
+					"standardKey": "edfi",
+					"standardName": "EdFi",
+					"sourceIri": "urn:educore:edfi:"
+				},
+				{
+					"standardKey": "pescacademiceportfolio1v0v0",
+					"standardName": "PESC-AcademicEportfolio-1.0.0",
+					"sourceIri": "urn:educore:pescacademiceportfolio1v0v0:"
+				},
+				{
+					"standardKey": "pesccollegetranscript1v8v0",
+					"standardName": "PESC-CollegeTranscript-1.8.0",
+					"sourceIri": "urn:educore:pesccollegetranscript1v8v0:"
+				},
+				{
+					"standardKey": "pescdocumentrequest1v0v0",
+					"standardName": "PESC-DocumentRequest-1.0.0",
+					"sourceIri": "urn:educore:pescdocumentrequest1v0v0:"
+				},
+				{
+					"standardKey": "sif260928",
+					"standardName": "SIF260928",
+					"sourceIri": "urn:educore:sif260928:"
+				}
+			],
+			"hubList": [
+				{
+					"hubKey": "ceds",
+					"hubName": "CEDS",
+					"sourceIri": "urn:educore:hub:CEDS:"
+				}
+			],
+			"versionList": [
+				{
+					"administrationRecord": {
+						"registrationAuthority": "https://w3id.org/EDUcore/agent/org/educore",
+						"registrar": "https://w3id.org/EDUcore/agent/org/educore",
+						"submitter": "https://w3id.org/EDUcore/agent/org/educore",
+						"publishedAt": "2026-10-25T15:34:25.491Z",
+						"contentId": "b9c3d2897588ad77c7d5ed919e1c4ea9ff973caa7764dab89e92b225e4f970a0",
+						"versionTag": "r1"
+					},
+					"registrationStatus": "Candidate",
+					"authorAgentIri": "https://w3id.org/EDUcore/agent/org/educore",
+					"contentIdBasis": "frozenSetBytes",
+					"wholeSetBlock": {
+						"pairKey": "layerSet::raters",
+						"decisionBlockHash": "b9c3d2897588ad77c7d5ed919e1c4ea9ff973caa7764dab89e92b225e4f970a0"
+					},
+					"memberBlockList": [
+						{
+							"pairKey": "ceds@14.0.0.0::edfi@5.2.0::layer.raters::curated",
+							"decisionBlockHash": "f47751e687eee35d072cb89e47a98430d7a20a79646f46d4b3289fea1ba6bacf"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescacademiceportfolio1v0v0@1.0.0::layer.raters::curated",
+							"decisionBlockHash": "e7c07f8119e80b3f2546b72991d0e8098dc986392c49bdaec37c9173df00799d"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pesccollegetranscript1v8v0@1.8.0::layer.raters::curated",
+							"decisionBlockHash": "4da54f8ea8f22593618d790314c436183dd131f2e686eb7d14b0eff7cc1356a0"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::pescdocumentrequest1v0v0@1.0.0::layer.raters::curated",
+							"decisionBlockHash": "70109c7c8d6b9a047c3e901fcbb19551f4ccc2cf46ada7fb78e8b801e0a61c86"
+						},
+						{
+							"pairKey": "ceds@14.0.0.0::sif260928@4.3::layer.raters::curated",
+							"decisionBlockHash": "443fdf5fa21a289605b78c465c4d5251f37c87afadec7fb7cef8e6a000f474e4"
+						}
+					],
+					"sssomPath": "/Users/tqwhite/educoreForgeScratch/ml2/raterSets/run1/raters.r1.sssom.tsv"
+				}
+			],
+			"statusChangeList": []
 		}
 	]
 }

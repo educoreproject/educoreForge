@@ -16,6 +16,24 @@
 			"agentIri": "https://w3id.org/EDUcore/agent/judge/jev:jev-1.13.0:data:cfg-cf8d41f82791",
 			"agentKind": "judge",
 			"displayName": "Jev jev-1.13.0 (cfg-cf8d41f82791)"
+		},
+		{
+			"agentIri": "https://w3id.org/EDUcore/agent/i0PuAgVSbcP6P7YquytU",
+			"agentKind": "person",
+			"displayName": "rater 02, survey B",
+			"note": "a CEDS rater (mappingLayers ML2-a); pseudonymous by policy; IRI by the rater tool account refId (D-AUTHOR)"
+		},
+		{
+			"agentIri": "https://w3id.org/EDUcore/agent/wLU9K4XBscmGCKCJ5rhw",
+			"agentKind": "person",
+			"displayName": "rater 04, survey A",
+			"note": "a CEDS rater (mappingLayers ML2-a); pseudonymous by policy; IRI by the rater tool account refId (D-AUTHOR)"
+		},
+		{
+			"agentIri": "https://w3id.org/EDUcore/agent/asIQEa1yTP5Y4LAvx9r8",
+			"agentKind": "person",
+			"displayName": "rater 05, survey B",
+			"note": "a CEDS rater (mappingLayers ML2-a); pseudonymous by policy; IRI by the rater tool account refId (D-AUTHOR)"
 		}
 	]
 }
