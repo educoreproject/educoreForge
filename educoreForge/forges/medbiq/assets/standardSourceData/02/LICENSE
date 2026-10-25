@@ -1,0 +1,14 @@
+MedBiquitous Standards — notices required by the MedBiquitous Standards Public License and Terms of Use
+
+1. Pre-existing notices. Each MedBiquitous schema in this download carries its own copyright and licence notices (for example
+   "Copyright © 2017 MedBiquitous Consortium. All Rights Reserved. http://www.medbiq.org" and "Users are bound by the terms of the
+   MedBiquitous Consortium XML Public License and Terms of Use"); they are kept verbatim, in the source files and, as comments, in the graph.
+   Where a file carries none: Copyright Association of American Medical Colleges. All Rights Reserved. http://www.medbiq.org
+
+2. Notice of change. The source files are the publisher's own bytes, unmodified, from https://github.com/medbiq/medbiq at commit
+   8f5c74a51bf6721fa1f0b57f2d9c4b51496bb566 (2025-08-28). The graph download is a DERIVATIVE: educoreForge forged those schemas into a graph
+   (types, fields, enumerations, references); it is not an official MedBiquitous specification and has not been adopted by MedBiquitous.
+   The IEEE LOM binding files (lomv2/common, extend, unique, vocab) are IEEE's, as MedBiquitous ships them inside Healthcare LOM.
+
+3. Users of these files and of the derived graph are bound by the MedBiquitous Standards Public License and Terms of Use
+   (Association of American Medical Colleges, last updated June 3, 2020), whose full text is at https://www.medbiq.org/license

@@ -128,6 +128,34 @@ const sedmListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
 	});
 };
 
+// ⟪nextStandards-102326 wave 3 lane I3, 2026-10-25; the wave-2 grant form⟫ MedBiquitous: sedmListingEmitter's form, over forges/medbiq's round-trip
+// pair (lib/xsd-forge/xsdRoundTripPair.js through the bundle)
+const medbiqListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
+	const bundleDirPath = path.join(treeRootPath, 'forges', 'medbiq');
+	const forgeDeclaration = require(path.join(bundleDirPath, 'lib', 'medbiqForgeDeclaration'));
+	const roundTripPair = require(path.join(bundleDirPath, 'lib', 'medbiqRoundTripPair'))({ ruleModulePath: 'lib/xsd-forge/xsdRoundTripPair.js' });
+	const { openGraphReader } = require(path.join(treeRootPath, 'lib', 'forge-framework', 'roundTripHarness', 'graphReader'));
+	openGraphReader({ boltUrl: boltTriple.boltUrl, user: boltTriple.user, password: boltTriple.password, standardSource: forgeDeclaration.standardSource }, (openError, reader) => {
+		if (openError) {
+			callback(`medbiq listing: ${openError}`);
+			return;
+		}
+		roundTripPair.emitFromGraph({ reader }, (emitError, emitted) => {
+			reader.close((closeError) => {
+				if (emitError || (emitted && emitted.fault !== undefined)) {
+					callback(`medbiq listing: ${emitError || JSON.stringify(emitted.fault)}`);
+					return;
+				}
+				if (closeError) {
+					callback(`medbiq listing: ${closeError}`);
+					return;
+				}
+				callback('', { statementMap: emitted.statements });
+			});
+		});
+	});
+};
+
 const edfiListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
 	const edfiLibDirPath = path.join(treeRootPath, 'forges', 'edfi', 'lib');
 	const roundTripEdfiCompiler = require(path.join(edfiLibDirPath, 'roundTripEdfiCompiler'))();
@@ -249,6 +277,7 @@ const statementListingEmitterByBundleToken = Object.freeze({
 	sedm: sedmListingEmitter,
 	eduapi: openapiKitListingEmitterFor({ bundleToken: 'eduapi' }),
 	clr: openapiKitListingEmitterFor({ bundleToken: 'clr' }),
+	medbiq: medbiqListingEmitter,
 });
 
 module.exports = { installReadOnlyDriverGuard, statementListingEmitterByBundleToken };
