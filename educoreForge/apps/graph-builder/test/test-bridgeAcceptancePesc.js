@@ -1117,7 +1117,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // lib/bridge-framework/test/test-bgDecl.js 5/2, test-bgJudgeSlot.js 3/0, test-bridgeComposer.js 6/0, test-hubBridging.js 5/2, and
 // test-bgNosub.js (this commit's own seamDiffEmpty re-anchor). No bridge-framework, bridge-maker, build or vocabulary source.
 // Observed red at 7c967fb4 before this commit (25/26).
-const P1_BASELINE_COMMIT = 'postNsV2FbPescCompose-102426'; // re-anchored by OCEAN_SPIRE (census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (QUIET_GATE; nextStandards-102326 wave 2 D1-D2, the lane's own new rows; the last merger, after lanes E, G and F) ═══
+// postNsV2FbPescCompose-102426 -> postNsD2ePescCompose-102426, tag cut ON this commit. CENSUS over this gate's paths: lib/bridge-framework/test/
+// test-bgNosub.js 6/1 (the D1 seamDiffEmpty re-anchor for the new CLR forge files) and lane D's ADDED roster rows: test-bridgeComposer.js 6/0,
+// test-hubBridging.js 5/2, test-bgJudgeSlot.js 3/0, test-bgDecl.js 5/2. No bridge-framework or bridge-maker source.
+const P1_BASELINE_COMMIT = 'postNsD2ePescCompose-102426'; // re-anchored by QUIET_GATE (census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
