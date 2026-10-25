@@ -1,0 +1,81 @@
+{
+  // goldWave3 — nextStandards wave-3 assembly (WORKORDER-assembly-wave3-102526, Programmer W3A / INDIGO_GARDEN for
+  // BRONZE_CROWN, 2026-10-25). It is goldWave2 (the recipe of GOLD_EVAL_261025_wave2) with OneRoster 1.2's three standards
+  // (lane H: onerosterrostering, onerostergradebook, onerosterresources) and MedBiquitous (lane I: medbiq) APPENDED, each
+  // bridged exactly as in its lane's *Bridged recipe: one judged facet to both hubs. Every goldWave2 entry keeps its position
+  // (the inventory gate's appended-never-reordered rule).
+  // Built with --judgeCacheOnly=true --embeddingCacheOnly=true over a COPY of the wave-2 gold's store with the two lanes'
+  // judgment caches folded in and the wave-3 shared vector cache, so no judge or embedder is asked.
+  // kind 'golden' so -stampPromotion may name its graph GOLD_EVAL_*.
+  "schemaVersion": "1.0.0",
+  "recipeName": "goldWave3",
+  "kind": "golden",
+  "description": "The wave-3 gold: goldWave2 (CEDS and CTDL hubs, CEDS layers, Ed-Fi, SIF 260928, eight PESC releases, the CTDL family, PESC_LD, Open Badges 3.0, JEDx, LIF 2.0, CLR 2.0, CASE 1.1, EduAPI, SEDM, every derived bridge judged against both hubs) PLUS OneRoster 1.2 as three standards (Rostering, Gradebook, Resources) and MedBiquitous, each with its one judged facet to both hubs.",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "edfi", "version": "current" },
+    { "token": "sif260928", "version": "current" },
+    { "token": "pesccollegetranscript1v8v0", "version": "current" },
+    { "token": "pesccollegetranscript1v7v0", "version": "current" },
+    { "token": "peschighschooltranscript1v6v0", "version": "current" },
+    { "token": "pesctestscorereport1v1v0", "version": "current" },
+    { "token": "pesclearningrecord1v0v0", "version": "current" },
+    { "token": "pescdocumentrequest1v0v0", "version": "current" },
+    { "token": "pescdocumentresponse1v0v0", "version": "current" },
+    { "token": "pescacademiceportfolio1v0v0", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "ctdlasn", "version": "current" },
+    { "token": "ctdlqdata", "version": "current" },
+    { "token": "pescld", "version": "current" },
+    { "token": "openbadges", "version": "current" },
+    { "token": "jedx", "version": "current" },
+    { "token": "lif", "version": "current" },
+    { "token": "clr", "version": "current" },
+    { "token": "case", "version": "current" },
+    { "token": "eduapi", "version": "current" },
+    { "token": "sedm", "version": "current" },
+    { "token": "onerosterrostering", "version": "current" },
+    { "token": "onerostergradebook", "version": "current" },
+    { "token": "onerosterresources", "version": "current" },
+    { "token": "medbiq", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "layers": [
+    { "standard": "ceds", "layer": "guide" },
+    { "standard": "ceds", "layer": "textRepair" }
+  ],
+  "bridges": [
+    { "source": "edfi", "hubs": ["ceds", "ctdl"], "dependencies": ["edfi", "ceds", "ctdl"] },
+    { "source": "sif260928", "hubs": ["ceds", "ctdl"], "dependencies": ["sif260928", "ceds", "ctdl"] },
+    { "source": "pesccollegetranscript1v8v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesccollegetranscript1v8v0", "ceds", "ctdl"] },
+    { "source": "pesccollegetranscript1v7v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesccollegetranscript1v7v0", "ceds", "ctdl"] },
+    { "source": "peschighschooltranscript1v6v0", "hubs": ["ceds", "ctdl"], "dependencies": ["peschighschooltranscript1v6v0", "ceds", "ctdl"] },
+    { "source": "pesctestscorereport1v1v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesctestscorereport1v1v0", "ceds", "ctdl"] },
+    { "source": "pesclearningrecord1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pesclearningrecord1v0v0", "ceds", "ctdl"] },
+    { "source": "pescdocumentrequest1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescdocumentrequest1v0v0", "ceds", "ctdl"] },
+    { "source": "pescdocumentresponse1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescdocumentresponse1v0v0", "ceds", "ctdl"] },
+    { "source": "pescacademiceportfolio1v0v0", "hubs": ["ceds", "ctdl"], "dependencies": ["pescacademiceportfolio1v0v0", "ceds", "ctdl"] },
+    { "source": "ctdl", "hubs": ["ceds"], "dependencies": ["ctdl", "ceds"] },
+    { "source": "ctdlasn", "hubs": ["ctdl"], "dependencies": ["ctdlasn", "ctdl"] },
+    { "source": "ctdl", "familyStandards": ["ctdl", "ctdlasn", "ctdlqdata"], "bridge": "ctdlFamilyStructure", "dependencies": ["ctdl", "ctdlasn", "ctdlqdata"] },
+    { "source": "pescld", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "pescld", "facet": "PescTermRow", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "pescld", "facet": "PescTermShape", "hubs": ["ceds", "ctdl"], "dependencies": ["pescld", "ceds", "ctdl"] },
+    { "source": "openbadges", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["openbadges", "ceds", "ctdl"] },
+    { "source": "jedx", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["jedx", "ceds", "ctdl"] },
+    { "source": "lif", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["lif", "ceds", "ctdl"] },
+    { "source": "clr", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["clr", "ceds", "ctdl"] },
+    { "source": "case", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["case", "ceds", "ctdl"] },
+    { "source": "eduapi", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["eduapi", "ceds", "ctdl"] },
+    { "source": "sedm", "facet": "", "hubs": ["ceds"], "dependencies": ["sedm", "ceds"] },
+    { "source": "sedm", "facet": "Element", "hubs": ["ctdl"], "dependencies": ["sedm", "ctdl"] },
+    { "source": "onerosterrostering", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["onerosterrostering", "ceds", "ctdl"] },
+    { "source": "onerostergradebook", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["onerostergradebook", "ceds", "ctdl"] },
+    { "source": "onerosterresources", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["onerosterresources", "ceds", "ctdl"] },
+    { "source": "medbiq", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["medbiq", "ceds", "ctdl"] }
+  ],
+  "roundTripStage": true
+}
