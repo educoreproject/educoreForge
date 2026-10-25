@@ -12,6 +12,10 @@
 // today), its type or the element it references as written (typeQName, refQName), its occurrence (minOccurs, maxOccurs, use), the value names
 // of the option set it is typed by (optionValueNameList) and its owning type's own documentation (owningTypeDescription). Nothing of
 // MedBiquitous names a hub card.
+// ⟪I2, 2026-10-25⟫ and its schemaFile (e.g. 'activityreport/v2/activityreport.xsd'): MedBiquitous copies types between its schemas (34 groups,
+// 76 in-scope fields, render identically without it, e.g. RegulatoryInformationType in Activity Report v2 and Metrics v2), and identical
+// prompts judged concurrently in one run refuse the run when the answers differ (judgeComponent, first-writer-wins). The file names the
+// sub-standard, so it also tells the judge where the field lives; with it every rendering is distinct (measured: 0 duplicates).
 
 const path = require('path');
 const hubPairing = require(path.join(__dirname, 'medbiqHubPairing.json'));
@@ -60,7 +64,7 @@ const standardBridging = Object.freeze({
 		{
 			facetName: '',
 			declarationTemplate,
-			subjectRenderingAllowList: ['name', 'path', 'description', 'typeQName', 'refQName', 'minOccurs', 'maxOccurs', 'use', 'optionValueNameList', 'owningTypeDescription'],
+			subjectRenderingAllowList: ['name', 'path', 'schemaFile', 'description', 'typeQName', 'refQName', 'minOccurs', 'maxOccurs', 'use', 'optionValueNameList', 'owningTypeDescription'],
 			pairByHubToken: Object.freeze(Object.fromEntries(hubPairing.judgedHubTokenList.map((hubToken) => [hubToken, judgedPairRow]))),
 		},
 	],

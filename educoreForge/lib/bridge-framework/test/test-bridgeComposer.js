@@ -99,8 +99,8 @@ const ADDED_NEXT_STANDARDS_WAVE2_LANE_D = Object.freeze({
 });
 // ⟪nextStandards-102326 wave 3 lane I2, 2026-10-25 (EBONY_TOWER)⟫ ADDED, in this lane's own table: MedBiquitous's one judged facet
 const ADDED_NEXT_STANDARDS_WAVE3_LANE_I = Object.freeze({
-	medbiqCedsDerivedPlugin: { standardKey: 'medbiq', targetHub: 'ceds', declarationDigest: 'a703538b062764d6a858928b44c589372d4e1650fc54f3829b5cc56aa3a910fc', hookNameList: [], reason: 'nextStandards wave 3 I2: the current-version MedBiquitous fields judged toward the CEDS hub (forges/medbiq)' },
-	medbiqCtdlDerivedPlugin: { standardKey: 'medbiq', targetHub: 'ctdl', declarationDigest: '06f0545a80e6b49e46ae1ffe519b6ae5e0c0f905cc49149e1e3e21d813824b56', hookNameList: [], reason: 'nextStandards wave 3 I2: the current-version MedBiquitous fields judged toward the CTDL hub (forges/medbiq)' },
+	medbiqCedsDerivedPlugin: { standardKey: 'medbiq', targetHub: 'ceds', declarationDigest: 'ebf0fcf6c7cc951e1e3e5171eb65ada8bbc1ac8090d2ace415fce53ed4a37140', hookNameList: [], reason: 'nextStandards wave 3 I2: the current-version MedBiquitous fields judged toward the CEDS hub (forges/medbiq)' },
+	medbiqCtdlDerivedPlugin: { standardKey: 'medbiq', targetHub: 'ctdl', declarationDigest: '999b5c318191559d45c92e5ba312fde22d39677f523e794d95c18f4f1ddbc57d', hookNameList: [], reason: 'nextStandards wave 3 I2: the current-version MedBiquitous fields judged toward the CTDL hub (forges/medbiq)' },
 });
 const ADDED_SINCE_R3_START = Object.freeze({
 	pescldCtdlDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '61c6c9cda1b1f7cbca25ecf77f50bdf316c8f685d4447bcc9df5a418c7672ff7', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C2: PESC_LD declared identity to the CTDL hub (forges/pescld)' },
