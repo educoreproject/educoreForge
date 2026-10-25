@@ -1,0 +1,21 @@
+{
+  // clrBridged — nextStandards-102326 wave 2 lane D2: CLR 2.0 beside both hubs with its ONE judged facet (every property a subject;
+  // retrieval by the forge's text nodes, the judge Jev jev-1.13.0 naming the relation). Rehearsed under --useDebugJudge, then the real
+  // judge; pre-declared spend $0.12 (206 units x 2 hubs x $0.00029, Open Badges' measured rate), STOP at $1.
+  "schemaVersion": "1.0.0",
+  "recipeName": "clrBridged",
+  "kind": "dev",
+  "description": "CLR 2.0 beside the CEDS and CTDL hubs with its one judged facet (D2).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "clr", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "clr", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["clr", "ceds", "ctdl"] }
+  ]
+}

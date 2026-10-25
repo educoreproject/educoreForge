@@ -154,6 +154,9 @@ SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_WAVE2_LANE_G_PLUGIN_LIST);
 // ⟪nextStandards wave 2 lane F2, 2026-10-24 (OCEAN_SPIRE)⟫ ADDED: EduAPI 1.0's one judged facet toward both hubs, the same judgeSlot-v1 form
 const NEXT_STANDARDS_WAVE2_LANE_F_PLUGIN_LIST = ['ceds', 'ctdl'].map((hubStem) => ({ bridgeName: `eduapi${hubStem.charAt(0).toUpperCase()}${hubStem.slice(1)}DerivedPlugin`, composedFromBridgingFilePath: 'forges/eduapi/bridges/eduapiBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL }));
 SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_WAVE2_LANE_F_PLUGIN_LIST);
+// ⟪nextStandards-102326 wave 2 lane D2, 2026-10-24 (QUIET_GATE)⟫ ADDED: CLR 2.0's one judged facet toward both hubs, the same judgeSlot-v1 form
+const NEXT_STANDARDS_WAVE2_LANE_D_PLUGIN_LIST = ['ceds', 'ctdl'].map((hubStem) => ({ bridgeName: `clr${hubStem.charAt(0).toUpperCase()}${hubStem.slice(1)}DerivedPlugin`, composedFromBridgingFilePath: 'forges/clr/bridges/clrBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL }));
+SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_WAVE2_LANE_D_PLUGIN_LIST);
 
 // ---------------------------------------------------------------------
 // module loading: the real module, or a double carrying the scenario's mutations

@@ -335,7 +335,10 @@ const NEXT_STANDARDS_WAVE2_LANE_G_DECLARING_PLUGIN_NAME_LIST = Object.freeze(['s
 // nextStandards wave 2 lane F2 (2026-10-24, OCEAN_SPIRE): + 2, the two judged EduAPI bridges (one facet × the ceds and ctdl hubs,
 // forges/eduapi/bridges/eduapiBridging.js), in their own ADDED table beside the wave-1 lanes'.
 const NEXT_STANDARDS_WAVE2_LANE_F_DECLARING_PLUGIN_NAME_LIST = Object.freeze(['eduapiCedsDerivedPlugin', 'eduapiCtdlDerivedPlugin']);
-const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 26 + NEXT_STANDARDS_LANE_A_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_LANE_B_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_LANE_C_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_WAVE2_LANE_E_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_WAVE2_LANE_G_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_WAVE2_LANE_F_DECLARING_PLUGIN_NAME_LIST.length;
+// nextStandards-102326 wave 2 lane D2 (2026-10-24, QUIET_GATE): + 2, the two judged CLR bridges (one facet × the ceds and ctdl hubs,
+// forges/clr/bridges/clrBridging.js), in their own ADDED table beside lanes A's, B's, C's, E's, G's and F's.
+const NEXT_STANDARDS_WAVE2_LANE_D_DECLARING_PLUGIN_NAME_LIST = Object.freeze(['clrCedsDerivedPlugin', 'clrCtdlDerivedPlugin']);
+const EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT = 26 + NEXT_STANDARDS_LANE_A_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_LANE_B_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_LANE_C_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_WAVE2_LANE_E_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_WAVE2_LANE_G_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_WAVE2_LANE_F_DECLARING_PLUGIN_NAME_LIST.length + NEXT_STANDARDS_WAVE2_LANE_D_DECLARING_PLUGIN_NAME_LIST.length;
 const EMBED_TEXT_VOTE_RETRIEVAL = Object.freeze({
 	method: 'embedTextVote-v1',
 	hitsPerText: 20,
@@ -565,7 +568,7 @@ const nvConjunctList = [
 				return { pluginFileName: onePlugin.pluginLabel === undefined ? path.basename(onePlugin.pluginFilePath) : onePlugin.pluginLabel, refusalText: validated.error === undefined ? '' : validated.error.message };
 			});
 			const refusedList = outcomeList.filter((oneOutcome) => oneOutcome.refusalText !== '');
-			const countHolds = shippedList.length === EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT && NEXT_STANDARDS_LANE_A_DECLARING_PLUGIN_NAME_LIST.concat(NEXT_STANDARDS_LANE_B_DECLARING_PLUGIN_NAME_LIST, NEXT_STANDARDS_LANE_C_DECLARING_PLUGIN_NAME_LIST, NEXT_STANDARDS_WAVE2_LANE_E_DECLARING_PLUGIN_NAME_LIST, NEXT_STANDARDS_WAVE2_LANE_G_DECLARING_PLUGIN_NAME_LIST, NEXT_STANDARDS_WAVE2_LANE_F_DECLARING_PLUGIN_NAME_LIST).every((bridgeName) => shippedList.some((onePlugin) => onePlugin.pluginLabel === bridgeName));
+			const countHolds = shippedList.length === EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT && NEXT_STANDARDS_LANE_A_DECLARING_PLUGIN_NAME_LIST.concat(NEXT_STANDARDS_LANE_B_DECLARING_PLUGIN_NAME_LIST, NEXT_STANDARDS_LANE_C_DECLARING_PLUGIN_NAME_LIST, NEXT_STANDARDS_WAVE2_LANE_E_DECLARING_PLUGIN_NAME_LIST, NEXT_STANDARDS_WAVE2_LANE_G_DECLARING_PLUGIN_NAME_LIST, NEXT_STANDARDS_WAVE2_LANE_F_DECLARING_PLUGIN_NAME_LIST, NEXT_STANDARDS_WAVE2_LANE_D_DECLARING_PLUGIN_NAME_LIST).every((bridgeName) => shippedList.some((onePlugin) => onePlugin.pluginLabel === bridgeName));
 			return {
 				pass: countHolds && refusedList.length === 0,
 				detail: `${shippedList.length} shipped declaring (expected ${EXPECTED_SHIPPED_DECLARING_PLUGIN_COUNT}): ${outcomeList.map((oneOutcome) => oneOutcome.pluginFileName).join(', ')}; ${refusedList.length === 0 ? 'all register' : `REFUSED ${refusedList.map((oneOutcome) => `${oneOutcome.pluginFileName}: ${oneOutcome.refusalText.slice(0, 160)}`).join(' | ')}`}`,
