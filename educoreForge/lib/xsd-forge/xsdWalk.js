@@ -21,7 +21,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                constraints are carried verbatim, as ruled. So is an enumeration the profile's enumerationRepeatList declares a repeat
 //                of an earlier value of its own restriction: one value, one node, and the repeat's statement kept on the option set.
 // Every minted node carries xsdConstruct, xsdLocator and schemaFile, its construct's carried attributes under the registry's property
-// names (a property also its contextText, '<owning type>.<field>', equal to its path, for a bundle to embed), and its description: the text of its OWN annotation's documentation (non-blank texts, joined by a newline). No text is borrowed
+// names (a property also its contextText, '<owning type>.<field>', equal to its path, for a bundle to embed, and, K3c, the derived
+// optionValueNameList and owningTypeDescription a bridge may render), and its description: the text of its OWN annotation's documentation (non-blank texts, joined by a newline). No text is borrowed
 // from a type or a reference: a property without documentation has no description.
 //
 // REFERENCES (registry qnameAttributeRuleList; xsdResolution.js): every QName attribute is resolved through its own file. A corpus target
@@ -50,6 +51,11 @@ const TARGET_NAMESPACE_PROPERTY_NAME = 'targetNamespace';
 // a property's readable place, '<owning type>.<field>' (its path): carried as text so a bundle can embed it, the SIF/PESC contextText form
 // (the framework refuses 'path' itself as an embed text, being structural); the round-trip pair checks it equals the path, never states it
 const CONTEXT_TEXT_PROPERTY_NAME = 'contextText';
+// ⟪K3c⟫ the judge's view of a field, from the standard's own text only (Phase 0 ruling 5): the value names of the option set the field is
+// typed by (by its type= or its anonymous type), as JSON text in document order, and its owning type's own description. Both are DERIVED
+// from other nodes of this graph; the round-trip pair checks them and never states them.
+const OPTION_VALUE_NAME_LIST_PROPERTY_NAME = 'optionValueNameList';
+const OWNING_TYPE_DESCRIPTION_PROPERTY_NAME = 'owningTypeDescription';
 const COMMENT_CONSTRUCT = 'comment';
 const DESCRIPTION_SEPARATOR = '\n';
 const DECLARATION_CONSTRUCT_LIST = Object.freeze(['globalElement', 'localElement', 'localAttribute']);
@@ -274,6 +280,21 @@ const moduleFunction =
 			// 2. MINT — every record, in plan order (a parent always before its children)
 			// -----------------------------------------------------------------
 			const roleByStableId = {};
+			const recordByStableId = mintRecordList.reduce((byId, record) => ({ ...byId, [record.stableId]: record }), {});
+			const valueNameListByOptionSetStableId = mintRecordList.filter((record) => record.role === DME_ROLES.OPTION_VALUE).reduce((byId, record) => ({ ...byId, [record.parentStableId]: (byId[record.parentStableId] || []).concat([record.name]) }), {});
+			const anonymousOptionSetStableIdByDeclarationStableId = mintRecordList.filter((record) => record.role === DME_ROLES.OPTION_SET && record.parentEdgeType === EDGE_TYPES.HAS_OPTION_SET).reduce((byId, record) => ({ ...byId, [record.parentStableId]: record.stableId }), {});
+			// optionSetStableIdOf — the option set a field is typed by: its anonymous one, or the corpus option set its type= names
+			const optionSetStableIdOf = (record) => {
+				if (anonymousOptionSetStableIdByDeclarationStableId[record.stableId] !== undefined) {
+					return anonymousOptionSetStableIdByDeclarationStableId[record.stableId];
+				}
+				const writtenQName = attributeValueOf(record.node, 'type');
+				if (writtenQName === undefined) {
+					return undefined;
+				}
+				const resolved = resolveWrittenQName({ resolutionTable, schemaFile: record.schemaFile, writtenQName, symbolSpace: 'type', foreignNamespaceUriList, siteText: `'${record.schemaFile.schemaFileRelativePath}' ${record.node.locator} @type` });
+				return resolved.resolutionKind === 'corpus' && recordByStableId[resolved.targetStableId].role === DME_ROLES.OPTION_SET ? resolved.targetStableId : undefined;
+			};
 			mintRecordList.forEach((record) => {
 				const { node, schemaFile, role, nodeKind, stableId, name, nodePath, parentStableId, parentEdgeType, owningName, structureList } = record;
 				const constructRule = constructRegistry.constructByName[node.construct];
@@ -296,6 +317,14 @@ const moduleFunction =
 				}
 				if (role === DME_ROLES.PROPERTY) {
 					carriedProperties[CONTEXT_TEXT_PROPERTY_NAME] = nodePath;
+					const optionSetStableId = optionSetStableIdOf(record);
+					if (optionSetStableId !== undefined && valueNameListByOptionSetStableId[optionSetStableId] !== undefined) {
+						carriedProperties[OPTION_VALUE_NAME_LIST_PROPERTY_NAME] = JSON.stringify(valueNameListByOptionSetStableId[optionSetStableId]);
+					}
+					const owningTypeDescription = recordByStableId[parentStableId].role === DME_ROLES.CLASS ? descriptionOf(recordByStableId[parentStableId].node) : undefined;
+					if (owningTypeDescription !== undefined) {
+						carriedProperties[OWNING_TYPE_DESCRIPTION_PROPERTY_NAME] = owningTypeDescription;
+					}
 				}
 				if (structureList.length !== 0) {
 					// a JSON string, not a list: a one-entry list would be read back as a scalar (graph-contract §1)
