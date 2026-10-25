@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- prolog comment: the kit fixture's file A (prefix xsd:) -->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://example.org/a/v1/" xmlns:b="http://example.org/b/v1/" xmlns:xhtml="http://www.w3.org/1999/xhtml" targetNamespace="http://example.org/a/v1/" elementFormDefault="qualified">
+	<xsd:import namespace="http://example.org/b/v1/" schemaLocation="http://example.org/b/v1/b.xsd"/>
+	<xsd:import namespace="http://www.w3.org/1999/xhtml" schemaLocation="http://www.w3.org/2002/08/xhtml/xhtml1-strict.xsd"/>
+	<!-- a top-level comment -->
+	<xsd:element name="Report" type="ReportType">
+		<xsd:unique name="UniqueItemId">
+			<xsd:selector xpath="Item"/>
+			<xsd:field xpath="@id"/>
+		</xsd:unique>
+	</xsd:element>
+	<xsd:complexType name="ReportType">
+		<xsd:annotation>
+			<xsd:documentation>A report.</xsd:documentation>
+		</xsd:annotation>
+		<xsd:complexContent>
+			<xsd:extension base="b:BaseType">
+				<xsd:sequence>
+					<!-- the title comes first -->
+					<xsd:element name="Title" type="xsd:string">
+						<xsd:annotation>
+							<xsd:documentation>The title.</xsd:documentation>
+						</xsd:annotation>
+					</xsd:element>
+					<xsd:element name="Status" type="b:StatusType" minOccurs="0"/>
+					<xsd:element ref="b:Note" minOccurs="0" maxOccurs="unbounded"/>
+					<xsd:choice maxOccurs="unbounded">
+						<xsd:element name="Item">
+							<xsd:complexType>
+								<xsd:attribute name="id" type="xsd:ID" use="required"/>
+							</xsd:complexType>
+						</xsd:element>
+						<xsd:element name="Body" type="xhtml:Flow"/>
+					</xsd:choice>
+					<xsd:group ref="b:TrailerGroup"/>
+					<xsd:any namespace="##other" processContents="lax" minOccurs="0"/>
+				</xsd:sequence>
+				<xsd:attribute name="level" default="1">
+					<xsd:simpleType>
+						<xsd:restriction base="xsd:string">
+							<xsd:enumeration value="1"/>
+							<xsd:enumeration value="2"/>
+						</xsd:restriction>
+					</xsd:simpleType>
+				</xsd:attribute>
+				<xsd:attributeGroup ref="b:CommonAttributes"/>
+				<xsd:anyAttribute namespace="##other" processContents="lax"/>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<xsd:simpleType name="CodeOrText">
+		<xsd:union memberTypes="b:StatusType xsd:string"/>
+	</xsd:simpleType>
+	<xsd:complexType name="AmountType">
+		<xsd:simpleContent>
+			<xsd:extension base="xsd:decimal">
+				<xsd:attribute name="currency" type="xsd:string" fixed="USD"/>
+			</xsd:extension>
+		</xsd:simpleContent>
+	</xsd:complexType>
+</xsd:schema>
+<!-- epilog comment -->
