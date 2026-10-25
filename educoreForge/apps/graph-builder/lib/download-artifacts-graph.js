@@ -200,6 +200,10 @@ const OPENAPI_KIT_LISTING_RULE_BY_BUNDLE_TOKEN = Object.freeze({
 	case: Object.freeze({ forgeDeclarationModuleName: 'caseForgeDeclaration', openapiProfileFileName: 'caseOpenapiProfile.json' }),
 	eduapi: Object.freeze({ forgeDeclarationModuleName: 'eduapiForgeDeclaration', openapiProfileFileName: 'eduapiOpenapiProfile.json' }),
 	clr: Object.freeze({ forgeDeclarationModuleName: 'clrForgeDeclaration', openapiProfileFileName: 'clrOpenapiProfile.json' }),
+	// ⟪nextStandards-102326 wave 3 lane H3⟫ OneRoster 1.2's three standards (one row each, the wave-2 form)
+	onerosterrostering: Object.freeze({ forgeDeclarationModuleName: 'onerosterrosteringForgeDeclaration', openapiProfileFileName: 'onerosterrosteringOpenapiProfile.json' }),
+	onerostergradebook: Object.freeze({ forgeDeclarationModuleName: 'onerostergradebookForgeDeclaration', openapiProfileFileName: 'onerostergradebookOpenapiProfile.json' }),
+	onerosterresources: Object.freeze({ forgeDeclarationModuleName: 'onerosterresourcesForgeDeclaration', openapiProfileFileName: 'onerosterresourcesOpenapiProfile.json' }),
 });
 
 const openapiKitListingEmitterFor = ({ bundleToken }) => {
@@ -249,6 +253,9 @@ const statementListingEmitterByBundleToken = Object.freeze({
 	sedm: sedmListingEmitter,
 	eduapi: openapiKitListingEmitterFor({ bundleToken: 'eduapi' }),
 	clr: openapiKitListingEmitterFor({ bundleToken: 'clr' }),
+	onerosterrostering: openapiKitListingEmitterFor({ bundleToken: 'onerosterrostering' }),
+	onerostergradebook: openapiKitListingEmitterFor({ bundleToken: 'onerostergradebook' }),
+	onerosterresources: openapiKitListingEmitterFor({ bundleToken: 'onerosterresources' }),
 });
 
 module.exports = { installReadOnlyDriverGuard, statementListingEmitterByBundleToken };
