@@ -1,0 +1,15 @@
+{
+	"about": "graphBuilder build-store retention (EC4, VELVET_RIDGE for BRONZE_CROWN, 2026-10-25), read by lib/build-retention.js. Only files whose NAME matches storeFileNamePatternText (and their companionSuffixList files) are ever candidates for deletion: logs, buildLogs/, forensics/, buildRequest.json and reports are never candidates, by construction. A store is KEPT when a buildOfRecordMarkerFileName file sits in its directory or any ancestor up to the campaign directory; when a gate report names its directory; when a text file beside it (or its directory's sibling run log) mentions a promoted graph (promotionEvidencePatternText); when it holds a row a fold still needs (foldNeededTableList: an address the store of record lacks); or when it is the reference a kept delta reads through. A store is REFUSED (never touched, listed by name) when its real path holds a protectedPathFragmentList entry or a path segment matching backupSegmentPatternText (case-insensitive; a volume's own name under volumeMountRootPath is a device name, not a backup, and is not tested: the scratch SSD is 'qMaxBackup - Data'), lies under the P-a1 baseline ([noRebuildProof] baselineDirectoryPath) or IS a configured store of record ([stores]), or a live process holds it or a companion open.",
+	"storeFileNamePatternText": "\\.(sqlite3|sqlite)$",
+	"companionSuffixList": ["-wal", "-shm"],
+	"buildOfRecordMarkerFileName": ".buildOfRecord",
+	"protectedPathFragmentList": ["/fileStash_Backups/", "/MILO Backups/"],
+	"backupSegmentPatternText": "backup",
+	"volumeMountRootPath": "/Volumes",
+	"promotionEvidencePatternText": "\\bGOLD(_EVAL)?_[0-9]{6}",
+	"promotionEvidenceFileNamePatternText": "\\.(log|json|md|txt|tsv)$",
+	"foldNeededTableList": [
+		{ "tableName": "judgmentCacheEntries", "addressColumnList": ["promptHash", "model", "rendererVersion"], "rowWord": "judgment" },
+		{ "tableName": "vectorCacheEntries", "addressColumnList": ["embeddingModelVersion", "embeddingDims", "textHash"], "rowWord": "cached vector" }
+	]
+}
