@@ -552,7 +552,11 @@ const POST_D1_BASE_TAG = 'postW3VocabularyIi-102526'; // re-anchored by INDIGO_G
 // BRONZE_CROWN) ═══ PHASE0_ANCHOR_TAG postNsV2ForgeFrameworkIii-102426 -> postW3ForgeFrameworkIii-102526, tag cut ON this commit. Observed RED
 // first on the integrated head e2e341e2. CENSUS over this gate's paths: lib/forge-framework/test/test-gStandardMetadata.js 11/0 (lane H: the
 // ONEROSTER and MEDBIQ families admitted, and their twins). No framework source. Exactly the path lanes H and I reported.
-const PHASE0_ANCHOR_TAG = 'postW3ForgeFrameworkIii-102526'; // re-anchored by INDIGO_GARDEN (nextStandards wave-3 assembly; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-25 (VELVET_RIDGE; build-store economy, the same re-anchor commit as PHASE3_ANCHOR_TAG below) ═══ PHASE0_ANCHOR_TAG
+// postW3ForgeFrameworkIii-102526 -> postEcForgeFrameworkIii-102526, tag cut ON this commit. Observed RED first at 5b99202e (iii changed
+// [lib/forge-framework/test/test-gSeamUntouched.js]). CENSUS (lib/forge-framework/, numstat from the W3 tag): test/test-gSeamUntouched.js
+// 6/1, its own PRE_MIGRATION_REF re-anchor for EC1 and nothing else. No forge-framework source.
+const PHASE0_ANCHOR_TAG = 'postEcForgeFrameworkIii-102526'; // re-anchored by VELVET_RIDGE (EC; census in the block above); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -1162,7 +1166,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // (its (e) twin admits Oneroster*, Medbiq* residue) and lib/forge-framework/test/test-gStandardMetadata.js 11/0. Lane I, one NEW forge:
 // forges/medbiq/forgeMedbiq.js 26/0, lib/medbiqForgeDeclaration.js 60/0, lib/medbiqHooks.js 9/0. Exactly the paths lanes H and I reported. No
 // existing forge, no build, forger, replay or replay-manager source; lib/xsd-forge is not on this gate's path list. Allowed-path list NOT widened.
-const PHASE3_ANCHOR_TAG = 'postW3SeamDiffEmpty-102526'; // re-anchored by INDIGO_GARDEN (nextStandards wave-3 assembly; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-25 (VELVET_RIDGE; build-store economy EC1, WORKORDER-buildStoreEconomy-102526 mandate: seam re-anchors purely caused by
+// the lane's own files) ═══ PHASE3_ANCHOR_TAG postW3SeamDiffEmpty-102526 -> postEcSeamDiffEmpty-102526, tag cut ON this commit. Observed RED
+// first by the full suite at ec/economy 758006b9 (59/64). CENSUS over this gate's paths (numstat from the W3 tag): replay-manager only,
+// apps/graph-builder/apps/replay-manager/replayManager.js 66/4 (EC1 watchdog + labelled scratch volumes + sweep),
+// apps/graph-builder/apps/replay-manager/test/test-scratchVolumeLeak.js 201/0 and test/testSupport/scratchVolumeLeakChild.js 66/0 (EC1's
+// gate, NEW). No build, forger, replay or forge-framework source. Allowed-path list NOT widened.
+const PHASE3_ANCHOR_TAG = 'postEcSeamDiffEmpty-102526'; // re-anchored by VELVET_RIDGE (EC1; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');

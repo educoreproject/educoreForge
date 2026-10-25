@@ -253,7 +253,12 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // ═══ RE-ANCHOR, 2026-10-23 (SILENT_TRAIL; zeroBacklog lane B, on main 768a9477; ruled by BRONZE_CROWN: a lane re-anchors its own seam move) ═══
 // G-SEAM-UNTOUCHED seamDiffEmpty postZeroBacklogD3GSeamUntouched-102226 -> postZbB3GSeamUntouched-102226. CENSUS over the 7 seam files: build.js 46/2 (B3: the --rebridge
 // <source>:<hub> pair token and its refusal). Other six untouched.
-const PRE_MIGRATION_REF = 'postZbB3GSeamUntouched-102226'; // re-anchored by SILENT_TRAIL (zeroBacklog lane B; census REANCHOR-CENSUS-B-102226.md); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-25 (VELVET_RIDGE; build-store economy EC1, WORKORDER-buildStoreEconomy-102526 mandate: a lane re-anchors a seam
+// move purely its own) ═══ postZbB3GSeamUntouched-102226 -> postEcGSeamUntouched-102526, tag cut ON this commit. Observed RED first by the
+// full suite at ec/economy 758006b9 (8/13). CENSUS over the 7 seam files: apps/graph-builder/apps/replay-manager/replayManager.js 66/4
+// (EC1: the exit watchdog launched reparented and immune to TERM/INT/HUP; scratch volumes mounted anonymous but labelled
+// educoreForge.scratchGraph; create sweeps dangling labelled volumes first). Other six untouched; seam file list unchanged.
+const PRE_MIGRATION_REF = 'postEcGSeamUntouched-102526'; // re-anchored by VELVET_RIDGE (EC1; census in the block above); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',
