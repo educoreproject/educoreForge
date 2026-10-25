@@ -1,0 +1,7 @@
+{
+	"name": "forge-medbiq",
+	"version": "1.0.0",
+	"main": "forgeMedbiq.js",
+	"description": "MedBiquitous forge bundle — the AAMC MedBiquitous XML Schema portfolio (one standard of schema sets) on lib/xsd-forge: complex types, fields, enumerations, every QName reference as an edge. It does no bridging.",
+	"private": true
+}

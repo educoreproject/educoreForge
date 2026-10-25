@@ -1,0 +1,16 @@
+{
+  // medbiqOnlyRoundTrip — MedBiquitous alone with the RT-13 round-trip stage: the nextStandards-102326 wave 3 lane I phase-1 certification recipe.
+  "schemaVersion": "1.0.0",
+  "recipeName": "medbiqOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the MedBiquitous standard base and round-trip-validate the materialized product (RT-13 stage).",
+  "roundTripStage": true,
+  "standards": [
+    {
+      "token": "medbiq",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

@@ -75,3 +75,11 @@ educoreForge/forges/onerostergradebook/assets/standardSourceData/01/*.json
 educoreForge/forges/onerostergradebook/assets/standardSourceData/01/*.zip
 educoreForge/forges/onerosterresources/assets/standardSourceData/01/*.json
 educoreForge/forges/onerosterresources/assets/standardSourceData/01/*.zip
+
+# forge-medbiq snapshots 01/02 (nextStandards-102326 wave 3, lane I): the MedBiquitous publisher bytes (the XSD and WSDL files) are never
+# committed (TQ ruling 2026-10-24: "Leave it out of git"), though the licence permits redistribution. SHA256SUMS, README_PROVENANCE.md,
+# standardSourceLocation and snapshot 01's July manifest.json stay tracked; README_PROVENANCE.md says how to fetch the bytes and check them.
+educoreForge/forges/medbiq/assets/standardSourceData/01/**/*.xsd
+educoreForge/forges/medbiq/assets/standardSourceData/01/**/*.wsdl
+educoreForge/forges/medbiq/assets/standardSourceData/02/**/*.xsd
+educoreForge/forges/medbiq/assets/standardSourceData/02/**/*.wsdl

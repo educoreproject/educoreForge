@@ -1,0 +1,15 @@
+{
+  // medbiqOnly — MedBiquitous alone (stage off): the forge's base block, no hub, no bridge (nextStandards-102326 wave 3, lane I, phase 1).
+  "schemaVersion": "1.0.0",
+  "recipeName": "medbiqOnly",
+  "kind": "dev",
+  "description": "Forge the MedBiquitous standard base only - proves the MedBiquitous bundle forges from the publisher repository (snapshot 02).",
+  "standards": [
+    {
+      "token": "medbiq",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

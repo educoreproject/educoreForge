@@ -107,6 +107,11 @@ const ADDED_NEXT_STANDARDS_WAVE3_LANE_H = Object.freeze({
 	onerosterresourcesCedsDerivedPlugin: { standardKey: 'onerosterresources', targetHub: 'ceds', declarationDigest: '386b4d66fca6fb85c67996c44019d6e425d68faf0b8b476feff4147dbd6af7a2', hookNameList: [], reason: 'nextStandards wave 3 H2: every OneRoster 1.2 Resources property judged toward the CEDS hub (forges/onerosterresources)' },
 	onerosterresourcesCtdlDerivedPlugin: { standardKey: 'onerosterresources', targetHub: 'ctdl', declarationDigest: '8015fc47a9128266bd24de9a2b8d8f44a1533943416c696e12496e36a4691b8b', hookNameList: [], reason: 'nextStandards wave 3 H2: every OneRoster 1.2 Resources property judged toward the CTDL hub (forges/onerosterresources)' },
 });
+// ⟪nextStandards-102326 wave 3 lane I2, 2026-10-25 (EBONY_TOWER)⟫ ADDED, in this lane's own table: MedBiquitous's one judged facet
+const ADDED_NEXT_STANDARDS_WAVE3_LANE_I = Object.freeze({
+	medbiqCedsDerivedPlugin: { standardKey: 'medbiq', targetHub: 'ceds', declarationDigest: 'ebf0fcf6c7cc951e1e3e5171eb65ada8bbc1ac8090d2ace415fce53ed4a37140', hookNameList: [], reason: 'nextStandards wave 3 I2: the current-version MedBiquitous fields judged toward the CEDS hub (forges/medbiq)' },
+	medbiqCtdlDerivedPlugin: { standardKey: 'medbiq', targetHub: 'ctdl', declarationDigest: '999b5c318191559d45c92e5ba312fde22d39677f523e794d95c18f4f1ddbc57d', hookNameList: [], reason: 'nextStandards wave 3 I2: the current-version MedBiquitous fields judged toward the CTDL hub (forges/medbiq)' },
+});
 const ADDED_SINCE_R3_START = Object.freeze({
 	pescldCtdlDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '61c6c9cda1b1f7cbca25ecf77f50bdf316c8f685d4447bcc9df5a418c7672ff7', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C2: PESC_LD declared identity to the CTDL hub (forges/pescld)' },
 	pescldCedsDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ceds', declarationDigest: 'a5245e6b402c54d1c7572da75ecd7dde6589edb5353e65c04273dff483772595', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C3: PESC_LD declared identity to the CEDS hub, its stableIdTemplate rules only (forges/pescld)' },
@@ -123,6 +128,7 @@ const ADDED_SINCE_R3_START = Object.freeze({
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_F,
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_D,
 	...ADDED_NEXT_STANDARDS_WAVE3_LANE_H,
+	...ADDED_NEXT_STANDARDS_WAVE3_LANE_I,
 });
 // a bridge whose declaration moved since the start: both digests, so the entry is anchored to the roster it departs from
 const RE_KEYED_SINCE_R3_START = Object.freeze({

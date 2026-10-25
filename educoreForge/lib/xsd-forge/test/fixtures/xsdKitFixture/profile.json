@@ -1,0 +1,14 @@
+{
+	"profileNote": "The XSD kit test fixture: two prefixes (xsd:, xs:), an absolute import location, a relative include, a foreign namespace, a declared enumeration repeat, an excluded schema and an excluded WSDL.",
+	"schemaSetList": [{ "schemaSetName": "Report", "entryFileList": ["a/a.xsd"] }],
+	"schemaLocationTable": { "http://example.org/b/v1/b.xsd": "b/b.xsd" },
+	"foreignNamespaceList": [{ "namespace": "http://www.w3.org/1999/xhtml", "reason": "W3C XHTML: another body's namespace" }],
+	"schemaFileExclusionList": [
+		{ "schemaFile": "extra/legacy.xsd", "reason": "a legacy schema no set reaches" },
+		{ "schemaFile": "service.wsdl", "reason": "a service description, not the data model" }
+	],
+	"enumerationRepeatList": [{ "schemaFile": "b/b.xsd", "enumerationLocator": "/schema/simpleType[1]/restriction[1]/enumeration[3]", "reason": "the fixture repeats 'open'" }],
+	"stableIdPrefix": "synthxsd:",
+	"rootStableId": "synthxsd:root",
+	"perStandardLabelByNodeKind": { "schemaFile": "SynthXsdSchemaFile", "class": "SynthXsdComplexType", "property": "SynthXsdField", "optionSet": "SynthXsdOptionSet", "optionValue": "SynthXsdOptionValue", "support": "SynthXsdSupport" }
+}

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://example.org/b/v1/" targetNamespace="http://example.org/b/v1/" elementFormDefault="qualified">
+	<xs:include schemaLocation="c.xsd"/>
+	<xs:element name="Note" type="xs:string"/>
+	<xs:simpleType name="StatusType">
+		<xs:annotation>
+			<xs:documentation>A status.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:token">
+			<xs:enumeration value="open"/>
+			<xs:enumeration value="closed"/>
+			<xs:enumeration value="open"/>
+			<xs:enumeration value="on hold"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:group name="TrailerGroup">
+		<xs:sequence>
+			<xs:element name="Signature" type="xs:string"/>
+		</xs:sequence>
+	</xs:group>
+	<xs:attributeGroup name="CommonAttributes">
+		<xs:attribute name="lang" type="xs:language"/>
+	</xs:attributeGroup>
+</xs:schema>

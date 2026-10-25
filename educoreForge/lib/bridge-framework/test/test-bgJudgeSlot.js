@@ -161,6 +161,9 @@ SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_WAVE2_LANE_D_PLUGIN_LIST);
 // hubs, the same judgeSlot-v1 form
 const NEXT_STANDARDS_WAVE3_LANE_H_PLUGIN_LIST = ['onerosterrostering', 'onerostergradebook', 'onerosterresources'].flatMap((standardKey) => ['ceds', 'ctdl'].map((hubStem) => ({ bridgeName: `${standardKey}${hubStem.charAt(0).toUpperCase()}${hubStem.slice(1)}DerivedPlugin`, composedFromBridgingFilePath: `forges/${standardKey}/bridges/${standardKey}Bridging.js`, judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL })));
 SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_WAVE3_LANE_H_PLUGIN_LIST);
+// ⟪nextStandards-102326 wave 3 lane I2, 2026-10-25 (EBONY_TOWER)⟫ ADDED: MedBiquitous's one judged facet toward both hubs, the same judgeSlot-v1 form
+const NEXT_STANDARDS_WAVE3_LANE_I_PLUGIN_LIST = ['ceds', 'ctdl'].map((hubStem) => ({ bridgeName: `medbiq${hubStem.charAt(0).toUpperCase()}${hubStem.slice(1)}DerivedPlugin`, composedFromBridgingFilePath: 'forges/medbiq/bridges/medbiqBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL }));
+SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_WAVE3_LANE_I_PLUGIN_LIST);
 
 // ---------------------------------------------------------------------
 // module loading: the real module, or a double carrying the scenario's mutations
