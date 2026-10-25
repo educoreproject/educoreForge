@@ -97,6 +97,16 @@ const ADDED_NEXT_STANDARDS_WAVE2_LANE_D = Object.freeze({
 	clrCedsDerivedPlugin: { standardKey: 'clr', targetHub: 'ceds', declarationDigest: 'b1a4f49be068eccb6d05483d99a5d7025bdd3ca7707f7d85f27e7515fd80f95e', hookNameList: [], reason: 'nextStandards wave 2 D2: every CLR property judged toward the CEDS hub (forges/clr)' },
 	clrCtdlDerivedPlugin: { standardKey: 'clr', targetHub: 'ctdl', declarationDigest: '5f7cb5f7cc758785d5f1faf5585f73447b36b9b357af1feb366be5215c90e7c5', hookNameList: [], reason: 'nextStandards wave 2 D2: every CLR property judged toward the CTDL hub (forges/clr)' },
 });
+// ⟪nextStandards-102326 wave 3 lane H2, 2026-10-24 (MIDNIGHT_JOURNEY)⟫ ADDED, in this lane's own table: OneRoster 1.2's three standards
+// (Rostering, Gradebook, Resources), each with one judged facet toward both hubs
+const ADDED_NEXT_STANDARDS_WAVE3_LANE_H = Object.freeze({
+	onerosterrosteringCedsDerivedPlugin: { standardKey: 'onerosterrostering', targetHub: 'ceds', declarationDigest: '6ef0d52131bdee633e372c7a35b6c655d7b68443703f62b6ae16e6120a588cf3', hookNameList: [], reason: 'nextStandards wave 3 H2: every OneRoster 1.2 Rostering property judged toward the CEDS hub (forges/onerosterrostering)' },
+	onerosterrosteringCtdlDerivedPlugin: { standardKey: 'onerosterrostering', targetHub: 'ctdl', declarationDigest: '0bcb761129d5df0a6c597fab7ce019ac0f91a0d611b199966dbbb017fb675f4b', hookNameList: [], reason: 'nextStandards wave 3 H2: every OneRoster 1.2 Rostering property judged toward the CTDL hub (forges/onerosterrostering)' },
+	onerostergradebookCedsDerivedPlugin: { standardKey: 'onerostergradebook', targetHub: 'ceds', declarationDigest: '2cab7ae2b7cb6d2e343ac8a5126f0c4da0f5f12f76939ea60ca29a227b70984e', hookNameList: [], reason: 'nextStandards wave 3 H2: every OneRoster 1.2 Gradebook property judged toward the CEDS hub (forges/onerostergradebook)' },
+	onerostergradebookCtdlDerivedPlugin: { standardKey: 'onerostergradebook', targetHub: 'ctdl', declarationDigest: '04f59fa08b21dfbd6c2e5a4125c9728b64d1cde1902cda6c50f68454f477a27e', hookNameList: [], reason: 'nextStandards wave 3 H2: every OneRoster 1.2 Gradebook property judged toward the CTDL hub (forges/onerostergradebook)' },
+	onerosterresourcesCedsDerivedPlugin: { standardKey: 'onerosterresources', targetHub: 'ceds', declarationDigest: '386b4d66fca6fb85c67996c44019d6e425d68faf0b8b476feff4147dbd6af7a2', hookNameList: [], reason: 'nextStandards wave 3 H2: every OneRoster 1.2 Resources property judged toward the CEDS hub (forges/onerosterresources)' },
+	onerosterresourcesCtdlDerivedPlugin: { standardKey: 'onerosterresources', targetHub: 'ctdl', declarationDigest: '8015fc47a9128266bd24de9a2b8d8f44a1533943416c696e12496e36a4691b8b', hookNameList: [], reason: 'nextStandards wave 3 H2: every OneRoster 1.2 Resources property judged toward the CTDL hub (forges/onerosterresources)' },
+});
 const ADDED_SINCE_R3_START = Object.freeze({
 	pescldCtdlDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '61c6c9cda1b1f7cbca25ecf77f50bdf316c8f685d4447bcc9df5a418c7672ff7', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C2: PESC_LD declared identity to the CTDL hub (forges/pescld)' },
 	pescldCedsDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ceds', declarationDigest: 'a5245e6b402c54d1c7572da75ecd7dde6589edb5353e65c04273dff483772595', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C3: PESC_LD declared identity to the CEDS hub, its stableIdTemplate rules only (forges/pescld)' },
@@ -112,6 +122,7 @@ const ADDED_SINCE_R3_START = Object.freeze({
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_G,
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_F,
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_D,
+	...ADDED_NEXT_STANDARDS_WAVE3_LANE_H,
 });
 // a bridge whose declaration moved since the start: both digests, so the entry is anchored to the roster it departs from
 const RE_KEYED_SINCE_R3_START = Object.freeze({
