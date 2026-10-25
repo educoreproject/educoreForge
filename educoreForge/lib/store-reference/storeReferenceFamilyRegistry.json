@@ -1,0 +1,10 @@
+{
+	"about": "The store families that may be opened as a DELTA over a read-only REFERENCE (EC2/EC3, build-store economy, 2026-10-25). countedTableName is the family's address table: its row count is stamped when the delta is made and must never be lower when the delta is opened again (the reference is append-only; a smaller one is not the store the delta was built over). sequenceColumnName, when present, is the family's append order: its maximum is stamped too, so a fold can tell a reference row written AFTER the delta was made from one written before.",
+	"familyList": [
+		{ "familyName": "standardsDatabase", "countedTableName": "blocks" },
+		{ "familyName": "vectorStore", "countedTableName": "vectors" },
+		{ "familyName": "decisionStore", "countedTableName": "decisionBlocks", "sequenceColumnName": "seq" },
+		{ "familyName": "judgmentCache", "countedTableName": "judgmentCacheEntries" },
+		{ "familyName": "vectorCache", "countedTableName": "vectorCacheEntries" }
+	]
+}

@@ -19,6 +19,8 @@ const { pipeRunner, taskListPlus } = new require('qtools-asynchronous-pipe-plus'
 
 const sqliteInstance = require('../sqlite-instance/sqlite-instance');
 
+const storeReference = require('../store-reference/store-reference');
+
 const contentAddress = require('../content-address/content-address')();
 
 // START OF moduleFunction() ============================================================
@@ -68,6 +70,7 @@ const moduleFunction =
 
 		// closured once init() succeeds:
 		let dbHandle; // { runStatement, getData } from a sqlite-instance table handle
+		let referenceLayer = null; // ⟪EC3⟫ a DELTA store's read-only reference (lib/store-reference), null for a standalone store
 
 		const DTYPE = 'float32';
 		const BYTES_PER_FLOAT = 4;
@@ -83,6 +86,9 @@ const moduleFunction =
 
 		const getRows = (statement, callback) =>
 			dbHandle.getData(statement, rawOpts, callback);
+
+		// ⟪EC3⟫ a lookup by vectorId: the own store first, the reference when the own store has no row
+		const getRowsFromLayers = (statement, callback) => storeReference.rowsFromLayers({ getRows, referenceLayer })(statement, callback);
 
 		// encodeVectorBlob — number[] | Float32Array -> raw little-endian float32 Buffer. This is
 		// the deliberate double->float32 narrowing (the wire dtype is float32), matching
@@ -146,6 +152,13 @@ const moduleFunction =
 				runSql(createVectors, (err) => next(err, args));
 			});
 
+			taskList.push((args, next) => {
+				storeReference.openReferenceLayer({ getRows, familyName: 'vectorStore', databaseFilePath: dbPath }, (referenceErr, openedLayer) => {
+					referenceLayer = openedLayer || null;
+					next(referenceErr ? `${moduleName}.init: ${referenceErr}` : '', args);
+				});
+			});
+
 			pipeRunner(taskList.getList(), {}, (err) => {
 				callback(err, err ? undefined : {});
 			});
@@ -206,7 +219,7 @@ const moduleFunction =
 			const taskList = new taskListPlus();
 
 			taskList.push((args, next) => {
-				getRows(
+				getRowsFromLayers(
 					`SELECT vectorId, vectorHash FROM vectors WHERE vectorId=${esc(vectorId)};`,
 					(err, rows) => next(err, { ...args, rows }),
 				);
@@ -247,7 +260,7 @@ const moduleFunction =
 		//   REFUSED loudly (error channel, no data), NAMING the vector — a tampered vector must
 		//   never flow into a build. Mirrors forge-store.getBlock:240-272.
 		const getVector = ({ vectorId }, callback) => {
-			getRows(
+			getRowsFromLayers(
 				`SELECT * FROM vectors WHERE vectorId=${esc(vectorId)};`,
 				(err, rows) => {
 					if (err) {
@@ -333,7 +346,7 @@ const moduleFunction =
 
 		// hasVector — presence check by id (no text/blob read, no verify-on-read).
 		const hasVector = ({ vectorId }, callback) => {
-			getRows(
+			getRowsFromLayers(
 				`SELECT vectorId FROM vectors WHERE vectorId=${esc(vectorId)};`,
 				(err, rows) => {
 					if (err) {

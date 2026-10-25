@@ -47,6 +47,7 @@ const TREE_LIB = path.join(__dirname, '..');
 const sqliteInstance = require(path.join(TREE_LIB, 'sqlite-instance', 'sqlite-instance'))({});
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
 const vocabulary = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
+const storeReference = require(path.join(TREE_LIB, 'store-reference', 'store-reference'));
 
 // The option shape sqlite-instance needs for hand-written SQL: runStatement REFUSES a statement
 // with no <!tableName!> substitution tag unless noTableNameOk says the caller means it.
@@ -59,7 +60,14 @@ const RAW_OPTS = { noTableNameOk: true, suppressStatementLog: true };
 // manifest shares (manifestEditor.save refuses the same). blockTextColumnType: blocks.text always held TEXT (saveBlock
 // escapes a string); a store created before this declared it BLOB with TEXT affinity, which SQLite tolerates and
 // CREATE TABLE IF NOT EXISTS never retypes.
-const STORE_INVARIANT_BY_NAME = Object.freeze({ foreignKeysOn: true, emptyManifestRefused: true, blockTextColumnType: 'TEXT' });
+//
+// ⟪EC2, BRONZE_CROWN ruling F 2026-10-25⟫ W-C-9 EXTENDED, not weakened. foreignKeysOn still holds for every STANDALONE store
+// (the canonical store of record among them). A DELTA store (lib/store-reference: stamped over a read-only reference) cannot
+// satisfy a FOREIGN KEY whose parent row lives in the reference (a build's manifest names the hubs' base blocks, which the
+// reference holds), so its connection runs foreign_keys OFF and deltaMembershipCheckedOverUnion takes the key's place: open
+// asserts the reference is attached and the union check active, and saveManifest refuses by name a member held by neither the
+// delta nor its reference. graphBuilder -foldStore runs PRAGMA foreign_key_check on the store it folds into.
+const STORE_INVARIANT_BY_NAME = Object.freeze({ foreignKeysOn: true, deltaMembershipCheckedOverUnion: true, emptyManifestRefused: true, blockTextColumnType: 'TEXT' });
 
 // The LOCKED block taxonomy is the VOCABULARY REGISTRY's, not this module's. It used to be
 // declared here and re-exported to manifestEditor, which made the store the accidental home of a
@@ -149,13 +157,33 @@ const standardsDatabase = () => {
 							callback(`standardsDatabase.open '${databaseFilePath}': ${schemaErr}`);
 							return;
 						}
-						getRows('PRAGMA foreign_keys;', (pragmaErr, pragmaRows) => {
-							const foreignKeysOn = !pragmaErr && pragmaRows && pragmaRows[0] && pragmaRows[0].foreign_keys === 1;
-							if (foreignKeysOn !== STORE_INVARIANT_BY_NAME.foreignKeysOn) {
-								callback(`standardsDatabase.open '${databaseFilePath}': REFUSING — PRAGMA foreign_keys is ${pragmaErr ? `unreadable (${pragmaErr})` : JSON.stringify(pragmaRows)} on this connection, and STORE_INVARIANT_BY_NAME declares foreignKeysOn ${STORE_INVARIANT_BY_NAME.foreignKeysOn}: the manifest membership's FOREIGN KEYs would go unenforced`);
+						storeReference.openReferenceLayer({ getRows, familyName: 'standardsDatabase', databaseFilePath }, (referenceErr, referenceLayer) => {
+							if (referenceErr) {
+								callback(`standardsDatabase.open: ${referenceErr}`);
 								return;
 							}
-							callback('', makeApi({ esc, escJson, runSql, getRows, databaseFilePath }));
+							// a DELTA's connection turns the FOREIGN KEYs off (its parent rows may live in the reference); a standalone
+							// connection leaves them as sqlite-instance set them. Either way the pragma is READ BACK below, never assumed.
+							const turnForeignKeysOffForDelta = (done) => (referenceLayer ? runSql('PRAGMA foreign_keys = OFF;', done) : done(''));
+							turnForeignKeysOffForDelta((pragmaSetErr) => {
+								if (pragmaSetErr) {
+									callback(`standardsDatabase.open '${databaseFilePath}': ${pragmaSetErr}`);
+									return;
+								}
+								getRows('PRAGMA foreign_keys;', (pragmaErr, pragmaRows) => {
+									const foreignKeysOn = !pragmaErr && pragmaRows && pragmaRows[0] && pragmaRows[0].foreign_keys === 1;
+									const api = makeApi({ esc, escJson, runSql, getRows, databaseFilePath, referenceLayer });
+									if (!referenceLayer && foreignKeysOn !== STORE_INVARIANT_BY_NAME.foreignKeysOn) {
+										callback(`standardsDatabase.open '${databaseFilePath}': REFUSING — PRAGMA foreign_keys is ${pragmaErr ? `unreadable (${pragmaErr})` : JSON.stringify(pragmaRows)} on this connection, and STORE_INVARIANT_BY_NAME declares foreignKeysOn ${STORE_INVARIANT_BY_NAME.foreignKeysOn}: the manifest membership's FOREIGN KEYs would go unenforced`);
+										return;
+									}
+									if (referenceLayer && (pragmaErr || foreignKeysOn || api.membershipCheckedOverUnion !== STORE_INVARIANT_BY_NAME.deltaMembershipCheckedOverUnion)) {
+										callback(`standardsDatabase.open '${databaseFilePath}': REFUSING — a DELTA of '${referenceLayer.referenceDatabaseFilePath}' must run foreign_keys OFF with the manifest membership checked over the delta and its reference (STORE_INVARIANT_BY_NAME.deltaMembershipCheckedOverUnion); found foreign_keys ${pragmaErr ? `unreadable (${pragmaErr})` : JSON.stringify(pragmaRows)} and the union check ${api.membershipCheckedOverUnion ? 'active' : 'INACTIVE'}`);
+										return;
+									}
+									callback('', api);
+								});
+							});
 						});
 					});
 				});
@@ -357,7 +385,13 @@ const ensureColumns = ({ runSql, getRows }, wanted, callback) => {
 };
 
 // -----
-const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
+const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath, referenceLayer }) => {
+	// ⟪EC2⟫ a lookup by refId: the own store first, the reference when the own store has no row (null referenceLayer: own only)
+	const getRowsFromLayers = storeReference.rowsFromLayers({ getRows, referenceLayer });
+	const getReferenceRows = (statement, rowsCallback) => (referenceLayer ? referenceLayer.getReferenceRows(statement, rowsCallback) : rowsCallback(null, []));
+	// a DELTA's saveManifest checks membership over the delta and its reference (the FOREIGN KEYs' place, ruling F); open asserts it
+	const membershipCheckedOverUnion = Boolean(referenceLayer);
+
 	// -----
 	// saveBlock — content-address the text, insert if absent. Idempotent by construction.
 	const saveBlock = ({ text, kind, subject, version, requires, producedBy }, callback) => {
@@ -434,13 +468,14 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 
 		const refId = contentAddress.blockIdForText(text);
 
-		getRows(`SELECT refId FROM blocks WHERE refId=${esc(refId)};`, (err, rows) => {
+		getRowsFromLayers(`SELECT refId FROM blocks WHERE refId=${esc(refId)};`, (err, rows) => {
 			if (err) {
 				callback(err);
 				return;
 			}
 			if (rows && rows.length > 0) {
-				// already present — the same bytes ARE the same block. Not an error, not a rewrite.
+				// already present — the same bytes ARE the same block. Not an error, not a rewrite. (In a delta, "present" includes
+				// the reference: a hub's base block the store of record holds is not written again, EC2.)
 				callback('', { refId, alreadyPresent: true });
 				return;
 			}
@@ -469,7 +504,7 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			callback('standardsDatabase.getBlock: refId is required');
 			return;
 		}
-		getRows(`SELECT * FROM blocks WHERE refId=${esc(refId)};`, (err, rows) => {
+		getRowsFromLayers(`SELECT * FROM blocks WHERE refId=${esc(refId)};`, (err, rows) => {
 			if (err) {
 				callback(err);
 				return;
@@ -519,16 +554,22 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			return;
 		}
 		const versionClause = version === undefined ? '' : ` AND version=${esc(version)}`;
-		getRows(
-			`SELECT refId, kind, subject, version, createdAt FROM blocks WHERE kind=${esc(kind)} AND subject=${esc(subject)}${versionClause} ORDER BY createdAt DESC;`,
-			(err, rows) => {
-				if (err) {
-					callback(`standardsDatabase.findBlockBySubject: ${err}`);
+		const subjectStatement = `SELECT refId, kind, subject, version, createdAt FROM blocks WHERE kind=${esc(kind)} AND subject=${esc(subject)}${versionClause} ORDER BY createdAt DESC;`;
+		getRows(subjectStatement, (err, rows) => {
+			if (err) {
+				callback(`standardsDatabase.findBlockBySubject: ${err}`);
+				return;
+			}
+			// ⟪EC2⟫ a NAME lookup is not unique, so a delta asks both layers and takes the newest of the union
+			getReferenceRows(subjectStatement, (referenceErr, referenceRows) => {
+				if (referenceErr) {
+					callback(`standardsDatabase.findBlockBySubject: ${referenceErr}`);
 					return;
 				}
-				callback('', (rows || [])[0] || null);
-			},
-		);
+				const unionRowList = (rows || []).concat(referenceRows || []).sort((leftRow, rightRow) => String(rightRow.createdAt).localeCompare(String(leftRow.createdAt)));
+				callback('', unionRowList[0] || null);
+			});
+		});
 	};
 
 	// -----
@@ -570,17 +611,47 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			return;
 		}
 
+		// ⟪EC2, ruling F⟫ THE UNION CHECK: a delta runs without FOREIGN KEYs, so before anything is written every member must be a
+		// block the delta OR its reference holds; one that neither holds is refused by name, and nothing is written.
+		const checkMembershipOverUnion = (done) => {
+			if (!membershipCheckedOverUnion) {
+				done('');
+				return;
+			}
+			const memberRefIdList = [...new Set(members.map((oneMember) => `${oneMember.schemaBlockRefId}`))];
+			const memberStatement = `SELECT refId FROM blocks WHERE refId IN (${memberRefIdList.map((memberRefId) => esc(memberRefId)).join(', ')});`;
+			getRows(memberStatement, (ownErr, ownRows) => {
+				getReferenceRows(memberStatement, (referenceErr, referenceRows) => {
+					if (ownErr || referenceErr) {
+						done(`standardsDatabase.saveManifest ${refId}: the union membership check could not read its blocks: ${ownErr || referenceErr}`);
+						return;
+					}
+					const heldRefIdSet = new Set((ownRows || []).concat(referenceRows || []).map((oneRow) => oneRow.refId));
+					const unheldRefIdList = memberRefIdList.filter((memberRefId) => !heldRefIdSet.has(memberRefId));
+					done(
+						unheldRefIdList.length === 0
+							? ''
+							: `standardsDatabase.saveManifest ${refId}: REFUSED — ${unheldRefIdList.length} member block(s) are held by neither this DELTA nor its reference '${referenceLayer.referenceDatabaseFilePath}' (first: ${unheldRefIdList[0]}). A manifest never names a block that does not exist; nothing was written.`,
+					);
+				});
+			});
+		};
+
 		// ONE TRANSACTION (W-C-9, 2026-10-06): a member the FOREIGN KEY refuses must take the manifest row with it. Written
 		// piecemeal, the row would stay behind under the membership's address and the next save of the same membership
 		// would find it alreadyPresent and report success over a manifest missing its members.
 		const taskList = new taskListPlus();
 
 		taskList.push((args, next) => {
+			checkMembershipOverUnion((unionErr) => next(unionErr, args));
+		});
+
+		taskList.push((args, next) => {
 			runSql('BEGIN IMMEDIATE;', (err) => next(err, { ...args, transactionOpen: !err }));
 		});
 
 		taskList.push((args, next) => {
-			getRows(`SELECT refId FROM manifests WHERE refId=${esc(refId)};`, (err, rows) =>
+			getRowsFromLayers(`SELECT refId FROM manifests WHERE refId=${esc(refId)};`, (err, rows) =>
 				next(err, { ...args, alreadyPresent: !!(rows && rows.length) }),
 			);
 		});
@@ -653,38 +724,73 @@ const makeApi = ({ esc, escJson, runSql, getRows, databaseFilePath }) => {
 			callback('standardsDatabase.getManifest: refId is required');
 			return;
 		}
-		getRows(`SELECT * FROM manifests WHERE refId=${esc(refId)};`, (err, rows) => {
+		const manifestStatement = `SELECT * FROM manifests WHERE refId=${esc(refId)};`;
+		const memberStatement = `SELECT mb.schemaBlockRefId, mb.position, mb.description, mb.producedByRecipeName,
+		        b.kind, b.subject, b.version, b.requires
+		 FROM manifestBlocks mb
+		 LEFT JOIN blocks b ON b.refId = mb.schemaBlockRefId
+		 WHERE mb.manifestRefId=${esc(refId)}
+		 ORDER BY mb.position, mb.schemaBlockRefId;`;
+		// requires is stored as JSON text (saveBlock escJson); a member reads back the parsed list, or null when the row has none
+		// (every block saved before campaign P3, W-C-7)
+		const finish = (manifestRow, memberRows) =>
+			callback('', { ...manifestRow, members: (memberRows || []).map((oneRow) => ({ ...oneRow, requires: oneRow.requires == null ? null : JSON.parse(oneRow.requires) })) });
+		getRows(manifestStatement, (err, rows) => {
 			if (err) {
 				callback(err);
 				return;
 			}
-			const manifestRow = rows && rows[0];
-			if (!manifestRow) {
-				callback('', null);
-				return;
-			}
-			getRows(
-				`SELECT mb.schemaBlockRefId, mb.position, mb.description, mb.producedByRecipeName,
-				        b.kind, b.subject, b.version, b.requires
-				 FROM manifestBlocks mb
-				 LEFT JOIN blocks b ON b.refId = mb.schemaBlockRefId
-				 WHERE mb.manifestRefId=${esc(refId)}
-				 ORDER BY mb.position, mb.schemaBlockRefId;`,
-				(memberErr, memberRows) => {
-					if (memberErr) {
-						callback(memberErr);
+			const ownManifestRow = rows && rows[0];
+			if (!ownManifestRow) {
+				// ⟪EC2⟫ a manifest the reference holds is read whole from the reference (its members live there with it)
+				getReferenceRows(manifestStatement, (referenceErr, referenceRows) => {
+					if (referenceErr) {
+						callback(referenceErr);
 						return;
 					}
-					// requires is stored as JSON text (saveBlock escJson); a member reads back the parsed list, or null when the row
-					// has none (every block saved before campaign P3, W-C-7)
-					callback('', { ...manifestRow, members: (memberRows || []).map((oneRow) => ({ ...oneRow, requires: oneRow.requires == null ? null : JSON.parse(oneRow.requires) })) });
-				},
-			);
+					const referenceManifestRow = referenceRows && referenceRows[0];
+					if (!referenceManifestRow) {
+						callback('', null);
+						return;
+					}
+					getReferenceRows(memberStatement, (memberErr, memberRows) => (memberErr ? callback(memberErr) : finish(referenceManifestRow, memberRows)));
+				});
+				return;
+			}
+			getRows(memberStatement, (memberErr, memberRows) => {
+				if (memberErr) {
+					callback(memberErr);
+					return;
+				}
+				// ⟪EC2⟫ a DELTA's manifest may name blocks only its reference holds: their kind/subject/version/requires are read there
+				const unjoinedRefIdList = (memberRows || []).filter((oneRow) => oneRow.kind == null).map((oneRow) => oneRow.schemaBlockRefId);
+				if (!referenceLayer || unjoinedRefIdList.length === 0) {
+					finish(ownManifestRow, memberRows);
+					return;
+				}
+				getReferenceRows(`SELECT refId, kind, subject, version, requires FROM blocks WHERE refId IN (${unjoinedRefIdList.map((memberRefId) => esc(memberRefId)).join(', ')});`, (referenceErr, referenceBlockRows) => {
+					if (referenceErr) {
+						callback(referenceErr);
+						return;
+					}
+					const referenceBlockByRefId = new Map((referenceBlockRows || []).map((oneRow) => [oneRow.refId, oneRow]));
+					finish(
+						ownManifestRow,
+						memberRows.map((oneRow) => {
+							const referenceBlock = oneRow.kind == null ? referenceBlockByRefId.get(oneRow.schemaBlockRefId) : null;
+							return referenceBlock ? { ...oneRow, kind: referenceBlock.kind, subject: referenceBlock.subject, version: referenceBlock.version, requires: referenceBlock.requires } : oneRow;
+						}),
+					);
+				});
+			});
 		});
 	};
 
 	return {
 		databaseFilePath,
+		// ⟪EC2⟫ null for a standalone store; for a delta, the reference it reads through (and is never opened without)
+		referenceDatabaseFilePath: referenceLayer ? referenceLayer.referenceDatabaseFilePath : null,
+		membershipCheckedOverUnion,
 		saveBlock,
 		getBlock,
 		findBlockBySubject,

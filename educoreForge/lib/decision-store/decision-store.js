@@ -46,6 +46,7 @@ const sqlString = require('sqlstring-sqlite');
 const TREE_LIB = path.join(__dirname, '..');
 const sqliteInstance = require(path.join(TREE_LIB, 'sqlite-instance', 'sqlite-instance'))({});
 const contentAddress = require(path.join(TREE_LIB, 'content-address', 'content-address'))();
+const storeReference = require(path.join(TREE_LIB, 'store-reference', 'store-reference'));
 
 // The option shape sqlite-instance needs for hand-written SQL: runStatement REFUSES a statement with no
 // <!tableName!> substitution tag unless noTableNameOk says the caller means it. (Same as standards-database.)
@@ -97,7 +98,14 @@ const decisionStore = () => {
 						callback(`decisionStore.open '${databaseFilePath}': ${schemaErr}`);
 						return;
 					}
-					callback('', makeApi({ esc, runSql, getRows, databaseFilePath }));
+					// ⟪EC3⟫ a DELTA store opens its stamped reference (lib/store-reference); a standalone store gets null
+					storeReference.openReferenceLayer({ getRows, familyName: 'decisionStore', databaseFilePath }, (referenceErr, referenceLayer) => {
+						if (referenceErr) {
+							callback(`decisionStore.open: ${referenceErr}`);
+							return;
+						}
+						callback('', makeApi({ esc, runSql, getRows, databaseFilePath, referenceLayer }));
+					});
 				});
 			});
 		});
@@ -136,7 +144,10 @@ const buildSchema = ({ runSql }, callback) => {
 };
 
 // -----
-const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
+const makeApi = ({ esc, runSql, getRows, databaseFilePath, referenceLayer }) => {
+	// ⟪EC3⟫ the own store first, the reference when the own store has no row: for the hash (a unique address) and for a pair's
+	// LATEST block alike, because a delta's block for a pair is always later than its reference's
+	const getRowsFromLayers = storeReference.rowsFromLayers({ getRows, referenceLayer });
 	// -----
 	// saveDecisionBlock — content-address the frozen text, insert if absent. Idempotent by construction.
 	//
@@ -166,7 +177,7 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 			return;
 		}
 
-		getRows(`SELECT seq FROM decisionBlocks WHERE decisionBlockHash=${esc(refId)};`, (err, rows) => {
+		getRowsFromLayers(`SELECT seq FROM decisionBlocks WHERE decisionBlockHash=${esc(refId)};`, (err, rows) => {
 			if (err) {
 				callback(err);
 				return;
@@ -204,7 +215,7 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 			callback('decisionStore.getDecisionBlock: pairKey is required and must be a non-empty string');
 			return;
 		}
-		getRows(
+		getRowsFromLayers(
 			`SELECT decisionBlockHash, frozenText FROM decisionBlocks
 			 WHERE pairKey=${esc(pairKey)} ORDER BY seq DESC LIMIT 1;`,
 			(err, rows) => {

@@ -41,6 +41,7 @@ const sqlString = require('sqlstring-sqlite');
 
 const TREE_LIB = path.join(__dirname, '..');
 const sqliteInstance = require(path.join(TREE_LIB, 'sqlite-instance', 'sqlite-instance'))({});
+const storeReference = require(path.join(TREE_LIB, 'store-reference', 'store-reference'));
 
 // The option shape sqlite-instance needs for hand-written SQL: runStatement REFUSES a statement with
 // no <!tableName!> substitution tag unless noTableNameOk says the caller means it. (Same as
@@ -97,7 +98,14 @@ const vectorCache = () => {
 						callback(`vectorCache.open '${databaseFilePath}': ${schemaErr}`);
 						return;
 					}
-					callback('', makeApi({ esc, runSql, getRows, databaseFilePath }));
+					// ⟪EC3⟫ a DELTA cache opens its stamped reference (lib/store-reference); a standalone cache gets null
+					storeReference.openReferenceLayer({ getRows, familyName: 'vectorCache', databaseFilePath }, (referenceErr, referenceLayer) => {
+						if (referenceErr) {
+							callback(`vectorCache.open: ${referenceErr}`);
+							return;
+						}
+						callback('', makeApi({ esc, runSql, getRows, databaseFilePath, referenceLayer }));
+					});
 				});
 			});
 		});
@@ -136,7 +144,7 @@ const buildSchema = ({ runSql }, callback) => {
 };
 
 // -----
-const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
+const makeApi = ({ esc, runSql, getRows, databaseFilePath, referenceLayer }) => {
 	// validateIdentity — model and dims are the address; a bad one is a fault, never a default.
 	const validateIdentity = (embeddingModelVersion, embeddingDims, who) => {
 		if (typeof embeddingModelVersion !== 'string' || embeddingModelVersion.trim() === '') {
@@ -167,12 +175,23 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 			callback('', { byHash: {} });
 			return;
 		}
-		const inList = distinct.map((oneHash) => esc(oneHash)).join(', ');
-		getRows(
+		const selectFor = (hashList) =>
 			`SELECT textHash, vectorBase64, sourceText FROM vectorCacheEntries
 			 WHERE embeddingModelVersion=${esc(embeddingModelVersion)}
 			   AND embeddingDims=${Number(embeddingDims)}
-			   AND textHash IN (${inList});`,
+			   AND textHash IN (${hashList.map((oneHash) => esc(oneHash)).join(', ')});`;
+		// ⟪EC3⟫ the own store answers first; a delta's reference answers only the hashes the own store missed
+		const layeredRows = (rowsCallback) =>
+			getRows(selectFor(distinct), (ownErr, ownRows) => {
+				const ownHashSet = new Set((ownRows || []).map((oneRow) => oneRow.textHash));
+				const missedHashList = distinct.filter((oneHash) => !ownHashSet.has(oneHash));
+				if (ownErr || !referenceLayer || missedHashList.length === 0) {
+					rowsCallback(ownErr, ownRows);
+					return;
+				}
+				referenceLayer.getReferenceRows(selectFor(missedHashList), (referenceErr, referenceRows) => rowsCallback(referenceErr, (ownRows || []).concat(referenceRows || [])));
+			});
+		layeredRows(
 			(err, rows) => {
 				if (err) {
 					callback(err);
@@ -229,23 +248,48 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 			);
 			return;
 		}
-		const tuples = entries
-			.map(
-				(oneEntry) =>
-					`(${esc(embeddingModelVersion)}, ${Number(embeddingDims)}, ${esc(oneEntry.textHash)}, ` +
-					`${esc(oneEntry.vectorBase64)}, ${esc(oneEntry.sourceText)})`,
-			)
-			.join(', ');
-		runSql(
-			`INSERT OR IGNORE INTO vectorCacheEntries
-			 (embeddingModelVersion, embeddingDims, textHash, vectorBase64, sourceText)
-			 VALUES ${tuples};`,
-			(err) => {
-				if (err) {
-					callback(`vectorCache.putVectors: ${err}`);
+		// insertEntries — INSERT OR IGNORE into the OWN store; an empty list (everything already in the reference) writes nothing
+		const insertEntries = (entryList) => {
+			if (entryList.length === 0) {
+				callback('', { requested: entries.length });
+				return;
+			}
+			const tuples = entryList
+				.map(
+					(oneEntry) =>
+						`(${esc(embeddingModelVersion)}, ${Number(embeddingDims)}, ${esc(oneEntry.textHash)}, ` +
+						`${esc(oneEntry.vectorBase64)}, ${esc(oneEntry.sourceText)})`,
+				)
+				.join(', ');
+			runSql(
+				`INSERT OR IGNORE INTO vectorCacheEntries
+				 (embeddingModelVersion, embeddingDims, textHash, vectorBase64, sourceText)
+				 VALUES ${tuples};`,
+				(err) => {
+					if (err) {
+						callback(`vectorCache.putVectors: ${err}`);
+						return;
+					}
+					callback('', { requested: entries.length });
+				},
+			);
+		};
+		if (!referenceLayer) {
+			insertEntries(entries);
+			return;
+		}
+		// ⟪EC3⟫ a delta writes only what its reference does not already hold (the reference itself is never written)
+		referenceLayer.getReferenceRows(
+			`SELECT textHash FROM vectorCacheEntries
+			 WHERE embeddingModelVersion=${esc(embeddingModelVersion)} AND embeddingDims=${Number(embeddingDims)}
+			   AND textHash IN (${[...new Set(entries.map((oneEntry) => oneEntry.textHash))].map((oneHash) => esc(oneHash)).join(', ')});`,
+			(referenceErr, referenceRows) => {
+				if (referenceErr) {
+					callback(`vectorCache.putVectors: ${referenceErr}`);
 					return;
 				}
-				callback('', { requested: entries.length });
+				const referenceHashSet = new Set((referenceRows || []).map((oneRow) => oneRow.textHash));
+				insertEntries(entries.filter((oneEntry) => !referenceHashSet.has(oneEntry.textHash)));
 			},
 		);
 	};

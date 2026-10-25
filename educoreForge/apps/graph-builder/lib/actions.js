@@ -62,6 +62,15 @@ const requireDecisionStore = () =>
 const requireJudgmentCache = () =>
 	require(path.join(__dirname, '..', '..', '..', 'lib', 'judgment-cache', 'judgment-cache'));
 
+// store-reference (EC2/EC3: a delta store over a read-only reference) requires sqlite-instance at load too — required lazily.
+const requireStoreReference = () =>
+	require(path.join(__dirname, '..', '..', '..', 'lib', 'store-reference', 'store-reference'));
+// store-fold has no sqlite-instance pull (better-sqlite3 only), required lazily for symmetry; the two caches' modules the fold's
+// schema step opens carry the trap and are required lazily too
+const requireStoreFold = () => require(path.join(__dirname, '..', '..', '..', 'lib', 'store-fold', 'store-fold'));
+const requireVectorStore = () => require(path.join(__dirname, '..', '..', '..', 'lib', 'vector-store', 'vector-store'));
+const requireVectorCache = () => require(path.join(__dirname, '..', '..', '..', 'lib', 'embedding', 'vectorCache'));
+
 // match-forensics has NO sqlite pull (fs/path only) — lazily required anyway, for symmetry with
 // its two sibling persistence stores; the trap discipline is easier to audit when uniform.
 const requireMatchForensics = () =>
@@ -188,11 +197,17 @@ const resolveSupportStoreFilePath = ({ explicitValue, configuredValue, actionNam
 //                      starting one for this run (hermetic suites and acceptance runs do), but a new VECTOR CACHE is a
 //                      cold cache and is never what a build means unless it says --createStore=true.
 // Frozen vectors have no row: they ALWAYS live in the standards database file (build.js), stated here so nobody adds one.
+//   referenceFlagName  ⟪EC2/EC3, 2026-10-25⟫ the flag naming this family's read-only REFERENCE: the build's own store becomes a
+//                      DELTA of it (lib/store-reference), reading the reference in place and writing only what it does not
+//                      hold. Absent, the family has no reference and every statement is the one that ran before EC.
+//   referenceSameFileAsFamilyName  the reference follows the RESOLVED reference of that family unless its own flag speaks (the
+//                      single-file ruling, read on the reference side: one store of record holds every family). Frozen vectors
+//                      follow the standards database's reference, as their store follows the standards database's file.
 const STORE_FAMILY_RESOLUTION_TABLE = Object.freeze([
-	Object.freeze({ familyName: 'standardsDatabase', flagName: 'standardsDatabaseFilePath', configName: 'graphBuilderSupportFilePath', explicitPathMustExist: false, isSupportStore: true }),
-	Object.freeze({ familyName: 'decisionStore', flagName: 'decisionStoreFilePath', sameFileAsFamilyName: 'standardsDatabase', explicitPathMustExist: false }),
-	Object.freeze({ familyName: 'judgmentCache', flagName: 'judgmentCacheFilePath', sameFileAsFamilyName: 'standardsDatabase', disableWord: 'false', explicitPathMustExist: false }),
-	Object.freeze({ familyName: 'vectorCache', flagName: 'embeddingCacheFilePath', configName: 'vectorCacheFilePath', disableWord: 'false', explicitPathMustExist: true }),
+	Object.freeze({ familyName: 'standardsDatabase', flagName: 'standardsDatabaseFilePath', configName: 'graphBuilderSupportFilePath', explicitPathMustExist: false, isSupportStore: true, referenceFlagName: 'referenceStandardsDatabaseFilePath' }),
+	Object.freeze({ familyName: 'decisionStore', flagName: 'decisionStoreFilePath', sameFileAsFamilyName: 'standardsDatabase', explicitPathMustExist: false, referenceFlagName: 'referenceDecisionStoreFilePath', referenceSameFileAsFamilyName: 'standardsDatabase' }),
+	Object.freeze({ familyName: 'judgmentCache', flagName: 'judgmentCacheFilePath', sameFileAsFamilyName: 'standardsDatabase', disableWord: 'false', explicitPathMustExist: false, referenceFlagName: 'referenceJudgmentCacheFilePath', referenceSameFileAsFamilyName: 'standardsDatabase' }),
+	Object.freeze({ familyName: 'vectorCache', flagName: 'embeddingCacheFilePath', configName: 'vectorCacheFilePath', disableWord: 'false', explicitPathMustExist: true, referenceFlagName: 'referenceEmbeddingCacheFilePath' }),
 ]);
 const CREATE_STORE_FLAG_NAME = 'createStore';
 
@@ -247,6 +262,60 @@ const resolveStoreFamilyPath = ({ familyName, commandLineParameters, storesConfi
 		return { error: `graphBuilder ${actionName}: ${familyName} store '${candidate.filePath}' does not exist. A build never creates a store silently; pass --createStore=true on the one run meant to start it.` };
 	}
 	return { filePath: candidate.filePath, resolvedFrom: candidate.resolvedFrom };
+};
+
+// resolveReferenceStorePath — ⟪EC2/EC3⟫ a family's REFERENCE: { filePath } | { none: true } | { error }. The flag wins; a blank one is
+// refused; else a same-file family follows the resolved reference of the family it shares a file with; else none. A reference is
+// refused by name for a family that is disabled, and for an own store that came from CONFIG: the configured store of record is
+// never anybody's delta (a reference is for a build's own explicit store).
+const resolveReferenceStorePath = ({ familyName, commandLineParameters, ownResolution, resolvedReferenceByFamilyName, actionName }) => {
+	const familyRow = STORE_FAMILY_RESOLUTION_TABLE.find((oneRow) => oneRow.familyName === familyName);
+	if (!familyRow || familyRow.referenceFlagName === undefined) {
+		return { error: `graphBuilder ${actionName}: '${familyName}' is not a store family that takes a reference (STORE_FAMILY_RESOLUTION_TABLE)` };
+	}
+	const explicitValue = firstValue(commandLineParameters, familyRow.referenceFlagName);
+	if (typeof explicitValue === 'string' && explicitValue.trim() === '') {
+		return { error: `graphBuilder ${actionName}: --${familyRow.referenceFlagName} was given but blank. Pass the store of record's path or omit it; a blank is refused rather than guessed at.` };
+	}
+	const followedReference = familyRow.referenceSameFileAsFamilyName === undefined ? undefined : resolvedReferenceByFamilyName[familyRow.referenceSameFileAsFamilyName];
+	const referenceFilePath = typeof explicitValue === 'string' ? explicitValue : followedReference && followedReference.filePath;
+	if (referenceFilePath === undefined) {
+		return { none: true };
+	}
+	if (ownResolution.disabled) {
+		return typeof explicitValue === 'string' ? { error: `graphBuilder ${actionName}: --${familyRow.referenceFlagName} names a reference for the ${familyName}, which this run DISABLES (--${familyRow.flagName}=${familyRow.disableWord}). Drop one of the two.` } : { none: true };
+	}
+	if (ownResolution.resolvedFrom === 'config') {
+		return { error: `graphBuilder ${actionName}: a reference for the ${familyName} was named, but its own store '${ownResolution.filePath}' came from [stores] config: the configured store of record is never a delta. Name the build's own store with --${familyRow.flagName}.` };
+	}
+	if (!fs.existsSync(referenceFilePath)) {
+		return { error: `graphBuilder ${actionName}: the ${familyName} reference '${referenceFilePath}' does not exist. A reference is a store of record; it is never created.` };
+	}
+	return { filePath: referenceFilePath };
+};
+
+// stampDeltaStores — ⟪EC2/EC3⟫ before any family module opens, make each own store with a resolved reference a DELTA of it
+// (lib/store-reference stampReference; idempotent for the same reference, refused for a different one). Frozen vectors
+// (familyName vectorStore) live in the standards database file and follow its reference. stampPlanList: [{ familyName,
+// databaseFilePath, referenceFilePath }]; reports each stamp on the status log, so a delta build says so where it starts.
+const stampDeltaStores = ({ stampPlanList, actionName }, callback) => {
+	const { xLog } = process.global;
+	const stampNext = (planIndex) => {
+		if (planIndex >= stampPlanList.length) {
+			callback('');
+			return;
+		}
+		const onePlan = stampPlanList[planIndex];
+		requireStoreReference().stampReference({ databaseFilePath: onePlan.databaseFilePath, familyName: onePlan.familyName, referenceDatabaseFilePath: onePlan.referenceFilePath }, (stampErr, stampReport) => {
+			if (stampErr) {
+				callback(`graphBuilder ${actionName}: ${stampErr}`);
+				return;
+			}
+			xLog.status(`graphBuilder: ${onePlan.familyName} store ${onePlan.databaseFilePath} is a DELTA of ${onePlan.referenceFilePath} (${stampReport.alreadyStamped ? 'stamped before' : 'stamped now'}): it reads the reference in place and writes only what the reference does not hold`);
+			stampNext(planIndex + 1);
+		});
+	};
+	stampNext(0);
 };
 
 // embeddingCacheFilePathFor — the value build.js threads to the embedder: a path, or the BOOLEAN false that disables it.
@@ -543,6 +612,32 @@ const build = (callback) => {
 		callback(vectorCachePathResolution.error);
 		return;
 	}
+	// ⟪EC2/EC3⟫ each family's REFERENCE (none unless a --reference* flag names one; decision store and judgment cache follow the
+	// standards database's reference, frozen vectors live in its file and follow it too)
+	const resolvedReferenceByFamilyName = {};
+	const ownResolutionByFamilyName = { standardsDatabase: supportStoreResolution, decisionStore: decisionStorePathResolution, judgmentCache: judgmentCachePathResolution, vectorCache: vectorCachePathResolution };
+	const referenceError = ['standardsDatabase', 'decisionStore', 'judgmentCache', 'vectorCache'].reduce((firstError, familyName) => {
+		if (firstError) {
+			return firstError;
+		}
+		const referenceResolution = resolveReferenceStorePath({ familyName, commandLineParameters: process.global.commandLineParameters, ownResolution: ownResolutionByFamilyName[familyName], resolvedReferenceByFamilyName, actionName: '-build' });
+		resolvedReferenceByFamilyName[familyName] = referenceResolution;
+		return referenceResolution.error || '';
+	}, '');
+	if (referenceError) {
+		callback(referenceError);
+		return;
+	}
+	const stampPlanList = [
+		{ familyName: 'standardsDatabase', databaseFilePath: standardsDatabaseFilePath, referenceResolution: resolvedReferenceByFamilyName.standardsDatabase },
+		{ familyName: 'vectorStore', databaseFilePath: standardsDatabaseFilePath, referenceResolution: resolvedReferenceByFamilyName.standardsDatabase },
+		{ familyName: 'decisionStore', databaseFilePath: decisionStoreFilePath, referenceResolution: resolvedReferenceByFamilyName.decisionStore },
+		{ familyName: 'judgmentCache', databaseFilePath: judgmentCachePathResolution.filePath, referenceResolution: resolvedReferenceByFamilyName.judgmentCache },
+		{ familyName: 'vectorCache', databaseFilePath: vectorCachePathResolution.filePath, referenceResolution: resolvedReferenceByFamilyName.vectorCache },
+	]
+		.filter((onePlan) => onePlan.referenceResolution.filePath !== undefined)
+		.map((onePlan) => ({ familyName: onePlan.familyName, databaseFilePath: onePlan.databaseFilePath, referenceFilePath: onePlan.referenceResolution.filePath }));
+
 	const matchForensicsPathResolution = resolvePersistencePath({
 		explicitValue: firstValue(process.global.commandLineParameters, 'matchForensicsDirPath'),
 		defaultPath: MATCH_FORENSICS_DEFAULT_DIR_PATH,
@@ -586,52 +681,143 @@ const build = (callback) => {
 		});
 	};
 
-	requireStandardsDatabase()().open({ databaseFilePath: standardsDatabaseFilePath }, (openError, standardsDatabase) => {
-		if (openError) {
-			callback(`graphBuilder -build: ${openError}`);
+	stampDeltaStores({ stampPlanList, actionName: '-build' }, (stampError) => {
+		if (stampError) {
+			callback(stampError);
 			return;
 		}
-		requireDecisionStore()().open({ databaseFilePath: decisionStoreFilePath }, (decisionOpenError, decisionStore) => {
-			if (decisionOpenError) {
-				callback(`graphBuilder -build: ${decisionOpenError}`);
+		requireStandardsDatabase()().open({ databaseFilePath: standardsDatabaseFilePath }, (openError, standardsDatabase) => {
+			if (openError) {
+				callback(`graphBuilder -build: ${openError}`);
 				return;
 			}
-			xLog.status(`graphBuilder: decision store at ${decisionStoreFilePath}`);
-			openJudgmentCache((judgmentCacheError, judgmentCache) => {
-				if (judgmentCacheError) {
-					callback(judgmentCacheError);
+			requireDecisionStore()().open({ databaseFilePath: decisionStoreFilePath }, (decisionOpenError, decisionStore) => {
+				if (decisionOpenError) {
+					callback(`graphBuilder -build: ${decisionOpenError}`);
 					return;
 				}
-				openMatchForensics((matchForensicsError, matchForensics) => {
-					if (matchForensicsError) {
-						callback(matchForensicsError);
+				xLog.status(`graphBuilder: decision store at ${decisionStoreFilePath}`);
+				openJudgmentCache((judgmentCacheError, judgmentCache) => {
+					if (judgmentCacheError) {
+						callback(judgmentCacheError);
 						return;
 					}
-					buildLib.build(
-						recipe,
-						{
-							xLog,
-							standardsDatabase,
-							decisionStore,
-							judgmentCache,
-							matchForensics,
-							embeddingCacheFilePath: embeddingCacheFilePathFor(vectorCachePathResolution),
-							recipePath: read.recipePath,
-							recipeText: read.recipeText,
-							// ⟪campaign P2, W-C-8⟫ optional lineage: the manifest this build was composed FROM, when the operator names one
-							...(basedOnManifestRefIdResolution.basedOnManifestRefId !== undefined ? { basedOnManifestRefId: basedOnManifestRefIdResolution.basedOnManifestRefId } : {}),
-						},
-						(buildError, result) => {
-							if (buildError) {
-								callback(`graphBuilder -build failed: ${buildError}`);
-								return;
-							}
-							callback('', { exitCode: 0, resultText: JSON.stringify(result, null, 2) });
-						},
-					);
+					openMatchForensics((matchForensicsError, matchForensics) => {
+						if (matchForensicsError) {
+							callback(matchForensicsError);
+							return;
+						}
+						buildLib.build(
+							recipe,
+							{
+								xLog,
+								standardsDatabase,
+								decisionStore,
+								judgmentCache,
+								matchForensics,
+								embeddingCacheFilePath: embeddingCacheFilePathFor(vectorCachePathResolution),
+								recipePath: read.recipePath,
+								recipeText: read.recipeText,
+								// ⟪campaign P2, W-C-8⟫ optional lineage: the manifest this build was composed FROM, when the operator names one
+								...(basedOnManifestRefIdResolution.basedOnManifestRefId !== undefined ? { basedOnManifestRefId: basedOnManifestRefIdResolution.basedOnManifestRefId } : {}),
+							},
+							(buildError, result) => {
+								if (buildError) {
+									callback(`graphBuilder -build failed: ${buildError}`);
+									return;
+								}
+								callback('', { exitCode: 0, resultText: JSON.stringify(result, null, 2) });
+							},
+						);
+					});
 				});
 			});
 		});
+	});
+};
+
+// ---------------------------------------------------------------------
+// -foldStore
+// ---------------------------------------------------------------------
+// ⟪EC3, build-store economy 2026-10-25⟫ return a store's novel rows to the store of record: lib/store-fold does the counting, the
+// conflict check, the one-transaction insert, the conserved-count check and PRAGMA foreign_key_check; this action resolves the two
+// paths, holds the fold lock across plan and apply, prints the plan, and opens the target through each OWNING module first so
+// every table it writes is the schema its owner declares (the fold declares none). DRY RUN unless --apply=true.
+const FOLD_SCHEMA_OPENER_BY_FAMILY_NAME = Object.freeze({
+	standardsDatabase: (targetFilePath, done) => requireStandardsDatabase()().open({ databaseFilePath: targetFilePath }, (err) => done(err || '')),
+	vectorStore: (targetFilePath, done) => requireVectorStore()({}).init({ dbPath: targetFilePath }, (err) => done(err || '')),
+	decisionStore: (targetFilePath, done) => requireDecisionStore()().open({ databaseFilePath: targetFilePath }, (err) => done(err || '')),
+	judgmentCache: (targetFilePath, done) => requireJudgmentCache()().open({ databaseFilePath: targetFilePath }, (err) => done(err || '')),
+	vectorCache: (targetFilePath, done) => requireVectorCache()().open({ databaseFilePath: targetFilePath }, (err) => done(err || '')),
+});
+const foldPlanText = (plan) =>
+	[`graphBuilder -foldStore: ${plan.sourceFilePath}`, `                     into ${plan.targetFilePath}`]
+		.concat(
+			plan.tablePlanList.map(
+				(tablePlan) =>
+					`  ${tablePlan.tableName.padEnd(22)} source ${tablePlan.sourceRowCount}, target before ${tablePlan.targetRowCountBefore}${tablePlan.targetTablePresent ? '' : ' (no table yet)'}, MISSING ${tablePlan.missingCount}, overlap ${tablePlan.overlapCount}, conflicts ${tablePlan.conflictCount}, order conflicts ${tablePlan.orderConflictCount}` +
+					tablePlan.conflictExampleList.concat(tablePlan.orderConflictExampleList).map((exampleText) => `\n      CONFLICT ${exampleText}`).join(''),
+			),
+		)
+		.concat([`  total missing ${plan.missingTotal}, total conflicts ${plan.conflictTotal}${plan.conflictTotal > 0 ? ' — a fold with any conflict is a STOP' : ''}`])
+		.join('\n');
+
+const foldStoreAction = (callback) => {
+	const { xLog, commandLineParameters } = process.global;
+	const storeFold = requireStoreFold();
+	const sourceFilePath = firstValue(commandLineParameters, 'sourceFilePath');
+	const targetFilePath = firstValue(commandLineParameters, 'targetFilePath');
+	const applyText = firstValue(commandLineParameters, 'apply');
+	if (applyText !== undefined && applyText !== 'true') {
+		callback(`graphBuilder -foldStore: --apply must be 'true' when given (got '${applyText}'); without it the fold is a dry run.`);
+		return;
+	}
+	const absentList = [['sourceFilePath', sourceFilePath], ['targetFilePath', targetFilePath]].filter((oneFlag) => typeof oneFlag[1] !== 'string' || oneFlag[1].trim() === '').map((oneFlag) => `--${oneFlag[0]}`);
+	if (absentList.length > 0) {
+		callback(`graphBuilder -foldStore: required and absent: ${absentList.join(', ')}. There are no defaults: the source is the delta or store being folded, the target the store of record it folds into.`);
+		return;
+	}
+	const lockRefusal = storeFold.acquireFoldLock({ ownerText: `graphBuilder -foldStore ${sourceFilePath} -> ${targetFilePath}` });
+	if (lockRefusal) {
+		callback(`graphBuilder -foldStore: ${lockRefusal}`);
+		return;
+	}
+	const finishUnlocked = (err, result) => {
+		const releaseRefusal = storeFold.releaseFoldLock({});
+		callback(err ? `${err}${releaseRefusal ? `; AND ${releaseRefusal}` : ''}` : releaseRefusal ? `graphBuilder -foldStore: ${releaseRefusal}` : '', err || releaseRefusal ? undefined : result);
+	};
+	const planned = storeFold.planFold({ sourceFilePath, targetFilePath });
+	if (planned.error) {
+		finishUnlocked(`graphBuilder -foldStore: ${planned.error}`);
+		return;
+	}
+	xLog.status(foldPlanText(planned.plan));
+	if (applyText !== 'true') {
+		finishUnlocked('', { exitCode: planned.plan.conflictTotal > 0 ? 1 : 0, resultText: JSON.stringify({ dryRun: true, plan: planned.plan }, null, 2) });
+		return;
+	}
+	const ensureTargetSchema = (familyNameList, done) => {
+		const openNext = (familyIndex) => {
+			if (familyIndex >= familyNameList.length) {
+				done('');
+				return;
+			}
+			const schemaOpener = FOLD_SCHEMA_OPENER_BY_FAMILY_NAME[familyNameList[familyIndex]];
+			if (!schemaOpener) {
+				done(`no owning module is registered for family '${familyNameList[familyIndex]}' (FOLD_SCHEMA_OPENER_BY_FAMILY_NAME)`);
+				return;
+			}
+			schemaOpener(planned.plan.targetFilePath, (openErr) => (openErr ? done(`${familyNameList[familyIndex]}: ${openErr}`) : openNext(familyIndex + 1)));
+		};
+		openNext(0);
+	};
+	storeFold.applyFold({ plan: planned.plan, ensureTargetSchema }, (applyErr, report) => {
+		if (applyErr) {
+			finishUnlocked(`graphBuilder -foldStore: ${applyErr}`);
+			return;
+		}
+		xLog.status(`graphBuilder -foldStore: APPLIED — ${report.tableReportList.map((tableReport) => `${tableReport.tableName} ${tableReport.beforeCount} + ${tableReport.insertedCount} = ${tableReport.afterCount}`).join('; ')}; foreign_key_check clean`);
+		finishUnlocked('', { exitCode: 0, resultText: JSON.stringify({ dryRun: false, report }, null, 2) });
 	});
 };
 
@@ -1850,6 +2036,7 @@ return {
 	roundTripGates: roundTripVerbActionFor('roundTripGates'),
 	goldEvalCheck: goldEvalCheckAction,
 	truncateStore: truncateStoreAction,
+	foldStore: foldStoreAction,
 	stampPromotion: stampPromotionAction,
 	spendLedger: spendLedgerAction,
 	publishLayer: publishLayerAction,

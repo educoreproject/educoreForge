@@ -78,6 +78,8 @@ const run = () => {
 			? actions.goldEvalCheck
 			: switches.truncateStore
 			? actions.truncateStore
+			: switches.foldStore
+			? actions.foldStore
 			: switches.stampPromotion
 			? actions.stampPromotion
 			: switches.spendLedger

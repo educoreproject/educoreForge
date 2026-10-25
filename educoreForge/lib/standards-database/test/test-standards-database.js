@@ -370,7 +370,9 @@ function suffixKindGates(standardsDatabase) {
 function storeInvariantGates(standardsDatabase) {
 	harness.section('STORE INVARIANTS — foreign keys enforced, a dangling member refused atomically, TEXT block column, no dead API (W-C-9)');
 	const { STORE_INVARIANT_BY_NAME } = require('../standards-database');
-	harness.equal('the declared invariants', JSON.stringify(STORE_INVARIANT_BY_NAME), JSON.stringify({ foreignKeysOn: true, emptyManifestRefused: true, blockTextColumnType: 'TEXT' }));
+	// ⟪EC2, BRONZE_CROWN ruling F 2026-10-25⟫ W-C-9 EXTENDED: a delta store checks manifest membership over itself and its reference
+	// in the FOREIGN KEYs' place (proved by lib/store-reference/test/test-storeReference (e)(g))
+	harness.equal('the declared invariants', JSON.stringify(STORE_INVARIANT_BY_NAME), JSON.stringify({ foreignKeysOn: true, deltaMembershipCheckedOverUnion: true, emptyManifestRefused: true, blockTextColumnType: 'TEXT' }));
 	harness.ok('getBlockMeta is GONE from the api (no production caller; V1-S51)', standardsDatabase.getBlockMeta === undefined);
 
 	const danglingRefId = 'f'.repeat(64);

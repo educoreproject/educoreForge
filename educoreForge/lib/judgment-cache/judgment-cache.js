@@ -49,6 +49,7 @@ const sqlString = require('sqlstring-sqlite');
 
 const TREE_LIB = path.join(__dirname, '..');
 const sqliteInstance = require(path.join(TREE_LIB, 'sqlite-instance', 'sqlite-instance'))({});
+const storeReference = require(path.join(TREE_LIB, 'store-reference', 'store-reference'));
 const { judgeSummaryRefusal } = require(path.join(TREE_LIB, 'vocabulary', 'vocabulary'));
 const { spendCallListViolation } = require(path.join(TREE_LIB, 'spend-ledger', 'spendRecord'));
 
@@ -108,7 +109,14 @@ const judgmentCache = () => {
 						callback(`judgmentCache.open '${databaseFilePath}': ${schemaErr}`);
 						return;
 					}
-					callback('', makeApi({ esc, runSql, getRows, databaseFilePath }));
+					// ⟪EC3⟫ a DELTA cache opens its stamped reference (lib/store-reference); a standalone cache gets null
+					storeReference.openReferenceLayer({ getRows, familyName: 'judgmentCache', databaseFilePath }, (referenceErr, referenceLayer) => {
+						if (referenceErr) {
+							callback(`judgmentCache.open: ${referenceErr}`);
+							return;
+						}
+						callback('', makeApi({ esc, runSql, getRows, databaseFilePath, referenceLayer }));
+					});
 				});
 			});
 		});
@@ -174,7 +182,9 @@ const buildSchema = ({ runSql }, callback) => {
 };
 
 // -----
-const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
+const makeApi = ({ esc, runSql, getRows, databaseFilePath, referenceLayer }) => {
+	// ⟪EC3⟫ a lookup by the unique address: the own store first, the reference when the own store has no row
+	const getRowsFromLayers = storeReference.rowsFromLayers({ getRows, referenceLayer });
 	// validateKey — the THREE-PART address, refused by name when any part is missing or blank.
 	// THE SOUNDNESS INVARIANT lives here: a caller that supplies less than all three parts is a
 	// caller that could serve a judgment across a model or renderer boundary. There is no default.
@@ -203,7 +213,7 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 			callback(keyErr);
 			return;
 		}
-		getRows(
+		getRowsFromLayers(
 			`SELECT entry.judgmentJson, entry.generation, entry.createdAt, filling.fillingSpendCallListJson
 			 FROM judgmentCacheEntries AS entry
 			 LEFT JOIN judgmentFillingSpend AS filling
@@ -307,6 +317,31 @@ const makeApi = ({ esc, runSql, getRows, databaseFilePath }) => {
 			callback(`judgmentCache.putJudgment: the filling ${fillingFault}`);
 			return;
 		}
+		const insertJudgment = insertJudgmentFor({ promptHash, model, rendererVersion, generation, judgment, fillingSpendCallList }, callback);
+		// ⟪EC3⟫ an address the reference already holds is first-written THERE: a delta stores nothing, exactly as the own store
+		// answers a held address (alreadyPresent, nothing written)
+		if (referenceLayer) {
+			referenceLayer.getReferenceRows(
+				`SELECT promptHash FROM judgmentCacheEntries WHERE promptHash=${esc(promptHash)} AND model=${esc(model)} AND rendererVersion=${esc(rendererVersion)} LIMIT 1;`,
+				(referenceErr, referenceRows) => {
+					if (referenceErr) {
+						callback(`judgmentCache.putJudgment: ${referenceErr}`);
+						return;
+					}
+					if (referenceRows.length > 0) {
+						callback('', { stored: false, alreadyPresent: true });
+						return;
+					}
+					insertJudgment();
+				},
+			);
+			return;
+		}
+		insertJudgment();
+	};
+
+	// insertJudgmentFor — the own-store insert of putJudgment, built by putJudgment over its own arguments
+	const insertJudgmentFor = ({ promptHash, model, rendererVersion, generation, judgment, fillingSpendCallList }, callback) => () => {
 		runSql(
 			`INSERT OR IGNORE INTO judgmentCacheEntries
 			 (promptHash, model, rendererVersion, judgmentJson, generation)

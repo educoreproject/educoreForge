@@ -38,6 +38,7 @@ SYNOPSIS
                                    --replayLogPath=<the -replay run log>  | --replayBuildLogPath=<a replay build log>
                                    --reforgeEvidencePath=<reforgeCompare -summarize output>
      graphBuilder   -spendLedger [--since=YYYY-MM-DD] [--recipe=<recipeName>] [--lifetimeLedgerFilePath=<path>]
+     graphBuilder   -foldStore --sourceFilePath=<a delta or a store> --targetFilePath=<the store of record> [--apply=true]
      graphBuilder   -publishLayer --layerKey=<key> --versionTag=<tag> --sssomPath=<set.sssom.tsv>
                                    --decisionStoreFilePath=<path> --sssomValidatorPath=<sssom-py's sssom binary>
                                    [--authorIri=<edc agent IRI>] [--layerRegistryFilePath=<path>] [--agentRegistryFilePath=<path>]
@@ -381,6 +382,27 @@ OPTIONS
                            evidence about this one.) Record the build mode beside any id you
                            publish. Full account: forges/pesc260805/bridgeData/
                            buildModeIdentityRecord.json
+     --referenceStandardsDatabaseFilePath=<path>   --referenceDecisionStoreFilePath=<path>
+     --referenceJudgmentCacheFilePath=<path>       --referenceEmbeddingCacheFilePath=<path>
+                           OPTIONAL for -build (EC2/EC3, 2026-10-25). Make this build's own store of that
+                           family a DELTA of a store of record, read in place and READ-ONLY: every lookup
+                           asks the build's own store first and the reference second, and a write the
+                           reference already holds (a hub's base block, its frozen vectors, a cached vector
+                           or judgment, a decision block) is not made. The decision store and judgment
+                           cache follow the standards database's reference unless named; frozen vectors
+                           always do. The delta is STAMPED with its reference (table storeReferenceStamps):
+                           it is never opened again without it, and opening refuses by name if the
+                           reference is missing or holds fewer rows than when stamped. A delta runs without
+                           FOREIGN KEYs and checks a manifest's members over itself and its reference
+                           instead (ruling F). Refused: a blank value; a reference that does not exist; a
+                           reference for a disabled family; a reference for a store that came from [stores]
+                           config (the store of record is never a delta). A new delta vector cache still
+                           needs --createStore=true. --embeddingCacheOnly and --judgeCacheOnly are exactly
+                           as strict: a miss is a miss in BOTH layers. One difference from a clone: another
+                           process may fold rows INTO the reference during the build, so a cache-only run
+                           can hit a row that a frozen copy would have refused; the row is the same
+                           content-addressed, first-written row either way. Return the delta's rows with
+                           -foldStore.
      --embeddingCacheFilePath=<path> | --embeddingCacheFilePath=false
                            Where the content-addressed VECTOR CACHE (textHash x model -> embedding)
                            is read and written for this build. OPTIONAL. WHEN OMITTED it is [stores]
@@ -418,6 +440,23 @@ OPTIONS
      -verbose              Emit verbose diagnostic detail on stderr.
      -quiet                Suppress progress; results and errors only.
 
+     -foldStore --sourceFilePath=<path> --targetFilePath=<path> [--apply=true]
+                  Return a store's novel rows to the store of record (EC3). READS both, and WITHOUT
+                  --apply=true WRITES NOTHING: it prints, per table (blocks, manifests, manifestBlocks,
+                  vectors, decisionBlocks, judgmentCacheEntries, judgmentFillingSpend,
+                  vectorCacheEntries), the source rows, the target's rows, how many the target lacks
+                  (MISSING), how many it holds, and CONFLICTS: the same content address with a different
+                  payload, and a decision block for a pair the target holds a block for that is not
+                  provably older (the latest block for a pair wins, so order is content). With
+                  --apply=true it writes ONLY the target, in ONE transaction: INSERT OR IGNORE of the
+                  missing rows in the source's order, after = before + missing checked per table, and
+                  PRAGMA foreign_key_check; any failure ROLLS BACK and the target is exactly as it was.
+                  REFUSED BY NAME: any conflict (a fold with a conflict is a STOP; nothing is written);
+                  a missing file; the same file twice; a target that is itself a delta; a source that
+                  is not a graphBuilder store; a held fold lock (/tmp/miloPersistence/
+                  educoreForgeStoreFold.lock, one fold per machine). The target's tables are created by
+                  their OWNING modules, never by the fold. Exit 0 a clean plan or an applied fold;
+                  1 a plan with conflicts, or refused.
      -stampPromotion
                   RUN AFTER A GRAPH IS PROMOTED (renamed to its GNC-001 name). Writes the graph's REAL
                   name into GraphProvenance.graphName (the scratch name is kept as scratchGraphName) and
