@@ -1,0 +1,24 @@
+{
+	"scopeNote": "The files whose fields MedBiquitous's judged facet judges (nextStandards wave 3 lane I, Phase 0 ruling 6 by BRONZE_CROWN, 2026-10-25): the current version of each sub-standard and the current shared libraries. NOT judged, though forged: the legacy v1 libraries the current standards import (member, address, name, activityreport, curriculuminventory v1), the IEEE LOM binding (lomv2/common, extend, unique, vocab and healthcarelom.xsd: IEEE's, never bridged as LOM), and journal/service/v1/journaltypes.xsd. 1,229 fields at snapshot 02.",
+	"judgedSchemaFileList": [
+		"activitymodel/v1/activitymodel.xsd",
+		"activityreport/v2/activityreport.xsd",
+		"address/v2/address.xsd",
+		"common/v2/common.xsd",
+		"competencyframework/v1/competencyframework.xsd",
+		"competencyobject/v1/competencyobject.xsd",
+		"curriculuminventory/v2/curriculuminventory.xsd",
+		"dataavailabilitymodel/v1/dataavailabilitymodel.xsd",
+		"educationalachievement/v1/educationalachievement.xsd",
+		"educationaltrajectory/v1/educationaltrajectoryextensions.xsd",
+		"entrustmentscale/v1/entrustmentscale.xsd",
+		"financialinterest/v1/financialinterest.xsd",
+		"lomv2/healthcare/healthcaremetadata.xsd",
+		"member/v2/member.xsd",
+		"metrics/v2/medicaleducationmetrics.xsd",
+		"name/v2/name.xsd",
+		"performanceframework/v1/performanceframework.xsd",
+		"surveyitems/v1/surveyitems.xsd",
+		"virtualpatientdata/v1/virtualpatientdata.xsd"
+	]
+}

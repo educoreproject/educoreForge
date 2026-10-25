@@ -97,6 +97,11 @@ const ADDED_NEXT_STANDARDS_WAVE2_LANE_D = Object.freeze({
 	clrCedsDerivedPlugin: { standardKey: 'clr', targetHub: 'ceds', declarationDigest: 'b1a4f49be068eccb6d05483d99a5d7025bdd3ca7707f7d85f27e7515fd80f95e', hookNameList: [], reason: 'nextStandards wave 2 D2: every CLR property judged toward the CEDS hub (forges/clr)' },
 	clrCtdlDerivedPlugin: { standardKey: 'clr', targetHub: 'ctdl', declarationDigest: '5f7cb5f7cc758785d5f1faf5585f73447b36b9b357af1feb366be5215c90e7c5', hookNameList: [], reason: 'nextStandards wave 2 D2: every CLR property judged toward the CTDL hub (forges/clr)' },
 });
+// ⟪nextStandards-102326 wave 3 lane I2, 2026-10-25 (EBONY_TOWER)⟫ ADDED, in this lane's own table: MedBiquitous's one judged facet
+const ADDED_NEXT_STANDARDS_WAVE3_LANE_I = Object.freeze({
+	medbiqCedsDerivedPlugin: { standardKey: 'medbiq', targetHub: 'ceds', declarationDigest: 'a703538b062764d6a858928b44c589372d4e1650fc54f3829b5cc56aa3a910fc', hookNameList: [], reason: 'nextStandards wave 3 I2: the current-version MedBiquitous fields judged toward the CEDS hub (forges/medbiq)' },
+	medbiqCtdlDerivedPlugin: { standardKey: 'medbiq', targetHub: 'ctdl', declarationDigest: '06f0545a80e6b49e46ae1ffe519b6ae5e0c0f905cc49149e1e3e21d813824b56', hookNameList: [], reason: 'nextStandards wave 3 I2: the current-version MedBiquitous fields judged toward the CTDL hub (forges/medbiq)' },
+});
 const ADDED_SINCE_R3_START = Object.freeze({
 	pescldCtdlDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '61c6c9cda1b1f7cbca25ecf77f50bdf316c8f685d4447bcc9df5a418c7672ff7', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C2: PESC_LD declared identity to the CTDL hub (forges/pescld)' },
 	pescldCedsDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ceds', declarationDigest: 'a5245e6b402c54d1c7572da75ecd7dde6589edb5353e65c04273dff483772595', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C3: PESC_LD declared identity to the CEDS hub, its stableIdTemplate rules only (forges/pescld)' },
@@ -112,6 +117,7 @@ const ADDED_SINCE_R3_START = Object.freeze({
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_G,
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_F,
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_D,
+	...ADDED_NEXT_STANDARDS_WAVE3_LANE_I,
 });
 // a bridge whose declaration moved since the start: both digests, so the entry is anchored to the roster it departs from
 const RE_KEYED_SINCE_R3_START = Object.freeze({

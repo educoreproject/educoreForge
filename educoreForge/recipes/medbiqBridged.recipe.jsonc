@@ -1,0 +1,22 @@
+{
+  // medbiqBridged — nextStandards-102326 wave 3 lane I phase 2: MedBiquitous beside both hubs with its ONE judged facet (every MedbiqField of the
+  // current-version files, bridges/medbiqJudgedSubjects.json: 1,229 subjects), retrieval by the forge's text nodes, the judge Jev jev-1.13.0
+  // naming the relation. Rehearsed under --useDebugJudge, then the real judge; pre-declared spend $0.71 (2,458 asks), STOP at $1.00
+  // (BRONZE_CROWN, Phase 0 ruling 6).
+  "schemaVersion": "1.0.0",
+  "recipeName": "medbiqBridged",
+  "kind": "dev",
+  "description": "MedBiquitous beside the CEDS and CTDL hubs: its one judged field facet toward each (phase 2).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "ctdl", "version": "current" },
+    { "token": "medbiq", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" },
+    { "standard": "ctdl" }
+  ],
+  "bridges": [
+    { "source": "medbiq", "facet": "", "hubs": ["ceds", "ctdl"], "dependencies": ["medbiq", "ceds", "ctdl"] }
+  ]
+}
