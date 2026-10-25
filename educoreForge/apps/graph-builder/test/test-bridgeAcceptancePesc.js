@@ -1112,7 +1112,12 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postNsV2EPescCompose-102426 -> postNsV2GPescCompose-102426, tag cut ON this commit. CENSUS over this gate's paths: lane G's ADDED roster tables
 // in lib/bridge-framework/test/ (test-bgDecl.js 5/2, test-bgJudgeSlot.js 7/0, test-bridgeComposer.js 7/0, test-hubBridging.js 3/1). No
 // bridge-framework or bridge-maker source, no vocabulary file.
-const P1_BASELINE_COMMIT = 'postNsV2GPescCompose-102426'; // re-anchored by RUBY_PORTAL (census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (OCEAN_SPIRE; nextStandards wave 2 lane F2; the work order's mandate) ═══ postNsV2GPescCompose-102426 ->
+// postNsV2FbPescCompose-102426, tag cut ON this commit. CENSUS over this gate's paths: lane F's ADDED roster tables only,
+// lib/bridge-framework/test/test-bgDecl.js 5/2, test-bgJudgeSlot.js 3/0, test-bridgeComposer.js 6/0, test-hubBridging.js 5/2, and
+// test-bgNosub.js (this commit's own seamDiffEmpty re-anchor). No bridge-framework, bridge-maker, build or vocabulary source.
+// Observed red at 7c967fb4 before this commit (25/26).
+const P1_BASELINE_COMMIT = 'postNsV2FbPescCompose-102426'; // re-anchored by OCEAN_SPIRE (census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
