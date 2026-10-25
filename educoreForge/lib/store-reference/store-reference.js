@@ -250,6 +250,20 @@ const openReferenceLayer = ({ getRows, familyName, databaseFilePath }, callback)
 	});
 };
 
+// stampListOfFile — ⟪BRONZE_CROWN ruling 2026-10-25⟫ a store file's stamps, read through a READ-ONLY connection and synchronously, for a
+// caller that must know whether a store is a delta before it does anything with it (-goldEvalCheck, -stampPromotion: golds come only from a
+// store of record or a folded store). { stampList } ([] for a standalone store) or { error }.
+const stampListOfFile = (databaseFilePath) => {
+	const opened = openReadOnlyConnection(databaseFilePath);
+	if (opened.error) {
+		return { error: opened.error };
+	}
+	const tableRead = allRowsOf(opened.connection, `SELECT name FROM sqlite_master WHERE type='table' AND name=${esc(STORE_REFERENCE_TABLE_NAME)};`);
+	const stampRead = tableRead.error || tableRead.rowList.length === 0 ? { rowList: [] } : allRowsOf(opened.connection, `SELECT * FROM ${STORE_REFERENCE_TABLE_NAME} ORDER BY familyName;`);
+	opened.connection.close();
+	return tableRead.error || stampRead.error ? { error: tableRead.error || stampRead.error } : { stampList: stampRead.rowList };
+};
+
 // rowsFromLayers — own store first; the reference only when the own store has no row (a lookup by unique address)
 const rowsFromLayers =
 	({ getRows, referenceLayer }) =>
@@ -263,4 +277,4 @@ const rowsFromLayers =
 		});
 	};
 
-module.exports = { stampReference, openReferenceLayer, readStampList, rowsFromLayers, STORE_REFERENCE_TABLE_NAME, familyNameList };
+module.exports = { stampReference, openReferenceLayer, readStampList, stampListOfFile, rowsFromLayers, STORE_REFERENCE_TABLE_NAME, familyNameList };

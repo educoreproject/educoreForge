@@ -402,7 +402,10 @@ OPTIONS
                            process may fold rows INTO the reference during the build, so a cache-only run
                            can hit a row that a frozen copy would have refused; the row is the same
                            content-addressed, first-written row either way. Return the delta's rows with
-                           -foldStore.
+                           -foldStore. A delta is NEVER certified or promoted: -goldEvalCheck refuses a
+                           --standardsDatabaseFilePath that is a delta, and -stampPromotion refuses goldEvalCheck
+                           evidence that certified one, both by name (golds come only from a store of record or
+                           a folded store; BRONZE_CROWN, 2026-10-25).
      --embeddingCacheFilePath=<path> | --embeddingCacheFilePath=false
                            Where the content-addressed VECTOR CACHE (textHash x model -> embedding)
                            is read and written for this build. OPTIONAL. WHEN OMITTED it is [stores]

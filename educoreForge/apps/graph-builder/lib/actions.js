@@ -318,6 +318,27 @@ const stampDeltaStores = ({ stampPlanList, actionName }, callback) => {
 	stampNext(0);
 };
 
+// unfoldedDeltaRefusal — ⟪EC, BRONZE_CROWN ruling 2026-10-25⟫ golds come only from a store of record or a FOLDED store: a store stamped as a
+// DELTA (lib/store-reference) is refused by name by -goldEvalCheck and -stampPromotion. '' for a standalone store, and for a path that is
+// not on disk (the action's own checks refuse an absent store it needs; an evidence file may name a store retention has since removed).
+const unfoldedDeltaRefusal = ({ databaseFilePath, actionName }) => {
+	if (typeof databaseFilePath !== 'string' || !fs.existsSync(databaseFilePath)) {
+		return '';
+	}
+	const stampRead = requireStoreReference().stampListOfFile(databaseFilePath);
+	if (stampRead.error) {
+		return `graphBuilder ${actionName}: REFUSED — whether '${databaseFilePath}' is an unfolded delta could not be read (${stampRead.error}); a gold is never certified from a store nobody can classify`;
+	}
+	if (stampRead.stampList.length === 0) {
+		return '';
+	}
+	return (
+		`graphBuilder ${actionName}: REFUSED — '${databaseFilePath}' is an UNFOLDED DELTA of '${stampRead.stampList[0].referenceDatabaseFilePath}' ` +
+		`(${stampRead.stampList.map((oneStamp) => oneStamp.familyName).join(', ')}). A gold is certified and promoted only from a store of record or a folded store: ` +
+		`fold it (graphBuilder -foldStore --sourceFilePath=${databaseFilePath} --targetFilePath=<the store of record>) and name the store of record.`
+	);
+};
+
 // embeddingCacheFilePathFor — the value build.js threads to the embedder: a path, or the BOOLEAN false that disables it.
 const embeddingCacheFilePathFor = (vectorCacheResolution) => (vectorCacheResolution.disabled ? false : vectorCacheResolution.filePath);
 
@@ -1120,6 +1141,11 @@ const judgedByViolation = ({ commandLineParameters, audit, manifestRefId }) => {
 
 const goldEvalCheckAction = (callback) => {
 	const { xLog } = process.global;
+	const deltaRefusal = unfoldedDeltaRefusal({ databaseFilePath: firstValue(process.global.commandLineParameters, 'standardsDatabaseFilePath'), actionName: '-goldEvalCheck' });
+	if (deltaRefusal) {
+		callback(deltaRefusal);
+		return;
+	}
 	const roundTripStageStatics = require('./round-trip-stage');
 	const certificateEnrichmentLib = require('./certificate-enrichment');
 	const buildLogDirPath = firstValue(process.global.commandLineParameters, 'buildLogDirPath');
@@ -1618,6 +1644,14 @@ const stampPromotionAction = (callback) => {
 		callback(`graphBuilder -stampPromotion: REFUSED — ${replayEvidenceReaderNameList.map((parameterName) => `--${parameterName}`).join(' and ')} are both named; the replay row records ONE piece of evidence, so name one`);
 		return;
 	}
+	// ⟪EC, ruling 2026-10-25⟫ the store the -goldEvalCheck evidence certified (its certificate's standardsDatabaseFilePath) must not be an unfolded delta
+	const goldEvalCheckLogPath = evidenceList[0].evidencePath;
+	const certifiedStoreFilePathList = fs.existsSync(goldEvalCheckLogPath) ? [...new Set([...fs.readFileSync(goldEvalCheckLogPath, 'utf8').matchAll(/"standardsDatabaseFilePath":\s*"([^"]+)"/g)].map((oneMatch) => oneMatch[1]))] : [];
+	const promotionDeltaRefusal = certifiedStoreFilePathList.map((databaseFilePath) => unfoldedDeltaRefusal({ databaseFilePath, actionName: '-stampPromotion' })).find(Boolean);
+	if (promotionDeltaRefusal) {
+		callback(promotionDeltaRefusal);
+		return;
+	}
 	const vocabulary = require(path.join(__dirname, '..', '..', '..', 'lib', 'vocabulary', 'vocabulary'));
 	const certificationCheckLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'certificationCheck'));
 	const finishingDir = path.join(__dirname, '..', 'apps', 'replay-manager', 'lib', 'finishing');
@@ -2045,6 +2079,7 @@ return {
 	// claim provable only by launching a whole build is a claim nobody re-checks.
 	resolveSupportStoreFilePath,
 	resolveStoreFamilyPath,
+	unfoldedDeltaRefusal,
 	STORE_FAMILY_RESOLUTION_TABLE,
 	embeddingCacheFilePathFor,
 	// ⟪campaign P2, W-C-10⟫ the GOLD_EVAL kind gate and the -build lineage flag, for their hermetic gates
