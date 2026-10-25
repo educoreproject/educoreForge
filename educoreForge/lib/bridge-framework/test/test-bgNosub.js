@@ -1136,7 +1136,12 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // PHASE3_ANCHOR_TAG postNsV2GSeamDiffEmpty-102426 -> postNsV2FbSeamDiffEmpty-102426, tag cut ON this commit. CENSUS over this gate's paths:
 // forges/eduapi/forgeEduapi.js 26/0, lib/eduapiForgeDeclaration.js 61/0, lib/eduapiHooks.js 9/0 (new files, the new EduAPI bundle).
 // No build, forger, replay or replay-manager source; no lib/forge-framework file. Observed red at 7c967fb4 before this commit.
-const PHASE3_ANCHOR_TAG = 'postNsV2FbSeamDiffEmpty-102426'; // re-anchored by OCEAN_SPIRE (nextStandards wave 2 F; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-24 (QUIET_GATE; nextStandards-102326 wave 2 D1, the new CLR forge, rebased onto lanes E, G and F, the last merger; the work
+// order's mandate: a seam re-anchor caused purely by the lane's own new files) ═══ PHASE3_ANCHOR_TAG postNsV2FbSeamDiffEmpty-102426 ->
+// postNsD1dSeamDiffEmpty-102426, tag cut ON this commit. CENSUS over this gate's paths: forges/clr/forgeClr.js 26/0, lib/clrForgeDeclaration.js
+// 62/0, lib/clrHooks.js 9/0 (a NEW forge's entry, declaration and hooks: the lane C1 coupling). No existing forge, no framework, build, forger or
+// replay source.
+const PHASE3_ANCHOR_TAG = 'postNsD1dSeamDiffEmpty-102426'; // re-anchored by QUIET_GATE (nextStandards wave 2 D1; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
