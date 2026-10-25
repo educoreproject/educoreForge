@@ -18,7 +18,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // THE EMITTER reads only the materialized graph and rebuilds the same statements: a minted node from its xsdConstruct, xsdLocator,
 // schemaFile and its construct's carried attributes (xsdConstructRegistry.json read backwards), a structure construct and a comment from
 // its owner's xsdStructureList. A node property it has no reading for becomes an `unread|…` statement, which no source states, so an
-// invented property counts as invented. DERIVED values are checked, never stated: a node's description (its own annotation's
+// invented property counts as invented. DERIVED values are checked, never stated: a property's contextText (its path), a node's description (its own annotation's
 // documentation texts, non-blank, joined by a newline), a reference's name (the local part of its ref=), the ownership edges (one from
 // the node's parentId, whose locator encloses the node's), and the reference edges: the emitter RE-RESOLVES every QName attribute from
 // the graph alone (the file's bindings on its schemaFile node, the definitions' namespaces and names) and expects exactly the edges a
@@ -36,7 +36,7 @@ const ROOT_ROLE = DME_ROLES.STANDARD_ROOT;
 const NOT_SOURCE_ROLE_LIST = Object.freeze([DME_ROLES.EMBED_TEXT, EQUIVALENCE_NODE_LABELS.HUB_REFERENCE, EQUIVALENCE_NODE_LABELS.HUB_DEFINITION]);
 // the properties the framework derives or stamps on every content node: identity, structure, search; never a source statement
 const DERIVED_PROPERTY_NAME_LIST = Object.freeze(['_id', '_source', 'stableId', 'role', 'name', 'searchText', 'parentId', 'path', 'depth', 'crossRefs', 'embedding', 'embeddingModelVersion', 'description']);
-const WALK_PROPERTY_NAME = Object.freeze({ CONSTRUCT: 'xsdConstruct', LOCATOR: 'xsdLocator', SCHEMA_FILE: 'schemaFile', STRUCTURE_LIST: 'xsdStructureList', SCHEMA_ATTRIBUTE_LIST: 'schemaAttributeList', SCHEMA_SET_NAME_LIST: 'schemaSetNameList', TARGET_NAMESPACE: 'targetNamespace' });
+const WALK_PROPERTY_NAME = Object.freeze({ CONSTRUCT: 'xsdConstruct', LOCATOR: 'xsdLocator', SCHEMA_FILE: 'schemaFile', STRUCTURE_LIST: 'xsdStructureList', SCHEMA_ATTRIBUTE_LIST: 'schemaAttributeList', SCHEMA_SET_NAME_LIST: 'schemaSetNameList', TARGET_NAMESPACE: 'targetNamespace', CONTEXT_TEXT: 'contextText' });
 const COMMENT_CONSTRUCT = 'comment';
 const SCHEMA_CONSTRUCT = 'schema';
 const SCHEMA_LOCATOR = '/schema';
@@ -201,6 +201,10 @@ const moduleFunction =
 					const expectedDescription = construct === SCHEMA_CONSTRUCT || expectedTextList.length === 0 ? undefined : expectedTextList.join(DESCRIPTION_SEPARATOR);
 					if (properties.description !== expectedDescription) {
 						faultList.push(`node '${stableId}' description ${JSON.stringify(properties.description)} is not its own annotation's documentation ${JSON.stringify(expectedDescription)}`);
+					}
+					// derived: a property's contextText is its path (absent on every other node)
+					if (properties[WALK_PROPERTY_NAME.CONTEXT_TEXT] !== (oneNode.role === DME_ROLES.PROPERTY ? properties.path : undefined)) {
+						faultList.push(`node '${stableId}' contextText ${JSON.stringify(properties[WALK_PROPERTY_NAME.CONTEXT_TEXT])} is not its path ${JSON.stringify(properties.path)}`);
 					}
 					// derived: one ownership edge from the parentId, whose locator encloses this one (the root owns the files and the named complexTypes)
 					const parentNode = nodeById[properties.parentId];

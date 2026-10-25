@@ -21,7 +21,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                constraints are carried verbatim, as ruled. So is an enumeration the profile's enumerationRepeatList declares a repeat
 //                of an earlier value of its own restriction: one value, one node, and the repeat's statement kept on the option set.
 // Every minted node carries xsdConstruct, xsdLocator and schemaFile, its construct's carried attributes under the registry's property
-// names, and its description: the text of its OWN annotation's documentation (non-blank texts, joined by a newline). No text is borrowed
+// names (a property also its contextText, '<owning type>.<field>', equal to its path, for a bundle to embed), and its description: the text of its OWN annotation's documentation (non-blank texts, joined by a newline). No text is borrowed
 // from a type or a reference: a property without documentation has no description.
 //
 // REFERENCES (registry qnameAttributeRuleList; xsdResolution.js): every QName attribute is resolved through its own file. A corpus target
@@ -47,6 +47,9 @@ const SCHEMA_FILE_PROPERTY_NAME = 'schemaFile';
 const SCHEMA_ATTRIBUTE_LIST_PROPERTY_NAME = 'schemaAttributeList';
 const SCHEMA_SET_NAME_LIST_PROPERTY_NAME = 'schemaSetNameList';
 const TARGET_NAMESPACE_PROPERTY_NAME = 'targetNamespace';
+// a property's readable place, '<owning type>.<field>' (its path): carried as text so a bundle can embed it, the SIF/PESC contextText form
+// (the framework refuses 'path' itself as an embed text, being structural); the round-trip pair checks it equals the path, never states it
+const CONTEXT_TEXT_PROPERTY_NAME = 'contextText';
 const COMMENT_CONSTRUCT = 'comment';
 const DESCRIPTION_SEPARATOR = '\n';
 const DECLARATION_CONSTRUCT_LIST = Object.freeze(['globalElement', 'localElement', 'localAttribute']);
@@ -290,6 +293,9 @@ const moduleFunction =
 							carriedProperties[oneCarriage.propertyName] = attributeValue;
 						}
 					});
+				}
+				if (role === DME_ROLES.PROPERTY) {
+					carriedProperties[CONTEXT_TEXT_PROPERTY_NAME] = nodePath;
 				}
 				if (structureList.length !== 0) {
 					// a JSON string, not a list: a one-entry list would be read back as a scalar (graph-contract §1)

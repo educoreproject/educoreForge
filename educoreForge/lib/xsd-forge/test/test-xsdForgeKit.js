@@ -220,6 +220,7 @@ taskList.push((args, next) => forgeCase({ caseName: 'forge1' }, (forgeError, for
 	harness.ok('a comment inside a sequence rides on the owner with its child index', structureListOf(ID.reportType).some((entry) => entry.construct === 'comment' && entry.commentText === ' the title comes first ' && entry.beforeChildIndex === 0));
 	harness.ok('prolog and epilog comments ride on the file node', ['prolog', 'epilog'].every((onePlacement) => structureListOf(ID.fileA).some((entry) => entry.placement === onePlacement)));
 	harness.equal('descriptions come from each node\'s OWN documentation only', sortedText(forgeResult.stats.describedNodeCountByRole), sortedText(EXPECTED.describedNodeCountByRole));
+	harness.ok('a property carries contextText = its path (<owning type>.<field>); a class carries none', propertiesOf(ID.itemId).contextText === 'ReportType.Item.id' && propertiesOf(ID.itemId).path === 'ReportType.Item.id' && propertiesOf(ID.reportType).contextText === undefined);
 	harness.ok('the documented property carries its text verbatim; the reference property borrows none', propertiesOf(ID.title).description === 'The title.' && propertiesOf(ID.noteReference).description === undefined);
 	harness.ok('the file node carries its namespace, its xmlns bindings and its sets', propertiesOf(ID.fileB).targetNamespace === 'http://example.org/b/v1/' && JSON.parse(propertiesOf(ID.fileB).schemaAttributeList).some((oneAttribute) => oneAttribute.attributeName === 'xmlns:xs') && propertiesOf(ID.fileB).schemaSetNameList === '["Report"]');
 	harness.ok('the excluded schema and WSDL mint nothing', forgeResult.nodes.every((oneNode) => ['extra/legacy.xsd', 'service.wsdl'].indexOf(oneNode.properties.schemaFile) === -1));
@@ -258,6 +259,7 @@ const ROUND_TRIP_TWIN_LIST = Object.freeze([
 	{ twinName: 'the SUBCLASS_OF reference edge removed', expect: { faultPattern: /reference edges disagree/ }, perturb: (copy) => { copy.edges = copy.edges.filter((oneEdge) => oneEdge.type !== 'SUBCLASS_OF'); } },
 	{ twinName: 'a reference edge retargeted', expect: { faultPattern: /reference edges disagree/ }, perturb: (copy) => { copy.edges.find((oneEdge) => oneEdge.fromRef.id === ID.status && oneEdge.properties.referenceConstruct === 'type').toRef = { source: 'SynthXsd', id: ID.levelSet }; } },
 	{ twinName: 'an ownership edge removed (HAS_PROPERTY Title)', expect: { faultPattern: /is not owned by exactly one edge/ }, perturb: (copy) => { copy.edges = copy.edges.filter((oneEdge) => !(oneEdge.type === 'HAS_PROPERTY' && oneEdge.toRef.id === ID.title)); } },
+	{ twinName: 'a contextText that is not the path', expect: { faultPattern: /contextText "ReportType.Heading" is not its path/ }, perturb: (copy) => { copy.nodes.find((oneNode) => oneNode.stableId === ID.title).properties.contextText = 'ReportType.Heading'; } },
 	{ twinName: 'a reference renamed away from its ref=', expect: { faultPattern: /not the local part of its ref=/ }, perturb: (copy) => { copy.nodes.find((oneNode) => oneNode.stableId === ID.noteReference).properties.name = 'Memo'; } },
 ]);
 ROUND_TRIP_TWIN_LIST.forEach(({ twinName, expect, perturb }) => {
