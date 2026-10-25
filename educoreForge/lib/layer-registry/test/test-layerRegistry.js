@@ -127,8 +127,10 @@ const jevLayer = seeded.registry.layerFor('jev').layer;
 // the seed (the zeroBacklog gold's two configurations) and the wave-1 append (BRONZE_CROWN 2026-10-24): JEDx, LIF and Open Badges were
 // judged under cfg-cf8d…, so a new version spans its 12 blocks and the 6-block one is Superseded by an APPENDED change, its row untouched.
 // The wave-2 append (W2A, WORKORDER-assembly-wave2-102426 W2A-1.6): CLR, CASE, EduAPI and SEDM were judged under the same cfg-cf8d…, so a
-// fourth version spans 19 blocks and the wave-1 version is Superseded by a second appended change, its row untouched too
-harness.equal('layer jev carries four versions: the two seeded configurations, the wave-1 append and the wave-2 append', jevLayer.versionList.map((oneVersion) => oneVersion.administrationRecord.versionTag).join(','), 'cfg-03f64470322c,cfg-cf8d41f82791,cfg-cf8d41f82791.wave1-261024,cfg-cf8d41f82791.wave2-261025');
+// fourth version spans 19 blocks and the wave-1 version is Superseded by a second appended change, its row untouched too.
+// The wave-3 append (W3A, WORKORDER-assembly-wave3-102526 W3A-1.6): OneRoster's three standards and MedBiquitous were judged under the same
+// cfg-cf8d…, so a fifth version spans 27 blocks and the wave-2 version is Superseded by a third appended change, its row untouched too
+harness.equal('layer jev carries five versions: the two seeded configurations and the wave-1, wave-2 and wave-3 appends', jevLayer.versionList.map((oneVersion) => oneVersion.administrationRecord.versionTag).join(','), 'cfg-03f64470322c,cfg-cf8d41f82791,cfg-cf8d41f82791.wave1-261024,cfg-cf8d41f82791.wave2-261025,cfg-cf8d41f82791.wave3-261025');
 jevLayer.versionList.forEach((oneVersion) => {
 	harness.equal(`jev ${oneVersion.administrationRecord.versionTag}: contentId = sha256 of its ${oneVersion.memberBlockList.length} sorted member hashes (R-1)`, oneVersion.administrationRecord.contentId, contentIdForMemberBlockList(oneVersion.memberBlockList));
 	harness.equal(`jev ${oneVersion.administrationRecord.versionTag}: the row keeps the status it was published with (Standard)`, oneVersion.registrationStatus, 'Standard');
@@ -139,7 +141,10 @@ harness.ok('the wave-1 version holds every one of the superseded version\'s bloc
 harness.equal('jev cfg-cf8d41f82791.wave1-261024 is EFFECTIVELY Superseded, by the second appended change', seeded.registry.effectiveStatusFor({ layerKey: 'jev', versionTag: 'cfg-cf8d41f82791.wave1-261024' }).registrationStatus, 'Superseded');
 harness.equal('…and its successor is the wave-2 version', (jevLayer.statusChangeList[1] || {}).supersededByVersionTag, 'cfg-cf8d41f82791.wave2-261025');
 harness.ok('the wave-2 version holds every one of the wave-1 version\'s blocks, plus seven', (() => { const oldSet = new Set(jevLayer.versionList[2].memberBlockList.map((oneMember) => oneMember.decisionBlockHash)); const newList = (jevLayer.versionList[3] || { memberBlockList: [] }).memberBlockList.map((oneMember) => oneMember.decisionBlockHash); return newList.length === oldSet.size + 7 && Array.from(oldSet).every((oneHash) => newList.indexOf(oneHash) !== -1); })());
-harness.equal('the floating jev layer follows the wave-2 version (the effective Standard of cfg-cf8d…)', seeded.registry.effectiveStatusFor({ layerKey: 'jev', versionTag: 'cfg-cf8d41f82791.wave2-261025' }).registrationStatus, 'Standard');
+harness.equal('jev cfg-cf8d41f82791.wave2-261025 is EFFECTIVELY Superseded, by the third appended change', seeded.registry.effectiveStatusFor({ layerKey: 'jev', versionTag: 'cfg-cf8d41f82791.wave2-261025' }).registrationStatus, 'Superseded');
+harness.equal('…and its successor is the wave-3 version', (jevLayer.statusChangeList[2] || {}).supersededByVersionTag, 'cfg-cf8d41f82791.wave3-261025');
+harness.ok('the wave-3 version holds every one of the wave-2 version\'s blocks, plus eight', (() => { const oldSet = new Set(jevLayer.versionList[3].memberBlockList.map((oneMember) => oneMember.decisionBlockHash)); const newList = (jevLayer.versionList[4] || { memberBlockList: [] }).memberBlockList.map((oneMember) => oneMember.decisionBlockHash); return newList.length === oldSet.size + 8 && Array.from(oldSet).every((oneHash) => newList.indexOf(oneHash) !== -1); })());
+harness.equal('the floating jev layer follows the wave-3 version (the effective Standard of cfg-cf8d…)', seeded.registry.effectiveStatusFor({ layerKey: 'jev', versionTag: 'cfg-cf8d41f82791.wave3-261025' }).registrationStatus, 'Standard');
 
 // =====================================================================
 harness.section('status changes: appended, never edited into a version; each refusal by name');
