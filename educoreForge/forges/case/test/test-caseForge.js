@@ -6,6 +6,8 @@
 // valued vendor extensions, the declared caseVersion member text), the round trip over the harness's graph double with its omission table
 // and twins observed RED, the snapshot's provenance, and determinism. The kit's own constructs and refusals are proven in
 // lib/openapi-forge/test/test-openapiForgeKit.js; this suite proves the bundle and its bytes. Writes only under os.tmpdir().
+// The publisher's two files are git-ignored (01/README_PROVENANCE.md has the acquisition recipe): a tree that has not run the recipe is
+// REFUSED BY NAME in section 1, the JEDx form, never a raw ENOENT.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = `
@@ -19,6 +21,9 @@ DESCRIPTION
      Forges forges/case/assets/standardSourceData/01 in process (no embedding) and asserts the measured counts (39 schemas, 201
      properties, 8 enums, 39 values, 58 references) and how the CASE constructs are carried. Runs the bundle's round-trip validator
      over the harness graph double, clean and on perturbations. Writes only under os.tmpdir().
+
+FILES
+     forges/case/assets/standardSourceData/01/imscasev1p1_openapi3_v1p0.{yaml,json}   git-ignored; see 01/README_PROVENANCE.md to acquire
 
 EXIT STATUS
      0 every assertion passed;  1 otherwise.
@@ -62,9 +67,11 @@ const countBy = (itemList, nameOf) => itemList.reduce((counts, oneItem) => ({ ..
 const sortedText = (counts) => JSON.stringify(counts, Object.keys(counts).sort());
 const contentCountBy = (itemList, nameOf, roleOrTypeList) => countBy(itemList.filter((oneItem) => roleOrTypeList.indexOf(nameOf(oneItem)) !== -1), nameOf);
 const copyOfForgeResult = (forgeResult) => ({ nodes: forgeResult.nodes.map((oneNode) => ({ ...oneNode, properties: { ...oneNode.properties } })), edges: forgeResult.edges.map((oneEdge) => ({ ...oneEdge, properties: { ...oneEdge.properties } })) });
+const PUBLISHER_FILE_NAME_LIST = Object.freeze([SOURCE_FILE_NAME, JSON_SIBLING_FILE_NAME]);
+const absentPublisherFileList = PUBLISHER_FILE_NAME_LIST.filter((oneFileName) => !fs.existsSync(path.join(SNAPSHOT_DIR_PATH, oneFileName)));
 const sha256Of = (fileName) => crypto.createHash('sha256').update(fs.readFileSync(path.join(SNAPSHOT_DIR_PATH, fileName))).digest('hex');
 const scratchRootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'caseForgeTest-'));
-const { parseRefusal, document: sourceDocument } = parseOpenapiSourceFile({ sourceFilePath: path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME), sourceFormat: 'yaml' });
+const { parseRefusal, document: sourceDocument } = absentPublisherFileList.length !== 0 ? { parseRefusal: 'the YAML is absent', document: undefined } : parseOpenapiSourceFile({ sourceFilePath: path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME), sourceFormat: 'yaml' });
 const sourceRequiredCount = parseRefusal !== '' ? -1 : Object.values(sourceDocument.components.schemas).reduce((total, oneSchema) => total + (oneSchema.required || []).length, 0);
 
 const forgeSnapshot = (callback) => bundle.forge({ sourcePath: path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME), owner: 'test', skipEmbedding: true }, callback);
@@ -81,6 +88,11 @@ const taskList = new taskListPlus();
 // -----------------------------------------------------------------
 taskList.push((args, next) => {
 	harness.section('SECTION 1 — snapshot 01: the bytes, the pin, the declaration');
+	harness.accepts('the two git-ignored publisher files are present (else run the recipe in 01/README_PROVENANCE.md)', absentPublisherFileList.map((oneFileName) => `absent: ${oneFileName}`));
+	if (absentPublisherFileList.length !== 0) {
+		next('the CASE publisher bytes are absent: run the acquisition recipe in forges/case/assets/standardSourceData/01/README_PROVENANCE.md', args);
+		return;
+	}
 	harness.equal('the YAML sha256 is the 2026-06-23 held copy and the 2026-10-24 fetch', sha256Of(SOURCE_FILE_NAME), EXPECTED.sourceSha256);
 	harness.equal('the JSON sibling (stored, never read) is the 2026-10-24 fetch', sha256Of(JSON_SIBLING_FILE_NAME), EXPECTED.jsonSiblingSha256);
 	harness.accepts('the YAML parses', parseRefusal === '' ? [] : [parseRefusal]);
