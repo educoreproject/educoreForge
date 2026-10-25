@@ -30,6 +30,7 @@ const path = require('path');
 const { DME_ROLES, EQUIVALENCE_NODE_LABELS } = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const { validateOpenapiProfile } = require('./openapiProfileContract');
 const { parseOpenapiSourceFile } = require('./openapiSourceParser');
+const { memberSegmentOf } = require('./openapiIdentity');
 const keywordRegistry = require('./openapiKeywordRegistry.json');
 
 const SET_VALUED_KEYWORD_LIST = Object.freeze(['required', 'enum']);
@@ -276,7 +277,8 @@ const moduleFunction =
 						return; // its members are read off its HAS_VALUE edges at its enumLocator; its name is the property's (derived)
 					}
 					if (role === DME_ROLES.OPTION_VALUE) {
-						if (identity.segmentCount !== 4 || identity.enumSegment !== 'enum' || properties.name !== identity.memberText) {
+						// ⟪K4a, wave 3 lane H⟫ the id carries the member's ENCODED segment (memberSegmentOf), the name the member verbatim
+						if (identity.segmentCount !== 4 || identity.enumSegment !== 'enum' || memberSegmentOf(properties.name) !== identity.memberText) {
 							fault = `option value node '${stableId}' does not read as <prefix><Schema>/<property>/enum/<member> named for its member`;
 						}
 						return;
