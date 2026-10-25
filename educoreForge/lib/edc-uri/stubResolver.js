@@ -229,6 +229,8 @@ const RESOLUTION_BY_KIND = Object.freeze({
 		}
 		interpretationOf({ kind: 'interpretationFloating', partByName, layerKey: partByName.layerKey, version: current.version, registry, blockTextForHash }, (resolved) => done({ ...resolved, body: { ...resolved.body, followedVersionTag: current.version.administrationRecord.versionTag } }));
 	},
+	// ⟪ML3-a⟫ a declared mapping predicate answers its definition (uriScheme.json vocabularyTermDefinitionByName)
+	vocabularyTerm: ({ partByName, iri }, done) => done(answer(200, { kind: 'vocabularyTerm', term: iri, termName: partByName.termName, definition: URI_SCHEME.vocabularyTermDefinitionByName[partByName.termName] })),
 	element: ({ partByName }, done) => done(answer(200, { kind: 'element', partByName, note: 'parsed only: the element\'s graph record is not served by the ML1 stub' })),
 	meaning: ({ partByName }, done) => done(answer(200, { kind: 'meaning', partByName, note: 'parsed only: the card\'s graph record is not served by the ML1 stub' })),
 });

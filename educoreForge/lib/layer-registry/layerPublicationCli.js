@@ -91,6 +91,9 @@ const CAPTURE_QUERY_BY_NAME = Object.freeze({
 	standardList: "MATCH (n:ForgedNode) WHERE n.stableId ENDS WITH ':root' AND n._source IS NOT NULL RETURN n._source AS standardName, split(n.stableId, ':')[0] AS standardKey, n.version AS standardVersion ORDER BY standardName",
 	hubList: 'MATCH (h:HubDefinition) RETURN h.hubName AS hubName, h.version AS hubVersion, h.namespace AS namespace ORDER BY hubName',
 	passportList: 'MATCH (g:GraphProvenance) RETURN g.manifestRefId AS manifestRefId, g.graphName AS graphName',
+	// the versions the gold's OWN match edges stamp on their subjects: for SEDM and MedBiquitous they are the pair versions 'unknown_01' /
+	// 'unknown_02' while the standard root says 'unknown' (measured 2026-10-25); an assertion id hashes the edge's version, so both count
+	edgeSubjectVersionList: 'MATCH ()-[r]->() WHERE r.assertionId IS NOT NULL AND r.subjectSource IS NOT NULL RETURN DISTINCT r.subjectSource AS standardName, r.subjectVersion AS standardVersion ORDER BY standardName, standardVersion',
 });
 
 const captureGold = () => {
@@ -145,8 +148,6 @@ const render = () => {
 		soFar[oneCard.stableId] = { uri: oneCard.uri, name: oneCard.name };
 		return soFar;
 	}, {});
-	const standardNameByStandardKey = goldCapture.standardList.reduce((soFar, oneStandard) => ({ ...soFar, [oneStandard.standardKey]: oneStandard.standardName }), {});
-	const standardVersionByStandardKey = goldCapture.standardList.reduce((soFar, oneStandard) => ({ ...soFar, [oneStandard.standardKey]: oneStandard.standardVersion }), {});
 	const downloadRules = JSON.parse(fs.readFileSync(parameterValueFor('publicFilterRulesPath'), 'utf8'));
 	const { publicFilter } = exitOnError(layerPublicationLib.publicFilterFor({ licenceHoldList: downloadRules.licenceHoldList, filterSourceText: `downloadArtifactsRules.json licenceHoldList (TQ Q37), sha256 ${sha256Hex(fs.readFileSync(parameterValueFor('publicFilterRulesPath'))).slice(0, 12)}` }));
 	const store = new Database(parameterValueFor('storePath'), { readonly: true, fileMustExist: true });
@@ -194,7 +195,7 @@ const render = () => {
 				localNameByVersionTagByRendering[renderingName][versionTag] = `${versionTag}/set.sssom.tsv`;
 				const versionDirPath = path.join(oneRendering.subTreeDirPath, 'layer', oneLayer.layerKey, versionTag);
 				writeFileMakingDirs(path.join(versionDirPath, 'set.sssom.tsv'), rendered.setText);
-				const contexts = exitOnError(layerPublicationLib.contextDocumentTextList({ layer: oneLayer, version: oneVersion, subjectStableIdList: rendered.subjectStableIdList, standardNameByStandardKey, standardVersionByStandardKey, publicFilter: oneRendering.filter }));
+				const contexts = exitOnError(layerPublicationLib.contextDocumentTextList({ layer: oneLayer, version: oneVersion, subjectStableIdList: rendered.subjectStableIdList, standardNameByStandardKey: rendered.standardNameByStandardKey, standardVersionByStandardKey: rendered.standardVersionByStandardKey, publicFilter: oneRendering.filter }));
 				contexts.contextDocumentList.forEach((oneContext) => writeFileMakingDirs(path.join(versionDirPath, 'context', `${oneContext.standardKey}.jsonld`), oneContext.documentText));
 				layerReport.versionList.push({ versionTag, rendering: oneRendering.filter === undefined ? 'complete' : 'publicFiltered', mappingSetId: rendered.mappingSetId, rowCount: rendered.rowCount, fullRowCount: rendered.fullRowCount, setSha256: sha256Hex(rendered.setText), contextStandardKeyList: contexts.contextDocumentList.map((oneContext) => oneContext.standardKey) });
 			});
@@ -257,7 +258,14 @@ const gate = () => {
 		return matched ? { ...soFar, [matched[1]]: JSON.parse(matched[2]) } : soFar;
 	}, {});
 	const msiOf = (subjectIri, predicateIri, objectIri) => exitOnError(assertionIdentity.mappingSamenessIdFor({ subjectIriList: [subjectIri], predicateIri, objectIriList: [objectIri], isNegative: false })).mappingSamenessId;
-	const countList = (textList) => textList.reduce((soFar, oneText) => ({ ...soFar, [oneText]: (soFar[oneText] || 0) + 1 }), {});
+	// counted LINEARLY: a spread inside reduce is quadratic, and these lists run to 41,025 rows (the ML2 trap, measured again here)
+	const countList = (textList) => {
+		const countByText = {};
+		textList.forEach((oneText) => {
+			countByText[oneText] = (countByText[oneText] || 0) + 1;
+		});
+		return countByText;
+	};
 	const sameMultiset = (leftList, rightList) => {
 		const leftCount = countList(leftList);
 		const rightCount = countList(rightList);

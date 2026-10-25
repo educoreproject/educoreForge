@@ -167,6 +167,17 @@ SSSOM requires four and states that there can be no mapping without a justificat
 `object_id` names one domain's view of one idea. It is never "the CEDS property." This is the
 purpose of the tuple and the single most consequential line in this document.
 
+**Amendment (mappingLayers ML3-a, ruling R-a by BRONZE_CROWN, 2026-10-25).** In a PUBLISHED layer-version set,
+`subject_id` is the forged stableId **verbatim up to RFC 3986 encoding of its local part**: `edfi:property%2FX`,
+whose prefix expands to the element base of its standard version (`https://w3id.org/EDUcore/EdFi/5.2.0/edfi:`), so
+plain CURIE expansion yields exactly the element IRI the row's `record_id` hashes. The stableId is recovered by
+percent-decoding the local part (lossless: `%` is always encoded). The replaced `urn:educore:<standardKey>:`
+expansions are kept in the declared `legacy_curie_map` extension. The per-block export written at re-judge time
+is unchanged (verbatim subject, block URN as `mapping_set_id`): it is a working artifact of a block no layer
+version yet names. `object_id` is always a full IRI. Recipe: `record_id` = `edc:assertion/<scope block>/<hash>`,
+hash = sha256(subject IRI \n predicate IRI \n object IRI) for a machine row, with `\n` + the row's ONE `author_id`
+appended for a curated row.
+
 ### 4.2 mapping_justification
 
 `mapping_justification` is a closed enum, regex-bound to thirteen `semapv` terms. A forge cannot

@@ -49,8 +49,8 @@ const tsvTableOf = (sssomText) => {
 };
 
 const resolveImportRows = ({ sssomText, prefixExpansionByPrefix, goldCapture, importRules } = {}) => {
-	if (!isNonEmptyString(sssomText) || !isPlainObject(prefixExpansionByPrefix) || !goldCapture || !importRules) {
-		return { error: refusalText('sssomText, prefixExpansionByPrefix, goldCapture and importRules are required', 'resolveImportRows({ … }); nothing is defaulted') };
+	if (!isNonEmptyString(sssomText) || !isPlainObject(prefixExpansionByPrefix) || !goldCapture || !Array.isArray(goldCapture.edgeSubjectVersionList) || !importRules) {
+		return { error: refusalText('sssomText, prefixExpansionByPrefix, goldCapture (with its edgeSubjectVersionList) and importRules are required', 'resolveImportRows({ … }); nothing is defaulted; re-capture an older gold capture') };
 	}
 	const table = tsvTableOf(sssomText);
 	if (table.error) {
@@ -64,7 +64,13 @@ const resolveImportRows = ({ sssomText, prefixExpansionByPrefix, goldCapture, im
 		soFar[oneElement.stableId].add(oneElement.sourceName);
 		return soFar;
 	}, {});
-	const standardVersionByStandardName = goldCapture.standardList.reduce((soFar, oneStandard) => ({ ...soFar, [oneStandard.standardName]: oneStandard.standardVersion }), {});
+	// a standard's admissible versions: its root's version AND every subject version the gold's own match edges stamp (SEDM's root says
+	// 'unknown', its edges 'unknown_01': an assertion id hashes the edge's version, so an element IRI may carry either)
+	const versionSetByStandardName = {};
+	goldCapture.standardList.concat(goldCapture.edgeSubjectVersionList).forEach((oneStandard) => {
+		versionSetByStandardName[oneStandard.standardName] = versionSetByStandardName[oneStandard.standardName] || new Set();
+		versionSetByStandardName[oneStandard.standardName].add(oneStandard.standardVersion);
+	});
 	const cardUriSet = new Set(goldCapture.cardList.map((oneCard) => oneCard.uri));
 	const predicateIriSet = new Set(importRules.predicateIriList);
 	const expandCell = (cellText) => {
@@ -110,8 +116,8 @@ const resolveImportRows = ({ sssomText, prefixExpansionByPrefix, goldCapture, im
 		}
 		const { standardName, standardVersion, elementStableId } = parsedSubject.partByName;
 		const sourceNameSet = sourceNameSetByStableId[elementStableId];
-		if (sourceNameSet === undefined || !sourceNameSet.has(standardName) || standardVersionByStandardName[standardName] !== standardVersion) {
-			refuseRow('subjectAbsentFromGold', `subject ${elementStableId} of ${standardName} ${standardVersion} is not an element of ${goldCapture.goldContainerName} (${standardVersionByStandardName[standardName] === undefined ? 'no such standard' : `the gold holds ${standardName} ${standardVersionByStandardName[standardName]}`})`);
+		if (sourceNameSet === undefined || !sourceNameSet.has(standardName) || versionSetByStandardName[standardName] === undefined || !versionSetByStandardName[standardName].has(standardVersion)) {
+			refuseRow('subjectAbsentFromGold', `subject ${elementStableId} of ${standardName} ${standardVersion} is not an element of ${goldCapture.goldContainerName} (${versionSetByStandardName[standardName] === undefined ? 'no such standard' : `the gold holds ${standardName} ${Array.from(versionSetByStandardName[standardName]).sort(byCodePoint).join(' | ')}`})`);
 			continue;
 		}
 		const predicateCurie = row.predicate_id;

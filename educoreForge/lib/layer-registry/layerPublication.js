@@ -40,17 +40,8 @@ const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabula
 const { blockRowsFor, parseSssomTsv, yamlScalar, COLUMN_LIST, RECORD_ID_COLUMN, JUDGED_SUBJECT_COLUMN, NO_TERM_FOUND_OBJECT_ID, EXTENSION_SLOT_NAME_LIST, EXTENSION_PROPERTY_BASE, MAPPING_SET_ID_URN_BASE, URN_SCHEME_PREFIX } = sssomExporterLib;
 const { SSSOM_COLUMN_BY_EDGE_PROPERTY, MAPPING_PROPERTIES, JUDGE_SUMMARY_EDGE_PROPERTY_LIST, SSSOM_VERSION_FOR_ONE_ONE_SLOTS } = vocabularyLib;
 
-// what this renderer writes, as data
-const PUBLICATION_RULES = Object.freeze({
-	sssomSchemaReleaseText: 'sssom-schema 1.1.0a5; validated with sssom-py 0.4.21', // R-e: the enum admits only 1.0 | 1.1, so the alpha is named here
-	renderedBy: 'educoreForge lib/layer-registry/layerPublication.js (mappingLayers ML3)',
-	machineProducerKindList: ['inferred'], // the registered machine layers are judge layers (measured: 45 of 45 member blocks)
-	droppedMachineColumnList: ['subject_match_field', 'object_match_field'], // per-bridge, and their prefix (EDUcoreHub) names one hub per curie_map
-	legacySubjectExpansionPattern: 'urn:educore:{standardKey}:', // what the pre-ML3 export expanded a subject prefix to (bridge-framework.js)
-	legacyHubSourcePattern: 'urn:educore:hub:{hubName}:', // object_source, unchanged from the per-block export
-	publicFilterFragmentPrefix: '#publicFilter-',
-	authorIdSeparator: '|', // SSSOM/TSV multivalued cell separator
-});
+// what this renderer writes, as DATA (layerPublicationRules.json)
+const PUBLICATION_RULES = Object.freeze(require(path.join(__dirname, 'layerPublicationRules.json')));
 const ML3_SET_EXTENSION_SLOT_NAME_LIST = Object.freeze(['sssom_schema_release', 'legacy_curie_map', 'rendering_of']);
 const MACHINE_ONLY_EXTENSION_SLOT_NAME_LIST = Object.freeze(['member_block_list']);
 const PUBLIC_FILTER_SLOT_NAME = 'public_filter';
@@ -107,7 +98,8 @@ const machineMemberRowsFor = ({ member, decisionBlock, cardByStableId } = {}) =>
 	const standardVersion = String(header.sourceVersion);
 	const hubName = header.hubName;
 	const hubVersion = String(header.hubVersion);
-	const fromStableIdList = decisionBlock.decisionRecordList.reduce((soFar, oneRecord) => soFar.concat(oneRecord.instanceStableIdList === undefined ? [oneRecord.subjectStableId] : oneRecord.instanceStableIdList), []);
+	const fromStableIdList = [];
+	decisionBlock.decisionRecordList.forEach((oneRecord) => fromStableIdList.push(...(oneRecord.instanceStableIdList === undefined ? [oneRecord.subjectStableId] : oneRecord.instanceStableIdList)));
 	const subjectCuriePrefixList = Array.from(new Set(fromStableIdList.map(prefixOf))).sort(byCodePoint);
 	const objectSourceIri = PUBLICATION_RULES.legacyHubSourcePattern.replace('{hubName}', hubName);
 	const blockRows = blockRowsFor({
@@ -239,7 +231,14 @@ const machineVersionSetText = ({ layer, version, memberRowsList, publicFilter } 
 		rowList,
 	});
 	const subjectStableIdList = Array.from(new Set(keptMemberRowsList.reduce((soFar, oneMemberRows) => soFar.concat(oneMemberRows.rowList.map((oneEntry) => oneEntry.subjectStableId)), []))).sort(byCodePoint);
-	return { setText: assembled.setText, mappingSetId: assembled.mappingSetId, rowCount: rowList.length, fullRowCount: memberRowsList.reduce((soFar, oneMemberRows) => soFar + oneMemberRows.rowList.length, 0), subjectStableIdList };
+	// the standard names and versions the set's element IRIs were minted with (the frozen headers'), for the contexts to mint the same
+	const standardNameByStandardKey = {};
+	const standardVersionByStandardKey = {};
+	keptMemberRowsList.forEach((oneMemberRows) => {
+		standardNameByStandardKey[oneMemberRows.standardKey] = oneMemberRows.standardName;
+		standardVersionByStandardKey[oneMemberRows.standardKey] = oneMemberRows.standardVersion;
+	});
+	return { setText: assembled.setText, mappingSetId: assembled.mappingSetId, rowCount: rowList.length, fullRowCount: memberRowsList.reduce((soFar, oneMemberRows) => soFar + oneMemberRows.rowList.length, 0), subjectStableIdList, standardNameByStandardKey, standardVersionByStandardKey };
 };
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -272,6 +271,8 @@ const curatedVersionSetText = ({ layer, version, wholeSetText, publicFilter } = 
 	const legacyCurieMap = {};
 	const rowList = [];
 	const subjectStableIdList = [];
+	const curatedStandardNameByStandardKey = {};
+	const curatedStandardVersionByStandardKey = {};
 	for (let rowIndex = 0; rowIndex < parsed.rowList.length; rowIndex++) {
 		const oneRow = parsed.rowList[rowIndex];
 		const standardKey = prefixOf(oneRow.subject_id);
@@ -302,6 +303,8 @@ const curatedVersionSetText = ({ layer, version, wholeSetText, publicFilter } = 
 		}
 		curieMap[subjectIdentity.prefix] = subjectIdentity.expansion;
 		legacyCurieMap[subjectIdentity.prefix] = oneRow.subject_source;
+		curatedStandardNameByStandardKey[standardKey] = standard.standardName;
+		curatedStandardVersionByStandardKey[standardKey] = oneRow.subject_source_version;
 		rowList.push({ ...oneRow, subject_id: subjectIdentity.subjectCurie, subject_source: subjectIdentity.expansion, [RECORD_ID_COLUMN]: identity.assertionId });
 		subjectStableIdList.push(oneRow.subject_id);
 	}
@@ -334,7 +337,7 @@ const curatedVersionSetText = ({ layer, version, wholeSetText, publicFilter } = 
 		columnList: parsed.columnList.concat([RECORD_ID_COLUMN]),
 		rowList,
 	});
-	return { setText: assembled.setText, mappingSetId: assembled.mappingSetId, rowCount: rowList.length, fullRowCount: parsed.rowList.length, subjectStableIdList: Array.from(new Set(subjectStableIdList)).sort(byCodePoint) };
+	return { setText: assembled.setText, mappingSetId: assembled.mappingSetId, rowCount: rowList.length, fullRowCount: parsed.rowList.length, subjectStableIdList: Array.from(new Set(subjectStableIdList)).sort(byCodePoint), standardNameByStandardKey: curatedStandardNameByStandardKey, standardVersionByStandardKey: curatedStandardVersionByStandardKey };
 };
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -379,7 +382,7 @@ const recordIdRecomputation = ({ setText } = {}) => {
 // registry documents (SSSOM `mapping registry`, validated by linkml against sssom-schema) and JSON-LD contexts
 // ---------------------------------------------------------------------------------------------------------------------------
 
-const REGISTRY_DESCRIPTION_TEXT = 'EDUcore mapping-layer registry. Each mapping_set_reference is one frozen layer version: mapping_set_id is its pinned tag URI; mirror_from is its content-addressed URI (layer/<key>/sha256/<contentId>); mapping_set_group is its EFFECTIVE ISO/IEC 11179 registration status (the latest statusChangeList entry, else the status it was published with); last_updated is the date of that status; local_name is the rendered set beside this document. No URI resolves publicly yet (no w3id registration).';
+const REGISTRY_DESCRIPTION_TEXT = 'EDUcore mapping-layer registry. Each mapping_set_reference is one frozen layer version: mapping_set_id is its pinned tag URI; mirror_from is its content-addressed URI (layer/<layerKey>/sha256/<contentId>); mapping_set_group is its EFFECTIVE ISO/IEC 11179 registration status (the latest statusChangeList entry, else the status it was published with); last_updated is the date of that status; local_name is the rendered set beside this document. No URI resolves publicly yet (no w3id registration).';
 
 const registryDocumentText = ({ layer, registry, localNameByVersionTag, publicFilter } = {}) => {
 	const layerMint = mintUri({ kind: 'layer', layerKey: layer.layerKey });
@@ -430,7 +433,7 @@ const siteRegistryDocumentText = ({ layerKeyList, publicFilter } = {}) => {
 	const documentText = [
 		`mapping_registry_id: ${yamlScalar(siteMint.uri)}`,
 		`mapping_registry_title: ${yamlScalar(`EDUcore mapping layers${publicFilter === undefined ? '' : ' (public filtered renderings)'}`)}`,
-		`mapping_registry_description: ${yamlScalar('Every EDUcore mapping layer; each import is one layer\'s registry, whose id is the layer\'s floating URI (layer/<key>) and which lists its versions.')}`,
+		`mapping_registry_description: ${yamlScalar('Every EDUcore mapping layer; each import is one layer\'s registry, whose id is the layer\'s floating URI (layer/<layerKey>) and which lists its versions.')}`,
 		'imports:',
 		...layerMintList.map((oneMint) => `  - ${yamlScalar(oneMint.uri)}`),
 	].join('\n');
@@ -441,10 +444,12 @@ const siteRegistryDocumentText = ({ layerKeyList, publicFilter } = {}) => {
 // ':' encoded as %3A (PESC local parts carry 'urn:org:pesc:…'; a term holding ':' or '/' would be read as an IRI), mapped to the element's
 // PINNED interpretation URI under this version (SPEC §5.3). The term decodes back to the local part.
 const contextDocumentTextList = ({ layer, version, subjectStableIdList, standardNameByStandardKey, standardVersionByStandardKey, publicFilter } = {}) => {
-	const stableIdListByStandardKey = subjectStableIdList.reduce((soFar, oneStableId) => {
+	const stableIdListByStandardKey = {};
+	subjectStableIdList.forEach((oneStableId) => {
 		const standardKey = prefixOf(oneStableId);
-		return { ...soFar, [standardKey]: (soFar[standardKey] || []).concat([oneStableId]) };
-	}, {});
+		stableIdListByStandardKey[standardKey] = stableIdListByStandardKey[standardKey] || [];
+		stableIdListByStandardKey[standardKey].push(oneStableId);
+	});
 	const contextDocumentList = [];
 	const standardKeyList = Object.keys(stableIdListByStandardKey).sort(byCodePoint).filter((standardKey) => publicFilter === undefined || publicFilter.excludedStandardKeyList.indexOf(standardKey) === -1);
 	for (let standardIndex = 0; standardIndex < standardKeyList.length; standardIndex++) {

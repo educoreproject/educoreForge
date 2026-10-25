@@ -53,6 +53,7 @@ const goldCapture = {
 	cardList: [{ stableId: CARD_A, uri: CARD_A, name: 'Card A' }, { stableId: CARD_B, uri: CARD_B, name: 'Card B' }],
 	elementList: [{ stableId: 'toya:property/Alpha', sourceName: 'ToyA' }, { stableId: 'toya:property/Beta', sourceName: 'ToyA' }, { stableId: 'toya:property/Gamma', sourceName: 'ToyA' }],
 	standardList: [{ standardName: 'ToyA', standardKey: 'toya', standardVersion: '2.0' }],
+	edgeSubjectVersionList: [{ standardName: 'ToyA', standardVersion: '2.0_01' }],
 	hubList: [{ hubName: 'ToyHub', hubVersion: '1.0', namespace: 'https://w3id.org/EDUcore/ToyHub/hub/' }],
 };
 const prefixMapDeclaration = { prefixExpansion: { toya: 'https://w3id.org/EDUcore/ToyA/2.0/toya:', edc: 'https://w3id.org/EDUcore/', elsewhere: 'https://example.org/not/an/element/' } };
@@ -99,6 +100,9 @@ brokenRowList.forEach(([cellList, expectedReasonCode], brokenIndex) => {
 harness.ok('every refusal carries a reason text', brokenResolved.refusalList.every((oneRefusal) => typeof oneRefusal.reasonText === 'string' && oneRefusal.reasonText.length > 20));
 harness.ok('every refusal reason is one importRules.json lists', brokenResolved.refusalList.every((oneRefusal) => importRules.refusalReasonList.indexOf(oneRefusal.reasonCode) !== -1));
 harness.ok('the file\'s own curie_map is NOT used: foo is declared in the file, unknown to the declaration, and refused', brokenResolved.refusalList.some((oneRefusal) => oneRefusal.subject_id === 'foo:bar' && /prefix 'foo' is not in the declared prefix map/.test(oneRefusal.reasonText)));
+const pairVersionText = goodSetText.split('https://w3id.org/EDUcore/ToyA/2.0/toya:').join('https://w3id.org/EDUcore/ToyA/2.0_01/toya:');
+harness.equal('an element IRI carrying the version the gold\'s EDGES stamp (2.0_01, not the root\'s 2.0) resolves', resolveImportRows({ sssomText: pairVersionText, prefixExpansionByPrefix: { ...prefixMapDeclaration.prefixExpansion, toya: 'https://w3id.org/EDUcore/ToyA/2.0_01/toya:' }, goldCapture, importRules }).acceptedList.length, 3);
+harness.equal('…a version neither stamps is refused as subjectAbsentFromGold', resolveImportRows({ sssomText: goodSetText, prefixExpansionByPrefix: { ...prefixMapDeclaration.prefixExpansion, toya: 'https://w3id.org/EDUcore/ToyA/9.9/toya:' }, goldCapture, importRules }).refusalList.map((oneRefusal) => oneRefusal.reasonCode).join(','), 'subjectAbsentFromGold,subjectAbsentFromGold,subjectAbsentFromGold');
 harness.match('a file with no subject_id column is refused whole', resolveImportRows({ sssomText: '#mapping_set_id: "x:y"\npredicate_id\tobject_id\tmapping_justification\n', prefixExpansionByPrefix: {}, goldCapture, importRules }).error, /mandatory column 'subject_id' is absent/);
 
 // =====================================================================
