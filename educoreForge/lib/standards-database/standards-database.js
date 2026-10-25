@@ -64,7 +64,7 @@ const RAW_OPTS = { noTableNameOk: true, suppressStatementLog: true };
 // ⟪EC2, BRONZE_CROWN ruling F 2026-10-25⟫ W-C-9 EXTENDED, not weakened. foreignKeysOn still holds for every STANDALONE store
 // (the canonical store of record among them). A DELTA store (lib/store-reference: stamped over a read-only reference) cannot
 // satisfy a FOREIGN KEY whose parent row lives in the reference (a build's manifest names the hubs' base blocks, which the
-// reference holds), so its connection runs foreign_keys OFF and deltaMembershipCheckedOverUnion takes the key's place: open
+// reference holds), so its connection runs foreign_keys OFF and deltaMembershipCheckedOverUnion takes the FOREIGN KEYs' place: open
 // asserts the reference is attached and the union check active, and saveManifest refuses by name a member held by neither the
 // delta nor its reference. graphBuilder -foldStore runs PRAGMA foreign_key_check on the store it folds into.
 const STORE_INVARIANT_BY_NAME = Object.freeze({ foreignKeysOn: true, deltaMembershipCheckedOverUnion: true, emptyManifestRefused: true, blockTextColumnType: 'TEXT' });
