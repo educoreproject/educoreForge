@@ -1,0 +1,8 @@
+standard: MedBiquitous (AAMC MedBiquitous Program) — the health professions education and credentialing XML Schema portfolio
+publishedVersion: unknown
+publishedVersionEvidence: a portfolio: each standard carries its own version in its namespace (activityreport/v2, curriculuminventory/v2, member/v2, ...); the repository has no single release. Snapshot of the publisher's repository master at commit 8f5c74a51bf6721fa1f0b57f2d9c4b51496bb566 (2025-08-28, "Merge pull request #8 from medbiq/work/ProfessionalProfileUpdatesAbms")
+upstreamUrl: https://github.com/medbiq/medbiq
+publisher: Association of American Medical Colleges (AAMC), MedBiquitous Program
+acquiredDate: 2026-10-25
+licence: MedBiquitous Standards Public License and Terms of Use (AAMC, last updated 2020-06-03), https://www.medbiq.org/license
+note: EDITING WARNING. deriveVersionStamp (lib/snapshot-provenance) takes THE ENTIRE REST OF the publishedVersion line as the version, so keep that line bare. Files sit at the publisher's repository paths; the forge's profile (forges/medbiq/lib/medbiqXsdProfile.json) maps each http://ns.medbiq.org/... schemaLocation to them. ns.medbiq.org itself serves OLDER bytes and is not the source (README_PROVENANCE.md).

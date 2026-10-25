@@ -1,0 +1,201 @@
+{
+	"profileNote": "MedBiquitous (AAMC) on lib/xsd-forge (wave 3 lane I, Phase 0 ruled by BRONZE_CROWN 2026-10-25): ONE standard over the publisher repository's own paths (snapshot 02, master 8f5c74a5). One schema set per current sub-standard; the legacy v1 libraries (member, address, name, activityreport, curriculuminventory) and the IEEE LOM binding come in only through the current standards' imports and includes. The SOAP service files and the request/response wrapper schemas are API and excluded; journaltypes.xsd is forged, because the Journal standard has no other expression of its data model.",
+	"schemaSetList": [
+		{
+			"schemaSetName": "ActivityReport v2",
+			"entryFileList": [
+				"activityreport/v2/activityreport.xsd"
+			]
+		},
+		{
+			"schemaSetName": "CompetencyFramework v1",
+			"entryFileList": [
+				"competencyframework/v1/competencyframework.xsd"
+			]
+		},
+		{
+			"schemaSetName": "CompetencyObject v1",
+			"entryFileList": [
+				"competencyobject/v1/competencyobject.xsd"
+			]
+		},
+		{
+			"schemaSetName": "CurriculumInventory v2",
+			"entryFileList": [
+				"curriculuminventory/v2/curriculuminventory.xsd"
+			]
+		},
+		{
+			"schemaSetName": "EducationalAchievement v1",
+			"entryFileList": [
+				"educationalachievement/v1/educationalachievement.xsd"
+			]
+		},
+		{
+			"schemaSetName": "EducationalTrajectory v1",
+			"entryFileList": [
+				"educationaltrajectory/v1/educationaltrajectoryextensions.xsd"
+			]
+		},
+		{
+			"schemaSetName": "EntrustmentScale v1",
+			"entryFileList": [
+				"entrustmentscale/v1/entrustmentscale.xsd"
+			]
+		},
+		{
+			"schemaSetName": "FinancialInterest v1",
+			"entryFileList": [
+				"financialinterest/v1/financialinterest.xsd"
+			]
+		},
+		{
+			"schemaSetName": "HealthcareLOM v2",
+			"entryFileList": [
+				"lomv2/healthcarelom.xsd"
+			]
+		},
+		{
+			"schemaSetName": "Journal v1",
+			"entryFileList": [
+				"journal/service/v1/journaltypes.xsd"
+			]
+		},
+		{
+			"schemaSetName": "MedicalEducationMetrics v2",
+			"entryFileList": [
+				"metrics/v2/medicaleducationmetrics.xsd"
+			]
+		},
+		{
+			"schemaSetName": "PerformanceFramework v1",
+			"entryFileList": [
+				"performanceframework/v1/performanceframework.xsd"
+			]
+		},
+		{
+			"schemaSetName": "ProfessionalProfile v2",
+			"entryFileList": [
+				"member/v2/member.xsd"
+			]
+		},
+		{
+			"schemaSetName": "SurveyItems v1",
+			"entryFileList": [
+				"surveyitems/v1/surveyitems.xsd"
+			]
+		},
+		{
+			"schemaSetName": "VirtualPatient v1",
+			"entryFileList": [
+				"virtualpatientdata/v1/virtualpatientdata.xsd",
+				"activitymodel/v1/activitymodel.xsd",
+				"dataavailabilitymodel/v1/dataavailabilitymodel.xsd"
+			]
+		}
+	],
+	"schemaLocationTable": {
+		"http://ns.medbiq.org/common/v2/common.xsd": "common/v2/common.xsd",
+		"http://ns.medbiq.org/lom/healthcarelom.xsd": "lomv2/healthcarelom.xsd",
+		"http://ns.medbiq.org/lom/healthcare/healthcaremetadata.xsd": "lomv2/healthcare/healthcaremetadata.xsd",
+		"http://ns.medbiq.org/lom/healthcare/healthcarevocabularies.xsd": "lomv2/healthcare/healthcarevocabularies.xsd",
+		"http://ns.medbiq.org/member/v1/member.xsd": "member/v1/member.xsd",
+		"http://ns.medbiq.org/member/v2/member.xsd": "member/v2/member.xsd",
+		"http://ns.medbiq.org/competencyobject/v1/competencyobject.xsd": "competencyobject/v1/competencyobject.xsd",
+		"http://ns.medbiq.org/competencyframework/v1/competencyframework.xsd": "competencyframework/v1/competencyframework.xsd",
+		"http://ns.medbiq.org/address/v1/address.xsd": "address/v1/address.xsd",
+		"http://ns.medbiq.org/address/v2/address.xsd": "address/v2/address.xsd",
+		"http://ns.medbiq.org/name/v1/name.xsd": "name/v1/name.xsd",
+		"http://ns.medbiq.org/name/v2/name.xsd": "name/v2/name.xsd",
+		"http://ns.medbiq.org/performanceframework/v1/performanceframework.xsd": "performanceframework/v1/performanceframework.xsd",
+		"http://ns.medbiq.org/curriculuminventory/v1/curriculuminventory.xsd": "curriculuminventory/v1/curriculuminventory.xsd",
+		"http://ns.medbiq.org/activityreport/v1/activityreport.xsd": "activityreport/v1/activityreport.xsd",
+		"../lom/healthcarelom.xsd": "lomv2/healthcarelom.xsd",
+		"../common/v2/common.xsd": "common/v2/common.xsd"
+	},
+	"foreignNamespaceList": [
+		{
+			"namespace": "http://www.w3.org/1999/xhtml",
+			"reason": "W3C XHTML 1.0: another body's namespace; competency and performance framework rich text is typed by it"
+		},
+		{
+			"namespace": "http://purl.org/dc/terms/",
+			"reason": "DCMI Metadata Terms (Dublin Core): another body's namespace"
+		},
+		{
+			"namespace": "http://www.w3.org/2004/08/xop/include",
+			"reason": "W3C XOP (XML-binary Optimized Packaging): another body's namespace, used for attachments"
+		},
+		{
+			"namespace": "http://www.w3.org/XML/1998/namespace",
+			"reason": "the XML namespace (xml:lang): defined by the W3C, never forged"
+		},
+		{
+			"namespace": "urn:org:pesc:core:CoreMain:v1.12.0",
+			"reason": "PESC CoreMain 1.12.0: another standard of this graph; Educational Achievement imports it, and FBB-001 forbids forging or resolving it here"
+		},
+		{
+			"namespace": "urn:org:pesc:sector:AcademicRecord:v1.7.0",
+			"reason": "PESC AcademicRecord 1.7.0: another standard of this graph; Educational Achievement imports it, and FBB-001 forbids forging or resolving it here"
+		}
+	],
+	"schemaFileExclusionList": [
+		{
+			"schemaFile": "activityreport/service/v2/activityreportbindings.wsdl",
+			"reason": "a SOAP service description: API, not the data model (Phase 0 ruling)"
+		},
+		{
+			"schemaFile": "activityreport/service/v2/activityreportservice.wsdl",
+			"reason": "a SOAP service description: API, not the data model (Phase 0 ruling)"
+		},
+		{
+			"schemaFile": "activityreport/service/v2/activityreporttypes.xsd",
+			"reason": "the Activity Report service's request/response/result wrappers only: API, not the data model (Phase 0 ruling)"
+		},
+		{
+			"schemaFile": "common/v2/attachment.xsd",
+			"reason": "defines seven names of common.xsd again in the same namespace; no import of the portfolio reaches it"
+		},
+		{
+			"schemaFile": "competencyobject/v1/competency_object.xsd",
+			"reason": "an alternative form of competencyobject.xsd defining five of its names in the same namespace; no import of the portfolio reaches it"
+		},
+		{
+			"schemaFile": "journal/service/v1/journalbindings.wsdl",
+			"reason": "a SOAP service description: API, not the data model (Phase 0 ruling); the Journal data model in journaltypes.xsd is forged"
+		},
+		{
+			"schemaFile": "journal/service/v1/journalservice.wsdl",
+			"reason": "a SOAP service description: API, not the data model (Phase 0 ruling); the Journal data model in journaltypes.xsd is forged"
+		},
+		{
+			"schemaFile": "member/service/v2/memberbindings.wsdl",
+			"reason": "a SOAP service description: API, not the data model (Phase 0 ruling)"
+		},
+		{
+			"schemaFile": "member/service/v2/memberservice.wsdl",
+			"reason": "a SOAP service description: API, not the data model (Phase 0 ruling)"
+		},
+		{
+			"schemaFile": "member/service/v2/membertypes.xsd",
+			"reason": "the Professional Profile service's request/response/result wrappers only: API, not the data model (Phase 0 ruling)"
+		}
+	],
+	"enumerationRepeatList": [
+		{
+			"schemaFile": "lomv2/healthcare/healthcaremetadata.xsd",
+			"enumerationLocator": "/schema/simpleType[12]/restriction[1]/enumeration[9]",
+			"reason": "the publisher lists 'http://purl.org/meducator/repurposing#Different-Technology' twice in repurposingContextType (enumerations 7 and 9); carried once as a value, the repeat kept verbatim on the option set"
+		}
+	],
+	"stableIdPrefix": "medbiq:",
+	"rootStableId": "medbiq:root",
+	"perStandardLabelByNodeKind": {
+		"schemaFile": "MedbiqSchemaFile",
+		"class": "MedbiqComplexType",
+		"property": "MedbiqField",
+		"optionSet": "MedbiqOptionSet",
+		"optionValue": "MedbiqOptionValue",
+		"support": "MedbiqSupport"
+	}
+}
