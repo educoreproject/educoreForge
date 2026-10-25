@@ -80,6 +80,7 @@ const ADDED_NEXT_STANDARDS_LANE_C = Object.freeze({
 const ADDED_NEXT_STANDARDS_WAVE2_LANE_E = Object.freeze({
 	caseCedsDerivedPlugin: { standardKey: 'case', targetHub: 'ceds', declarationDigest: '6d27c3b1a373d5714f48e1f5e5ea8f9bff1dd97b2ea717bcfaf81c494f14fd9a', hookNameList: [], reason: 'nextStandards wave 2 E2: every CASE property judged toward the CEDS hub (forges/case)' },
 	caseCtdlDerivedPlugin: { standardKey: 'case', targetHub: 'ctdl', declarationDigest: '5bd23eefbc26fbb5add924eb9f6971282511a1763524fa0db82ae8811f47f20b', hookNameList: [], reason: 'nextStandards wave 2 E2: every CASE property judged toward the CTDL hub (forges/case)' },
+});
 // ⟪nextStandards-102326 wave 2 lane G, 2026-10-24 (RUBY_PORTAL)⟫ ADDED, in this lane's own table: SEDM's two facets, declared identity
 // toward the CEDS hub (the working documents' Global ID column) and the judged Element facet toward the CTDL hub (forges/sedm)
 const ADDED_NEXT_STANDARDS_WAVE2_LANE_G = Object.freeze({
