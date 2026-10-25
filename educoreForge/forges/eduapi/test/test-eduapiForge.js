@@ -6,6 +6,8 @@
 // its omission table and twins observed RED, the snapshot's provenance, and determinism. The kit's own constructs and refusals
 // are proven in lib/openapi-forge/test/test-openapiForgeKit.js; this suite proves the bundle and its bytes. Writes only under
 // os.tmpdir().
+// The publisher's file is git-ignored (02/README_PROVENANCE.md has the acquisition recipe): a tree that has not run the recipe is REFUSED
+// BY NAME in section 1, the JEDx / CASE form, never a raw ENOENT.
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const helpText = `
@@ -19,6 +21,9 @@ DESCRIPTION
      Forges forges/eduapi/assets/standardSourceData/02 (the pin) in process (no embedding) and asserts the measured counts (39
      schemas, 341 properties, 62 enums, 319 values, 93 references) and how the EduAPI constructs are carried. Runs the bundle's
      round-trip validator over the harness graph double, clean and on perturbations. Writes only under os.tmpdir().
+
+FILES
+     forges/eduapi/assets/standardSourceData/02/eduapi_v1p0_openapi3.json   git-ignored; see 02/README_PROVENANCE.md to acquire
 
 EXIT STATUS
      0 every assertion passed;  1 otherwise.
@@ -61,8 +66,9 @@ const sortedText = (counts) => JSON.stringify(counts, Object.keys(counts).sort()
 const contentCountBy = (itemList, nameOf, roleOrTypeList) => countBy(itemList.filter((oneItem) => roleOrTypeList.indexOf(nameOf(oneItem)) !== -1), nameOf);
 const copyOfForgeResult = (forgeResult) => ({ nodes: forgeResult.nodes.map((oneNode) => ({ ...oneNode, properties: { ...oneNode.properties } })), edges: forgeResult.edges.map((oneEdge) => ({ ...oneEdge, properties: { ...oneEdge.properties } })) });
 const scratchRootPath = fs.mkdtempSync(path.join(os.tmpdir(), 'eduapiForgeTest-'));
-const sourceDocument = JSON.parse(fs.readFileSync(path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME), 'utf8'));
-const sourceRequiredCount = Object.values(sourceDocument.components.schemas).reduce((total, oneSchema) => total + (oneSchema.required || []).length, 0);
+const isPublisherFilePresent = fs.existsSync(path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME));
+const sourceDocument = isPublisherFilePresent ? JSON.parse(fs.readFileSync(path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME), 'utf8')) : undefined;
+const sourceRequiredCount = isPublisherFilePresent ? Object.values(sourceDocument.components.schemas).reduce((total, oneSchema) => total + (oneSchema.required || []).length, 0) : -1;
 
 const forgeSnapshot = (callback) => bundle.forge({ sourcePath: path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME), owner: 'test', skipEmbedding: true }, callback);
 const validateDouble = ({ forgeResult, caseName }, callback) => {
@@ -78,6 +84,11 @@ const taskList = new taskListPlus();
 // -----------------------------------------------------------------
 taskList.push((args, next) => {
 	harness.section('SECTION 1 — snapshot 02: the bytes, the pin, the declaration');
+	harness.accepts('the git-ignored publisher file is present (else run the recipe in 02/README_PROVENANCE.md)', isPublisherFilePresent ? [] : [`absent: ${SOURCE_FILE_NAME}`]);
+	if (!isPublisherFilePresent) {
+		next('the EduAPI publisher bytes are absent: run the acquisition recipe in forges/eduapi/assets/standardSourceData/02/README_PROVENANCE.md', args);
+		return;
+	}
 	harness.equal('eduapi_v1p0_openapi3.json sha256 is the 2026-10-24 fetch (the Final; snapshot 01 holds the May Candidate Final)', crypto.createHash('sha256').update(fs.readFileSync(path.join(SNAPSHOT_DIR_PATH, SOURCE_FILE_NAME))).digest('hex'), EXPECTED.sourceSha256);
 	harness.equal('the source says openapi 3.0.1, info.version 1.0, x-status Final', `${sourceDocument.openapi}|${sourceDocument.info.version}|${sourceDocument.info['x-status']}`, '3.0.1|1.0|Final');
 	harness.equal('declaration names (GATEREPORT-F0, ruled)', `${forgeDeclaration.standardKey}|${forgeDeclaration.standardSource}|${forgeDeclaration.standardFamily}|${forgeDeclaration.nativeIdentifierPropertyName}`, 'eduapi|EduAPI|EduAPI|null');
