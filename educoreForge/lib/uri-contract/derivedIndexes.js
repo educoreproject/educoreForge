@@ -10,8 +10,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // -rebuildUriContractIndexes recomputes them and REFUSES any difference (it fills a source that was never indexed; it never
 // changes or removes a row).
 //
-//   derivedRowsForSchemaBlock(schemaBlock) → { elementRowList, answerEdgeRowList } | { error }
+//   derivedRowsForSchemaBlock(schemaBlock) → { elementRowList, hubCardRowList, answerEdgeRowList } | { error }
 //       elementRowList     one row per standardBase node: where an element URI resolves, its parent, its definition text
+//       hubCardRowList     one row per HubReference card (a base node whose stableId parses as a meaning): the hub and domain listings
 //       answerEdgeRowList  one row per answer edge of a relationship block (a SKOS match or DECLARED_CORRESPONDENCE edge whose
 //                          target is a meaning card): what mappingsToMeaningFor and a question URI read
 //   derivedRowsForLayerVersion({ layer, version, blockTextFor }) → { countRowList } | { error }
@@ -29,6 +30,7 @@ const isNonEmptyString = (candidate) => typeof candidate === 'string' && candida
 const DEFINITION_PROPERTY_NAME_LIST = Object.freeze(['definition', 'description']);
 const ANSWER_EDGE_TYPE_SET = new Set(Object.values(vocabularyLib.SKOS_EDGE_TYPES).concat([vocabularyLib.EDGE_TYPES.DECLARED_CORRESPONDENCE]));
 const NO_TERM_FOUND_OBJECT_LIST = Object.freeze(['sssom:NoTermFound', 'https://w3id.org/sssom/NoTermFound']);
+const URI_CONTRACT_RULES = require(path.join(__dirname, 'uriContractRules.json'));
 const NODE_JSON_DROPPED_FIELD_LIST = Object.freeze(['embedding', 'embeddingRef', 'embeddingModelVersion']);
 
 const firstValueOf = (propertyValue) => (Array.isArray(propertyValue) ? propertyValue[0] : propertyValue);
@@ -53,12 +55,13 @@ const derivedRowsForSchemaBlock = (schemaBlock) => {
 	}
 	const header = headerParse.parsed;
 	const elementRowList = [];
+	const hubCardRowList = [];
 	const answerEdgeKeySet = new Set();
 	const answerEdgeRowList = [];
 	const isBase = header.blockType === vocabularyLib.SCHEMA_BLOCK_KIND.STANDARD_BASE;
 	const isRelationship = header.blockType === vocabularyLib.SCHEMA_BLOCK_KIND.RELATIONSHIP;
 	if (!isBase && !isRelationship) {
-		return { elementRowList, answerEdgeRowList };
+		return { elementRowList, hubCardRowList, answerEdgeRowList };
 	}
 	const versionByStandardKey = isRelationship ? { [header.pairA]: String(header.pairAVersion), [header.pairB]: String(header.pairBVersion) } : {};
 	for (let lineIndex = 1; lineIndex < lineList.length; lineIndex++) {
@@ -78,6 +81,17 @@ const derivedRowsForSchemaBlock = (schemaBlock) => {
 			const definitionName = DEFINITION_PROPERTY_NAME_LIST.find((propertyName) => isNonEmptyString(firstValueOf(properties[propertyName])));
 			const parentStableId = firstValueOf(properties.parentId);
 			const nodeForIndex = Object.keys(record).filter((fieldName) => NODE_JSON_DROPPED_FIELD_LIST.indexOf(fieldName) === -1 && fieldName !== 'kind').reduce((soFar, fieldName) => ({ ...soFar, [fieldName]: record[fieldName] }), {});
+			const cardMeaning = edcUri.parse(record.stableId);
+			if (!cardMeaning.error && cardMeaning.kind === 'meaning') {
+				const referenceTier = firstValueOf(properties.referenceTier);
+				const definitionPropertyList = URI_CONTRACT_RULES.hubCardDefinitionPropertyListByTier[referenceTier];
+				if (!Array.isArray(definitionPropertyList)) {
+					return { error: refusalText(`schema block ${schemaBlock.refId}: card ${record.stableId} has referenceTier ${JSON.stringify(referenceTier)}, which hubCardDefinitionPropertyListByTier does not list`, 'lib/uri-contract/uriContractRules.json') };
+				}
+				const definitionPropertyName = definitionPropertyList.find((propertyName) => isNonEmptyString(firstValueOf(properties[propertyName])));
+				const textOf = (propertyName) => (isNonEmptyString(firstValueOf(properties[propertyName])) ? firstValueOf(properties[propertyName]) : null);
+				hubCardRowList.push({ schemaBlockRefId: schemaBlock.refId, meaningIri: record.stableId, hubSegment: cardMeaning.partByName.hubSegment, hubReleaseSegment: cardMeaning.partByName.hubReleaseSegment, hubName: textOf('hubName'), hubVersion: textOf('hubVersion'), label: textOf('name'), definition: definitionPropertyName === undefined ? null : firstValueOf(properties[definitionPropertyName]), propertyName: textOf('propertyName'), propertyKey: textOf('propertyKey'), referenceTier, domainId: textOf('domainId'), domainName: textOf('domainName'), domainUri: textOf('domainUri'), domainDefinition: textOf('domainDefinition') });
+			}
 			elementRowList.push({ schemaBlockRefId: schemaBlock.refId, standardName: record.ref.source, standardVersion: String(header.version), standardKey: header.standardKey, elementStableId: record.stableId, parentStableId: isNonEmptyString(parentStableId) ? parentStableId : null, definitionText: definitionName === undefined ? null : firstValueOf(properties[definitionName]), nodeJson: JSON.stringify(nodeForIndex) });
 			continue;
 		}
@@ -97,7 +111,7 @@ const derivedRowsForSchemaBlock = (schemaBlock) => {
 			answerEdgeRowList.push(answerEdgeRow);
 		}
 	}
-	return { elementRowList, answerEdgeRowList };
+	return { elementRowList, hubCardRowList, answerEdgeRowList };
 };
 
 // countsOfDecisionText(frozenText) → { rowCount, mappedCount, abstainedCount }: a judged block's records (mapped = it names an

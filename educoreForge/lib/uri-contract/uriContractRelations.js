@@ -25,6 +25,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //        [{ elementStableId, role | null }] }   ordered by elementStableId in code-point order (SQLite BINARY), so pages are stable
 //   11 agentListFor({ pageNumber, pageSize }) → { totalCount, agentList: [{ profile }] }
 //   12 layerListFor() → [{ layerKey, displayName, layerKind, versionCount, currentStandardVersionTag | null }]
+//   13 manifestHubListFor(manifestSelector) → { manifestRefId, publicLabel, hubList: [{ hubName, hubVersion, hubSegment, hubReleaseSegment, cardCount, domainCount }] }
+//   14 hubDomainListFor(manifestSelector, { hubSegment, hubReleaseSegment, pageNumber, pageSize }) → { totalCount, domainList: [{ domainId,
+//        domainName, domainUri, domainDefinition, cardCount }] }   ordered by domainId
+//   15 hubDomainCardListFor(manifestSelector, { hubSegment, hubReleaseSegment, domainId, pageNumber, pageSize }) → { totalCount, cardList:
+//        [{ meaningIri, label, definition, propertyName, propertyKey, referenceTier }] }   ordered by meaningIri
 //
 // DECISIONS stated once: pages are numbered from 1 and pageSize is 1..PAGE_SIZE_LIMIT (anything else refused by name); "latestStatus"
 // is always { registrationStatus, changedAt }; a decisionBlockHash names the layer version that FIRST published it among layers that
@@ -235,7 +240,47 @@ const uriContractRelationsFor = ({ database, uriContract }) => {
 		return { answer: loaded.registry.layerRegistry.layerList.map((oneLayer) => { const current = loaded.registry.currentStandardVersionFor(oneLayer.layerKey); return { layerKey: oneLayer.layerKey, displayName: oneLayer.displayName, layerKind: oneLayer.layerKind, versionCount: oneLayer.versionList.length, currentStandardVersionTag: current.error ? null : current.version.administrationRecord.versionTag }; }) };
 	};
 
-	return { layerListFor, elementRecordFor, publishedLayerVersionListForStandard, mappingsToMeaningFor, layerHistoryFor, layerVersionRecordFor, manifestInventoryFor, rootCountsFor, publishedManifestListFor, manifestStandardListFor, manifestElementListFor, agentListFor };
+	// 13-15: the hub cards of a manifest (derivedHubCards joined to its members). A card with no domain (CTDL's, measured) counts in
+	// its hub's cardCount but in no domain; domains are listed by domainId and cards by meaningIri, code-point order, so pages are stable
+	const cardFromSql = 'FROM derivedHubCards AS cards JOIN publishedManifestMembers AS members ON members.schemaBlockRefId = cards.schemaBlockRefId WHERE members.manifestRefId = ?';
+	const manifestHubListFor = (manifestSelector) => {
+		const found = manifestRowFor(manifestSelector);
+		if (found.error || found.manifestRow === null) {
+			return found.error ? found : { answer: null };
+		}
+		const hubList = database.prepare(`SELECT cards.hubName AS hubName, cards.hubVersion AS hubVersion, cards.hubSegment AS hubSegment, cards.hubReleaseSegment AS hubReleaseSegment, COUNT(DISTINCT cards.meaningIri) AS cardCount, COUNT(DISTINCT cards.domainId) AS domainCount ${cardFromSql} GROUP BY cards.hubSegment, cards.hubReleaseSegment, cards.hubName, cards.hubVersion ORDER BY cards.hubSegment, cards.hubReleaseSegment`).all(found.manifestRow.manifestRefId);
+		return { answer: { manifestRefId: found.manifestRow.manifestRefId, publicLabel: found.manifestRow.publicLabel, hubList } };
+	};
+	const hubDomainListFor = (manifestSelector, { hubSegment, hubReleaseSegment, pageNumber, pageSize } = {}) => {
+		const fault = pageRefusal({ pageNumber, pageSize });
+		if (fault) {
+			return { error: fault };
+		}
+		const found = manifestRowFor(manifestSelector);
+		if (found.error || found.manifestRow === null) {
+			return found.error ? found : { answer: null };
+		}
+		const scopeSql = `${cardFromSql} AND cards.hubSegment = ? AND cards.hubReleaseSegment = ? AND cards.domainId IS NOT NULL`;
+		const parameterList = [found.manifestRow.manifestRefId, hubSegment, hubReleaseSegment];
+		const domainList = database.prepare(`SELECT cards.domainId AS domainId, MIN(cards.domainName) AS domainName, MIN(cards.domainUri) AS domainUri, MIN(cards.domainDefinition) AS domainDefinition, COUNT(DISTINCT cards.meaningIri) AS cardCount ${scopeSql} GROUP BY cards.domainId ORDER BY cards.domainId LIMIT ? OFFSET ?`).all(...parameterList, pageSize, (pageNumber - 1) * pageSize);
+		return { answer: { totalCount: database.prepare(`SELECT COUNT(DISTINCT cards.domainId) AS rowCount ${scopeSql}`).get(...parameterList).rowCount, domainList } };
+	};
+	const hubDomainCardListFor = (manifestSelector, { hubSegment, hubReleaseSegment, domainId, pageNumber, pageSize } = {}) => {
+		const fault = pageRefusal({ pageNumber, pageSize });
+		if (fault) {
+			return { error: fault };
+		}
+		const found = manifestRowFor(manifestSelector);
+		if (found.error || found.manifestRow === null) {
+			return found.error ? found : { answer: null };
+		}
+		const scopeSql = `${cardFromSql} AND cards.hubSegment = ? AND cards.hubReleaseSegment = ? AND cards.domainId = ?`;
+		const parameterList = [found.manifestRow.manifestRefId, hubSegment, hubReleaseSegment, domainId];
+		const cardList = database.prepare(`SELECT DISTINCT cards.meaningIri AS meaningIri, cards.label AS label, cards.definition AS definition, cards.propertyName AS propertyName, cards.propertyKey AS propertyKey, cards.referenceTier AS referenceTier ${scopeSql} ORDER BY cards.meaningIri LIMIT ? OFFSET ?`).all(...parameterList, pageSize, (pageNumber - 1) * pageSize);
+		return { answer: { totalCount: database.prepare(`SELECT COUNT(DISTINCT cards.meaningIri) AS rowCount ${scopeSql}`).get(...parameterList).rowCount, cardList } };
+	};
+
+	return { manifestHubListFor, hubDomainListFor, hubDomainCardListFor, layerListFor, elementRecordFor, publishedLayerVersionListForStandard, mappingsToMeaningFor, layerHistoryFor, layerVersionRecordFor, manifestInventoryFor, rootCountsFor, publishedManifestListFor, manifestStandardListFor, manifestElementListFor, agentListFor };
 };
 
 module.exports = { uriContractRelationsFor, PAGE_SIZE_LIMIT, moduleName };

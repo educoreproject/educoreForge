@@ -456,7 +456,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 				return read;
 			}
 			const derived = derivedIndexesLib.derivedRowsForSchemaBlock(read.schemaBlock);
-			return derived.error ? derived : { rowListByTable: { derivedElementIndex: derived.elementRowList, derivedAnswerEdges: derived.answerEdgeRowList } };
+			return derived.error ? derived : { rowListByTable: { derivedElementIndex: derived.elementRowList, derivedHubCards: derived.hubCardRowList, derivedAnswerEdges: derived.answerEdgeRowList } };
 		}
 		const derived = derivedIndexesLib.derivedRowsForLayerVersion({ layer: oneSource.layer, version: oneSource.version, blockTextFor: decisionSchemaBlockTextFor });
 		return derived.error ? derived : { rowListByTable: { derivedLayerVersionCounts: derived.countRowList } };
@@ -554,8 +554,9 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 			return derived;
 		}
 		insertDerivedRows('derivedElementIndex', derived.elementRowList);
+		insertDerivedRows('derivedHubCards', derived.hubCardRowList);
 		insertDerivedRows('derivedAnswerEdges', derived.answerEdgeRowList);
-		insertDerivedRows('derivedIndexedSources', [{ sourceKind: 'schemaBlock', sourceIdentity: schemaBlock.refId, derivedRowCount: derived.elementRowList.length + derived.answerEdgeRowList.length }]);
+		insertDerivedRows('derivedIndexedSources', [{ sourceKind: 'schemaBlock', sourceIdentity: schemaBlock.refId, derivedRowCount: derived.elementRowList.length + derived.hubCardRowList.length + derived.answerEdgeRowList.length }]);
 		return { alreadyPresent: false };
 	};
 	const writeDerivedRowsForLayerVersion = ({ layer, version }) => {
@@ -878,6 +879,9 @@ const uriContractReaderFor = ({ uriContractFilePath } = {}) => {
 		manifestElementListFor: (manifestSelector, listSpec, callback) => answerWith(uriContract.relations.manifestElementListFor(manifestSelector, listSpec), ({ answer }) => answer, callback),
 		agentListFor: (pageSpec, callback) => answerWith(uriContract.relations.agentListFor(pageSpec), ({ answer }) => answer, callback),
 		layerListFor: (callback) => answerWith(uriContract.relations.layerListFor(), ({ answer }) => answer, callback),
+		manifestHubListFor: (manifestSelector, callback) => answerWith(uriContract.relations.manifestHubListFor(manifestSelector), ({ answer }) => answer, callback),
+		hubDomainListFor: (manifestSelector, listSpec, callback) => answerWith(uriContract.relations.hubDomainListFor(manifestSelector, listSpec), ({ answer }) => answer, callback),
+		hubDomainCardListFor: (manifestSelector, listSpec, callback) => answerWith(uriContract.relations.hubDomainCardListFor(manifestSelector, listSpec), ({ answer }) => answer, callback),
 	};
 	return { uriContractReader, uriContract };
 };

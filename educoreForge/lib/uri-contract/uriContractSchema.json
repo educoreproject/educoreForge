@@ -1,5 +1,5 @@
 {
-	"about": "The nine IDENTITY and HISTORY tables of uriContract.sqlite, and its four DERIVED tables (rowRole derived: pure functions of the write-once rows, written in the same transaction, verified by -rebuildUriContractIndexes; AMBER_JOURNEY 2026-10-26) — (ML3.1 Part B; PROPOSAL-dataStoreLayout-102626 section 3 and Appendix B, with the additive columns AMBER_JOURNEY accepted 2026-10-26, and the ninth table frozenVectors ruled the same day: a vector a published schema block references by embeddingRef is part of what RECREATES the graph, not a calculation input). DATA: uriContract.js builds every CREATE TABLE, every write-once trigger and every INSERT from these rows, and refuses by name a row field no table lists. rowRole 'identity' = written once at publish; 'history' = append-only. NO TABLE IS EVER UPDATED OR DELETED FROM: each carries BEFORE UPDATE and BEFORE DELETE triggers that abort, so even raw SQL cannot edit the forever-promise. registrationStatus CHECKs are built from lib/layer-registry/layerRegistrySchema.json registrationStatusList, never restated here.",
+	"about": "The nine IDENTITY and HISTORY tables of uriContract.sqlite, and its five DERIVED tables (rowRole derived: pure functions of the write-once rows, written in the same transaction, verified by -rebuildUriContractIndexes; AMBER_JOURNEY 2026-10-26) — (ML3.1 Part B; PROPOSAL-dataStoreLayout-102626 section 3 and Appendix B, with the additive columns AMBER_JOURNEY accepted 2026-10-26, and the ninth table frozenVectors ruled the same day: a vector a published schema block references by embeddingRef is part of what RECREATES the graph, not a calculation input). DATA: uriContract.js builds every CREATE TABLE, every write-once trigger and every INSERT from these rows, and refuses by name a row field no table lists. rowRole 'identity' = written once at publish; 'history' = append-only. NO TABLE IS EVER UPDATED OR DELETED FROM: each carries BEFORE UPDATE and BEFORE DELETE triggers that abort, so even raw SQL cannot edit the forever-promise. registrationStatus CHECKs are built from lib/layer-registry/layerRegistrySchema.json registrationStatusList, never restated here.",
 	"writeOnceTriggerMessage": "uriContract is write-once: rows are never updated or deleted (a status change is a new history row)",
 	"tableList": [
 		{
@@ -179,6 +179,29 @@
 			"tableConstraintList": ["PRIMARY KEY (schemaBlockRefId, elementStableId)"]
 		},
 		{
+			"tableName": "derivedHubCards",
+			"rowRole": "derived",
+			"about": "DERIVED from schemaBlocks (standardBase): every HubReference card (a node whose stableId parses as a meaning URI), with its hub, domain, label, definition (uriContractRules.json hubCardDefinitionPropertyListByTier), property and tier; the hub and domain listings read it",
+			"columnList": [
+				{ "columnName": "schemaBlockRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES schemaBlocks(refId)" },
+				{ "columnName": "meaningIri", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubSegment", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubReleaseSegment", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubName", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "hubVersion", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "label", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "definition", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "propertyName", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "propertyKey", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "referenceTier", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "domainId", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "domainName", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "domainUri", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "domainDefinition", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (schemaBlockRefId, meaningIri)"]
+		},
+		{
 			"tableName": "derivedAnswerEdges",
 			"rowRole": "derived",
 			"about": "DERIVED from schemaBlocks (relationship): every answer edge (a SKOS match or DECLARED_CORRESPONDENCE edge whose target is a meaning card), with the decision schema block it was materialised from",
@@ -218,6 +241,7 @@
 		"CREATE INDEX IF NOT EXISTS derivedElementIndexByParent ON derivedElementIndex(schemaBlockRefId, parentStableId)",
 		"CREATE INDEX IF NOT EXISTS derivedAnswerEdgesByMeaning ON derivedAnswerEdges(meaningIri)",
 		"CREATE INDEX IF NOT EXISTS derivedAnswerEdgesBySubject ON derivedAnswerEdges(subjectStableId, hubSegment)",
-		"CREATE INDEX IF NOT EXISTS publishedManifestMembersByBlock ON publishedManifestMembers(schemaBlockRefId)"
+		"CREATE INDEX IF NOT EXISTS publishedManifestMembersByBlock ON publishedManifestMembers(schemaBlockRefId)",
+		"CREATE INDEX IF NOT EXISTS derivedHubCardsByHubDomain ON derivedHubCards(hubSegment, hubReleaseSegment, domainId, meaningIri)"
 	]
 }
