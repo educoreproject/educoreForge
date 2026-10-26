@@ -1,5 +1,5 @@
 {
-	"about": "What lib/layer-registry/layerPublication.js writes (mappingLayers ML3-a/b), as DATA. sssomSchemaReleaseText: R-e, the sssom_version enum admits only 1.0 | 1.1 (measured: '1.1.0a5' fails sssom validate), so the alpha the 1.1 slots were validated against is named in a declared extension. machineProducerKindList: the registered machine layers are judge layers (measured 2026-10-25: 45 of 45 member blocks inferred). droppedMachineColumnList: per-bridge match fields, whose CURIE prefix (EDUcoreHub) can name only one hub per curie_map while a version spans two hubs. legacySubjectExpansionPattern / legacyHubSourcePattern: what the pre-ML3 per-block export wrote (bridge-framework.js), kept declared under legacy_curie_map and as object_source. publicFilterFragmentPrefix: a filtered public rendering's mapping_set_id is the version URI plus this fragment and the filter digest (TQ Q37). authorIdSeparator: the SSSOM/TSV multivalued cell separator. subjectLabelPropertyNameBySubjectPrefix (ML3.1 Q42, table ruled by AMBER_JOURNEY 2026-10-26 O-2): the node property, WRITTEN BY THE FORGE, that holds each standard's OWN name for an element; subject_label is that property's value read verbatim (first value) from the gold, never composed; a subject whose node lacks it gets an empty cell and is counted in the render report. hubBundleTokenByHubName (ML3.1c, TQ Q8): which forge bundle each hub's cards come from, so the card download can refuse a hub on the licence-hold list by name; a hub missing here is refused, never guessed.",
+	"about": "What lib/layer-registry/layerPublication.js writes (mappingLayers ML3-a/b), as DATA. sssomSchemaReleaseText: R-e, the sssom_version enum admits only 1.0 | 1.1 (measured: '1.1.0a5' fails sssom validate), so the alpha the 1.1 slots were validated against is named in a declared extension. machineProducerKindList: the registered machine layers are judge layers (measured 2026-10-25: 45 of 45 member blocks inferred). droppedMachineColumnList: per-bridge match fields, whose CURIE prefix (EDUcoreHub) can name only one hub per curie_map while a version spans two hubs. legacySubjectExpansionPattern / legacyHubSourcePattern: what the pre-ML3 per-block export wrote (bridge-framework.js), kept declared under legacy_curie_map and as object_source. publicFilterFragmentPrefix: a filtered public rendering's mapping_set_id is the version URI plus this fragment and the filter digest (TQ Q37). authorIdSeparator: the SSSOM/TSV multivalued cell separator. subjectLabelPropertyNameBySubjectPrefix (ML3.1 Q42, table ruled by AMBER_JOURNEY 2026-10-26 O-2): the node property, WRITTEN BY THE FORGE, that holds each standard's OWN name for an element; subject_label is that property's value read verbatim (first value) from the gold, never composed; a subject whose node lacks it gets an empty cell and is counted in the render report. hubBundleTokenByHubName (ML3.1c, TQ Q8): which forge bundle each hub's cards come from, so the card download can refuse a hub on the licence-hold list by name; a hub missing here is refused, never guessed. publicationFileKindList (ML3.1c): every file published under downloadArtifacts/<gold>/ for the mapping sets and the cards, classified by the FIRST relativePathPattern it matches (named groups carry layerKey, versionTag, standardKey, hubSegment, hubReleaseSegment); publicationIndex.js refuses a file of no kind.",
 	"sssomSchemaReleaseText": "sssom-schema 1.1.0a5; validated with sssom-py 0.4.21",
 	"renderedBy": "educoreForge lib/layer-registry/layerPublication.js (mappingLayers ML3)",
 	"machineProducerKindList": ["inferred"],
@@ -37,5 +37,37 @@
 		"about": "hubName (as the HubDefinition and every card state it) -> the downloadArtifactsRules.json bundleToken of the forge that builds the hub",
 		"CEDS": "ceds",
 		"CTDL": "ctdl"
-	}
+	},
+	"publicationFileKindList": [
+		{
+			"kind": "mappingSet",
+			"format": "text/tab-separated-values (SSSOM/TSV)",
+			"relativePathPattern": "^mappingLayers/layer/(?<layerKey>[^/]+)/(?<versionTag>[^/]+)/set\\.sssom\\.tsv$"
+		},
+		{
+			"kind": "mappingContext",
+			"format": "application/ld+json",
+			"relativePathPattern": "^mappingLayers/layer/(?<layerKey>[^/]+)/(?<versionTag>[^/]+)/context/(?<standardKey>[^/]+)\\.jsonld$"
+		},
+		{
+			"kind": "layerRegistry",
+			"format": "application/yaml (SSSOM mapping registry)",
+			"relativePathPattern": "^mappingLayers/layer/(?<layerKey>[^/]+)/registry\\.sssom\\.yml$"
+		},
+		{
+			"kind": "siteRegistry",
+			"format": "application/yaml (SSSOM mapping registry)",
+			"relativePathPattern": "^mappingLayers/registry/layers\\.sssom\\.yml$"
+		},
+		{
+			"kind": "hubCardsCsv",
+			"format": "text/csv",
+			"relativePathPattern": "^hubCards/(?<hubSegment>[^/]+)/(?<hubReleaseSegment>[^/]+)/cards\\.csv$"
+		},
+		{
+			"kind": "hubCardsJsonLd",
+			"format": "application/ld+json",
+			"relativePathPattern": "^hubCards/(?<hubSegment>[^/]+)/(?<hubReleaseSegment>[^/]+)/cards\\.jsonld$"
+		}
+	]
 }

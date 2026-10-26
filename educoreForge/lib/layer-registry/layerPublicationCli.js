@@ -13,6 +13,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   -renderHubCards ⟪ML3.1c, TQ Q8⟫ the CARD DOWNLOAD: one cards.csv and one cards.jsonld per hub release from the capture's hubCardList
 //                  (meaning URI, tier, domain, property, range, value, term, definition, each read from the card); a hub on the
 //                  licence-hold list is refused by name.  --goldCapturePath  --licenceRulesPath=<downloadArtifactsRules.json>  --outputDirPath
+//   -indexPublication ⟪ML3.1c⟫ write <gold>/publicationDownloads.json, the listing the educore downloads page reads, over every file
+//                  under <gold>/mappingLayers and <gold>/hubCards.  --goldDownloadsDirPath  --uriContractFilePath  --hubCardsReportPath
+//                  --publicLabel  --manifestRefId  --generatedAt=YYYY-MM-DD
 //   -render        render every registered layer version (machine and curated) as ONE SSSOM set (R-b), one registry document per layer,
 //                  the site registry, and one JSON-LD context per (version, standard), into --outputDirPath; with --publicFilterRulesPath
 //                  ALSO a public filtered rendering of each (TQ Q37) under <outputDirPath>/public, never anywhere else.
@@ -62,6 +65,7 @@ const REQUIRED_PARAMETER_NAME_LIST_BY_ACTION = Object.freeze({
 	gate: ['renderedDirPath', 'storePath', 'goldCapturePath', 'publicFilterMode', 'sssomValidatorPath', 'linkmlValidatorPath', 'sssomSchemaPath', 'gateReportPath'],
 	publishPublic: ['renderedDirPath', 'gateReportPath', 'publicDestinationDirPath'],
 	renderHubCards: ['goldCapturePath', 'licenceRulesPath', 'outputDirPath'],
+	indexPublication: ['goldDownloadsDirPath', 'uriContractFilePath', 'hubCardsReportPath', 'publicLabel', 'manifestRefId', 'generatedAt'],
 });
 const actionList = Object.keys(REQUIRED_PARAMETER_NAME_LIST_BY_ACTION).filter((actionName) => argumentList.indexOf(`-${actionName}`) !== -1);
 if (actionList.length !== 1) {
@@ -470,5 +474,28 @@ const renderHubCards = () => {
 	process.stdout.write(`${moduleName}: rendered the cards of ${report.hubFileList.map((oneHubFile) => `${oneHubFile.hubName} ${oneHubFile.hubVersion} (${oneHubFile.cardCount})`).join(', ')} into ${parameterValueFor('outputDirPath')}/hubCards\n`);
 };
 
-const ACTION_BY_NAME = Object.freeze({ captureGold, render, gate, publishPublic, renderHubCards });
+// =====================================================================
+// -indexPublication ⟪ML3.1c⟫ the listing the educore downloads page reads: <gold>/publicationDownloads.json over every published
+// mapping-set and card file (kind by layerPublicationRules.json publicationFileKindList; titles and statuses from uriContract)
+// =====================================================================
+
+const PUBLICATION_INDEX_FILE_NAME = 'publicationDownloads.json';
+const PUBLICATION_SUBDIR_NAME_LIST = Object.freeze(['mappingLayers', 'hubCards']);
+
+const indexPublication = () => {
+	const goldDownloadsDirPath = path.resolve(parameterValueFor('goldDownloadsDirPath'));
+	const { registry } = exitOnError(registryFromSource());
+	const layerFactByLayerKey = registry.layerRegistry.layerList.reduce((soFar, oneLayer) => ({ ...soFar, [oneLayer.layerKey]: { displayName: oneLayer.displayName, statusByVersionTag: oneLayer.versionList.reduce((soFarInner, oneVersion) => ({ ...soFarInner, [oneVersion.administrationRecord.versionTag]: exitOnError(registry.effectiveStatusFor({ layerKey: oneLayer.layerKey, versionTag: oneVersion.administrationRecord.versionTag })).registrationStatus }), {}) } }), {});
+	const hubCardsReport = JSON.parse(fs.readFileSync(parameterValueFor('hubCardsReportPath'), 'utf8'));
+	const hubFactByRelease = hubCardsReport.hubFileList.reduce((soFar, oneHubFile) => ({ ...soFar, [`${oneHubFile.hubSegment}/${oneHubFile.hubReleaseSegment}`]: { hubName: oneHubFile.hubName, hubVersion: oneHubFile.hubVersion, cardCount: oneHubFile.cardCount } }), {});
+	const fileFactList = PUBLICATION_SUBDIR_NAME_LIST.filter((subdirName) => fs.existsSync(path.join(goldDownloadsDirPath, subdirName))).reduce((soFar, subdirName) => soFar.concat(listFilesUnder(path.join(goldDownloadsDirPath, subdirName))), []).map((oneFilePath) => {
+		const contentBuffer = fs.readFileSync(oneFilePath);
+		return { relativePath: path.relative(goldDownloadsDirPath, oneFilePath).split(path.sep).join('/'), byteSize: contentBuffer.length, sha256: sha256Hex(contentBuffer) };
+	});
+	const indexed = exitOnError(require(path.join(__dirname, 'publicationIndex')).publicationIndexFor({ graphName: path.basename(goldDownloadsDirPath), publicLabel: parameterValueFor('publicLabel'), manifestRefId: parameterValueFor('manifestRefId'), generatedAt: parameterValueFor('generatedAt'), fileFactList, layerFactByLayerKey, hubFactByRelease }));
+	writeFileMakingDirs(path.join(goldDownloadsDirPath, PUBLICATION_INDEX_FILE_NAME), `${JSON.stringify(indexed.publicationIndex, null, '\t')}\n`);
+	process.stdout.write(`${moduleName}: indexed ${indexed.publicationIndex.entryList.length} published file(s) into ${path.join(goldDownloadsDirPath, PUBLICATION_INDEX_FILE_NAME)}\n`);
+};
+
+const ACTION_BY_NAME = Object.freeze({ captureGold, render, gate, publishPublic, renderHubCards, indexPublication });
 ACTION_BY_NAME[actionName]();
