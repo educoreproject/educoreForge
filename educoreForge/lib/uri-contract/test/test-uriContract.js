@@ -347,7 +347,7 @@ const answerOf = (readerFunction, argument) => {
 	});
 	return captured;
 };
-sameValue('the uriContractReader lane A is injected with exposes exactly its fifteen functions', Object.keys(reader.uriContractReader).sort(), ['agentListFor', 'agentRecordFor', 'decisionSchemaBlockFor', 'elementRecordFor', 'layerHistoryFor', 'layerVersionRecordFor', 'manifestElementListFor', 'manifestInventoryFor', 'manifestStandardListFor', 'mappingsToMeaningFor', 'publishedLayerVersionListForStandard', 'publishedManifestFor', 'publishedManifestListFor', 'rootCountsFor', 'schemaBlockFor']);
+sameValue('the uriContractReader lane A is injected with exposes exactly its sixteen functions', Object.keys(reader.uriContractReader).sort(), ['agentListFor', 'agentRecordFor', 'decisionSchemaBlockFor', 'elementRecordFor', 'layerHistoryFor', 'layerListFor', 'layerVersionRecordFor', 'manifestElementListFor', 'manifestInventoryFor', 'manifestStandardListFor', 'mappingsToMeaningFor', 'publishedLayerVersionListForStandard', 'publishedManifestFor', 'publishedManifestListFor', 'rootCountsFor', 'schemaBlockFor']);
 sameValue('decisionSchemaBlockFor answers { decisionBlockHash, pairKey, frozenText }', Object.keys(answerOf(reader.uriContractReader.decisionSchemaBlockFor, judgedMemberBlockList[0].decisionBlockHash).answer).sort(), ['decisionBlockHash', 'frozenText', 'pairKey']);
 sameValue('schemaBlockFor answers { schemaBlockRefId, blockKind, subject, version, text }', Object.keys(answerOf(reader.uriContractReader.schemaBlockFor, sha256Hex(baseText)).answer).sort(), ['blockKind', 'schemaBlockRefId', 'subject', 'text', 'version']);
 sameValue('an absent hash answers null, not an error', answerOf(reader.uriContractReader.schemaBlockFor, '0'.repeat(64)), { errorText: '', answer: null });
@@ -361,7 +361,7 @@ sameValue('a curated set is counted by its rows (one assertion, no abstention)',
 harness.equal('an unknown agent answers null', answerOf(reader.uriContractReader.agentRecordFor, 'https://w3id.org/EDUcore/agent/nobody').answer, null);
 
 // =====================================================================
-harness.section('THE COMPUTED RELATIONS (lane A\'s eleven reader functions) and the DERIVED tables they read');
+harness.section('THE COMPUTED RELATIONS (lane A\'s twelve relation functions) and the DERIVED tables they read');
 // =====================================================================
 const callOf = (readerFunction, ...argumentList) => {
 	const captured = { errorText: 'no callback', answer: undefined };
@@ -388,6 +388,7 @@ harness.match('…page 0 is refused (pages are numbered from 1)', callOf(relatio
 sameValue('9 manifestStandardListFor: one row per base block with its element count', callOf(relationReader.manifestStandardListFor, { manifestRefId }).answer.standardList, [{ standardName: 'Toy', standardVersion: '1', standardKey: 'toy', elementCount: 2, schemaBlockRefId: sha256Hex(baseText) }, { standardName: 'Toy', standardVersion: '1', standardKey: 'toy2', elementCount: 2, schemaBlockRefId: sha256Hex(secondText) }]);
 sameValue('10 manifestElementListFor: distinct elements in code-point order, paged', callOf(relationReader.manifestElementListFor, { manifestRefId }, { standardName: 'Toy', standardVersion: '1', pageNumber: 2, pageSize: 2 }).answer, { totalCount: 3, elementList: [{ elementStableId: 'toy:c', role: null }] });
 sameValue('11 agentListFor: profiles in registration order', callOf(relationReader.agentListFor, { pageNumber: 1, pageSize: 2 }).answer, { totalCount: 3, agentList: [{ profile: agentRegistry.agentList[0] }, { profile: agentRegistry.agentList[1] }] });
+sameValue('12 layerListFor: each layer, its version count, its current Standard version', callOf(relationReader.layerListFor).answer, [{ layerKey: 'toyCurated', displayName: 'a toy curator', layerKind: 'curated', versionCount: 1, currentStandardVersionTag: null }, { layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', versionCount: 2, currentStandardVersionTag: 'wave1' }]);
 sameValue('the derived tables verify: every source recomputes to its stored rows, none absent', reader.uriContract.verifyDerivedIndexes(), { verifiedSourceCount: 6, absentSourceCount: 0, differenceList: [] });
 harness.match('the reader factory refuses an absent file', uriContractLib.uriContractReaderFor({ uriContractFilePath: path.join(scratchDirPath, 'absent.sqlite') }).error, /does not exist/);
 reader.uriContract.close();

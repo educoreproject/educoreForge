@@ -16,7 +16,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //            (inter-rater: the rater tool's OWN aggregation, required read-only and never changed)
 //   -versionAgainstVersion   two versions of one layer (SPEC §8.2)
 //       --leftBlockList=…  --rightBlockList=…  --leftLabel=<text>  --rightLabel=<text>
-// ALWAYS:  --layerRegistryFilePath=<recipes/layers.json> (standard names)  --reportJsonPath=<out.json>
+// ALWAYS:  --reportJsonPath=<out.json>, and the standard names from EXACTLY ONE of --uriContractFilePath=<uriContract.sqlite>
+//          (ML3.1b: the registry of record once Part C retires the JSON) or --layerRegistryFilePath=<recipes/layers.json> (until then)
 // Every parameter is REQUIRED for its action, with no default. Exit 0 when the report is written; 1 on a refusal (printed).
 // -help prints this header.
 
@@ -39,8 +40,8 @@ if (argumentList.some((oneArgument) => ['-help', '--help', '-h'].indexOf(oneArgu
 	process.exit(0);
 }
 const REQUIRED_PARAMETER_NAME_LIST_BY_ACTION = Object.freeze({
-	judgeAgainstRater: ['judgeBlockList', 'judgeLabel', 'raterSetPath', 'raterCensusPath', 'raterLabel', 'raterLayerKey', 'sampleJsonPath', 'raterStoreCopyPath', 'suggestedPath', 'raterResultsModulePath', 'layerRegistryFilePath', 'reportJsonPath'],
-	versionAgainstVersion: ['leftBlockList', 'rightBlockList', 'leftLabel', 'rightLabel', 'layerRegistryFilePath', 'reportJsonPath'],
+	judgeAgainstRater: ['judgeBlockList', 'judgeLabel', 'raterSetPath', 'raterCensusPath', 'raterLabel', 'raterLayerKey', 'sampleJsonPath', 'raterStoreCopyPath', 'suggestedPath', 'raterResultsModulePath', 'reportJsonPath'],
+	versionAgainstVersion: ['leftBlockList', 'rightBlockList', 'leftLabel', 'rightLabel', 'reportJsonPath'],
 });
 const actionList = Object.keys(REQUIRED_PARAMETER_NAME_LIST_BY_ACTION).filter((actionName) => argumentList.indexOf(`-${actionName}`) !== -1);
 if (actionList.length !== 1) {
@@ -50,6 +51,11 @@ const actionName = actionList[0];
 const missingParameterList = REQUIRED_PARAMETER_NAME_LIST_BY_ACTION[actionName].filter((parameterName) => !parameterValueFor(parameterName));
 if (missingParameterList.length) {
 	refuseAndExit(`-${actionName}: ${missingParameterList.map((parameterName) => `--${parameterName}`).join(', ')} REQUIRED, with no default`);
+}
+const REGISTRY_SOURCE_PARAMETER_NAME_LIST = Object.freeze(['uriContractFilePath', 'layerRegistryFilePath']);
+const givenRegistrySourceList = REGISTRY_SOURCE_PARAMETER_NAME_LIST.filter((parameterName) => parameterValueFor(parameterName));
+if (givenRegistrySourceList.length !== 1) {
+	refuseAndExit(`-${actionName}: exactly one of ${REGISTRY_SOURCE_PARAMETER_NAME_LIST.map((parameterName) => `--${parameterName}`).join(' | ')} names where the standard names are read (got ${givenRegistrySourceList.length})`);
 }
 
 const Database = require(path.join(__dirname, '..', '..', 'node_modules', 'better-sqlite3'));
@@ -66,7 +72,17 @@ const exitOnError = (result) => {
 	return result;
 };
 
-const layerRegistry = JSON.parse(fs.readFileSync(parameterValueFor('layerRegistryFilePath'), 'utf8'));
+// layerRegistryFromSource() → the layers.json shape, from uriContract (read-only) or from the JSON file, whichever was named
+const layerRegistryFromSource = () => {
+	if (parameterValueFor('uriContractFilePath')) {
+		const opened = exitOnError(require(path.join(__dirname, '..', 'uri-contract', 'uriContract')).openUriContractFile({ uriContractFilePath: parameterValueFor('uriContractFilePath'), accessMode: 'read' }));
+		const { layerRegistry: contractLayerRegistry } = opened.uriContract.registryShape();
+		opened.uriContract.close();
+		return contractLayerRegistry;
+	}
+	return JSON.parse(fs.readFileSync(parameterValueFor('layerRegistryFilePath'), 'utf8'));
+};
+const layerRegistry = layerRegistryFromSource();
 const standardNameByStandardKey = layerRegistry.layerList.reduce((soFar, oneLayer) => oneLayer.standardList.reduce((inner, oneStandard) => ({ ...inner, [oneStandard.standardKey]: oneStandard.standardName }), soFar), {});
 
 // blockAssertionsFor('<store>#<hash>,…') → { assertionList, inputList } — every named block must exist, verified by re-hash

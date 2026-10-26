@@ -23,6 +23,8 @@ const { pipeRunner, taskListPlus } = new (require('qtools-asynchronous-pipe-plus
 const recipeLib = require('./recipe')();
 const { readOptionalBooleanValue } = require('./optional-boolean-value');
 const buildLib = require('./build')();
+// ⟪ML3.1b⟫ the uriContract actions and the publish actions' door (lib/uri-contract opens better-sqlite3 lazily: safe at load)
+const uriContractActionsLib = require('./uri-contract-actions');
 
 // timestampForFileName — a sortable, filesystem-safe stamp for a backup copy's name (YYYYMMDD-HHMMSS,
 // local time, matching the buildLogs run-directory convention already in this tree). It is a distinct
@@ -1990,15 +1992,12 @@ const spendLedgerAction = (callback) => {
 // layer (lib/layer-registry/publishLayer.js): validates (parseSssomTsv, then the REAL sssom-py at --sssomValidatorPath), freezes the
 // whole set and its per-pair blocks into --decisionStoreFilePath, appends the version (Candidate) to the layer registry and prints
 // the content id. Idempotent on identical bytes (alreadyPresent); a tag already holding other bytes is refused by name. Lists no
-// library and touches no manifest. The registries default to the tree's recipes/layers.json and recipes/agents.json (help says so).
-const PUBLISH_LAYER_REGISTRY_DEFAULT_PATH_BY_PARAMETER_NAME = Object.freeze({
-	layerRegistryFilePath: path.join(__dirname, '..', '..', '..', 'recipes', 'layers.json'),
-	agentRegistryFilePath: path.join(__dirname, '..', '..', '..', 'recipes', 'agents.json'),
-});
+// library and touches no manifest. ⟪ML3.1b⟫ The registry is uriContract's ([stores] uriContractFilePath, or --uriContractFilePath;
+// the file must exist), and the version, its blocks and any new agents are appended THERE (uri-contract-actions.js); a layer's first
+// publish names its definition with --layerDefinitionPath, new agents come with --agentDefinitionPath.
 const publishLayerAction = (callback) => {
 	const { xLog, commandLineParameters } = process.global;
 	const { spawnSync } = require('child_process');
-	const layerRegistryLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-registry', 'layerRegistry'));
 	const publishLayerLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-registry', 'publishLayer'));
 	const requiredParameterNameList = ['layerKey', 'versionTag', 'sssomPath', 'decisionStoreFilePath', 'sssomValidatorPath'];
 	const missingParameterList = requiredParameterNameList.filter((parameterName) => !firstValue(commandLineParameters, parameterName));
@@ -2012,12 +2011,12 @@ const publishLayerAction = (callback) => {
 		callback(`graphBuilder -publishLayer: REFUSED — ${!fs.existsSync(sssomPath) ? `--sssomPath ${sssomPath}` : `--sssomValidatorPath ${sssomValidatorPath}`} does not exist`);
 		return;
 	}
-	const registryPathByParameterName = Object.keys(PUBLISH_LAYER_REGISTRY_DEFAULT_PATH_BY_PARAMETER_NAME).reduce((soFar, parameterName) => ({ ...soFar, [parameterName]: firstValue(commandLineParameters, parameterName) || PUBLISH_LAYER_REGISTRY_DEFAULT_PATH_BY_PARAMETER_NAME[parameterName] }), {});
-	const loaded = layerRegistryLib.loadRegistry(registryPathByParameterName);
-	if (loaded.error) {
-		callback(`graphBuilder -publishLayer: ${loaded.error}`);
+	const contractDoor = uriContractActionsLib.uriContractForPublishAction({ commandLineParameters, storesConfig: process.global.getConfig('stores'), actionName: '-publishLayer', writerActionName: 'publishLayer', layerKey: firstValue(commandLineParameters, 'layerKey'), layerIsCreatedByAction: false });
+	if (contractDoor.error) {
+		callback(contractDoor.error);
 		return;
 	}
+	const loaded = { registry: contractDoor.registry };
 	// the REAL validator, run as a child: exit 0 is a pass, anything else is its own words
 	const validateWithSssomPy = (validatedPath, validatedCallback) => {
 		const validatorRun = spawnSync(sssomValidatorPath, ['validate', validatedPath], { encoding: 'utf8' });
@@ -2026,6 +2025,7 @@ const publishLayerAction = (callback) => {
 	};
 	requireDecisionStore()().open({ databaseFilePath: firstValue(commandLineParameters, 'decisionStoreFilePath') }, (openError, decisionStore) => {
 		if (openError) {
+			contractDoor.uriContract.close();
 			callback(`graphBuilder -publishLayer: ${openError}`);
 			return;
 		}
@@ -2042,18 +2042,22 @@ const publishLayerAction = (callback) => {
 		};
 		publishLayerLib.publishLayer(publishArgs, (publishError, published) => {
 			if (publishError) {
+				contractDoor.uriContract.close();
 				callback(`graphBuilder -publishLayer: ${publishError}`);
 				return;
 			}
-			// the store already holds the blocks; the registry is written last, by temp file and rename, so a crash between the two
-			// leaves blocks a re-run finds alreadyPresent and a registry that never names a block it does not have
+			// the working store already holds the blocks; uriContract is written last, in one transaction (new agents, then the
+			// version with its blocks), so a crash between the two leaves blocks a re-run finds alreadyPresent
 			if (published.layerRegistry !== null) {
-				const registryFilePath = registryPathByParameterName.layerRegistryFilePath;
-				const temporaryFilePath = `${registryFilePath}.publishLayer-${process.pid}.tmp`;
-				fs.writeFileSync(temporaryFilePath, layerRegistryLib.registryText(published.layerRegistry));
-				fs.renameSync(temporaryFilePath, registryFilePath);
+				const appended = uriContractActionsLib.appendPublishedVersion({ uriContract: contractDoor.uriContract, newAgentList: contractDoor.newAgentList, uriContractAppend: published.uriContractAppend });
+				if (appended.error) {
+					contractDoor.uriContract.close();
+					callback(`graphBuilder -publishLayer: ${appended.error}`);
+					return;
+				}
 			}
-			const { layerRegistry, ...reported } = published;
+			contractDoor.uriContract.close();
+			const { layerRegistry, uriContractAppend, ...reported } = published;
 			xLog.status(`graphBuilder: [publishLayer] ${published.alreadyPresent ? 'alreadyPresent' : 'published'} ${published.layerVersionUri} contentId ${published.contentId} (${published.memberBlockList.length} pair block(s))`);
 			callback('', { exitCode: 0, resultText: JSON.stringify(reported, null, 2) });
 		});
@@ -2065,13 +2069,13 @@ const publishLayerAction = (callback) => {
 // silently drops a malformed row and still exits 0, measured), every row resolves through the DECLARED prefix map (--prefixMapPath) and
 // the gold capture (--goldCapturePath, from layerPublicationCli -captureGold) or is refused BY NAME into the refusal list written to
 // --importReportPath; the file's exact bytes are frozen under layerSet::imported-<slug> (sha256 = the version id) and the layer and
-// its version (Candidate) are appended through the registry's own append path, written last by temp file and rename as -publishLayer
-// writes it. Identical bytes report alreadyPresent. Creates no relationship schema block and touches no graph.
+// its version (Candidate) are appended through the registry's own append path, and ⟪ML3.1b⟫ written to uriContract as -publishLayer
+// writes it (new agents with --agentDefinitionPath). Identical bytes report alreadyPresent. Creates no relationship schema block and
+// touches no graph.
 const importLayerAction = (callback) => {
 	const { xLog, commandLineParameters } = process.global;
 	const { spawnSync } = require('child_process');
 	const os = require('os');
-	const layerRegistryLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-registry', 'layerRegistry'));
 	const layerImportLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-import', 'layerImport'));
 	const importRules = require(path.join(__dirname, '..', '..', '..', 'lib', 'layer-import', 'importRules.json'));
 	const requiredParameterNameList = ['slug', 'versionTag', 'authorIri', 'sssomPath', 'prefixMapPath', 'goldCapturePath', 'decisionStoreFilePath', 'sssomValidatorPath', 'importReportPath'];
@@ -2087,12 +2091,12 @@ const importLayerAction = (callback) => {
 	}
 	const sssomPath = path.resolve(firstValue(commandLineParameters, 'sssomPath'));
 	const sssomValidatorPath = firstValue(commandLineParameters, 'sssomValidatorPath');
-	const registryPathByParameterName = Object.keys(PUBLISH_LAYER_REGISTRY_DEFAULT_PATH_BY_PARAMETER_NAME).reduce((soFar, parameterName) => ({ ...soFar, [parameterName]: firstValue(commandLineParameters, parameterName) || PUBLISH_LAYER_REGISTRY_DEFAULT_PATH_BY_PARAMETER_NAME[parameterName] }), {});
-	const loaded = layerRegistryLib.loadRegistry(registryPathByParameterName);
-	if (loaded.error) {
-		callback(`graphBuilder -importLayer: ${loaded.error}`);
+	const contractDoor = uriContractActionsLib.uriContractForPublishAction({ commandLineParameters, storesConfig: process.global.getConfig('stores'), actionName: '-importLayer', writerActionName: 'importLayer', layerKey: `imported-${firstValue(commandLineParameters, 'slug')}`, layerIsCreatedByAction: true });
+	if (contractDoor.error) {
+		callback(contractDoor.error);
 		return;
 	}
+	const loaded = { registry: contractDoor.registry };
 	// the REAL validator twice: 'validate' (exit 0 is a pass) and 'parse' (its row count, because a dropped row does not fail validate)
 	const validateWithSssomPy = (validatedPath, validatedCallback) => {
 		const validatorRun = spawnSync(sssomValidatorPath, ['validate', validatedPath], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
@@ -2113,6 +2117,7 @@ const importLayerAction = (callback) => {
 	};
 	requireDecisionStore()().open({ databaseFilePath: firstValue(commandLineParameters, 'decisionStoreFilePath') }, (openError, decisionStore) => {
 		if (openError) {
+			contractDoor.uriContract.close();
 			callback(`graphBuilder -importLayer: ${openError}`);
 			return;
 		}
@@ -2133,19 +2138,23 @@ const importLayerAction = (callback) => {
 		layerImportLib.importLayer(importArgs, (importError, imported) => {
 			const importReportPath = firstValue(commandLineParameters, 'importReportPath');
 			if (imported !== undefined) {
-				const { layerRegistry, ...reported } = imported;
+				const { layerRegistry, uriContractAppend, ...reported } = imported;
 				fs.writeFileSync(importReportPath, `${JSON.stringify(reported, null, 2)}\n`);
 			}
 			if (importError) {
+				contractDoor.uriContract.close();
 				callback(`graphBuilder -importLayer: ${importError}`);
 				return;
 			}
 			if (imported.layerRegistry !== null) {
-				const registryFilePath = registryPathByParameterName.layerRegistryFilePath;
-				const temporaryFilePath = `${registryFilePath}.importLayer-${process.pid}.tmp`;
-				fs.writeFileSync(temporaryFilePath, layerRegistryLib.registryText(imported.layerRegistry));
-				fs.renameSync(temporaryFilePath, registryFilePath);
+				const appended = uriContractActionsLib.appendPublishedVersion({ uriContract: contractDoor.uriContract, newAgentList: contractDoor.newAgentList, uriContractAppend: imported.uriContractAppend });
+				if (appended.error) {
+					contractDoor.uriContract.close();
+					callback(`graphBuilder -importLayer: ${appended.error}`);
+					return;
+				}
 			}
+			contractDoor.uriContract.close();
 			xLog.status(`graphBuilder: [importLayer] ${imported.alreadyPresent ? 'alreadyPresent' : 'imported'} ${imported.layerVersionUri} contentId ${imported.contentId}: accepted ${imported.acceptedRowCount}, refused ${imported.refusedRowCount} (report ${importReportPath})`);
 			callback('', { exitCode: 0, resultText: JSON.stringify({ layerKey: imported.layerKey, layerVersionUri: imported.layerVersionUri, contentId: imported.contentId, alreadyPresent: imported.alreadyPresent, acceptedRowCount: imported.acceptedRowCount, refusedRowCount: imported.refusedRowCount, importReportPath }, null, 2) });
 		});
@@ -2167,6 +2176,10 @@ return {
 	spendLedger: spendLedgerAction,
 	publishLayer: publishLayerAction,
 	importLayer: importLayerAction,
+	seedUriContractFromRegistryJson: uriContractActionsLib.seedUriContractFromRegistryJsonAction({ resolveStoreFamilyPath }),
+	publishManifest: uriContractActionsLib.publishManifestAction({ resolveStoreFamilyPath }),
+	replayOldest: uriContractActionsLib.replayOldestAction({ buildLib }),
+	rebuildUriContractIndexes: uriContractActionsLib.rebuildUriContractIndexesAction(),
 	scanAvailableForges,
 	// exported for the hermetic gates: the no-default refusal is the phase's headline claim, and a
 	// claim provable only by launching a whole build is a claim nobody re-checks.

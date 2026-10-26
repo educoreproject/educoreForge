@@ -594,7 +594,16 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		if (!isNonEmptyString(pairKey) || !isNonEmptyString(frozenText) || DECISION_BLOCK_PRODUCER_KIND_LIST.indexOf(producerKind) === -1) {
 			return { error: refusalText(`a decision schema block needs a pairKey, its frozenText and a producerKind in ${DECISION_BLOCK_PRODUCER_KIND_LIST.join(', ')} (got ${JSON.stringify(pairKey)}, ${JSON.stringify(producerKind)})`, 'appendLayerVersion decisionSchemaBlockList') };
 		}
-		return insertIdentityRow({ tableName: 'decisionSchemaBlocks', row: { decisionSchemaBlockHash: sha256Hex(frozenText), pairKey, producerKind, frozenText }, identityWhereSql: 'decisionSchemaBlockHash = ?', identityValueList: [sha256Hex(frozenText)] });
+		// THE BYTES ARE THE IDENTITY, the pairKey is not: one frozen text can be a version's whole set AND its only pair block (a
+		// single-pair curated set splits into a block byte-identical to the set), so a held hash is alreadyPresent whatever pairKey it
+		// was first written under. The row keeps that FIRST pairKey; a version's own memberListJson names the pairKeys it uses.
+		// (lib/decision-store keys the same way: decisionBlockHash UNIQUE, an identical re-save a no-op.)
+		const decisionSchemaBlockHash = sha256Hex(frozenText);
+		if (database.prepare('SELECT decisionSchemaBlockHash FROM decisionSchemaBlocks WHERE decisionSchemaBlockHash = ?').get(decisionSchemaBlockHash) !== undefined) {
+			return { alreadyPresent: true };
+		}
+		database.prepare(insertSqlFor('decisionSchemaBlocks', { decisionSchemaBlockHash, pairKey, producerKind, frozenText })).run({ decisionSchemaBlockHash, pairKey, producerKind, frozenText });
+		return { alreadyPresent: false };
 	};
 
 	// appendLayerVersion — the version, its decision schema blocks and its publication-status row, in ONE transaction. The layer
@@ -841,6 +850,7 @@ const uriContractReaderFor = ({ uriContractFilePath } = {}) => {
 		manifestStandardListFor: (manifestSelector, callback) => answerWith(uriContract.relations.manifestStandardListFor(manifestSelector), ({ answer }) => answer, callback),
 		manifestElementListFor: (manifestSelector, listSpec, callback) => answerWith(uriContract.relations.manifestElementListFor(manifestSelector, listSpec), ({ answer }) => answer, callback),
 		agentListFor: (pageSpec, callback) => answerWith(uriContract.relations.agentListFor(pageSpec), ({ answer }) => answer, callback),
+		layerListFor: (callback) => answerWith(uriContract.relations.layerListFor(), ({ answer }) => answer, callback),
 	};
 	return { uriContractReader, uriContract };
 };

@@ -24,6 +24,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   10 manifestElementListFor(manifestSelector, { standardName, standardVersion, pageNumber, pageSize }) → { totalCount, elementList:
 //        [{ elementStableId, role | null }] }   ordered by elementStableId in code-point order (SQLite BINARY), so pages are stable
 //   11 agentListFor({ pageNumber, pageSize }) → { totalCount, agentList: [{ profile }] }
+//   12 layerListFor() → [{ layerKey, displayName, layerKind, versionCount, currentStandardVersionTag | null }]
 //
 // DECISIONS stated once: pages are numbered from 1 and pageSize is 1..PAGE_SIZE_LIMIT (anything else refused by name); "latestStatus"
 // is always { registrationStatus, changedAt }; a decisionBlockHash names the layer version that FIRST published it among layers that
@@ -225,7 +226,16 @@ const uriContractRelationsFor = ({ database, uriContract }) => {
 		return { answer: { totalCount: database.prepare('SELECT COUNT(*) AS rowCount FROM agents').get().rowCount, agentList: agentIriList.map((agentIri) => ({ profile: profileByIri[agentIri] })) } };
 	};
 
-	return { elementRecordFor, publishedLayerVersionListForStandard, mappingsToMeaningFor, layerHistoryFor, layerVersionRecordFor, manifestInventoryFor, rootCountsFor, publishedManifestListFor, manifestStandardListFor, manifestElementListFor, agentListFor };
+	// 12
+	const layerListFor = () => {
+		const loaded = loadedRegistry();
+		if (loaded.error) {
+			return loaded;
+		}
+		return { answer: loaded.registry.layerRegistry.layerList.map((oneLayer) => { const current = loaded.registry.currentStandardVersionFor(oneLayer.layerKey); return { layerKey: oneLayer.layerKey, displayName: oneLayer.displayName, layerKind: oneLayer.layerKind, versionCount: oneLayer.versionList.length, currentStandardVersionTag: current.error ? null : current.version.administrationRecord.versionTag }; }) };
+	};
+
+	return { layerListFor, elementRecordFor, publishedLayerVersionListForStandard, mappingsToMeaningFor, layerHistoryFor, layerVersionRecordFor, manifestInventoryFor, rootCountsFor, publishedManifestListFor, manifestStandardListFor, manifestElementListFor, agentListFor };
 };
 
 module.exports = { uriContractRelationsFor, PAGE_SIZE_LIMIT, moduleName };

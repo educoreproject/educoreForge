@@ -7,7 +7,7 @@
 		"publish": { "readonly": false, "fileMustExist": true, "fileMustBeAbsent": false, "writerActionRequired": true },
 		"create": { "readonly": false, "fileMustExist": false, "fileMustBeAbsent": true, "writerActionRequired": true }
 	},
-	"writerActionNameList": ["publishLayer", "importLayer", "publishManifest", "seedUriContractFromRegistryJson"],
+	"writerActionNameList": ["publishLayer", "importLayer", "publishManifest", "seedUriContractFromRegistryJson", "rebuildUriContractIndexes"],
 	"createActionNameList": ["seedUriContractFromRegistryJson"],
 	"reservedPublicLabelList": ["sha256"],
 	"publicLabelPattern": "^[a-z0-9][a-z0-9-]*$",
