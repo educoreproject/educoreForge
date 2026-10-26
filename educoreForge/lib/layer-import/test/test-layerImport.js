@@ -61,20 +61,20 @@ const COLUMN_LINE = ['subject_id', 'predicate_id', 'object_id', 'mapping_justifi
 const HEADER_LINE_LIST = ['#curie_map:', '#  toya: "https://w3id.org/EDUcore/ToyA/2.0/toya:"', '#  foo: "https://example.org/foo/"', '#  edc: "https://w3id.org/EDUcore/"', '#mapping_set_id: "https://example.org/toySet"', '#mapping_provider: "https://example.org/toySource"'];
 const rowLine = (cellList) => cellList.join('\t');
 const goodRowList = [
-	['toya:property%2FAlpha', 'skos:exactMatch', CARD_A, 'semapv:ManualMappingCuration', 'https://example.org/r/1'],
-	['toya:property%2FBeta', 'edc:bestMatch', CARD_B, 'semapv:ManualMappingCuration', 'https://example.org/r/2'],
-	['toya:property%2FGamma', 'skos:mappingRelation', 'sssom:NoTermFound', 'semapv:ManualMappingCuration', 'https://example.org/r/3'],
+	['toya:property/Alpha', 'skos:exactMatch', CARD_A, 'semapv:ManualMappingCuration', 'https://example.org/r/1'],
+	['toya:property/Beta', 'edc:bestMatch', CARD_B, 'semapv:ManualMappingCuration', 'https://example.org/r/2'],
+	['toya:property/Gamma', 'skos:mappingRelation', 'sssom:NoTermFound', 'semapv:ManualMappingCuration', 'https://example.org/r/3'],
 ];
 // the broken fixture: each row carries exactly ONE fault, named in the expected reason list in the same order
 const brokenRowList = [
 	[['foo:bar', 'skos:exactMatch', CARD_A, 'semapv:ManualMappingCuration', 'https://example.org/b/1'], 'unknownPrefix'],
 	[['elsewhere:thing', 'skos:exactMatch', CARD_A, 'semapv:ManualMappingCuration', 'https://example.org/b/2'], 'subjectNotAnElementIri'],
-	[['toya:property%2FNoSuchElement', 'skos:exactMatch', CARD_A, 'semapv:ManualMappingCuration', 'https://example.org/b/3'], 'subjectAbsentFromGold'],
-	[['toya:property%2FAlpha', 'skos:exactMatch', 'https://w3id.org/EDUcore/ToyHub/hub/1.0/zzzz', 'semapv:ManualMappingCuration', 'https://example.org/b/4'], 'objectNotAHubReference'],
-	[['toya:property%2FAlpha', 'exactMatch', CARD_B, 'semapv:ManualMappingCuration', 'https://example.org/b/5'], 'malformedPredicate'],
-	[['toya:property%2FAlpha', 'skos:related', CARD_B, 'semapv:ManualMappingCuration', 'https://example.org/b/6'], 'predicateNotAdmitted'],
-	[['toya:property%2FBeta', 'skos:closeMatch', CARD_A, 'semapv:ManualMappingCuration', 'https://example.org/r/1'], 'duplicateRecordId'],
-	[['toya:property%2FBeta', 'skos:closeMatch', CARD_A, ''], 'missingMandatoryCell'],
+	[['toya:property/NoSuchElement', 'skos:exactMatch', CARD_A, 'semapv:ManualMappingCuration', 'https://example.org/b/3'], 'subjectAbsentFromGold'],
+	[['toya:property/Alpha', 'skos:exactMatch', 'https://w3id.org/EDUcore/ToyHub/hub/1.0/zzzz', 'semapv:ManualMappingCuration', 'https://example.org/b/4'], 'objectNotAHubReference'],
+	[['toya:property/Alpha', 'exactMatch', CARD_B, 'semapv:ManualMappingCuration', 'https://example.org/b/5'], 'malformedPredicate'],
+	[['toya:property/Alpha', 'skos:related', CARD_B, 'semapv:ManualMappingCuration', 'https://example.org/b/6'], 'predicateNotAdmitted'],
+	[['toya:property/Beta', 'skos:closeMatch', CARD_A, 'semapv:ManualMappingCuration', 'https://example.org/r/1'], 'duplicateRecordId'],
+	[['toya:property/Beta', 'skos:closeMatch', CARD_A, ''], 'missingMandatoryCell'],
 ];
 const setTextOf = (cellListList) => `${HEADER_LINE_LIST.join('\n')}\n${COLUMN_LINE}\n${cellListList.map(rowLine).join('\n')}\n`;
 const goodSetText = setTextOf(goodRowList);

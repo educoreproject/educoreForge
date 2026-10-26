@@ -88,6 +88,14 @@ const run = () => {
 			? actions.publishLayer
 			: switches.importLayer
 			? actions.importLayer
+			: switches.seedUriContractFromRegistryJson
+			? actions.seedUriContractFromRegistryJson
+			: switches.publishManifest
+			? actions.publishManifest
+			: switches.replayOldest
+			? actions.replayOldest
+			: switches.rebuildUriContractIndexes
+			? actions.rebuildUriContractIndexes
 			: null;
 
 		// help is the default: an invocation that names no action is a question, not an error

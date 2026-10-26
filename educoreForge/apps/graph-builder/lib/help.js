@@ -41,11 +41,20 @@ SYNOPSIS
      graphBuilder   -foldStore --sourceFilePath=<a delta or a store> --targetFilePath=<the store of record> [--apply=true]
      graphBuilder   -publishLayer --layerKey=<key> --versionTag=<tag> --sssomPath=<set.sssom.tsv>
                                    --decisionStoreFilePath=<path> --sssomValidatorPath=<sssom-py's sssom binary>
-                                   [--authorIri=<edc agent IRI>] [--layerRegistryFilePath=<path>] [--agentRegistryFilePath=<path>]
+                                   [--authorIri=<edc agent IRI>] [--uriContractFilePath=<path>]
+                                   [--layerDefinitionPath=<layer .json>] [--agentDefinitionPath=<agent list .json>]
      graphBuilder   -importLayer --slug=<slug> --versionTag=<tag> --authorIri=<edc agent IRI> --sssomPath=<outside.sssom.tsv>
                                    --prefixMapPath=<declared prefix map .json> --goldCapturePath=<layerPublicationCli capture>
                                    --decisionStoreFilePath=<path> --sssomValidatorPath=<sssom-py's sssom binary>
-                                   --importReportPath=<report .json> [--layerRegistryFilePath=<path>] [--agentRegistryFilePath=<path>]
+                                   --importReportPath=<report .json> [--uriContractFilePath=<path>] [--agentDefinitionPath=<path>]
+     graphBuilder   -seedUriContractFromRegistryJson --layerRegistryFilePath=<recipes/layers.json>
+                                   --agentRegistryFilePath=<recipes/agents.json> [--uriContractFilePath=<a NEW path>]
+                                   [--standardsDatabaseFilePath=<the support store holding the decision blocks>]
+     graphBuilder   -publishManifest --manifestRefId=<64 hex> --publicLabel=<TQ's label> --registrationStatus=<ISO 11179 status>
+                                   [--note=<text>] [--defaultLayerByHubPath=<json>] [--uriContractFilePath=<path>]
+                                   [--standardsDatabaseFilePath=<the support store holding the manifest>]
+     graphBuilder   -replayOldest [--uriContractFilePath=<path>] [--live=true --exportStoreFilePath=<a NEW scratch store>]
+     graphBuilder   -rebuildUriContractIndexes [--verifyOnly=true] [--uriContractFilePath=<path>]
      graphBuilder   -help
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
@@ -501,8 +510,13 @@ OPTIONS
                   the same tag report alreadyPresent and write nothing new. REFUSED BY NAME: a tag already holding
                   other bytes, these bytes under another tag, an unregistered layer or author, a judge layer, a
                   curated set whose #mapping_provider is not its author, a row source the layer does not list.
-                  --layerRegistryFilePath and --agentRegistryFilePath default to the tree's recipes/layers.json and
-                  recipes/agents.json; every other parameter is required. Lists no library and touches no manifest.
+                  THE REGISTRY IS uriContract's (ML3.1b): the file named by --uriContractFilePath, else [stores]
+                  uriContractFilePath in graphBuilder.ini; it must EXIST (a publish never creates it). The version, every
+                  block it is made of and any new agents are appended there, in one transaction, after the decision
+                  store holds the blocks. A layer not yet in uriContract needs --layerDefinitionPath (a JSON object:
+                  layerKey, displayName, layerKind, authorAgentIri, standardList, hubList); a definition that differs from
+                  the stored layer is refused. --agentDefinitionPath is a JSON list of agents to append first (identical =
+                  alreadyPresent, different under one IRI = refused). Lists no library and touches no manifest.
 
      -importLayer
                   WRITES. Makes an OUTSIDE SSSOM/TSV set a new version of the layer imported-<slug> (mappingLayers ML3-c):
@@ -517,8 +531,44 @@ OPTIONS
                   (Candidate) are appended to the registry. Prints accepted N, refused M; --importReportPath lists every
                   refusal with its reason. IDEMPOTENT: identical bytes report alreadyPresent. A tag holding other bytes,
                   an unregistered author and a file sssom-py rejects are refused. Creates no relationship schema block and
-                  touches no graph. --layerRegistryFilePath and --agentRegistryFilePath default to the tree's
-                  recipes/layers.json and recipes/agents.json, as for -publishLayer; every other parameter is required.
+                  touches no graph. The registry is uriContract's and the version is appended there, as for -publishLayer
+                  (the layer imported-<slug> is created by the import itself; --agentDefinitionPath adds its author).
+
+     -seedUriContractFromRegistryJson
+                  WRITES (CREATES ONE FILE). Moves the mapping-layer registry (--layerRegistryFilePath) and the agent registry
+                  (--agentRegistryFilePath) into a NEW uriContract.sqlite (ML3.1 Part B): agents, every layer version with
+                  every decision schema block it is made of (read from the support store, never written), every status
+                  change; and the derived rows. Built under a temporary name; the registry rebuilt from the tables must
+                  equal the JSON row for row and every derived row must verify, else REFUSED and the partial file is left
+                  under its temporary name. Refused by name: an existing target (never written over), a field the tables
+                  cannot hold, a decision block the support store lacks. The only action that creates a uriContract.
+
+     -publishManifest
+                  WRITES. Publishes a stored manifest into uriContract: its identity row (manifestRefId, --publicLabel,
+                  both URIs), its ordered members, every member schema block (a member's requires must be members: the
+                  closure is published whole), every frozen vector the blocks reference by embeddingRef (exactly those),
+                  the node and edge counts its hermetic replay yields (recordedNodeCount / recordedEdgeCount), and its
+                  first status row (--registrationStatus; the registration authority and registrar are
+                  lib/uri-contract/uriContractRules.json's). A question URI answers from the manifest's own relationship
+                  blocks, so defaultLayerByHub is stored as null UNLESS one subject's answer edges toward one hub come
+                  from two decision schema blocks; then --defaultLayerByHubPath must pick one per subject
+                  ({ <hubSegment>: { decisionBlockHashList } }), and with no such conflict it is refused. Re-publishing the
+                  same manifest under the same label is alreadyPresent; a label is never reassigned. --publicLabel and
+                  --registrationStatus are REQUIRED (the label is TQ's to choose). Reads the support store, never writes it.
+
+     -replayOldest
+                  READ-ONLY (but --live writes a scratch store and a DEV_ graph). THE REPLAY-THE-OLDEST DISCIPLINE (TQ: "a
+                  good discipline no matter what"): the OLDEST published manifest in uriContract is replayed hermetically
+                  (replay()'s own deserialize and guards, then MERGE semantics) and its node and edge counts must equal
+                  the counts recorded at publish, else REFUSED: replayManager must read every block format it has ever
+                  written. --live=true --exportStoreFilePath=<NEW path> also exports that manifest's blocks and frozen
+                  vectors from uriContract ALONE into the new store and runs the real -replay from it into a DEV_ graph
+                  (take /tmp/miloPersistence/dockerProvisionLock first; dispose of the graph with docker rm -f -v).
+
+     -rebuildUriContractIndexes
+                  WRITES (fills only). Recomputes every derived row of uriContract (the element index, the answer edges,
+                  the layer-version counts) from its write-once source and REFUSES on any difference; writes the derived
+                  rows of a source never indexed. It changes and removes nothing. --verifyOnly=true writes nothing.
 
      -spendLedger
                   WHAT THE BUILDS SPENT (spend ledger lane R1, 2026-10-21). READ-ONLY and FREE.

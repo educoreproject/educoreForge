@@ -1,0 +1,34 @@
+{
+	"about": "What uriContract.js may accept and who may write (ML3.1 Part B). DATA: the module reads these lists and refuses by name anything outside them. registrationAuthorityIri and registrarIri are what layers.json carried at its top (AMBER_JOURNEY 2026-10-26: data here, not a ninth table); every new layer version's administration record names them.",
+	"registrationAuthorityIri": "https://w3id.org/EDUcore/agent/org/educore",
+	"registrarIri": "https://w3id.org/EDUcore/agent/org/educore",
+	"accessModeByName": {
+		"read": { "readonly": true, "fileMustExist": true, "fileMustBeAbsent": false, "writerActionRequired": false },
+		"publish": { "readonly": false, "fileMustExist": true, "fileMustBeAbsent": false, "writerActionRequired": true },
+		"create": { "readonly": false, "fileMustExist": false, "fileMustBeAbsent": true, "writerActionRequired": true }
+	},
+	"writerActionNameList": ["publishLayer", "importLayer", "publishManifest", "seedUriContractFromRegistryJson", "rebuildUriContractIndexes"],
+	"createActionNameList": ["seedUriContractFromRegistryJson"],
+	"reservedPublicLabelList": ["sha256"],
+	"publicLabelPattern": "^[a-z0-9][a-z0-9-]*$",
+	"registryTopFieldList": ["about", "registrationAuthorityIri", "registrarIri", "layerList"],
+	"layerFieldList": ["layerKey", "displayName", "layerKind", "authorAgentIri", "standardList", "hubList", "versionList", "statusChangeList"],
+	"versionFieldList": ["administrationRecord", "registrationStatus", "authorAgentIri", "contentIdBasis", "memberBlockList", "wholeSetBlock", "sssomPath", "importRecord", "copiedFromLayerVersion", "scoreList", "note"],
+	"statusChangeFieldList": ["versionTag", "registrationStatus", "changedAt", "changedBy", "supersededByVersionTag", "note"],
+	"agentFieldList": ["agentIri", "agentKind", "displayName", "description", "homepageIri", "aliasIriList", "judgeConfiguration", "note"],
+	"agentFieldListByKind": {
+		"about": "TQ ruling Q3 (2026-10-26): persons stay strictly pseudonymous (a role and aliases such as an ORCID, never a name, never an e-mail); only a judge carries a configuration; a person has no homepage",
+		"person": ["agentIri", "agentKind", "displayName", "description", "aliasIriList", "note"],
+		"judge": ["agentIri", "agentKind", "displayName", "description", "homepageIri", "aliasIriList", "judgeConfiguration", "note"],
+		"organisation": ["agentIri", "agentKind", "displayName", "description", "homepageIri", "aliasIriList", "note"]
+	},
+	"personTextRefusalPattern": "[^\\s@]+@[^\\s@]+\\.[^\\s@]+",
+	"agentRegistryTopFieldList": ["about", "agentList"],
+	"manifestRecordFieldList": ["refId", "name", "description", "recipeName", "recipeHash", "recipeFileName", "basedOnManifestRefId", "createdAt"],
+	"hubCardDefinitionPropertyListByTier": {
+		"about": "where a HubReference card's DEFINITION is read, per referenceTier, the first present property winning (measured on goldWave3 2026-10-26: value cards carry valueDefinition on 26,651 of 97,335, so a value card without its own definition answers its property's); a tier not listed is refused by name when indexed",
+		"value": ["valueDefinition", "propertyDefinition"],
+		"property": ["propertyDefinition"],
+		"term": ["termDefinition"]
+	}
+}

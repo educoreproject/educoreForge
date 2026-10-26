@@ -1,0 +1,251 @@
+{
+	"about": "The nine IDENTITY and HISTORY tables of uriContract.sqlite, and its five DERIVED tables (rowRole derived: pure functions of the write-once rows, written in the same transaction, verified by -rebuildUriContractIndexes; AMBER_JOURNEY 2026-10-26) — (ML3.1 Part B; PROPOSAL-dataStoreLayout-102626 section 3 and Appendix B, with the additive columns AMBER_JOURNEY accepted 2026-10-26, and the ninth table frozenVectors ruled the same day: a vector a published schema block references by embeddingRef is part of what RECREATES the graph, not a calculation input). DATA: uriContract.js builds every CREATE TABLE, every write-once trigger and every INSERT from these rows, and refuses by name a row field no table lists. rowRole 'identity' = written once at publish; 'history' = append-only. NO TABLE IS EVER UPDATED OR DELETED FROM: each carries BEFORE UPDATE and BEFORE DELETE triggers that abort, so even raw SQL cannot edit the forever-promise. registrationStatus CHECKs are built from lib/layer-registry/layerRegistrySchema.json registrationStatusList, never restated here.",
+	"writeOnceTriggerMessage": "uriContract is write-once: rows are never updated or deleted (a status change is a new history row)",
+	"tableList": [
+		{
+			"tableName": "agents",
+			"rowRole": "identity",
+			"about": "authors of record: people (pseudonymous, by userRefId: a role and aliases, never a name or an e-mail), judges (with their configuration), organisations; the PROFILE only. An agent URI also answers a computed RECORD (what the agent authored, its status, counts, scores, dates), which is NEVER stored: it is computed from layerVersions and layerStatusChanges (TQ ruling Q3, 2026-10-26)",
+			"columnList": [
+				{ "columnName": "agentIri", "sqlType": "TEXT", "constraintText": "PRIMARY KEY" },
+				{ "columnName": "agentKind", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (agentKind IN ('person', 'judge', 'organisation'))" },
+				{ "columnName": "displayName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "description", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "homepageIri", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "aliasIriListJson", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "judgeConfigurationJson", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "note", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": []
+		},
+		{
+			"tableName": "schemaBlocks",
+			"rowRole": "identity",
+			"about": "every schema block a published manifest lists; verify on read: sha256(text) = refId; requiresJson NULL where the support store holds NULL (the block names no requirement: 45 of the ML3 store's 100 blocks), copied as it is, never rewritten to []",
+			"columnList": [
+				{ "columnName": "refId", "sqlType": "TEXT", "constraintText": "PRIMARY KEY CHECK (length(refId) = 64)" },
+				{ "columnName": "kind", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "subject", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "version", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "requiresJson", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "text", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "producedBy", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": []
+		},
+		{
+			"tableName": "frozenVectors",
+			"rowRole": "identity",
+			"about": "every vector a published schema block references by embeddingRef (NOT the embedding cache): the support store's vectors rows, copied at publish; verify on read: dtype and length, the vectorId recipe over (modelVersion, dims, inputText) (grammar 2, or grammar 1 for a row minted before campaign P3), and sha256(vector) = vectorHash",
+			"columnList": [
+				{ "columnName": "vectorId", "sqlType": "TEXT", "constraintText": "PRIMARY KEY CHECK (length(vectorId) = 64)" },
+				{ "columnName": "modelVersion", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "dims", "sqlType": "INTEGER", "constraintText": "NOT NULL CHECK (dims > 0)" },
+				{ "columnName": "dtype", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "inputText", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "vector", "sqlType": "BLOB", "constraintText": "NOT NULL" },
+				{ "columnName": "vectorHash", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (length(vectorHash) = 64)" }
+			],
+			"tableConstraintList": []
+		},
+		{
+			"tableName": "publishedManifests",
+			"rowRole": "identity",
+			"about": "one row per published manifest; manifestRecordJson is the support store's manifests row metadata (name, description, recipeName, recipeHash, recipeFileName, createdAt) and ancestorRecordListJson the basedOn chain of such rows the finisher walks (the published graph's :ManifestRecipe subgraph is generated from them; found by the first live replay 2026-10-26); manifestRefId = content-address manifestKeyForMembership of its members; the label is never 'sha256' and never reassigned; defaultLayerByHubJson is NULL unless one standard-hub pair carries edges from two producers (AMBER_JOURNEY ruling (b) 2026-10-26: a question URI answers from the manifest's own relationship schema blocks)",
+			"columnList": [
+				{ "columnName": "manifestRefId", "sqlType": "TEXT", "constraintText": "PRIMARY KEY CHECK (length(manifestRefId) = 64)" },
+				{ "columnName": "publicLabel", "sqlType": "TEXT", "constraintText": "NOT NULL UNIQUE CHECK (publicLabel <> 'sha256' AND publicLabel <> '')" },
+				{ "columnName": "uri", "sqlType": "TEXT", "constraintText": "NOT NULL UNIQUE" },
+				{ "columnName": "uriByContent", "sqlType": "TEXT", "constraintText": "NOT NULL UNIQUE" },
+				{ "columnName": "defaultLayerByHubJson", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "basedOnManifestRefId", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "recordedNodeCount", "sqlType": "INTEGER", "constraintText": "NOT NULL CHECK (recordedNodeCount >= 0)" },
+				{ "columnName": "recordedEdgeCount", "sqlType": "INTEGER", "constraintText": "NOT NULL CHECK (recordedEdgeCount >= 0)" },
+				{ "columnName": "manifestRecordJson", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "ancestorRecordListJson", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "publishedAt", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "publishedByAgentIri", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES agents(agentIri)" }
+			],
+			"tableConstraintList": []
+		},
+		{
+			"tableName": "publishedManifestMembers",
+			"rowRole": "identity",
+			"about": "the assembly of each manifest, written once with it, in replay order; memberDescription and producedByRecipeName are the membership metadata the :RecipeBlock nodes carry",
+			"columnList": [
+				{ "columnName": "manifestRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES publishedManifests(manifestRefId)" },
+				{ "columnName": "position", "sqlType": "INTEGER", "constraintText": "NOT NULL" },
+				{ "columnName": "schemaBlockRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES schemaBlocks(refId)" },
+				{ "columnName": "memberDescription", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "producedByRecipeName", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (manifestRefId, schemaBlockRefId)", "UNIQUE (manifestRefId, position)"]
+		},
+		{
+			"tableName": "manifestStatusChanges",
+			"rowRole": "history",
+			"about": "append-only status history of each manifest; the effective status is the latest row",
+			"columnList": [
+				{ "columnName": "rowId", "sqlType": "INTEGER", "constraintText": "PRIMARY KEY AUTOINCREMENT" },
+				{ "columnName": "manifestRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES publishedManifests(manifestRefId)" },
+				{ "columnName": "registrationStatus", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (registrationStatus IN (<!registrationStatusList!>))" },
+				{ "columnName": "registrationAuthority", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES agents(agentIri)" },
+				{ "columnName": "changedAt", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "changedByAgentIri", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES agents(agentIri)" },
+				{ "columnName": "note", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": []
+		},
+		{
+			"tableName": "decisionSchemaBlocks",
+			"rowRole": "identity",
+			"about": "every decision schema block a published layer version is made of; verify on read: sha256(frozenText) = decisionSchemaBlockHash",
+			"columnList": [
+				{ "columnName": "decisionSchemaBlockHash", "sqlType": "TEXT", "constraintText": "PRIMARY KEY CHECK (length(decisionSchemaBlockHash) = 64)" },
+				{ "columnName": "pairKey", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "producerKind", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "frozenText", "sqlType": "TEXT", "constraintText": "NOT NULL" }
+			],
+			"tableConstraintList": []
+		},
+		{
+			"tableName": "layerVersions",
+			"rowRole": "identity",
+			"about": "one row per layer version, no status; the layer's own fields (layerKind, displayName, layerAuthorAgentIri, standardListJson, hubListJson) are recorded as of this version's publication",
+			"columnList": [
+				{ "columnName": "layerKey", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "versionTag", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "contentId", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (length(contentId) = 64)" },
+				{ "columnName": "layerKind", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "displayName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "layerAuthorAgentIri", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES agents(agentIri)" },
+				{ "columnName": "standardListJson", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubListJson", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "authorAgentIri", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES agents(agentIri)" },
+				{ "columnName": "registrationAuthorityIri", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES agents(agentIri)" },
+				{ "columnName": "registrarIri", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES agents(agentIri)" },
+				{ "columnName": "submitterAgentIri", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES agents(agentIri)" },
+				{ "columnName": "publishedAt", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "contentIdBasis", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "memberListJson", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "wholeSetBlockJson", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "sssomPath", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "importRecordJson", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "copiedFromLayerVersion", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "note", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (layerKey, versionTag)", "UNIQUE (layerKey, contentId)"]
+		},
+		{
+			"tableName": "layerStatusChanges",
+			"rowRole": "history",
+			"about": "append-only status history of each layer version: its first row (statusChangeKind atPublication) is the status it was published with, carrying the scores recorded then; later rows are appended changes",
+			"columnList": [
+				{ "columnName": "rowId", "sqlType": "INTEGER", "constraintText": "PRIMARY KEY AUTOINCREMENT" },
+				{ "columnName": "layerKey", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "versionTag", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "statusChangeKind", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (statusChangeKind IN ('atPublication', 'appended'))" },
+				{ "columnName": "registrationStatus", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (registrationStatus IN (<!registrationStatusList!>))" },
+				{ "columnName": "supersededByVersionTag", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "scoreListJson", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "changedAt", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "changedByAgentIri", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES agents(agentIri)" },
+				{ "columnName": "note", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": ["FOREIGN KEY (layerKey, versionTag) REFERENCES layerVersions(layerKey, versionTag)"]
+		}
+,
+		{
+			"tableName": "derivedIndexedSources",
+			"rowRole": "derived",
+			"about": "DERIVED. One row per identity source whose derived rows were written (a schema block, or a layer version), with how many: the completeness record -rebuildUriContractIndexes checks, so a source that legitimately yields no rows is distinguishable from one never indexed",
+			"columnList": [
+				{ "columnName": "sourceKind", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (sourceKind IN ('schemaBlock', 'layerVersion'))" },
+				{ "columnName": "sourceIdentity", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "derivedRowCount", "sqlType": "INTEGER", "constraintText": "NOT NULL CHECK (derivedRowCount >= 0)" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (sourceKind, sourceIdentity)"]
+		},
+		{
+			"tableName": "derivedElementIndex",
+			"rowRole": "derived",
+			"about": "DERIVED from schemaBlocks (standardBase): where an element URI resolves (standard name, version, stableId), its parent (the node's parentId), its definition text (verbatim) and its node record without vectors",
+			"columnList": [
+				{ "columnName": "schemaBlockRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES schemaBlocks(refId)" },
+				{ "columnName": "standardName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "standardVersion", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "standardKey", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "elementStableId", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "parentStableId", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "definitionText", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "nodeJson", "sqlType": "TEXT", "constraintText": "NOT NULL" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (schemaBlockRefId, elementStableId)"]
+		},
+		{
+			"tableName": "derivedHubCards",
+			"rowRole": "derived",
+			"about": "DERIVED from schemaBlocks (standardBase): every HubReference card (a node labelled HubReference; NOT any node whose id parses as a meaning: the HubDefinition's does), with its hub, domain, label, definition (uriContractRules.json hubCardDefinitionPropertyListByTier), property and tier; the hub and domain listings read it",
+			"columnList": [
+				{ "columnName": "schemaBlockRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES schemaBlocks(refId)" },
+				{ "columnName": "meaningIri", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubSegment", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubReleaseSegment", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubName", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "hubVersion", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "label", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "definition", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "propertyName", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "propertyKey", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "referenceTier", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "domainId", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "domainName", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "domainUri", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "domainDefinition", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (schemaBlockRefId, meaningIri)"]
+		},
+		{
+			"tableName": "derivedAnswerEdges",
+			"rowRole": "derived",
+			"about": "DERIVED from schemaBlocks (relationship): every answer edge (a SKOS match or DECLARED_CORRESPONDENCE edge whose target is a meaning card), with the decision schema block it was materialised from",
+			"columnList": [
+				{ "columnName": "schemaBlockRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES schemaBlocks(refId)" },
+				{ "columnName": "subjectStableId", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "subjectStandardName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "subjectStandardVersion", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "meaningIri", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubSegment", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubVersion", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "relationType", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "decisionBlockHash", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": ["UNIQUE (schemaBlockRefId, subjectStableId, meaningIri, relationType, decisionBlockHash)"]
+		},
+		{
+			"tableName": "derivedLayerVersionCounts",
+			"rowRole": "derived",
+			"about": "DERIVED from a layer version's member decision schema blocks: per standard (standardKey) and per hub (hubName), rows, mapped and abstained",
+			"columnList": [
+				{ "columnName": "layerKey", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "versionTag", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "countScope", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (countScope IN ('standard', 'hub'))" },
+				{ "columnName": "scopeName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "rowCount", "sqlType": "INTEGER", "constraintText": "NOT NULL" },
+				{ "columnName": "mappedCount", "sqlType": "INTEGER", "constraintText": "NOT NULL" },
+				{ "columnName": "abstainedCount", "sqlType": "INTEGER", "constraintText": "NOT NULL" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (layerKey, versionTag, countScope, scopeName)", "FOREIGN KEY (layerKey, versionTag) REFERENCES layerVersions(layerKey, versionTag)"]
+		}
+	],
+	"indexList": [
+		"CREATE UNIQUE INDEX IF NOT EXISTS layerStatusChangesOnePublicationRow ON layerStatusChanges(layerKey, versionTag) WHERE statusChangeKind = 'atPublication'",
+		"CREATE INDEX IF NOT EXISTS derivedElementIndexByElement ON derivedElementIndex(standardName, standardVersion, elementStableId)",
+		"CREATE INDEX IF NOT EXISTS derivedElementIndexByParent ON derivedElementIndex(schemaBlockRefId, parentStableId)",
+		"CREATE INDEX IF NOT EXISTS derivedAnswerEdgesByMeaning ON derivedAnswerEdges(meaningIri)",
+		"CREATE INDEX IF NOT EXISTS derivedAnswerEdgesBySubject ON derivedAnswerEdges(subjectStableId, hubSegment)",
+		"CREATE INDEX IF NOT EXISTS publishedManifestMembersByBlock ON publishedManifestMembers(schemaBlockRefId)",
+		"CREATE INDEX IF NOT EXISTS derivedHubCardsByHubDomain ON derivedHubCards(hubSegment, hubReleaseSegment, domainId, meaningIri)"
+	]
+}
