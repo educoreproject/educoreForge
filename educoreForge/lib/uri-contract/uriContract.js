@@ -223,7 +223,6 @@ const agentFromRow = (agentRow) => withOptionalFields({ agentIri: agentRow.agent
 // FROZEN VECTORS — the same three checks lib/vector-store getVector makes on every read (W-C-12: grammar 2, or grammar 1 for a
 // row minted before campaign P3), applied on the way IN as well as on the way out
 const FROZEN_VECTOR_DTYPE = 'float32';
-const NO_TERM_FOUND_OBJECT_LIST = Object.freeze(['sssom:NoTermFound', 'https://w3id.org/sssom/NoTermFound']);
 const BYTES_PER_FLOAT = 4;
 const frozenVectorRefusal = (row) => {
 	if (row.dtype !== FROZEN_VECTOR_DTYPE || !Buffer.isBuffer(row.vector) || row.vector.length !== Number(row.dims) * BYTES_PER_FLOAT) {
@@ -373,28 +372,10 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		return { publishedManifest: { ...row, defaultLayerByHub: row.defaultLayerByHubJson === null ? null : JSON.parse(row.defaultLayerByHubJson), memberList, statusChangeList, effectiveRegistrationStatus: statusChangeList[statusChangeList.length - 1].registrationStatus } };
 	};
 	// ⟪TQ ruling Q3⟫ agentRecordFor — the agent's PROFILE (its row) plus a RECORD computed, never stored: every layer version in which
-	// it holds a role, that version's effective status and its assertion and abstention counts (read from the version's own frozen
-	// blocks: a judged record with an objectStableId is an assertion, one without is an abstention; a set row whose object is
-	// sssom:NoTermFound is an abstention), the scores recorded with its versions, and its first and last contribution dates
-	const countByBlockHash = new Map();
-	const countsForBlock = (decisionSchemaBlockHash) => {
-		if (countByBlockHash.has(decisionSchemaBlockHash)) {
-			return countByBlockHash.get(decisionSchemaBlockHash);
-		}
-		const read = decisionSchemaBlockTextFor(decisionSchemaBlockHash);
-		if (read.error || read.frozenText === null) {
-			return { error: read.error || refusalText(`decision schema block ${decisionSchemaBlockHash} is not held`, 'a layer version\'s blocks are copied with it') };
-		}
-		const counted = read.frozenText.charAt(0) === '{'
-			? JSON.parse(read.frozenText).decisionRecordList.reduce((soFar, oneRecord) => (isNonEmptyString(oneRecord.objectStableId) ? { ...soFar, assertionCount: soFar.assertionCount + 1 } : { ...soFar, abstentionCount: soFar.abstentionCount + 1 }), { assertionCount: 0, abstentionCount: 0 })
-			: (() => {
-					const lineList = read.frozenText.split('\n').filter((oneLine) => oneLine.length > 0 && !oneLine.startsWith('#'));
-					const objectIndex = lineList.length ? lineList[0].split('\t').indexOf('object_id') : -1;
-					return lineList.slice(1).reduce((soFar, oneLine) => (NO_TERM_FOUND_OBJECT_LIST.indexOf(oneLine.split('\t')[objectIndex]) !== -1 ? { ...soFar, abstentionCount: soFar.abstentionCount + 1 } : { ...soFar, assertionCount: soFar.assertionCount + 1 }), { assertionCount: 0, abstentionCount: 0 });
-				})();
-		countByBlockHash.set(decisionSchemaBlockHash, counted);
-		return counted;
-	};
+	// it holds a role, that version's effective status and its assertion and abstention counts (summed from derivedLayerVersionCounts,
+	// standard scope: the version's own member blocks, counted once at publish and verified by -rebuildUriContractIndexes), the scores
+	// recorded with its versions, and its first and last contribution dates
+	const countsForVersion = (layerKey, versionTag) => database.prepare("SELECT COALESCE(SUM(mappedCount), 0) AS assertionCount, COALESCE(SUM(abstainedCount), 0) AS abstentionCount, COUNT(*) AS scopeRowCount FROM derivedLayerVersionCounts WHERE layerKey = ? AND versionTag = ? AND countScope = 'standard'").get(layerKey, versionTag);
 	const agentRecordFor = (agentIri) => {
 		const agentRow = database.prepare('SELECT * FROM agents WHERE agentIri = ?').get(agentIri);
 		if (agentRow === undefined) {
@@ -418,14 +399,12 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 				if (roleList.length === 0) {
 					continue;
 				}
-				const countedBlockList = oneVersion.contentIdBasis === 'frozenSetBytes' ? [oneVersion.wholeSetBlock] : oneVersion.memberBlockList;
-				const countList = countedBlockList.map((oneBlock) => countsForBlock(oneBlock.decisionBlockHash));
-				const countFault = countList.find((oneCount) => oneCount.error);
-				if (countFault !== undefined) {
-					return { error: countFault.error };
+				const counted = countsForVersion(oneLayer.layerKey, record.versionTag);
+				if (counted.scopeRowCount === 0) {
+					return { error: refusalText(`layer '${oneLayer.layerKey}' version '${record.versionTag}' has no derived counts`, 'graphBuilder -rebuildUriContractIndexes fills a source never indexed') };
 				}
 				const layerVersionUri = edcUri.mint({ kind: 'layerVersion', layerKey: oneLayer.layerKey, versionTag: record.versionTag }).uri;
-				versionList.push({ versionTag: record.versionTag, layerVersionUri, contentId: record.contentId, publishedAt: record.publishedAt, effectiveRegistrationStatus: loaded.registry.effectiveStatusFor({ layerKey: oneLayer.layerKey, versionTag: record.versionTag }).registrationStatus, roleList, assertionCount: countList.reduce((soFar, oneCount) => soFar + oneCount.assertionCount, 0), abstentionCount: countList.reduce((soFar, oneCount) => soFar + oneCount.abstentionCount, 0) });
+				versionList.push({ versionTag: record.versionTag, layerVersionUri, contentId: record.contentId, publishedAt: record.publishedAt, effectiveRegistrationStatus: loaded.registry.effectiveStatusFor({ layerKey: oneLayer.layerKey, versionTag: record.versionTag }).registrationStatus, roleList, assertionCount: counted.assertionCount, abstentionCount: counted.abstentionCount });
 				(oneVersion.scoreList || []).forEach((oneScore) => scores.push({ layerVersionUri, ...oneScore }));
 				contributionDateList.push(record.publishedAt);
 			}
