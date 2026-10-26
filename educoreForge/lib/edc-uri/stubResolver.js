@@ -21,6 +21,27 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //       agentRecordFor(agentIri, cb(err, { profile: { agentIri, agentKind, displayName, aliasIri }, layersAuthored: [...], scores: {...} } | null))
 //           ⟪TQ ruling Q3, relayed by AMBER_JOURNEY 2026-10-26⟫ a profile plus a computed record; the stub answers ONLY the profile
 //           fields AGENT_PROFILE_FIELD_LIST names, so nothing else a reader carries can leak (persons are strictly pseudonymous)
+//     ⟪ML3.1, TQ Q4: every URI answers the thing PLUS its relations, computed from uriContract, never stored⟫
+//       elementRecordFor({ standardName, standardVersion, elementStableId }, cb(err, { schemaBlockRefId, node: { stableId, labels,
+//           properties }, parentStableId | null, siblingStableIdList, definitionText | null } | null))
+//       publishedLayerVersionListForStandard({ standardName, standardVersion }, cb(err, [{ layerKey, versionTag, registrationStatus }]))
+//       mappingsToMeaningFor(meaningIri, cb(err, [{ manifestRefId, standardName, standardVersion, layerKey | null, versionTag | null,
+//           relationType, elementCount }]))
+//       layerHistoryFor(layerKey, cb(err, { layerKey, displayName, layerKind, authorAgentIri, versionList: [{ versionTag, contentId,
+//           publishedAt, statusHistory: [{ registrationStatus, changedAt, changedBy }], scores | null }] } | null))
+//       layerVersionRecordFor({ layerKey, versionTag }, cb(err, { authorAgentIri, publishedAt, latestStatus, countByStandard,
+//           countByHub, abstentionRate, agreementScores | null } | null))
+//       manifestInventoryFor({ publicLabel } | { manifestRefId }, cb(err, { manifestRefId, publicLabel, publishedAt, latestStatus,
+//           standardList: [{ standardName, standardVersion }], hubList, layerVersionList, nodeCount, edgeCount } | null))
+//     ⟪ML3.1, TQ Q5: discovery⟫ listings are paged as uriScheme.json listingPaging says (?page=N, fixed pageSize)
+//       rootCountsFor(cb(err, { manifestCount, layerCount, layerVersionCount, agentCount }))
+//       publishedManifestListFor({ pageNumber, pageSize }, cb(err, { totalCount, manifestList: [{ manifestRefId, publicLabel, publishedAt, latestStatus }] }))
+//       manifestStandardListFor({ publicLabel } | { manifestRefId }, cb(err, { manifestRefId, publicLabel, standardList: [{ standardName,
+//           standardVersion, standardKey, elementCount, schemaBlockRefId }] } | null))
+//       manifestElementListFor({ publicLabel } | { manifestRefId }, { standardName, standardVersion, pageNumber, pageSize },
+//           cb(err, { totalCount, elementList: [{ elementStableId, role | null }] } | null))   ordered by stableId (code point)
+//       agentListFor({ pageNumber, pageSize }, cb(err, { totalCount, agentList: [{ profile }] }))
+//       layerListFor(cb(err, [{ layerKey, displayName, layerKind, versionCount, currentStandardVersionTag | null }]))   the site registry
 //       Every hash the reader hands over it has verified on read; null means "not published", never an error.
 //
 // ANSWERS: layer → its current STANDARD version (never merely the newest); layerVersion / layerVersionByContent → the version's
@@ -296,18 +317,140 @@ const questionAnswerFor = ({ kind, partByName, iri, uriContractReader }, done) =
 };
 const withReader = (kind, resolution) => (context, done) => (context.uriContractReader === undefined ? done(answer(501, { kind, error: NO_READER_ERROR(kind) })) : resolution(context, done));
 
+// ⟪ML3.1, Q4⟫ relation answers. mintUriOf: a URI the stub writes into an answer, minted through edcUri (lane B hard-codes no spelling)
+const mintUriOf = (partByName) => edcUri.mint(partByName).uri;
+const manifestAddressOf = (partByName) => (partByName.manifestRefId !== undefined ? { manifestRefId: partByName.manifestRefId } : { publicLabel: partByName.publicLabel });
+const manifestUriOf = (manifestAddress) => (manifestAddress.manifestRefId !== undefined ? mintUriOf({ kind: 'manifestByContent', manifestRefId: manifestAddress.manifestRefId }) : mintUriOf({ kind: 'manifest', publicLabel: manifestAddress.publicLabel }));
+const readerAnswer = ({ kind, readError, found, notFoundText }, answerBodyFor) => (readError ? answer(500, { kind, error: readError }) : found === null ? answer(404, { kind, error: notFoundText }) : answer(200, { kind, ...answerBodyFor(found) }));
+// the floating version of a layer, from its history: the latest-published version whose LATEST status is Standard (SPEC §5.3)
+const currentStandardTagOf = (history) => {
+	const standardList = history.versionList.filter((oneVersion) => oneVersion.statusHistory.length > 0 && oneVersion.statusHistory[oneVersion.statusHistory.length - 1].registrationStatus === 'Standard').sort((leftVersion, rightVersion) => (leftVersion.publishedAt < rightVersion.publishedAt ? 1 : leftVersion.publishedAt > rightVersion.publishedAt ? -1 : 0));
+	return standardList.length === 0 ? null : standardList[0].versionTag;
+};
+const elementAnswerFor = ({ partByName, iri, uriContractReader }, done) => {
+	const { standardName, standardVersion, elementStableId } = partByName;
+	uriContractReader.elementRecordFor({ standardName, standardVersion, elementStableId }, (readError, elementRecord) => {
+		if (readError || elementRecord === null) {
+			done(readError ? answer(500, { kind: 'element', error: readError }) : answer(404, { kind: 'element', error: `no published schema block holds ${standardName} ${standardVersion} element ${elementStableId}` }));
+			return;
+		}
+		uriContractReader.publishedLayerVersionListForStandard({ standardName, standardVersion }, (listError, layerVersionList) => {
+			if (listError) {
+				done(answer(500, { kind: 'element', error: listError }));
+				return;
+			}
+			const elementUriOf = (stableId) => mintUriOf({ kind: 'element', standardName, standardVersion, elementStableId: stableId });
+			done(answer(200, {
+				kind: 'element',
+				element: iri,
+				partByName,
+				definitionText: elementRecord.definitionText,
+				node: elementRecord.node,
+				schemaBlock: mintUriOf({ kind: 'schemaBlock', schemaBlockRefId: elementRecord.schemaBlockRefId }),
+				parent: elementRecord.parentStableId === null ? null : elementUriOf(elementRecord.parentStableId),
+				siblingList: elementRecord.siblingStableIdList.map(elementUriOf),
+				interpretationList: layerVersionList.map((oneLayerVersion) => ({ ...oneLayerVersion, pinned: mintUriOf({ kind: 'interpretationPinned', standardName, standardVersion, elementStableId, layerKey: oneLayerVersion.layerKey, versionTag: oneLayerVersion.versionTag }), floating: mintUriOf({ kind: 'interpretationFloating', standardName, standardVersion, elementStableId, layerKey: oneLayerVersion.layerKey }) })),
+			}));
+		});
+	});
+};
+
+// ⟪ML3.1, Q5⟫ pageNumberFor(queryText, kind) → { pageNumber } | { error }: only a listing takes a query, and only ?page=N
+const LISTING_PAGING = URI_SCHEME.listingPaging;
+const pageNumberFor = (queryText, kind) => {
+	const isListing = LISTING_PAGING.listingKindList.indexOf(kind) !== -1;
+	if (queryText === '') {
+		return { pageNumber: LISTING_PAGING.firstPageNumber };
+	}
+	if (!isListing) {
+		return { error: `kind '${kind}' takes no query ('?${queryText}'); only the listings (${LISTING_PAGING.listingKindList.join(', ')}) take ?${LISTING_PAGING.queryParameterName}=N` };
+	}
+	const matched = new RegExp(`^${LISTING_PAGING.queryParameterName}=([0-9]+)$`).exec(queryText);
+	if (matched === null || !/^[1-9][0-9]*$/.test(matched[1]) || Number(matched[1]) < LISTING_PAGING.firstPageNumber) {
+		return { error: `'?${queryText}' is not ?${LISTING_PAGING.queryParameterName}=N with N an integer from ${LISTING_PAGING.firstPageNumber} (uriScheme.json listingPaging; never clamped)` };
+	}
+	return { pageNumber: Number(matched[1]) };
+};
+// pagedAnswer — totalCount, page position and next/previous URLs; a page past the end is refused by name, never clamped
+const pagedAnswer = ({ kind, iri, pageNumber, totalCount, itemListName, itemList, extra }) => {
+	const pageCount = Math.max(1, Math.ceil(totalCount / LISTING_PAGING.pageSize));
+	if (pageNumber > pageCount) {
+		return answer(400, { kind, error: `page ${pageNumber} is past the end: ${totalCount} item(s) in ${pageCount} page(s) of ${LISTING_PAGING.pageSize} (never clamped)` });
+	}
+	const pageUrlOf = (oneNumber) => `${iri}?${LISTING_PAGING.queryParameterName}=${oneNumber}`;
+	return answer(200, { kind, listing: iri, ...extra, totalCount, pageSize: LISTING_PAGING.pageSize, pageNumber, pageCount, next: pageNumber < pageCount ? pageUrlOf(pageNumber + 1) : null, previous: pageNumber > LISTING_PAGING.firstPageNumber ? pageUrlOf(pageNumber - 1) : null, [itemListName]: itemList });
+};
+const layerVersionRecordAnswerFor = ({ kind, layerKey, versionTag, uriContractReader }, done) =>
+	uriContractReader.layerVersionRecordFor({ layerKey, versionTag }, (readError, versionRecord) =>
+		done(readerAnswer({ kind, readError, found: versionRecord, notFoundText: `layer '${layerKey}' has no published version '${versionTag}'` }, (found) => ({ layerKey, versionTag, layerVersion: mintUriOf({ kind: 'layerVersion', layerKey, versionTag }), layer: mintUriOf({ kind: 'layer', layerKey }), ...found }))),
+	);
+const manifestInventoryAnswerFor = ({ kind, manifestAddress, uriContractReader }, done) =>
+	uriContractReader.manifestInventoryFor(manifestAddress, (readError, inventory) =>
+		done(readerAnswer({ kind, readError, found: inventory, notFoundText: `no published manifest ${JSON.stringify(manifestAddress)}` }, (found) => ({ manifest: mintUriOf({ kind: 'manifest', publicLabel: found.publicLabel }), manifestByContent: mintUriOf({ kind: 'manifestByContent', manifestRefId: found.manifestRefId }), standardListing: mintUriOf({ kind: 'manifestStandardList', publicLabel: found.publicLabel }), ...found, layerVersionList: found.layerVersionList.map((oneLayerVersion) => ({ ...oneLayerVersion, uri: mintUriOf({ kind: 'layerVersion', layerKey: oneLayerVersion.layerKey, versionTag: oneLayerVersion.versionTag }) })) }))),
+	);
+const manifestStandardListAnswerFor = ({ kind, partByName, iri, uriContractReader }, done) => {
+	const manifestAddress = manifestAddressOf(partByName);
+	uriContractReader.manifestStandardListFor(manifestAddress, (readError, found) =>
+		done(readerAnswer({ kind, readError, found, notFoundText: `no published manifest ${JSON.stringify(manifestAddress)}` }, (standardListing) => ({
+			listing: iri,
+			manifest: manifestUriOf(manifestAddress),
+			manifestRefId: standardListing.manifestRefId,
+			publicLabel: standardListing.publicLabel,
+			standardList: standardListing.standardList.map((oneStandard) => ({ ...oneStandard, elementListing: mintUriOf({ kind: manifestAddress.manifestRefId !== undefined ? 'manifestElementListByContent' : 'manifestElementList', ...manifestAddress, standardName: oneStandard.standardName, standardVersion: oneStandard.standardVersion }), schemaBlock: mintUriOf({ kind: 'schemaBlock', schemaBlockRefId: oneStandard.schemaBlockRefId }) })),
+		}))),
+	);
+};
+const manifestElementListAnswerFor = ({ kind, partByName, iri, pageNumber, uriContractReader }, done) => {
+	const manifestAddress = manifestAddressOf(partByName);
+	const { standardName, standardVersion } = partByName;
+	uriContractReader.manifestElementListFor(manifestAddress, { standardName, standardVersion, pageNumber, pageSize: LISTING_PAGING.pageSize }, (readError, page) => {
+		if (readError || page === null) {
+			done(readError ? answer(500, { kind, error: readError }) : answer(404, { kind, error: `no published manifest ${JSON.stringify(manifestAddress)} lists ${standardName} ${standardVersion}` }));
+			return;
+		}
+		const questionKind = manifestAddress.manifestRefId !== undefined ? 'questionByContent' : 'question';
+		done(pagedAnswer({ kind, iri, pageNumber, totalCount: page.totalCount, itemListName: 'elementList', extra: { manifest: manifestUriOf(manifestAddress), standardName, standardVersion }, itemList: page.elementList.map((oneElement) => ({ ...oneElement, element: mintUriOf({ kind: 'element', standardName, standardVersion, elementStableId: oneElement.elementStableId }), question: mintUriOf({ kind: questionKind, ...manifestAddress, standardName, standardVersion, elementStableId: oneElement.elementStableId }) })) }));
+	});
+};
+const profileOf = (profile) => AGENT_PROFILE_FIELD_LIST.reduce((soFar, oneFieldName) => (profile === null || typeof profile !== 'object' || profile[oneFieldName] === undefined ? soFar : { ...soFar, [oneFieldName]: profile[oneFieldName] }), {});
+
 // RESOLUTION_BY_KIND — one row per kind the stub answers (DATA, no branch); a kind with no row is answered 501 by name
 const RESOLUTION_BY_KIND = Object.freeze({
-	layer: ({ partByName, registry }, done) => {
+	layer: ({ partByName, registry, uriContractReader }, done) => {
+		// ⟪ML3.1, Q4⟫ with a reader: the full version history with statuses, scores and dates, and the version it floats to
+		if (uriContractReader !== undefined) {
+			uriContractReader.layerHistoryFor(partByName.layerKey, (readError, history) =>
+				done(readerAnswer({ kind: 'layer', readError, found: history, notFoundText: `layer '${partByName.layerKey}' is not in uriContract` }, (found) => {
+					const currentStandardVersionTag = currentStandardTagOf(found);
+					return { layerKey: partByName.layerKey, displayName: found.displayName, layerKind: found.layerKind, author: found.authorAgentIri, currentStandardVersionTag, currentStandardVersionUri: currentStandardVersionTag === null ? null : mintUriOf({ kind: 'layerVersion', layerKey: partByName.layerKey, versionTag: currentStandardVersionTag }), versionList: found.versionList.map((oneVersion) => ({ ...oneVersion, uri: mintUriOf({ kind: 'layerVersion', layerKey: partByName.layerKey, versionTag: oneVersion.versionTag }), uriByContent: mintUriOf({ kind: 'layerVersionByContent', layerKey: partByName.layerKey, contentId: oneVersion.contentId }) })) };
+				})),
+			);
+			return;
+		}
 		const current = registry.currentStandardVersionFor(partByName.layerKey);
 		done(current.error ? answer(404, { error: current.error }) : answer(200, { kind: 'layer', layerKey: partByName.layerKey, currentStandardVersion: current.version, currentStandardVersionUri: edcUri.mint({ kind: 'layerVersion', layerKey: partByName.layerKey, versionTag: current.version.administrationRecord.versionTag }).uri }));
 	},
-	layerVersion: ({ partByName, registry }, done) => {
+	layerVersion: ({ partByName, registry, uriContractReader }, done) => {
+		if (uriContractReader !== undefined) {
+			layerVersionRecordAnswerFor({ kind: 'layerVersion', layerKey: partByName.layerKey, versionTag: partByName.versionTag, uriContractReader }, done);
+			return;
+		}
 		const found = registry.versionFor({ layerKey: partByName.layerKey, versionTag: partByName.versionTag });
 		// the row keeps the status it was published with; the EFFECTIVE status (after appended changes) is answered beside it
 		done(found.error ? answer(404, { error: found.error }) : answer(200, { kind: 'layerVersion', layerKey: partByName.layerKey, effectiveRegistrationStatus: registry.effectiveStatusFor({ layerKey: partByName.layerKey, versionTag: partByName.versionTag }).registrationStatus, version: found.version }));
 	},
-	layerVersionByContent: ({ partByName, registry }, done) => {
+	layerVersionByContent: ({ partByName, registry, uriContractReader }, done) => {
+		if (uriContractReader !== undefined) {
+			uriContractReader.layerHistoryFor(partByName.layerKey, (readError, history) => {
+				const version = readError || history === null ? undefined : history.versionList.find((oneVersion) => oneVersion.contentId === partByName.contentId);
+				if (version === undefined) {
+					done(readError ? answer(500, { kind: 'layerVersionByContent', error: readError }) : answer(404, { kind: 'layerVersionByContent', error: `layer '${partByName.layerKey}' has no published version with content ${partByName.contentId}` }));
+					return;
+				}
+				layerVersionRecordAnswerFor({ kind: 'layerVersionByContent', layerKey: partByName.layerKey, versionTag: version.versionTag, uriContractReader }, done);
+			});
+			return;
+		}
 		const found = registry.layerFor(partByName.layerKey);
 		const version = found.error ? undefined : found.layer.versionList.find((oneVersion) => oneVersion.administrationRecord.contentId === partByName.contentId);
 		done(version === undefined ? answer(404, { error: found.error || `layer '${partByName.layerKey}' has no version with content ${partByName.contentId}` }) : answer(200, { kind: 'layerVersionByContent', layerKey: partByName.layerKey, effectiveRegistrationStatus: registry.effectiveStatusFor({ layerKey: partByName.layerKey, versionTag: version.administrationRecord.versionTag }).registrationStatus, version }));
@@ -344,8 +487,46 @@ const RESOLUTION_BY_KIND = Object.freeze({
 	},
 	// ⟪ML3-a⟫ a declared mapping predicate answers its definition (uriScheme.json vocabularyTermDefinitionByName)
 	vocabularyTerm: ({ partByName, iri }, done) => done(answer(200, { kind: 'vocabularyTerm', term: iri, termName: partByName.termName, definition: URI_SCHEME.vocabularyTermDefinitionByName[partByName.termName] })),
-	element: ({ partByName }, done) => done(answer(200, { kind: 'element', partByName, note: 'parsed only: the element\'s graph record is not served by the ML1 stub' })),
-	meaning: ({ partByName }, done) => done(answer(200, { kind: 'meaning', partByName, note: 'parsed only: the card\'s graph record is not served by the ML1 stub' })),
+	// ⟪ML3.1, Q4⟫ with a uriContract reader an element and a meaning answer their relations; without one, the parse as in ML1
+	element: (context, done) => (context.uriContractReader === undefined ? done(answer(200, { kind: 'element', partByName: context.partByName, note: 'parsed only: the stub was started without a uriContract reader' })) : elementAnswerFor(context, done)),
+	meaning: ({ partByName, iri, uriContractReader }, done) => {
+		if (uriContractReader === undefined) {
+			done(answer(200, { kind: 'meaning', partByName, note: 'parsed only: the stub was started without a uriContract reader' }));
+			return;
+		}
+		uriContractReader.mappingsToMeaningFor(iri, (readError, mappingList) =>
+			done(readerAnswer({ kind: 'meaning', readError, found: mappingList, notFoundText: '' }, (found) => ({ meaning: iri, partByName, mappedElementCount: found.reduce((soFar, oneRow) => soFar + oneRow.elementCount, 0), mappingList: found.map((oneRow) => ({ ...oneRow, manifest: mintUriOf({ kind: 'manifestByContent', manifestRefId: oneRow.manifestRefId }), layerVersion: oneRow.layerKey === null ? null : mintUriOf({ kind: 'layerVersion', layerKey: oneRow.layerKey, versionTag: oneRow.versionTag }) })) }))),
+		);
+	},
+	// ⟪ML3.1, Q4⟫ a manifest answers its inventory; ⟪Q5⟫ the discovery forms
+	manifest: withReader('manifest', ({ partByName, uriContractReader }, done) => manifestInventoryAnswerFor({ kind: 'manifest', manifestAddress: manifestAddressOf(partByName), uriContractReader }, done)),
+	manifestByContent: withReader('manifestByContent', ({ partByName, uriContractReader }, done) => manifestInventoryAnswerFor({ kind: 'manifestByContent', manifestAddress: manifestAddressOf(partByName), uriContractReader }, done)),
+	root: withReader('root', ({ iri, uriContractReader }, done) =>
+		uriContractReader.rootCountsFor((readError, counts) =>
+			done(readerAnswer({ kind: 'root', readError, found: counts, notFoundText: '' }, (found) => ({ root: iri, entryPointList: [{ kind: 'scheme', uri: mintUriOf({ kind: 'scheme' }) }, { kind: 'manifestList', uri: mintUriOf({ kind: 'manifestList' }), count: found.manifestCount }, { kind: 'siteLayerRegistry', uri: mintUriOf({ kind: 'siteLayerRegistry' }), layerCount: found.layerCount, layerVersionCount: found.layerVersionCount }, { kind: 'agentList', uri: mintUriOf({ kind: 'agentList' }), count: found.agentCount }] }))),
+		),
+	),
+	// the scheme answers ITSELF: the very object the parser compiled, plus the reserved words it derived, so the two cannot disagree
+	siteLayerRegistry: withReader('siteLayerRegistry', ({ iri, uriContractReader }, done) =>
+		uriContractReader.layerListFor((readError, layerList) =>
+			done(readerAnswer({ kind: 'siteLayerRegistry', readError, found: layerList, notFoundText: '' }, (found) => ({ registry: iri, layerList: found.map((oneLayer) => ({ ...oneLayer, layer: mintUriOf({ kind: 'layer', layerKey: oneLayer.layerKey }) })) }))),
+		),
+	),
+	scheme: ({ iri }, done) => done(answer(200, { kind: 'scheme', scheme: iri, reservedWordList: edcUri.RESERVED_WORD_LIST, kindCount: edcUri.KIND_LIST.length, uriScheme: URI_SCHEME })),
+	manifestList: withReader('manifestList', ({ iri, pageNumber, uriContractReader }, done) =>
+		uriContractReader.publishedManifestListFor({ pageNumber, pageSize: LISTING_PAGING.pageSize }, (readError, page) =>
+			done(readError ? answer(500, { kind: 'manifestList', error: readError }) : pagedAnswer({ kind: 'manifestList', iri, pageNumber, totalCount: page.totalCount, itemListName: 'manifestList', itemList: page.manifestList.map((oneManifest) => ({ ...oneManifest, manifest: mintUriOf({ kind: 'manifest', publicLabel: oneManifest.publicLabel }), manifestByContent: mintUriOf({ kind: 'manifestByContent', manifestRefId: oneManifest.manifestRefId }) })) })),
+		),
+	),
+	manifestStandardList: withReader('manifestStandardList', (context, done) => manifestStandardListAnswerFor({ ...context, kind: 'manifestStandardList' }, done)),
+	manifestStandardListByContent: withReader('manifestStandardListByContent', (context, done) => manifestStandardListAnswerFor({ ...context, kind: 'manifestStandardListByContent' }, done)),
+	manifestElementList: withReader('manifestElementList', (context, done) => manifestElementListAnswerFor({ ...context, kind: 'manifestElementList' }, done)),
+	manifestElementListByContent: withReader('manifestElementListByContent', (context, done) => manifestElementListAnswerFor({ ...context, kind: 'manifestElementListByContent' }, done)),
+	agentList: withReader('agentList', ({ iri, pageNumber, uriContractReader }, done) =>
+		uriContractReader.agentListFor({ pageNumber, pageSize: LISTING_PAGING.pageSize }, (readError, page) =>
+			done(readError ? answer(500, { kind: 'agentList', error: readError }) : pagedAnswer({ kind: 'agentList', iri, pageNumber, totalCount: page.totalCount, itemListName: 'agentList', itemList: page.agentList.map((oneAgent) => profileOf(oneAgent.profile)) })),
+		),
+	),
 	// ⟪ML3.1⟫ the four question forms share one answer; schema blocks answer their text or, held, their metadata (Q51)
 	question: withReader('question', (context, done) => questionAnswerFor({ ...context, kind: 'question' }, done)),
 	questionForHub: withReader('questionForHub', (context, done) => questionAnswerFor({ ...context, kind: 'questionForHub' }, done)),
@@ -390,12 +571,19 @@ const resolveEdcUri = ({ uriOrPath, registry, blockTextForHash, uriContractReade
 		callback('', answer(400, { error: parsed.error }));
 		return;
 	}
-	const resolution = RESOLUTION_BY_KIND[parsed.kind];
-	if (resolution === undefined) {
-		callback('', answer(501, { kind: parsed.kind, partByName: parsed.partByName, error: `the stub does not resolve kind '${parsed.kind}' (manifest kinds: ML5)` }));
+	// ⟪ML3.1, Q5⟫ a query is a VIEW (a listing's page), never part of the identity; anything else carrying one is refused by name
+	const queryText = typeof uriOrPath === 'string' && uriOrPath.indexOf('?') !== -1 ? uriOrPath.slice(uriOrPath.indexOf('?') + 1) : '';
+	const paging = pageNumberFor(queryText, parsed.kind);
+	if (paging.error) {
+		callback('', answer(400, { kind: parsed.kind, error: paging.error }));
 		return;
 	}
-	resolution({ partByName: parsed.partByName, iri: edcUri.mint({ kind: parsed.kind, ...parsed.partByName }).uri, registry, blockTextForHash, uriContractReader }, (resolved) => callback('', resolved));
+	const resolution = RESOLUTION_BY_KIND[parsed.kind];
+	if (resolution === undefined) {
+		callback('', answer(501, { kind: parsed.kind, partByName: parsed.partByName, error: `the stub does not resolve kind '${parsed.kind}'` }));
+		return;
+	}
+	resolution({ partByName: parsed.partByName, iri: edcUri.mint({ kind: parsed.kind, ...parsed.partByName }).uri, registry, blockTextForHash, uriContractReader, pageNumber: paging.pageNumber }, (resolved) => callback('', resolved));
 };
 
 module.exports = { resolveEdcUri, edcIriFor, RESOLUTION_BY_KIND, LICENCE_HOLD_BY_STANDARD_KEY, AGENT_PROFILE_FIELD_LIST, W3ID_PATH_PREFIX, moduleName };
