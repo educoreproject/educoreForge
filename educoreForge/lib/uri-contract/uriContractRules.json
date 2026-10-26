@@ -15,6 +15,13 @@
 	"layerFieldList": ["layerKey", "displayName", "layerKind", "authorAgentIri", "standardList", "hubList", "versionList", "statusChangeList"],
 	"versionFieldList": ["administrationRecord", "registrationStatus", "authorAgentIri", "contentIdBasis", "memberBlockList", "wholeSetBlock", "sssomPath", "importRecord", "copiedFromLayerVersion", "scoreList", "note"],
 	"statusChangeFieldList": ["versionTag", "registrationStatus", "changedAt", "changedBy", "supersededByVersionTag", "note"],
-	"agentFieldList": ["agentIri", "agentKind", "displayName", "aliasIri", "note"],
+	"agentFieldList": ["agentIri", "agentKind", "displayName", "description", "homepageIri", "aliasIriList", "judgeConfiguration", "note"],
+	"agentFieldListByKind": {
+		"about": "TQ ruling Q3 (2026-10-26): persons stay strictly pseudonymous (a role and aliases such as an ORCID, never a name, never an e-mail); only a judge carries a configuration; a person has no homepage",
+		"person": ["agentIri", "agentKind", "displayName", "description", "aliasIriList", "note"],
+		"judge": ["agentIri", "agentKind", "displayName", "description", "homepageIri", "aliasIriList", "judgeConfiguration", "note"],
+		"organisation": ["agentIri", "agentKind", "displayName", "description", "homepageIri", "aliasIriList", "note"]
+	},
+	"personTextRefusalPattern": "[^\\s@]+@[^\\s@]+\\.[^\\s@]+",
 	"agentRegistryTopFieldList": ["about", "agentList"]
 }

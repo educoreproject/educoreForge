@@ -20,16 +20,18 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     decisionSchemaBlockTextFor(hash)       → { frozenText } | { error }        frozenText null when absent; VERIFIED
 //     decisionSchemaBlockFor(hash)           → { decisionSchemaBlock } | { error }  the row { hash, pairKey, producerKind, frozenText }
 //     schemaBlockFor(refId)                  → { schemaBlock } | { error }       schemaBlock null when absent; VERIFIED
+//     frozenVectorFor(vectorId)              → { frozenVector } | { error }      the vector-store getVector record shape; VERIFIED
 //     publishedManifestFor({ publicLabel } | { manifestRefId }) → { publishedManifest } | { error }   null when absent
 //     publishedManifestList()                → [{ manifestRefId, publicLabel, publishedAt }] in publication order
 //   WRITERS (publish and create modes only; each is ONE transaction, refused whole or written whole)
 //     appendAgent(agent)                                         → { alreadyPresent } | { error }
 //     appendLayerVersion({ layer, version, decisionSchemaBlockList }) → { alreadyPresent } | { error }
 //     appendLayerStatusChange({ layerKey, statusChange })         → { rowId } | { error }
-//     publishManifest({ ... })                                    → { alreadyPresent } | { error }
+//     publishManifest({ ... , frozenVectorList })                 → { alreadyPresent } | { error }   with exactly the frozen
+//                                                                    vectors its members reference by embeddingRef
 //
 // THE RULES THIS MODULE KEEPS, each a refusal by name:
-//   * NO UPDATE, NO DELETE. The module issues neither; the schema adds BEFORE UPDATE / BEFORE DELETE triggers that abort, so
+//   * NO UPDATE, NO DELETE. The module issues neither; the schema adds BEFORE UPDATE / BEFORE DELETE triggers on all nine tables, so
 //     raw SQL cannot edit the file either. A status change is a new history row.
 //   * IDENTITY ROWS ARE INSERTED ONCE. Re-writing an identical identity row answers alreadyPresent; a different row under
 //     the same identity is refused (a published thing never changes).
@@ -180,7 +182,16 @@ const appendedStatusRowFor = ({ layerKey, statusChange }) => ({
 	changedByAgentIri: statusChange.changedBy,
 	note: statusChange.note === undefined ? null : statusChange.note,
 });
-const agentRowFor = (agent) => ({ agentIri: agent.agentIri, agentKind: agent.agentKind, displayName: agent.displayName, aliasIri: agent.aliasIri === undefined ? null : agent.aliasIri, note: agent.note === undefined ? null : agent.note });
+const agentRowFor = (agent) => ({
+	agentIri: agent.agentIri,
+	agentKind: agent.agentKind,
+	displayName: agent.displayName,
+	description: agent.description === undefined ? null : agent.description,
+	homepageIri: agent.homepageIri === undefined ? null : agent.homepageIri,
+	aliasIriListJson: jsonOrNull(agent.aliasIriList),
+	judgeConfigurationJson: jsonOrNull(agent.judgeConfiguration),
+	note: agent.note === undefined ? null : agent.note,
+});
 
 // withOptionalFields(base, [[fieldName, columnValue]]) → base plus each field whose column is not NULL
 const withOptionalFields = (base, pairList) => pairList.reduce((soFar, [fieldName, columnValue]) => (columnValue === null || columnValue === undefined ? soFar : { ...soFar, [fieldName]: columnValue }), base);
@@ -204,10 +215,39 @@ const versionFromRows = ({ versionRow, publicationRow }) =>
 		],
 	);
 const statusChangeFromRow = (statusRow) => withOptionalFields({ versionTag: statusRow.versionTag, registrationStatus: statusRow.registrationStatus, changedAt: statusRow.changedAt, changedBy: statusRow.changedByAgentIri }, [['supersededByVersionTag', statusRow.supersededByVersionTag], ['note', statusRow.note]]);
-const agentFromRow = (agentRow) => withOptionalFields({ agentIri: agentRow.agentIri, agentKind: agentRow.agentKind, displayName: agentRow.displayName }, [['aliasIri', agentRow.aliasIri], ['note', agentRow.note]]);
+const agentFromRow = (agentRow) => withOptionalFields({ agentIri: agentRow.agentIri, agentKind: agentRow.agentKind, displayName: agentRow.displayName }, [['description', agentRow.description], ['homepageIri', agentRow.homepageIri], ['aliasIriList', parsedOrUndefined(agentRow.aliasIriListJson)], ['judgeConfiguration', parsedOrUndefined(agentRow.judgeConfigurationJson)], ['note', agentRow.note]]);
+
+// FROZEN VECTORS — the same three checks lib/vector-store getVector makes on every read (W-C-12: grammar 2, or grammar 1 for a
+// row minted before campaign P3), applied on the way IN as well as on the way out
+const FROZEN_VECTOR_DTYPE = 'float32';
+const NO_TERM_FOUND_OBJECT_LIST = Object.freeze(['sssom:NoTermFound', 'https://w3id.org/sssom/NoTermFound']);
+const BYTES_PER_FLOAT = 4;
+const frozenVectorRefusal = (row) => {
+	if (row.dtype !== FROZEN_VECTOR_DTYPE || !Buffer.isBuffer(row.vector) || row.vector.length !== Number(row.dims) * BYTES_PER_FLOAT) {
+		return `structure: dtype ${JSON.stringify(row.dtype)} (expected ${FROZEN_VECTOR_DTYPE}), ${Buffer.isBuffer(row.vector) ? row.vector.length : 'no'} bytes for ${row.dims} dims`;
+	}
+	const NUL = String.fromCharCode(0);
+	if (`${row.modelVersion}`.indexOf(NUL) !== -1 || `${row.inputText}`.indexOf(NUL) !== -1) {
+		return 'a stored determinant carries a NUL byte';
+	}
+	const recomputedId = contentAddress.vectorIdForInput({ modelVersion: row.modelVersion, embeddingDims: Number(row.dims), inputText: row.inputText });
+	if (recomputedId !== row.vectorId && contentAddress.versionOneVectorIdForInput(row.modelVersion, row.inputText) !== row.vectorId) {
+		return `determinants: (modelVersion, dims, inputText) hash to ${recomputedId}, not the vectorId`;
+	}
+	return contentAddress.vectorHashForBytes(row.vector) === row.vectorHash ? '' : `payload: the vector bytes hash to ${contentAddress.vectorHashForBytes(row.vector)}, not vectorHash ${row.vectorHash}`;
+};
+const decodedVectorOf = (vectorBuffer, dims) => Array.from({ length: Number(dims) }, (unused, floatIndex) => vectorBuffer.readFloatLE(floatIndex * BYTES_PER_FLOAT));
+
+// embeddingRefListOf(blockText) → every embeddingRef a schema block's node lines carry (each node line parsed, never pattern-matched)
+const embeddingRefListOf = (blockText) =>
+	blockText
+		.split('\n')
+		.filter((oneLine) => oneLine.indexOf('"kind":"node"') !== -1 && oneLine.indexOf('"embeddingRef"') !== -1)
+		.map((oneLine) => JSON.parse(oneLine).embeddingRef)
+		.filter((embeddingRef) => typeof embeddingRef === 'string' && embeddingRef.length > 0);
 
 // identityRowsEqual(left, right) → the two rows say the same thing, column for column
-const identityRowsEqual = (leftRow, rightRow) => Object.keys(rightRow).every((columnName) => leftRow[columnName] === rightRow[columnName]);
+const identityRowsEqual = (leftRow, rightRow) => Object.keys(rightRow).every((columnName) => (Buffer.isBuffer(rightRow[columnName]) ? Buffer.isBuffer(leftRow[columnName]) && leftRow[columnName].equals(rightRow[columnName]) : leftRow[columnName] === rightRow[columnName]));
 
 // ---------------------------------------------------------------------
 // THE STORE, over an injected handle
@@ -297,6 +337,15 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		}
 		return sha256Hex(row.text) === refId ? { schemaBlock: { ...row, requires: JSON.parse(row.requiresJson) } } : { error: refusalText(`schema block ${refId} fails verify-on-read (its text hashes to ${sha256Hex(row.text)})`, 'a corrupted row is a defect to report; this file is never repaired') };
 	};
+	// frozenVectorFor — the record lib/vector-store getVector returns, verified as getVector verifies (structure, determinants, payload)
+	const frozenVectorFor = (vectorId) => {
+		const row = database.prepare('SELECT * FROM frozenVectors WHERE vectorId = ?').get(vectorId);
+		if (row === undefined) {
+			return { frozenVector: null };
+		}
+		const fault = frozenVectorRefusal(row);
+		return fault ? { error: refusalText(`frozen vector ${vectorId} fails verify-on-read: ${fault}`, 'a corrupted row is a defect to report; this file is never repaired') } : { frozenVector: { vectorId: row.vectorId, modelVersion: row.modelVersion, dims: row.dims, dtype: row.dtype, inputText: row.inputText, vector: decodedVectorOf(row.vector, row.dims), vectorHash: row.vectorHash } };
+	};
 	const publishedManifestFor = ({ publicLabel, manifestRefId } = {}) => {
 		const row = isNonEmptyString(manifestRefId) ? database.prepare('SELECT * FROM publishedManifests WHERE manifestRefId = ?').get(manifestRefId) : database.prepare('SELECT * FROM publishedManifests WHERE publicLabel = ?').get(publicLabel);
 		if (row === undefined) {
@@ -310,9 +359,74 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		const statusChangeList = database.prepare('SELECT * FROM manifestStatusChanges WHERE manifestRefId = ? ORDER BY rowId').all(row.manifestRefId);
 		return { publishedManifest: { ...row, defaultLayerByHub: row.defaultLayerByHubJson === null ? null : JSON.parse(row.defaultLayerByHubJson), memberList, statusChangeList, effectiveRegistrationStatus: statusChangeList[statusChangeList.length - 1].registrationStatus } };
 	};
+	// ⟪TQ ruling Q3⟫ agentRecordFor — the agent's PROFILE (its row) plus a RECORD computed, never stored: every layer version in which
+	// it holds a role, that version's effective status and its assertion and abstention counts (read from the version's own frozen
+	// blocks: a judged record with an objectStableId is an assertion, one without is an abstention; a set row whose object is
+	// sssom:NoTermFound is an abstention), the scores recorded with its versions, and its first and last contribution dates
+	const countByBlockHash = new Map();
+	const countsForBlock = (decisionSchemaBlockHash) => {
+		if (countByBlockHash.has(decisionSchemaBlockHash)) {
+			return countByBlockHash.get(decisionSchemaBlockHash);
+		}
+		const read = decisionSchemaBlockTextFor(decisionSchemaBlockHash);
+		if (read.error || read.frozenText === null) {
+			return { error: read.error || refusalText(`decision schema block ${decisionSchemaBlockHash} is not held`, 'a layer version\'s blocks are copied with it') };
+		}
+		const counted = read.frozenText.charAt(0) === '{'
+			? JSON.parse(read.frozenText).decisionRecordList.reduce((soFar, oneRecord) => (isNonEmptyString(oneRecord.objectStableId) ? { ...soFar, assertionCount: soFar.assertionCount + 1 } : { ...soFar, abstentionCount: soFar.abstentionCount + 1 }), { assertionCount: 0, abstentionCount: 0 })
+			: (() => {
+					const lineList = read.frozenText.split('\n').filter((oneLine) => oneLine.length > 0 && !oneLine.startsWith('#'));
+					const objectIndex = lineList.length ? lineList[0].split('\t').indexOf('object_id') : -1;
+					return lineList.slice(1).reduce((soFar, oneLine) => (NO_TERM_FOUND_OBJECT_LIST.indexOf(oneLine.split('\t')[objectIndex]) !== -1 ? { ...soFar, abstentionCount: soFar.abstentionCount + 1 } : { ...soFar, assertionCount: soFar.assertionCount + 1 }), { assertionCount: 0, abstentionCount: 0 });
+				})();
+		countByBlockHash.set(decisionSchemaBlockHash, counted);
+		return counted;
+	};
+	const agentRecordFor = (agentIri) => {
+		const agentRow = database.prepare('SELECT * FROM agents WHERE agentIri = ?').get(agentIri);
+		if (agentRow === undefined) {
+			return { agentRecord: null };
+		}
+		const loaded = loadRegistry();
+		if (loaded.error) {
+			return loaded;
+		}
+		const { layerRegistry } = loaded.registry;
+		const layersAuthored = [];
+		const scores = [];
+		const contributionDateList = [];
+		for (let layerIndex = 0; layerIndex < layerRegistry.layerList.length; layerIndex++) {
+			const oneLayer = layerRegistry.layerList[layerIndex];
+			const versionList = [];
+			for (let versionIndex = 0; versionIndex < oneLayer.versionList.length; versionIndex++) {
+				const oneVersion = oneLayer.versionList[versionIndex];
+				const record = oneVersion.administrationRecord;
+				const roleList = [['layerAuthor', oneLayer.authorAgentIri], ['versionAuthor', oneVersion.authorAgentIri], ['submitter', record.submitter], ['registrationAuthority', record.registrationAuthority], ['registrar', record.registrar]].filter(([, roleAgentIri]) => roleAgentIri === agentIri).map(([roleName]) => roleName);
+				if (roleList.length === 0) {
+					continue;
+				}
+				const countedBlockList = oneVersion.contentIdBasis === 'frozenSetBytes' ? [oneVersion.wholeSetBlock] : oneVersion.memberBlockList;
+				const countList = countedBlockList.map((oneBlock) => countsForBlock(oneBlock.decisionBlockHash));
+				const countFault = countList.find((oneCount) => oneCount.error);
+				if (countFault !== undefined) {
+					return { error: countFault.error };
+				}
+				const layerVersionUri = edcUri.mint({ kind: 'layerVersion', layerKey: oneLayer.layerKey, versionTag: record.versionTag }).uri;
+				versionList.push({ versionTag: record.versionTag, layerVersionUri, contentId: record.contentId, publishedAt: record.publishedAt, effectiveRegistrationStatus: loaded.registry.effectiveStatusFor({ layerKey: oneLayer.layerKey, versionTag: record.versionTag }).registrationStatus, roleList, assertionCount: countList.reduce((soFar, oneCount) => soFar + oneCount.assertionCount, 0), abstentionCount: countList.reduce((soFar, oneCount) => soFar + oneCount.abstentionCount, 0) });
+				(oneVersion.scoreList || []).forEach((oneScore) => scores.push({ layerVersionUri, ...oneScore }));
+				contributionDateList.push(record.publishedAt);
+			}
+			oneLayer.statusChangeList.filter((oneChange) => oneChange.changedBy === agentIri).forEach((oneChange) => contributionDateList.push(oneChange.changedAt));
+			if (versionList.length) {
+				layersAuthored.push({ layerKey: oneLayer.layerKey, layerUri: edcUri.mint({ kind: 'layer', layerKey: oneLayer.layerKey }).uri, layerKind: oneLayer.layerKind, displayName: oneLayer.displayName, versionList });
+			}
+		}
+		const sortedDateList = contributionDateList.slice().sort();
+		return { agentRecord: { profile: agentFromRow(agentRow), layersAuthored, scores, firstContributionAt: sortedDateList.length ? sortedDateList[0] : null, lastContributionAt: sortedDateList.length ? sortedDateList[sortedDateList.length - 1] : null, recordNote: 'computed from layerVersions and layerStatusChanges at resolution; never stored' } };
+	};
 	const publishedManifestList = () => database.prepare('SELECT manifestRefId, publicLabel, publishedAt FROM publishedManifests ORDER BY rowid').all();
 
-	const readerApi = { accessMode, registryShape, loadRegistry, decisionSchemaBlockTextFor, decisionSchemaBlockFor, schemaBlockFor, publishedManifestFor, publishedManifestList, close: () => database.close() };
+	const readerApi = { accessMode, registryShape, loadRegistry, decisionSchemaBlockTextFor, decisionSchemaBlockFor, schemaBlockFor, frozenVectorFor, agentRecordFor, publishedManifestFor, publishedManifestList, close: () => database.close() };
 	if (accessMode === 'read') {
 		return { uriContract: readerApi };
 	}
@@ -347,7 +461,22 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		return ran.error ? { error: refusalText(`the write was rolled back: ${ran.error}`, 'uriContract writes are one transaction each') } : ran.result;
 	};
 
-	const agentRefusalFor = (agent) => closedFieldRefusal({ candidate: agent, fieldList: URI_CONTRACT_RULES.agentFieldList, label: `agent ${JSON.stringify(agent && agent.agentIri)}` });
+	// agentRefusalFor — the closed field list OF ITS KIND (a person carries no homepage and no configuration), and a person's text
+	// never carries an e-mail address (TQ ruling Q3: persons stay strictly pseudonymous)
+	const agentRefusalFor = (agent) => {
+		const label = `agent ${JSON.stringify(agent && agent.agentIri)}`;
+		const kindFieldList = isPlainObject(agent) ? URI_CONTRACT_RULES.agentFieldListByKind[agent.agentKind] : undefined;
+		if (!Array.isArray(kindFieldList)) {
+			return `${label} has agentKind ${JSON.stringify(agent && agent.agentKind)}, which is not one of ${Object.keys(URI_CONTRACT_RULES.agentFieldListByKind).filter((kindName) => kindName !== 'about').join(', ')}`;
+		}
+		const fieldFault = closedFieldRefusal({ candidate: agent, fieldList: kindFieldList, label: `${label} (a ${agent.agentKind})` });
+		if (fieldFault) {
+			return fieldFault;
+		}
+		const aliasFault = agent.aliasIriList !== undefined && (!Array.isArray(agent.aliasIriList) || !agent.aliasIriList.every(isNonEmptyString));
+		const emailField = agent.agentKind === 'person' ? ['displayName', 'description', 'note'].find((fieldName) => typeof agent[fieldName] === 'string' && new RegExp(URI_CONTRACT_RULES.personTextRefusalPattern).test(agent[fieldName])) : undefined;
+		return aliasFault ? `${label}: aliasIriList is a list of IRIs` : emailField !== undefined ? `${label}: a person's ${emailField} carries an e-mail address; persons are pseudonymous (a role and aliases, never a name or an e-mail)` : '';
+	};
 	const appendAgent = (agent) => {
 		const fieldFault = agentRefusalFor(agent);
 		if (fieldFault) {
@@ -432,7 +561,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 	// publishManifest — the identity row, its members in order, every member schema block (the closure: a member's requires
 	// must be members too), and the first status row, in ONE transaction. Re-publishing the same manifest under the same label
 	// answers alreadyPresent and writes nothing; a second label for one manifest, or one label for two, is refused.
-	const publishManifest = ({ manifestRefId, publicLabel, memberList, defaultLayerByHub, basedOnManifestRefId, recordedNodeCount, recordedEdgeCount, publishedAt, publishedByAgentIri, registrationStatus, registrationAuthority, note } = {}) => {
+	const publishManifest = ({ manifestRefId, publicLabel, memberList, frozenVectorList, defaultLayerByHub, basedOnManifestRefId, recordedNodeCount, recordedEdgeCount, publishedAt, publishedByAgentIri, registrationStatus, registrationAuthority, note } = {}) => {
 		if (!isNonEmptyString(publicLabel) || !new RegExp(URI_CONTRACT_RULES.publicLabelPattern).test(publicLabel) || URI_CONTRACT_RULES.reservedPublicLabelList.indexOf(publicLabel) !== -1) {
 			return { error: refusalText(`publicLabel ${JSON.stringify(publicLabel)} must match ${URI_CONTRACT_RULES.publicLabelPattern} and is never a reserved word (${URI_CONTRACT_RULES.reservedPublicLabelList.join(', ')})`, 'uriContractRules.json; the label is TQ\'s to choose') };
 		}
@@ -467,6 +596,21 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		if (blockFault !== undefined) {
 			return { error: refusalText(blockFault, 'publishManifest memberList') };
 		}
+		// the frozen vectors: EXACTLY the set the members reference (none missing, none extra), each verified before it is written
+		if (!Array.isArray(frozenVectorList)) {
+			return { error: refusalText('frozenVectorList is required (an empty list is stated, never assumed)', 'publishManifest copies every vector its members reference by embeddingRef') };
+		}
+		const referencedVectorIdSet = new Set(memberList.reduce((soFar, { schemaBlock }) => soFar.concat(embeddingRefListOf(schemaBlock.text)), []));
+		const offeredVectorIdSet = new Set(frozenVectorList.map((oneVector) => oneVector.vectorId));
+		const absentVectorId = [...referencedVectorIdSet].find((vectorId) => !offeredVectorIdSet.has(vectorId));
+		const extraVectorId = [...offeredVectorIdSet].find((vectorId) => !referencedVectorIdSet.has(vectorId));
+		if (absentVectorId !== undefined || extraVectorId !== undefined || offeredVectorIdSet.size !== frozenVectorList.length) {
+			return { error: refusalText(absentVectorId !== undefined ? `a member references vector ${absentVectorId}, which frozenVectorList does not carry (${referencedVectorIdSet.size} referenced, ${offeredVectorIdSet.size} offered)` : extraVectorId !== undefined ? `frozenVectorList carries vector ${extraVectorId}, which no member references` : 'frozenVectorList names one vectorId twice', 'uriContract holds all and ONLY the vectors its published blocks reference') };
+		}
+		const badVector = frozenVectorList.map((oneVector) => ({ vectorId: oneVector.vectorId, fault: frozenVectorRefusal(oneVector) })).find((oneCheck) => oneCheck.fault !== '');
+		if (badVector !== undefined) {
+			return { error: refusalText(`frozen vector ${badVector.vectorId}: ${badVector.fault}`, 'a vector is verified before it is written, as on every read') };
+		}
 		const uriMint = edcUri.mint({ kind: 'manifest', publicLabel });
 		const uriByContentMint = edcUri.mint({ kind: 'manifestByContent', manifestRefId });
 		if (uriMint.error || uriByContentMint.error) {
@@ -484,6 +628,12 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 				.find((oneOutcome) => oneOutcome.error);
 			if (blockOutcome !== undefined) {
 				return blockOutcome;
+			}
+			const vectorOutcome = frozenVectorList
+				.map((oneVector) => insertIdentityRow({ tableName: 'frozenVectors', row: { vectorId: oneVector.vectorId, modelVersion: oneVector.modelVersion, dims: Number(oneVector.dims), dtype: oneVector.dtype, inputText: oneVector.inputText, vector: oneVector.vector, vectorHash: oneVector.vectorHash }, identityWhereSql: 'vectorId = ?', identityValueList: [oneVector.vectorId] }))
+				.find((oneOutcome) => oneOutcome.error);
+			if (vectorOutcome !== undefined) {
+				return vectorOutcome;
 			}
 			database.prepare(insertSqlFor('publishedManifests', manifestRow)).run(manifestRow);
 			memberList.forEach((oneMember) => {
@@ -525,14 +675,39 @@ const openUriContractFile = ({ uriContractFilePath, accessMode, writerActionName
 	return built;
 };
 
-// uriContractReaderFor — the three-function reader lane A's stubResolver kind cases are injected with; nothing more is exposed
+// uriContractReaderFor — THE uriContractReader lane A's stubResolver kind cases are injected with, VERBATIM as declared in
+// lib/edc-uri/stubResolver.js on ml/m31a-respell (AMBER_JOURNEY relay 2026-10-26). Callback style; null = not published; err =
+// reader failure (a hash that fails verify-on-read is an err); nothing else is exposed.
+//   schemaBlockFor(schemaBlockRefId, cb(err, { schemaBlockRefId, blockKind, subject, version, text } | null))
+//   decisionSchemaBlockFor(decisionBlockHash, cb(err, { decisionBlockHash, pairKey, frozenText } | null))
+//   publishedManifestFor({ publicLabel } | { manifestRefId }, cb(err, { manifestRefId, publicLabel, publishedAt, memberList: [{ schemaBlockRefId,
+//       position }], defaultLayerByHub: null | { <hubSegment>: { decisionBlockHashList } }, latestStatus: { registrationStatus, changedAt } } | null))
+//   agentRecordFor(agentIri, cb(err, { profile, layersAuthored, scores, firstContributionAt, lastContributionAt } | null))
 const uriContractReaderFor = ({ uriContractFilePath } = {}) => {
 	const opened = openUriContractFile({ uriContractFilePath, accessMode: 'read' });
 	if (opened.error) {
 		return opened;
 	}
-	const { schemaBlockFor, decisionSchemaBlockFor, publishedManifestFor } = opened.uriContract;
-	return { uriContractReader: { schemaBlockFor, decisionSchemaBlockFor, publishedManifestFor }, uriContract: opened.uriContract };
+	const { uriContract } = opened;
+	const answerWith = (read, shapeFor, callback) => (read.error ? callback(read.error) : callback('', shapeFor(read)));
+	const uriContractReader = {
+		schemaBlockFor: (schemaBlockRefId, callback) => answerWith(uriContract.schemaBlockFor(schemaBlockRefId), ({ schemaBlock }) => (schemaBlock === null ? null : { schemaBlockRefId: schemaBlock.refId, blockKind: schemaBlock.kind, subject: schemaBlock.subject, version: schemaBlock.version, text: schemaBlock.text }), callback),
+		decisionSchemaBlockFor: (decisionBlockHash, callback) => answerWith(uriContract.decisionSchemaBlockFor(decisionBlockHash), ({ decisionSchemaBlock }) => (decisionSchemaBlock === null ? null : { decisionBlockHash: decisionSchemaBlock.decisionSchemaBlockHash, pairKey: decisionSchemaBlock.pairKey, frozenText: decisionSchemaBlock.frozenText }), callback),
+		publishedManifestFor: (manifestSelector, callback) =>
+			answerWith(
+				uriContract.publishedManifestFor(manifestSelector),
+				({ publishedManifest }) => {
+					if (publishedManifest === null) {
+						return null;
+					}
+					const latestStatusRow = publishedManifest.statusChangeList[publishedManifest.statusChangeList.length - 1];
+					return { manifestRefId: publishedManifest.manifestRefId, publicLabel: publishedManifest.publicLabel, publishedAt: publishedManifest.publishedAt, memberList: publishedManifest.memberList.map((oneMember) => ({ schemaBlockRefId: oneMember.schemaBlockRefId, position: oneMember.position })), defaultLayerByHub: publishedManifest.defaultLayerByHub, latestStatus: { registrationStatus: latestStatusRow.registrationStatus, changedAt: latestStatusRow.changedAt } };
+				},
+				callback,
+			),
+		agentRecordFor: (agentIri, callback) => answerWith(uriContract.agentRecordFor(agentIri), ({ agentRecord }) => agentRecord, callback),
+	};
+	return { uriContractReader, uriContract };
 };
 
-module.exports = { openUriContractFile, uriContractFor, uriContractReaderFor, schemaSqlList, URI_CONTRACT_SCHEMA, URI_CONTRACT_RULES, moduleName };
+module.exports = { openUriContractFile, uriContractFor, uriContractReaderFor, schemaSqlList, embeddingRefListOf, URI_CONTRACT_SCHEMA, URI_CONTRACT_RULES, moduleName };

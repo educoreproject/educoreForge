@@ -1,16 +1,19 @@
 {
-	"about": "The eight tables of uriContract.sqlite (ML3.1 Part B; PROPOSAL-dataStoreLayout-102626 section 3 and Appendix B, with the additive columns AMBER_JOURNEY accepted 2026-10-26). DATA: uriContract.js builds every CREATE TABLE, every write-once trigger and every INSERT from these rows, and refuses by name a row field no table lists. rowRole 'identity' = written once at publish; 'history' = append-only. NO TABLE IS EVER UPDATED OR DELETED FROM: each carries BEFORE UPDATE and BEFORE DELETE triggers that abort, so even raw SQL cannot edit the forever-promise. registrationStatus CHECKs are built from lib/layer-registry/layerRegistrySchema.json registrationStatusList, never restated here.",
+	"about": "The nine tables of uriContract.sqlite (ML3.1 Part B; PROPOSAL-dataStoreLayout-102626 section 3 and Appendix B, with the additive columns AMBER_JOURNEY accepted 2026-10-26, and the ninth table frozenVectors ruled the same day: a vector a published schema block references by embeddingRef is part of what RECREATES the graph, not a calculation input). DATA: uriContract.js builds every CREATE TABLE, every write-once trigger and every INSERT from these rows, and refuses by name a row field no table lists. rowRole 'identity' = written once at publish; 'history' = append-only. NO TABLE IS EVER UPDATED OR DELETED FROM: each carries BEFORE UPDATE and BEFORE DELETE triggers that abort, so even raw SQL cannot edit the forever-promise. registrationStatus CHECKs are built from lib/layer-registry/layerRegistrySchema.json registrationStatusList, never restated here.",
 	"writeOnceTriggerMessage": "uriContract is write-once: rows are never updated or deleted (a status change is a new history row)",
 	"tableList": [
 		{
 			"tableName": "agents",
 			"rowRole": "identity",
-			"about": "authors of record: people (pseudonymous, by userRefId), judges, organisations",
+			"about": "authors of record: people (pseudonymous, by userRefId: a role and aliases, never a name or an e-mail), judges (with their configuration), organisations; the PROFILE only. An agent URI also answers a computed RECORD (what the agent authored, its status, counts, scores, dates), which is NEVER stored: it is computed from layerVersions and layerStatusChanges (TQ ruling Q3, 2026-10-26)",
 			"columnList": [
 				{ "columnName": "agentIri", "sqlType": "TEXT", "constraintText": "PRIMARY KEY" },
 				{ "columnName": "agentKind", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (agentKind IN ('person', 'judge', 'organisation'))" },
 				{ "columnName": "displayName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
-				{ "columnName": "aliasIri", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "description", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "homepageIri", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "aliasIriListJson", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "judgeConfigurationJson", "sqlType": "TEXT", "constraintText": "" },
 				{ "columnName": "note", "sqlType": "TEXT", "constraintText": "" }
 			],
 			"tableConstraintList": []
@@ -27,6 +30,21 @@
 				{ "columnName": "requiresJson", "sqlType": "TEXT", "constraintText": "NOT NULL" },
 				{ "columnName": "text", "sqlType": "TEXT", "constraintText": "NOT NULL" },
 				{ "columnName": "producedBy", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": []
+		},
+		{
+			"tableName": "frozenVectors",
+			"rowRole": "identity",
+			"about": "every vector a published schema block references by embeddingRef (NOT the embedding cache): the support store's vectors rows, copied at publish; verify on read: dtype and length, the vectorId recipe over (modelVersion, dims, inputText) (grammar 2, or grammar 1 for a row minted before campaign P3), and sha256(vector) = vectorHash",
+			"columnList": [
+				{ "columnName": "vectorId", "sqlType": "TEXT", "constraintText": "PRIMARY KEY CHECK (length(vectorId) = 64)" },
+				{ "columnName": "modelVersion", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "dims", "sqlType": "INTEGER", "constraintText": "NOT NULL CHECK (dims > 0)" },
+				{ "columnName": "dtype", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "inputText", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "vector", "sqlType": "BLOB", "constraintText": "NOT NULL" },
+				{ "columnName": "vectorHash", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (length(vectorHash) = 64)" }
 			],
 			"tableConstraintList": []
 		},

@@ -7,7 +7,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // library and touches no manifest.
 //
 //   publishLayer({ sssomText, sssomPath, layerKey, versionTag, authorIri, registry, decisionStore, publishedAt, validateWithSssomPy }, cb)
-//     → cb('', { contentId, layerVersionUri, layerVersionByContentUri, alreadyPresent, wholeSetBlock, memberBlockList, layerRegistry })
+//     → cb('', { contentId, layerVersionUri, layerVersionByContentUri, alreadyPresent, wholeSetBlock, memberBlockList, layerRegistry,
+//                uriContractAppend })   ⟪ML3.1b⟫ uriContractAppend = { layer, version, decisionSchemaBlockList }: what -publishLayer appends
+//                                       to uriContract (absent when alreadyPresent)
 //
 // IN ORDER, each step refusing by name: (1) the TSV passes the exporter's own parseSssomTsv; (2) it passes sssom-py `sssom validate`
 // (the caller's validateWithSssomPy, a callback(errString) — the real validator, never a proxy); (3) the layer is registered and
@@ -18,7 +20,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // hubList (an unlisted source refused): the block's text is the set's header lines, its column line and that pair's rows in
 // source order, under pairKey <hubKey>@<hubVersion>::<standardKey>@<version>::layer.<layerKey>::<producerKind>; the WHOLE set is
 // also frozen once, under layerSet::<layerKey>, and its hash IS the content id; (7) every block is saved (idempotent: the store
-// answers alreadyPresent); (8) the registry gains the version as Candidate, by a new registry object the CALLER writes.
+// answers alreadyPresent); (8) the registry gains the version as Candidate, by a new registry object; ⟪ML3.1b⟫ the CALLER appends it to uriContract.
 //
 // TRAP: the decision store answers getDecisionBlock with the LATEST block per pairKey and never re-inserts identical bytes, so a
 // pair whose rows return to an earlier version's bytes leaves the store's "latest" pointing at the intervening block. The
@@ -210,7 +212,11 @@ const publishLayer = ({ sssomText, sssomPath, layerKey, versionTag, authorIri, r
 				callback(appended.error);
 				return;
 			}
-			callback('', { ...report, alreadyPresent: false, layerRegistry: appended.layerRegistry });
+			// ⟪ML3.1b⟫ what the caller appends to uriContract (lib/uri-contract appendLayerVersion): the layer, the version and the
+			// frozen text of every block it is made of, so the forever store never depends on the working decision store
+			const decisionSchemaBlockList = [{ pairKey: wholeSetPairKey, producerKind, frozenText: sssomText }].concat(split.pairBlockList.map((onePair) => ({ pairKey: onePair.pairKey, producerKind, frozenText: onePair.frozenText })));
+			const uriContractAppend = { layer: appended.layerRegistry.layerList.find((oneLayer) => oneLayer.layerKey === layerKey), version, decisionSchemaBlockList };
+			callback('', { ...report, alreadyPresent: false, layerRegistry: appended.layerRegistry, uriContractAppend });
 		});
 	});
 };

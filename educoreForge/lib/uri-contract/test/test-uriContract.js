@@ -148,7 +148,13 @@ const rawHandleFor = (filePath) => new Database(filePath, { fileMustExist: true 
 const headerFor = (standardKey) => ({ blockType: 'standardBase', standardKey, version: '1', stableUriPropertyName: 'stableId', resolutionKey: 'stableId' });
 const nodeFor = (stableId) => ({ ref: { source: 'Toy', id: stableId }, labels: ['ForgedNode', 'ToyNode'], stableId, properties: { name: [stableId] } });
 const edgeFor = (fromStableId, toStableId) => ({ type: 'HAS_PART', fromRef: { source: 'Toy', id: fromStableId }, toRef: { source: 'Toy', id: toStableId }, properties: { provenanceTier: ['structural'] } });
-const baseText = replayBlock.serializeBlock({ header: headerFor('toy'), nodes: [nodeFor('toy:a'), nodeFor('toy:b')], edges: [edgeFor('toy:a', 'toy:b')] });
+// one frozen vector, referenced by toy:b's embeddingRef (a 2-dim float32 vector, its id by the grammar-2 recipe)
+const toyVectorBuffer = Buffer.alloc(8);
+toyVectorBuffer.writeFloatLE(0.25, 0);
+toyVectorBuffer.writeFloatLE(-0.5, 4);
+const toyVector = { modelVersion: 'toy-model', dims: 2, dtype: 'float32', inputText: 'toy b text', vector: toyVectorBuffer, vectorHash: contentAddress.vectorHashForBytes(toyVectorBuffer) };
+toyVector.vectorId = contentAddress.vectorIdForInput({ modelVersion: toyVector.modelVersion, embeddingDims: toyVector.dims, inputText: toyVector.inputText });
+const baseText = replayBlock.serializeBlock({ header: headerFor('toy'), nodes: [nodeFor('toy:a'), { ...nodeFor('toy:b'), embeddingRef: toyVector.vectorId, embeddingModelVersion: 'toy-model' }], edges: [edgeFor('toy:a', 'toy:b')] });
 const secondText = replayBlock.serializeBlock({ header: headerFor('toy2'), nodes: [nodeFor('toy:c'), nodeFor('toy:a')], edges: [edgeFor('toy:c', 'toy:a'), edgeFor('toy:a', 'toy:b'), edgeFor('toy:c', 'toy:nowhere')] });
 const schemaBlockFor = (text, requires) => ({ refId: sha256Hex(text), kind: 'standardBase', subject: 'toy@1_base', version: '1', requires, text, producedBy: 'fixture' });
 const memberList = [
@@ -156,7 +162,7 @@ const memberList = [
 	{ position: 1, schemaBlock: schemaBlockFor(secondText, [sha256Hex(baseText)]) },
 ];
 const manifestRefId = contentAddress.manifestKeyForMembership(memberList.map((oneMember) => ({ blockId: oneMember.schemaBlock.refId, position: oneMember.position })));
-const publishArgs = { manifestRefId, publicLabel: 'educore-2026-10', memberList, defaultLayerByHub: null, recordedNodeCount: 3, recordedEdgeCount: 2, publishedAt: '2026-10-26T00:00:00Z', publishedByAgentIri: ORGANISATION_IRI, registrationStatus: 'Candidate', registrationAuthority: ORGANISATION_IRI };
+const publishArgs = { manifestRefId, publicLabel: 'educore-2026-10', memberList, frozenVectorList: [toyVector], defaultLayerByHub: null, recordedNodeCount: 3, recordedEdgeCount: 2, publishedAt: '2026-10-26T00:00:00Z', publishedByAgentIri: ORGANISATION_IRI, registrationStatus: 'Candidate', registrationAuthority: ORGANISATION_IRI };
 // =====================================================================
 harness.section('NO UPDATE OR DELETE PATH: the module source (static) and the file (the write-once triggers)');
 // =====================================================================
@@ -251,6 +257,12 @@ const { uriContract } = seededWorld;
 sameValue('an identical agent answers alreadyPresent', uriContract.appendAgent(agentRegistry.agentList[1]), { alreadyPresent: true });
 harness.match('the same agentIri with a different displayName is refused', uriContract.appendAgent({ ...agentRegistry.agentList[1], displayName: 'renamed' }).error, /already holds .* with different content/);
 harness.match('an agent field uriContract cannot store is refused, never dropped', uriContract.appendAgent({ ...agentRegistry.agentList[1], orcid: 'x' }).error, /carries the field 'orcid'/);
+harness.match('a person may not carry a homepage (pseudonymous: a role and aliases)', uriContract.appendAgent({ agentIri: 'https://w3id.org/EDUcore/agent/u-0099', agentKind: 'person', displayName: 'rater 99', homepageIri: 'https://example.org/me' }).error, /carries the field 'homepageIri'/);
+harness.match('a person may not carry a judge configuration', uriContract.appendAgent({ agentIri: 'https://w3id.org/EDUcore/agent/u-0099', agentKind: 'person', displayName: 'rater 99', judgeConfiguration: {} }).error, /carries the field 'judgeConfiguration'/);
+harness.match('a person whose text carries an e-mail address is refused', uriContract.appendAgent({ agentIri: 'https://w3id.org/EDUcore/agent/u-0099', agentKind: 'person', displayName: 'rater 99', note: 'reach me at someone@example.org' }).error, /carries an e-mail address/);
+const fullJudge = { agentIri: 'https://w3id.org/EDUcore/agent/judge/jev:toy:cfg-000000000002', agentKind: 'judge', displayName: 'a configured toy judge', description: 'a judge', homepageIri: 'https://example.org/jev', aliasIriList: ['https://example.org/alias'], judgeConfiguration: { model: 'toy', hitsPerText: 40 } };
+sameValue('a judge with a description, homepage, aliases and configuration appends', uriContract.appendAgent(fullJudge), { alreadyPresent: false });
+sameValue('…and reads back field for field', uriContract.registryShape().agentRegistry.agentList.find((oneAgent) => oneAgent.agentIri === fullJudge.agentIri), fullJudge);
 const judgeLayer = layerRegistryFor().layerList[1];
 const thirdBlockText = '{"header":{"toy":3},"decisionRecordList":[]}';
 const thirdMemberBlockList = judgedMemberBlockList.concat([{ pairKey: 'toyhub@1::toy2@1::toyBridge::inferred', decisionBlockHash: sha256Hex(thirdBlockText) }]);
@@ -305,27 +317,51 @@ harness.match('a member requiring a block the manifest does not list is refused 
 harness.match('the reserved label sha256 is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, publicLabel: 'sha256' }).error, /never a reserved word/);
 harness.match('a publish without a registration status is refused (no default)', manifestWorld.uriContract.publishManifest({ ...publishArgs, registrationStatus: undefined }).error, /registrationStatus undefined is not/);
 harness.match('a member whose text does not hash to its refId is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, memberList: [{ position: 0, schemaBlock: { ...memberList[0].schemaBlock, text: `${baseText} ` } }, memberList[1]] }).error, /its text does not hash to its refId/);
+harness.match('a manifest offered without a vector its member references is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, frozenVectorList: [] }).error, /references vector .* which frozenVectorList does not carry/);
+harness.match('a vector no member references is refused (ONLY what recreates)', manifestWorld.uriContract.publishManifest({ ...publishArgs, frozenVectorList: [toyVector, { ...toyVector, vectorId: 'e'.repeat(64) }] }).error, /which no member references/);
+harness.match('a vector whose bytes do not hash to its vectorHash is refused before it is written', manifestWorld.uriContract.publishManifest({ ...publishArgs, frozenVectorList: [{ ...toyVector, vectorHash: 'd'.repeat(64) }] }).error, /payload: the vector bytes hash to/);
+harness.match('a vector whose determinants do not hash to its vectorId is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, frozenVectorList: [{ ...toyVector, inputText: 'another text' }] }).error, /determinants: .* hash to/);
 const firstPublish = manifestWorld.uriContract.publishManifest(publishArgs);
 harness.ok('the manifest publishes', firstPublish.error === undefined && firstPublish.alreadyPresent === false, firstPublish.error);
 harness.equal('re-publishing the same manifest under the same label is alreadyPresent', manifestWorld.uriContract.publishManifest(publishArgs).alreadyPresent, true);
 harness.match('the same label for another manifest is refused (a label is never reassigned)', manifestWorld.uriContract.publishManifest({ ...publishArgs, memberList: [memberList[0]], manifestRefId: contentAddress.manifestKeyForMembership([{ blockId: memberList[0].schemaBlock.refId, position: 0 }]) }).error, /already published/);
 const readBack = manifestWorld.uriContract.publishedManifestFor({ publicLabel: 'educore-2026-10' });
 sameValue('it reads back by label with its members, its status and its URIs', [readBack.publishedManifest.memberList.length, readBack.publishedManifest.effectiveRegistrationStatus, readBack.publishedManifest.uri, readBack.publishedManifest.uriByContent], [2, 'Candidate', 'https://w3id.org/EDUcore/manifest/educore-2026-10', `https://w3id.org/EDUcore/manifest/sha256/${manifestRefId}`]);
+sameValue('the frozen vector reads back verified, decoded as getVector decodes it', manifestWorld.uriContract.frozenVectorFor(toyVector.vectorId).frozenVector.vector, [0.25, -0.5]);
 harness.equal('…and by hash', manifestWorld.uriContract.publishedManifestFor({ manifestRefId }).publishedManifest.publicLabel, 'educore-2026-10');
 const reader = uriContractLib.uriContractReaderFor({ uriContractFilePath: manifestWorld.uriContractFilePath });
-sameValue('the reader lane A is injected with exposes exactly its three functions', Object.keys(reader.uriContractReader).sort(), ['decisionSchemaBlockFor', 'publishedManifestFor', 'schemaBlockFor']);
-sameValue('reader.decisionSchemaBlockFor returns the whole row', Object.keys(reader.uriContractReader.decisionSchemaBlockFor(judgedMemberBlockList[0].decisionBlockHash).decisionSchemaBlock).sort(), ['decisionSchemaBlockHash', 'frozenText', 'pairKey', 'producerKind']);
-harness.equal('reader.schemaBlockFor returns the verified block', reader.uriContractReader.schemaBlockFor(sha256Hex(baseText)).schemaBlock.text, baseText);
-harness.equal('reader answers null (not an error) for an absent hash', reader.uriContractReader.schemaBlockFor('0'.repeat(64)).schemaBlock, null);
+// answerOf(readerFunction, argument) → { errorText, answer }: the reader is callback-style (lane A's interface) and answers synchronously
+const answerOf = (readerFunction, argument) => {
+	const captured = { errorText: 'no callback', answer: undefined };
+	readerFunction(argument, (readError, answer) => {
+		captured.errorText = readError;
+		captured.answer = answer;
+	});
+	return captured;
+};
+sameValue('the uriContractReader lane A is injected with exposes exactly its functions', Object.keys(reader.uriContractReader).sort(), ['agentRecordFor', 'decisionSchemaBlockFor', 'publishedManifestFor', 'schemaBlockFor']);
+sameValue('decisionSchemaBlockFor answers { decisionBlockHash, pairKey, frozenText }', Object.keys(answerOf(reader.uriContractReader.decisionSchemaBlockFor, judgedMemberBlockList[0].decisionBlockHash).answer).sort(), ['decisionBlockHash', 'frozenText', 'pairKey']);
+sameValue('schemaBlockFor answers { schemaBlockRefId, blockKind, subject, version, text }', Object.keys(answerOf(reader.uriContractReader.schemaBlockFor, sha256Hex(baseText)).answer).sort(), ['blockKind', 'schemaBlockRefId', 'subject', 'text', 'version']);
+sameValue('an absent hash answers null, not an error', answerOf(reader.uriContractReader.schemaBlockFor, '0'.repeat(64)), { errorText: '', answer: null });
+const manifestAnswer = answerOf(reader.uriContractReader.publishedManifestFor, { publicLabel: 'educore-2026-10' }).answer;
+sameValue('publishedManifestFor answers the identity row, ordered members, latest status and publishedAt', [Object.keys(manifestAnswer).sort(), manifestAnswer.memberList, manifestAnswer.latestStatus], [['defaultLayerByHub', 'latestStatus', 'manifestRefId', 'memberList', 'publicLabel', 'publishedAt'], [{ schemaBlockRefId: sha256Hex(baseText), position: 0 }, { schemaBlockRefId: sha256Hex(secondText), position: 1 }], { registrationStatus: 'Candidate', changedAt: '2026-10-26T00:00:00Z' }]);
+const judgeRecord = answerOf(reader.uriContractReader.agentRecordFor, JUDGE_IRI).answer;
+sameValue('agentRecordFor computes the judge\'s record: its versions, their effective status, their counts', judgeRecord.layersAuthored.map((oneLayer) => [oneLayer.layerKey, oneLayer.versionList.map((oneVersion) => [oneVersion.versionTag, oneVersion.effectiveRegistrationStatus, oneVersion.roleList.join('+'), oneVersion.assertionCount, oneVersion.abstentionCount])]), [['toyJudge', [['base', 'Superseded', 'versionAuthor', 0, 0], ['wave1', 'Standard', 'versionAuthor', 0, 0]]]]);
+sameValue('…its scores and its first and last contribution', [judgeRecord.scores.length, judgeRecord.firstContributionAt, judgeRecord.lastContributionAt], [1, '2026-10-02T00:00:00Z', '2026-10-03T00:00:00Z']);
+const personRecord = answerOf(reader.uriContractReader.agentRecordFor, PERSON_IRI).answer;
+sameValue('a curated set is counted by its rows (one assertion, no abstention)', personRecord.layersAuthored[0].versionList.map((oneVersion) => [oneVersion.assertionCount, oneVersion.abstentionCount]), [[1, 0]]);
+harness.equal('an unknown agent answers null', answerOf(reader.uriContractReader.agentRecordFor, 'https://w3id.org/EDUcore/agent/nobody').answer, null);
 harness.match('the reader factory refuses an absent file', uriContractLib.uriContractReaderFor({ uriContractFilePath: path.join(scratchDirPath, 'absent.sqlite') }).error, /does not exist/);
 reader.uriContract.close();
 const manifestPath = manifestWorld.uriContractFilePath;
 manifestWorld.uriContract.close();
 plantCorruption(manifestPath, 'UPDATE schemaBlocks SET text = ? WHERE refId = ?', [`${baseText}x`, sha256Hex(baseText)]);
 plantCorruption(manifestPath, 'UPDATE publishedManifestMembers SET position = 7 WHERE position = 1', []);
+plantCorruption(manifestPath, 'UPDATE frozenVectors SET vectorHash = ? WHERE vectorId = ?', ['c'.repeat(64), toyVector.vectorId]);
 const corruptedManifest = uriContractLib.openUriContractFile({ uriContractFilePath: manifestPath, accessMode: 'read' }).uriContract;
 harness.match('a schema block whose text no longer hashes to its refId is refused on read', corruptedManifest.schemaBlockFor(sha256Hex(baseText)).error, /fails verify-on-read/);
 harness.match('a manifest whose membership no longer hashes to its refId is refused on read', corruptedManifest.publishedManifestFor({ manifestRefId }).error, /fails verify-on-read \(its members hash to/);
+harness.match('a frozen vector whose bytes no longer hash to its vectorHash is refused on read', corruptedManifest.frozenVectorFor(toyVector.vectorId).error, /fails verify-on-read: payload/);
 corruptedManifest.close();
 
 // =====================================================================

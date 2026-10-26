@@ -23,7 +23,7 @@ const crypto = require('crypto');
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const edcUri = require(path.join(__dirname, '..', 'edc-uri', 'edcUri'));
-const { registryFor } = require(path.join(__dirname, '..', 'layer-registry', 'layerRegistry'));
+const { registryFor, LAYER_REGISTRY_SCHEMA } = require(path.join(__dirname, '..', 'layer-registry', 'layerRegistry'));
 
 const LAYER_SET_PAIR_KEY_PREFIX = 'layerSet::';
 const MANDATORY_COLUMN_LIST = Object.freeze(['subject_id', 'predicate_id', 'object_id', 'mapping_justification']);
@@ -248,7 +248,9 @@ const importLayer = ({ sssomText, sssomPath, slug, versionTag, authorIri, prefix
 				callback(appended.error);
 				return;
 			}
-			callback('', { ...report, layerVersionUri: edcUri.mint({ kind: 'layerVersion', layerKey, versionTag }).uri, wholeSetBlock, alreadyPresent: false, layerRegistry: appended.layerRegistry });
+			// ⟪ML3.1b⟫ what the caller appends to uriContract: the layer (new or existing), the version and the set's frozen bytes
+			const uriContractAppend = { layer: appended.layerRegistry.layerList.find((oneLayer) => oneLayer.layerKey === layerKey), version, decisionSchemaBlockList: [{ pairKey: wholeSetPairKey, producerKind: LAYER_REGISTRY_SCHEMA.producerKindByLayerKind[importRules.layerKind], frozenText: sssomText }] };
+			callback('', { ...report, layerVersionUri: edcUri.mint({ kind: 'layerVersion', layerKey, versionTag }).uri, wholeSetBlock, alreadyPresent: false, layerRegistry: appended.layerRegistry, uriContractAppend });
 		});
 	});
 };
