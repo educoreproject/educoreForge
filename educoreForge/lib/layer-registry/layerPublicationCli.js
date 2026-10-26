@@ -13,7 +13,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   -render        render every registered layer version (machine and curated) as ONE SSSOM set (R-b), one registry document per layer,
 //                  the site registry, and one JSON-LD context per (version, standard), into --outputDirPath; with --publicFilterRulesPath
 //                  ALSO a public filtered rendering of each (TQ Q37) under <outputDirPath>/public, never anywhere else.
-//       --layerRegistryFilePath=<recipes/layers.json>  --agentRegistryFilePath=<recipes/agents.json>  --storePath=<support store COPY>
+//       --uriContractFilePath=<uriContract.sqlite> | --layerRegistryFilePath=<recipes/layers.json> --agentRegistryFilePath=<recipes/agents.json>  --storePath=<support store COPY>
 //       --goldCapturePath=<capture.json>  --outputDirPath=<dir>  --publicFilterRulesPath=<downloadArtifactsRules.json>
 //   -gate          run the publication gates over a rendered tree (complete AND public) and write ONE gate report binding each file's
 //                  sha256: (1) every record_id recomputes from its row; (2) sssom-py 'validate' exits 0 AND 'parse' keeps every row (a
@@ -55,8 +55,8 @@ if (argumentList.some((oneArgument) => ['-help', '--help', '-h'].indexOf(oneArgu
 }
 const REQUIRED_PARAMETER_NAME_LIST_BY_ACTION = Object.freeze({
 	captureGold: ['goldContainerName', 'goldCapturePath'],
-	render: ['layerRegistryFilePath', 'agentRegistryFilePath', 'storePath', 'goldCapturePath', 'outputDirPath', 'publicFilterRulesPath'],
-	gate: ['renderedDirPath', 'layerRegistryFilePath', 'agentRegistryFilePath', 'storePath', 'goldCapturePath', 'publicFilterRulesPath', 'sssomValidatorPath', 'linkmlValidatorPath', 'sssomSchemaPath', 'gateReportPath'],
+	render: ['storePath', 'goldCapturePath', 'outputDirPath', 'publicFilterRulesPath'],
+	gate: ['renderedDirPath', 'storePath', 'goldCapturePath', 'publicFilterRulesPath', 'sssomValidatorPath', 'linkmlValidatorPath', 'sssomSchemaPath', 'gateReportPath'],
 	publishPublic: ['renderedDirPath', 'gateReportPath', 'publicDestinationDirPath'],
 });
 const actionList = Object.keys(REQUIRED_PARAMETER_NAME_LIST_BY_ACTION).filter((actionName) => argumentList.indexOf(`-${actionName}`) !== -1);
@@ -69,6 +69,20 @@ if (missingParameterList.length) {
 	refuseAndExit(`-${actionName}: ${missingParameterList.map((parameterName) => `--${parameterName}`).join(', ')} REQUIRED, with no default`);
 }
 
+// ⟪ML3.1b, by AMBER_JOURNEY's grant⟫ -render and -gate read the registry from EXACTLY ONE source: --uriContractFilePath (the registry of
+// record once Part C retires the JSON) or --layerRegistryFilePath with --agentRegistryFilePath (until then)
+const registryFromSource = () => {
+	const uriContractFilePath = parameterValueFor('uriContractFilePath');
+	const jsonGiven = Boolean(parameterValueFor('layerRegistryFilePath') || parameterValueFor('agentRegistryFilePath'));
+	if (Boolean(uriContractFilePath) === jsonGiven) {
+		return { error: `-${actionName}: name the registry by exactly one of --uriContractFilePath | --layerRegistryFilePath with --agentRegistryFilePath` };
+	}
+	if (!uriContractFilePath) {
+		return layerRegistryLib.loadRegistry({ layerRegistryFilePath: parameterValueFor('layerRegistryFilePath'), agentRegistryFilePath: parameterValueFor('agentRegistryFilePath') });
+	}
+	const opened = require(path.join(__dirname, '..', 'uri-contract', 'uriContract')).openUriContractFile({ uriContractFilePath, accessMode: 'read' });
+	return opened.error ? opened : opened.uriContract.loadRegistry();
+};
 const sha256Hex = (text) => crypto.createHash('sha256').update(text).digest('hex');
 const exitOnError = (result) => {
 	if (result.error) {
@@ -152,7 +166,7 @@ const render = () => {
 	const Database = require(path.join(__dirname, '..', '..', 'node_modules', 'better-sqlite3'));
 	const layerRegistryLib = require(path.join(__dirname, 'layerRegistry'));
 	const layerPublicationLib = require(path.join(__dirname, 'layerPublication'));
-	const loaded = exitOnError(layerRegistryLib.loadRegistry({ layerRegistryFilePath: parameterValueFor('layerRegistryFilePath'), agentRegistryFilePath: parameterValueFor('agentRegistryFilePath') }));
+	const loaded = exitOnError(registryFromSource());
 	const { registry } = loaded;
 	const goldCapture = JSON.parse(fs.readFileSync(parameterValueFor('goldCapturePath'), 'utf8'));
 	const cardByStableId = goldCapture.cardList.reduce((soFar, oneCard) => {
@@ -260,7 +274,7 @@ const gate = () => {
 	const subjectCurieLib = require(path.join(__dirname, '..', 'edc-uri', 'subjectCurie'));
 	const { parseSssomTsv } = require(path.join(__dirname, '..', 'bridge-framework', 'sssomExporter'));
 	const renderedDirPath = parameterValueFor('renderedDirPath');
-	const { registry } = exitOnError(layerRegistryLib.loadRegistry({ layerRegistryFilePath: parameterValueFor('layerRegistryFilePath'), agentRegistryFilePath: parameterValueFor('agentRegistryFilePath') }));
+	const { registry } = exitOnError(registryFromSource());
 	const goldCapture = JSON.parse(fs.readFileSync(parameterValueFor('goldCapturePath'), 'utf8'));
 	const downloadRules = JSON.parse(fs.readFileSync(parameterValueFor('publicFilterRulesPath'), 'utf8'));
 	const heldStandardKeyList = downloadRules.licenceHoldList.map((oneHold) => oneHold.bundleToken);

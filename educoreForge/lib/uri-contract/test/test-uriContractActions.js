@@ -229,13 +229,13 @@ const runGates = (setupError, setup) => {
 	const port = 20000 + (process.pid % 20000);
 	const server = spawn('node', [STUB_SERVER, `--port=${port}`, contractFlag], { stdio: ['ignore', 'pipe', 'pipe'] });
 	const probeList = [
-		['layer (floating, its Standard version)', 'layer/toyJudge', 200, (body) => body.currentStandardVersion.administrationRecord.versionTag === 'base'],
-		['layer version by tag', 'layer/toyJudge/base', 200, (body) => body.effectiveRegistrationStatus === 'Standard'],
-		['layer version by content', `layer/toyJudge/sha256/${contentIdForMemberBlockList(judgedMemberBlockList)}`, 200, (body) => body.version.administrationRecord.versionTag === 'base'],
-		['agent', 'agent/judge/jev:toy:cfg-000000000001', 200, (body) => body.agent.displayName === 'a toy judge'],
+		['layer (floating, its Standard version)', 'layer/toyJudge', 200, (body) => body.currentStandardVersionTag === 'base' && body.versionList.length === 1],
+		['layer version by tag (with its computed counts)', 'layer/toyJudge/base', 200, (body) => body.latestStatus.registrationStatus === 'Standard' && body.countByStandard.toy.mappedCount === 1],
+		['layer version by content', `layer/toyJudge/sha256/${contentIdForMemberBlockList(judgedMemberBlockList)}`, 200, (body) => body.versionTag === 'base'],
+		['agent (profile plus computed record)', 'agent/judge/jev:toy:cfg-000000000001', 200, (body) => body.displayName === 'a toy judge' && body.layersAuthored[0].versionList[0].assertionCount === 1],
 		['interpretation, pinned', 'Toy/1/toy:a@toyJudge/base', 200, (body) => body.assertionList.length === 1 && body.assertionList[0].object === TOY_MEANING_IRI],
 		['interpretation, floating', 'Toy/1/toy:b@toyJudge', 200, (body) => body.answer === 'sssom:NoTermFound'],
-		['the curated layer version just published', 'layer/rater-42/r1', 200, (body) => body.effectiveRegistrationStatus === 'Candidate'],
+		['the curated layer version just published', 'layer/rater-42/r1', 200, (body) => body.latestStatus.registrationStatus === 'Candidate'],
 	];
 	const fetchPath = (requestPath, done) => {
 		http.get({ host: '127.0.0.1', port, path: `/EDUcore/${requestPath}` }, (response) => {
@@ -253,7 +253,14 @@ const runGates = (setupError, setup) => {
 		}
 		const [label, requestPath, expectedStatus, bodyCheck] = probeList[probeIndex];
 		fetchPath(requestPath, (fetchError, fetched) => {
-			harness.ok(`the stub resolves ${label} (${requestPath})`, !fetchError && fetched.httpStatus === expectedStatus && bodyCheck(fetched.body), fetchError || JSON.stringify(fetched.body).slice(0, 600));
+			const bodyVerdict = (() => {
+				try {
+					return !fetchError && bodyCheck(fetched.body);
+				} catch (checkError) {
+					return false;
+				}
+			})();
+			harness.ok(`the stub resolves ${label} (${requestPath})`, !fetchError && fetched.httpStatus === expectedStatus && bodyVerdict, fetchError || `${fetched.httpStatus} ${JSON.stringify(fetched.body).slice(0, 900)}`);
 			probeNext(probeIndex + 1);
 		});
 	};
