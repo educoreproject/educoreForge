@@ -21,13 +21,13 @@
 		{
 			"tableName": "schemaBlocks",
 			"rowRole": "identity",
-			"about": "every schema block a published manifest lists; verify on read: sha256(text) = refId",
+			"about": "every schema block a published manifest lists; verify on read: sha256(text) = refId; requiresJson NULL where the support store holds NULL (the block names no requirement: 45 of the ML3 store's 100 blocks), copied as it is, never rewritten to []",
 			"columnList": [
 				{ "columnName": "refId", "sqlType": "TEXT", "constraintText": "PRIMARY KEY CHECK (length(refId) = 64)" },
 				{ "columnName": "kind", "sqlType": "TEXT", "constraintText": "NOT NULL" },
 				{ "columnName": "subject", "sqlType": "TEXT", "constraintText": "" },
 				{ "columnName": "version", "sqlType": "TEXT", "constraintText": "" },
-				{ "columnName": "requiresJson", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "requiresJson", "sqlType": "TEXT", "constraintText": "" },
 				{ "columnName": "text", "sqlType": "TEXT", "constraintText": "NOT NULL" },
 				{ "columnName": "producedBy", "sqlType": "TEXT", "constraintText": "" }
 			],
@@ -181,7 +181,7 @@
 		{
 			"tableName": "derivedHubCards",
 			"rowRole": "derived",
-			"about": "DERIVED from schemaBlocks (standardBase): every HubReference card (a node whose stableId parses as a meaning URI), with its hub, domain, label, definition (uriContractRules.json hubCardDefinitionPropertyListByTier), property and tier; the hub and domain listings read it",
+			"about": "DERIVED from schemaBlocks (standardBase): every HubReference card (a node labelled HubReference; NOT any node whose id parses as a meaning: the HubDefinition's does), with its hub, domain, label, definition (uriContractRules.json hubCardDefinitionPropertyListByTier), property and tier; the hub and domain listings read it",
 			"columnList": [
 				{ "columnName": "schemaBlockRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES schemaBlocks(refId)" },
 				{ "columnName": "meaningIri", "sqlType": "TEXT", "constraintText": "NOT NULL" },

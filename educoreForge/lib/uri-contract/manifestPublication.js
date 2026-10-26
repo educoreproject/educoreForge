@@ -8,7 +8,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 //   manifestForPublish({ supportStore, manifestRefId }) → { memberList, frozenVectorList, decisionSchemaBlockList, basedOnManifestRefId } | { error }
 //       supportStore  a READ-ONLY better-sqlite3 handle on a support store (blocks, manifests, manifestBlocks, vectors)
-//   answerConflictListFor({ memberList }) → { answerKeyCount, answerConflictList: [{ subjectStableId, hubSegment, answerSourceList }] } | { error }
+//   answerConflictListFor({ memberList }) → { answerSlotCount, answerConflictList: [{ subjectStableId, hubSegment, answerSourceList }] } | { error }
 //   defaultLayerByHubFor({ answerConflictList, declaredDefaultLayerByHub }) → { defaultLayerByHub } | { error }
 //
 // THE QUESTION RULE (ruling (b)): a question URI asks what THIS GRAPH says an element maps to, and answers from the manifest's own
@@ -45,8 +45,8 @@ const manifestForPublish = ({ supportStore, manifestRefId } = {}) => {
 		if (blockRow === undefined || !Number.isInteger(position)) {
 			return { error: refusalText(`manifest ${manifestRefId} member ${schemaBlockRefId} ${blockRow === undefined ? 'is not in the blocks table' : 'has no position'}`, 'a published manifest is whole and ordered') };
 		}
-		const requiresList = blockRow.requires === null || blockRow.requires === '' ? [] : JSON.parse(blockRow.requires);
-		memberList.push({ position, schemaBlock: { refId: blockRow.refId, kind: blockRow.kind, subject: blockRow.subject === null ? undefined : blockRow.subject, version: blockRow.version === null ? undefined : blockRow.version, requires: requiresList, text: String(blockRow.text), producedBy: blockRow.producedBy === null ? undefined : blockRow.producedBy } });
+		// requires is copied as the store holds it: NULL stays null (the block names no requirement), never rewritten to []
+		memberList.push({ position, schemaBlock: { refId: blockRow.refId, kind: blockRow.kind, subject: blockRow.subject === null ? undefined : blockRow.subject, version: blockRow.version === null ? undefined : blockRow.version, requires: blockRow.requires === null ? null : JSON.parse(blockRow.requires), text: String(blockRow.text), producedBy: blockRow.producedBy === null ? undefined : blockRow.producedBy } });
 	}
 	const vectorIdSet = new Set(memberList.reduce((soFar, { schemaBlock }) => soFar.concat(embeddingRefListOf(schemaBlock.text)), []));
 	const vectorStatement = supportStore.prepare('SELECT vectorId, modelVersion, dims, dtype, inputText, vector, vectorHash FROM vectors WHERE vectorId = ?');
@@ -76,25 +76,25 @@ const manifestForPublish = ({ supportStore, manifestRefId } = {}) => {
 // answerConflictListFor — grouped from the same answer-edge rows the derived index holds (derivedIndexes.js), so the publish-time
 // conflict test and the question resolver read ONE definition of an answer edge; what answered is the edge's decisionBlockHash
 const answerConflictListFor = ({ memberList } = {}) => {
-	const answerSourceSetByAnswerKey = new Map();
+	const answerSourceSetByAnswerSlot = new Map();
 	for (let memberIndex = 0; memberIndex < memberList.length; memberIndex++) {
 		const derived = derivedIndexesLib.derivedRowsForSchemaBlock(memberList[memberIndex].schemaBlock);
 		if (derived.error) {
 			return { error: derived.error };
 		}
 		derived.answerEdgeRowList.forEach((oneRow) => {
-			const answerKey = `${oneRow.subjectStableId}\u0000${oneRow.hubSegment}`;
-			if (!answerSourceSetByAnswerKey.has(answerKey)) {
-				answerSourceSetByAnswerKey.set(answerKey, new Set());
+			const answerSlotText = `${oneRow.subjectStableId}\u0000${oneRow.hubSegment}`;
+			if (!answerSourceSetByAnswerSlot.has(answerSlotText)) {
+				answerSourceSetByAnswerSlot.set(answerSlotText, new Set());
 			}
-			answerSourceSetByAnswerKey.get(answerKey).add(oneRow.decisionBlockHash === null ? `noDecisionBlock:${oneRow.schemaBlockRefId}` : oneRow.decisionBlockHash);
+			answerSourceSetByAnswerSlot.get(answerSlotText).add(oneRow.decisionBlockHash === null ? `noDecisionBlock:${oneRow.schemaBlockRefId}` : oneRow.decisionBlockHash);
 		});
 	}
 	return {
-		answerKeyCount: answerSourceSetByAnswerKey.size,
-		answerConflictList: [...answerSourceSetByAnswerKey]
+		answerSlotCount: answerSourceSetByAnswerSlot.size,
+		answerConflictList: [...answerSourceSetByAnswerSlot]
 			.filter(([, answerSourceSet]) => answerSourceSet.size > 1)
-			.map(([answerKey, answerSourceSet]) => ({ subjectStableId: answerKey.split('\u0000')[0], hubSegment: answerKey.split('\u0000')[1], answerSourceList: [...answerSourceSet].sort() })),
+			.map(([answerSlotText, answerSourceSet]) => ({ subjectStableId: answerSlotText.split('\u0000')[0], hubSegment: answerSlotText.split('\u0000')[1], answerSourceList: [...answerSourceSet].sort() })),
 	};
 };
 

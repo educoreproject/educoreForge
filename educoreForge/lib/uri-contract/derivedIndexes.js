@@ -12,7 +12,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 //   derivedRowsForSchemaBlock(schemaBlock) → { elementRowList, hubCardRowList, answerEdgeRowList } | { error }
 //       elementRowList     one row per standardBase node: where an element URI resolves, its parent, its definition text
-//       hubCardRowList     one row per HubReference card (a base node whose stableId parses as a meaning): the hub and domain listings
+//       hubCardRowList     one row per HubReference card (a base node labelled HubReference): the hub and domain listings
 //       answerEdgeRowList  one row per answer edge of a relationship block (a SKOS match or DECLARED_CORRESPONDENCE edge whose
 //                          target is a meaning card): what mappingsToMeaningFor and a question URI read
 //   derivedRowsForLayerVersion({ layer, version, blockTextFor }) → { countRowList } | { error }
@@ -56,7 +56,7 @@ const derivedRowsForSchemaBlock = (schemaBlock) => {
 	const header = headerParse.parsed;
 	const elementRowList = [];
 	const hubCardRowList = [];
-	const answerEdgeKeySet = new Set();
+	const answerEdgeIdentitySet = new Set();
 	const answerEdgeRowList = [];
 	const isBase = header.blockType === vocabularyLib.SCHEMA_BLOCK_KIND.STANDARD_BASE;
 	const isRelationship = header.blockType === vocabularyLib.SCHEMA_BLOCK_KIND.RELATIONSHIP;
@@ -81,7 +81,9 @@ const derivedRowsForSchemaBlock = (schemaBlock) => {
 			const definitionName = DEFINITION_PROPERTY_NAME_LIST.find((propertyName) => isNonEmptyString(firstValueOf(properties[propertyName])));
 			const parentStableId = firstValueOf(properties.parentId);
 			const nodeForIndex = Object.keys(record).filter((fieldName) => NODE_JSON_DROPPED_FIELD_LIST.indexOf(fieldName) === -1 && fieldName !== 'kind').reduce((soFar, fieldName) => ({ ...soFar, [fieldName]: record[fieldName] }), {});
-			const cardMeaning = edcUri.parse(record.stableId);
+			// a CARD is a node LABELLED HubReference (lib/vocabulary EQUIVALENCE_NODE_LABELS), never "a stableId that parses as a meaning":
+			// the HubDefinition node's id parses as one too (measured on goldWave3: .../CEDStandards/hub/hubDefinition/CEDS)
+			const cardMeaning = Array.isArray(record.labels) && record.labels.indexOf(vocabularyLib.EQUIVALENCE_NODE_LABELS.HUB_REFERENCE) !== -1 ? edcUri.parse(record.stableId) : { error: 'not a HubReference card' };
 			if (!cardMeaning.error && cardMeaning.kind === 'meaning') {
 				const referenceTier = firstValueOf(properties.referenceTier);
 				const definitionPropertyList = URI_CONTRACT_RULES.hubCardDefinitionPropertyListByTier[referenceTier];
@@ -105,9 +107,9 @@ const derivedRowsForSchemaBlock = (schemaBlock) => {
 		const subjectStandardKey = record.fromRef.id.slice(0, record.fromRef.id.indexOf(':'));
 		const decisionBlockHashValue = record.properties && Array.isArray(record.properties.decisionBlockHash) ? record.properties.decisionBlockHash[0] : null;
 		const answerEdgeRow = { schemaBlockRefId: schemaBlock.refId, subjectStableId: record.fromRef.id, subjectStandardName: record.fromRef.source, subjectStandardVersion: versionByStandardKey[subjectStandardKey] === undefined ? null : versionByStandardKey[subjectStandardKey], meaningIri: record.toRef.id, hubSegment: meaning.partByName.hubSegment, hubName: record.toRef.source, hubVersion: meaning.partByName.hubReleaseSegment, relationType: record.type, decisionBlockHash: isNonEmptyString(decisionBlockHashValue) ? decisionBlockHashValue : null };
-		const answerEdgeKey = [answerEdgeRow.subjectStableId, answerEdgeRow.meaningIri, answerEdgeRow.relationType, answerEdgeRow.decisionBlockHash].join('\u0000');
-		if (!answerEdgeKeySet.has(answerEdgeKey)) {
-			answerEdgeKeySet.add(answerEdgeKey);
+		const answerEdgeIdentityText = [answerEdgeRow.subjectStableId, answerEdgeRow.meaningIri, answerEdgeRow.relationType, answerEdgeRow.decisionBlockHash].join('\u0000');
+		if (!answerEdgeIdentitySet.has(answerEdgeIdentityText)) {
+			answerEdgeIdentitySet.add(answerEdgeIdentityText);
 			answerEdgeRowList.push(answerEdgeRow);
 		}
 	}
@@ -133,9 +135,9 @@ const derivedRowsForLayerVersion = ({ layer, version, blockTextFor } = {}) => {
 	const hubNameByHubKey = layer.hubList.reduce((soFar, oneHub) => ({ ...soFar, [oneHub.hubKey]: oneHub.hubName }), {});
 	const countByScope = {};
 	const addTo = (countScope, scopeName, counted) => {
-		const scopeKey = `${countScope}\u0000${scopeName}`;
-		const soFar = countByScope[scopeKey] || { layerKey: layer.layerKey, versionTag: version.administrationRecord.versionTag, countScope, scopeName, rowCount: 0, mappedCount: 0, abstainedCount: 0 };
-		countByScope[scopeKey] = { ...soFar, rowCount: soFar.rowCount + counted.rowCount, mappedCount: soFar.mappedCount + counted.mappedCount, abstainedCount: soFar.abstainedCount + counted.abstainedCount };
+		const scopeSlotText = `${countScope}\u0000${scopeName}`;
+		const soFar = countByScope[scopeSlotText] || { layerKey: layer.layerKey, versionTag: version.administrationRecord.versionTag, countScope, scopeName, rowCount: 0, mappedCount: 0, abstainedCount: 0 };
+		countByScope[scopeSlotText] = { ...soFar, rowCount: soFar.rowCount + counted.rowCount, mappedCount: soFar.mappedCount + counted.mappedCount, abstainedCount: soFar.abstainedCount + counted.abstainedCount };
 	};
 	for (let memberIndex = 0; memberIndex < version.memberBlockList.length; memberIndex++) {
 		const { pairKey, decisionBlockHash } = version.memberBlockList[memberIndex];
@@ -153,7 +155,7 @@ const derivedRowsForLayerVersion = ({ layer, version, blockTextFor } = {}) => {
 		addTo('standard', standardKey, counted);
 		addTo('hub', hubNameByHubKey[hubKey], counted);
 	}
-	return { countRowList: Object.keys(countByScope).sort().map((scopeKey) => countByScope[scopeKey]) };
+	return { countRowList: Object.keys(countByScope).sort().map((scopeSlotText) => countByScope[scopeSlotText]) };
 };
 
 module.exports = { derivedRowsForSchemaBlock, derivedRowsForLayerVersion, countsOfDecisionText, DEFINITION_PROPERTY_NAME_LIST, ANSWER_EDGE_TYPE_SET, NO_TERM_FOUND_OBJECT_LIST, moduleName };

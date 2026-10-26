@@ -348,7 +348,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		if (row === undefined) {
 			return { schemaBlock: null };
 		}
-		return sha256Hex(row.text) === refId ? { schemaBlock: { ...row, requires: JSON.parse(row.requiresJson) } } : { error: refusalText(`schema block ${refId} fails verify-on-read (its text hashes to ${sha256Hex(row.text)})`, 'a corrupted row is a defect to report; this file is never repaired') };
+		return sha256Hex(row.text) === refId ? { schemaBlock: { ...row, requires: row.requiresJson === null ? null : JSON.parse(row.requiresJson) } } : { error: refusalText(`schema block ${refId} fails verify-on-read (its text hashes to ${sha256Hex(row.text)})`, 'a corrupted row is a defect to report; this file is never repaired') };
 	};
 	// frozenVectorFor — the record lib/vector-store getVector returns, verified as getVector verifies (structure, determinants, payload)
 	const frozenVectorFor = (vectorId) => {
@@ -514,28 +514,22 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		database.prepare(insertSqlFor(tableName, row)).run(row);
 		return { alreadyPresent: false };
 	};
-	// runWriteTransaction(work) → work's { ... } | { error }: ONE transaction; a refusal from work rolls everything back
+	// runWriteTransaction(work) → work's { ... } | { error }: ONE explicit transaction (BEGIN IMMEDIATE ... COMMIT); a refusal from work,
+	// or a library fault inside it, is answered by ROLLBACK (lib/store-fold's shape: explicit statements, no throw to roll back)
 	const runWriteTransaction = (work) => {
-		const ROLLBACK_SIGNAL = {};
-		let refusal = null;
-		const ran = attemptSql(() =>
-			database.transaction(() => {
-				const outcome = work();
-				if (outcome.error) {
-					refusal = outcome;
-					throw ROLLBACK_SIGNAL;
-				}
-				return outcome;
-			})(),
-		);
-		if (refusal !== null) {
-			return refusal;
+		const begun = attemptSql(() => database.exec('BEGIN IMMEDIATE'));
+		if (begun.error) {
+			return { error: refusalText(`opening the write transaction: ${begun.error}`, 'uriContract writes are one transaction each') };
 		}
-		return ran.error ? { error: refusalText(`the write was rolled back: ${ran.error}`, 'uriContract writes are one transaction each') } : ran.result;
+		const worked = attemptSql(work);
+		const outcome = worked.error ? { error: refusalText(`the write was rolled back: ${worked.error}`, 'uriContract writes are one transaction each') } : worked.result;
+		const finished = attemptSql(() => database.exec(outcome.error ? 'ROLLBACK' : 'COMMIT'));
+		if (finished.error) {
+			return { error: refusalText(`${outcome.error ? 'rolling back' : 'committing'}: ${finished.error}${outcome.error ? ` (after: ${outcome.error})` : ''}`, 'uriContract writes are one transaction each') };
+		}
+		return outcome;
 	};
 
-	// agentRefusalFor — the closed field list OF ITS KIND (a person carries no homepage and no configuration), and a person's text
-	// never carries an e-mail address (TQ ruling Q3: persons stay strictly pseudonymous)
 	// ----- DERIVED ROWS, written inside the transaction that writes their source (derivedIndexes.js; README_AI "derived tables")
 	const isIndexed = (sourceKind, sourceIdentity) => database.prepare('SELECT derivedRowCount FROM derivedIndexedSources WHERE sourceKind = ? AND sourceIdentity = ?').get(sourceKind, sourceIdentity) !== undefined;
 	const insertDerivedRows = (tableName, rowList) => {
@@ -706,10 +700,12 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 				if (!isPlainObject(schemaBlock) || !isNonEmptyString(schemaBlock.text) || sha256Hex(schemaBlock.text) !== schemaBlock.refId) {
 					return `member ${schemaBlock && schemaBlock.refId}: its text does not hash to its refId`;
 				}
-				if (SCHEMA_BLOCK_KINDS.indexOf(schemaBlock.kind) === -1 || !Array.isArray(schemaBlock.requires)) {
-					return `member ${schemaBlock.refId}: kind ${JSON.stringify(schemaBlock.kind)} is not a schema block kind (${SCHEMA_BLOCK_KINDS.join(', ')}) or requires is not a list`;
+				if (SCHEMA_BLOCK_KINDS.indexOf(schemaBlock.kind) === -1 || !(schemaBlock.requires === null || Array.isArray(schemaBlock.requires))) {
+					return `member ${schemaBlock.refId}: kind ${JSON.stringify(schemaBlock.kind)} is not a schema block kind (${SCHEMA_BLOCK_KINDS.join(', ')}) or requires is neither null nor a list`;
 				}
-				const outsideRequirement = schemaBlock.requires.find((requiredRefId) => !memberRefIdSet.has(requiredRefId));
+				// requires null: the block names no requirement (the support store's own reading, standards-database getBlock)
+				const requiredRefIdList = schemaBlock.requires === null ? [] : schemaBlock.requires;
+				const outsideRequirement = requiredRefIdList.find((requiredRefId) => !memberRefIdSet.has(requiredRefId));
 				return outsideRequirement === undefined ? '' : `member ${schemaBlock.refId} requires ${outsideRequirement}, which the manifest does not list (the closure must be published whole)`;
 			})
 			.find((oneFault) => oneFault !== '');
@@ -756,7 +752,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		}
 		return runWriteTransaction(() => {
 			const blockOutcome = memberList
-				.map(({ schemaBlock }) => insertIdentityRow({ tableName: 'schemaBlocks', row: { refId: schemaBlock.refId, kind: schemaBlock.kind, subject: schemaBlock.subject === undefined ? null : schemaBlock.subject, version: schemaBlock.version === undefined ? null : schemaBlock.version, requiresJson: JSON.stringify(schemaBlock.requires), text: schemaBlock.text, producedBy: schemaBlock.producedBy === undefined ? null : schemaBlock.producedBy }, identityWhereSql: 'refId = ?', identityValueList: [schemaBlock.refId] }))
+				.map(({ schemaBlock }) => insertIdentityRow({ tableName: 'schemaBlocks', row: { refId: schemaBlock.refId, kind: schemaBlock.kind, subject: schemaBlock.subject === undefined ? null : schemaBlock.subject, version: schemaBlock.version === undefined ? null : schemaBlock.version, requiresJson: schemaBlock.requires === null ? null : JSON.stringify(schemaBlock.requires), text: schemaBlock.text, producedBy: schemaBlock.producedBy === undefined ? null : schemaBlock.producedBy }, identityWhereSql: 'refId = ?', identityValueList: [schemaBlock.refId] }))
 				.find((oneOutcome) => oneOutcome.error);
 			if (blockOutcome !== undefined) {
 				return blockOutcome;
