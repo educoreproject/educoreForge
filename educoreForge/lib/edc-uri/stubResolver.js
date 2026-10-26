@@ -233,18 +233,19 @@ const interpretationOf = ({ kind, partByName, layerKey, version, registry, block
 };
 
 // ⟪ML3.1, Q51⟫ the standards a stored block names, read from the block itself: a schema block's header (standardKey, or pairA/pairB);
-// a decision block's pairKey ('<hub>@<v>::<standard>@<v>::…'), or for a stored set (pairKey 'layerSet::…') its rows' subject prefixes
 const schemaBlockStandardKeyListFor = (text) => {
 	const headerLine = text.slice(0, text.indexOf('\n') === -1 ? text.length : text.indexOf('\n'));
 	const header = headerLine.charAt(0) === '{' ? JSON.parse(headerLine) : {};
 	return [header.standardKey, header.pairA, header.pairB].filter((oneStandardKey) => typeof oneStandardKey === 'string');
 };
-const decisionBlockStandardKeyListFor = ({ pairKey, frozenText }) => {
-	const fieldList = pairKey.split('::');
-	if (fieldList.length >= 2 && fieldList[0].indexOf('@') !== -1 && fieldList[1].indexOf('@') !== -1) {
-		return [fieldList[0].split('@')[0], fieldList[1].split('@')[0]];
-	}
-	return Array.from(new Set(setRowListOf(frozenText).map((oneRow) => (oneRow.subject_id || '').slice(0, Math.max((oneRow.subject_id || '').indexOf(':'), 0))).filter((onePrefix) => onePrefix.length > 0))).sort();
+// a decision block's own SUBJECTS: the CURIE prefixes of its records' subject stableIds (and fan-out instances), or of a stored set's
+// subject_id column. Never its stored pairKey: uriContract keeps only a block's FIRST pairKey (lane B stand-down, ruled (c))
+const subjectPrefixOf = (stableId) => (typeof stableId === 'string' && stableId.indexOf(':') > 0 ? stableId.slice(0, stableId.indexOf(':')) : '');
+const decisionBlockStandardKeyListFor = ({ frozenText }) => {
+	const subjectIdList = frozenText.charAt(0) === '{'
+		? JSON.parse(frozenText).decisionRecordList.reduce((soFar, oneRecord) => soFar.concat([oneRecord.subjectStableId], oneRecord.instanceStableIdList === undefined ? [] : oneRecord.instanceStableIdList), [])
+		: setRowListOf(frozenText).map((oneRow) => oneRow.subject_id);
+	return Array.from(new Set(subjectIdList.map(subjectPrefixOf).filter((onePrefix) => onePrefix.length > 0))).sort();
 };
 const withheldAnswerFor = ({ standardKeyList, metadata }) => {
 	const heldList = standardKeyList.filter((oneStandardKey) => LICENCE_HOLD_BY_STANDARD_KEY[oneStandardKey] !== undefined);
