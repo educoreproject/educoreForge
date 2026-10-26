@@ -10,6 +10,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                  (stableId, uri, name), every ForgedNode element (stableId, _source), every standard root (name, key, version), the
 //                  passport's manifestRefId and ⟪ML3.1⟫ each element's own name (subjectLabelList, by layerPublicationRules.json). Rendering reads this file, never the graph, so the same file gives the same bytes.
 //       --goldContainerName=<container>  --goldCapturePath=<out.json>
+//   -renderHubCards ⟪ML3.1c, TQ Q8⟫ the CARD DOWNLOAD: one cards.csv and one cards.jsonld per hub release from the capture's hubCardList
+//                  (meaning URI, tier, domain, property, range, value, term, definition, each read from the card); a hub on the
+//                  licence-hold list is refused by name.  --goldCapturePath  --licenceRulesPath=<downloadArtifactsRules.json>  --outputDirPath
 //   -render        render every registered layer version (machine and curated) as ONE SSSOM set (R-b), one registry document per layer,
 //                  the site registry, and one JSON-LD context per (version, standard), into --outputDirPath; with --publicFilterRulesPath
 //                  ALSO a public filtered rendering of each (TQ Q37) under <outputDirPath>/public, never anywhere else.
@@ -58,6 +61,7 @@ const REQUIRED_PARAMETER_NAME_LIST_BY_ACTION = Object.freeze({
 	render: ['storePath', 'goldCapturePath', 'outputDirPath', 'publicFilterMode'],
 	gate: ['renderedDirPath', 'storePath', 'goldCapturePath', 'publicFilterMode', 'sssomValidatorPath', 'linkmlValidatorPath', 'sssomSchemaPath', 'gateReportPath'],
 	publishPublic: ['renderedDirPath', 'gateReportPath', 'publicDestinationDirPath'],
+	renderHubCards: ['goldCapturePath', 'licenceRulesPath', 'outputDirPath'],
 });
 const actionList = Object.keys(REQUIRED_PARAMETER_NAME_LIST_BY_ACTION).filter((actionName) => argumentList.indexOf(`-${actionName}`) !== -1);
 if (actionList.length !== 1) {
@@ -129,6 +133,8 @@ const CAPTURE_QUERY_BY_NAME = Object.freeze({
 	// 'unknown_02' while the standard root says 'unknown' (measured 2026-10-25); an assertion id hashes the edge's version, so both count
 	edgeSubjectVersionList: 'MATCH ()-[r]->() WHERE r.assertionId IS NOT NULL AND r.subjectSource IS NOT NULL RETURN DISTINCT r.subjectSource AS standardName, r.subjectVersion AS standardVersion ORDER BY standardName, standardVersion',
 	// ⟪ML3.1, Q42⟫ each element's OWN name: the forge-written property layerPublicationRules.json names for its subject prefix (O-2)
+	// ⟪ML3.1c, TQ Q8⟫ every hub card's own fields, for the card download per hub release (hubCardPublication.js)
+	hubCardList: 'MATCH (h:HubReference) WHERE h.uri IS NOT NULL RETURN h{.uri, .hubName, .hubVersion, .referenceTier, .domainId, .domainName, .propertyKey, .propertyName, .rangeOptionSetName, .rangeClassName, .rangeDatatype, .rangeOptionSetNameList, .rangeClassNameList, .rangeDatatypeList, .valueKey, .valueName, .termIri, .termName, .valueDefinition, .propertyDefinition, .termDefinition} AS card ORDER BY h.uri',
 	subjectLabelList: 'MATCH (n:ForgedNode) WHERE n.stableId IS NOT NULL AND NOT n:HubReference WITH n, split(n.stableId, \':\')[0] AS subjectPrefix WHERE subjectPrefix IN keys($labelPropertyNameBySubjectPrefix) WITH n, n[$labelPropertyNameBySubjectPrefix[subjectPrefix]] AS label WHERE label IS NOT NULL RETURN n.stableId AS stableId, label ORDER BY stableId',
 });
 // the parameters a capture query takes (DATA beside the queries); a query with no row here takes none
@@ -157,6 +163,8 @@ const captureGold = () => {
 						refuseAndExit(`the gold carries ${capture.passportList.length} GraphProvenance passports, not one`);
 					}
 					capture.manifestRefId = capture.passportList[0].manifestRefId;
+					// a field named *List stays a list; any other arrives as a scalar or a one-value list (the bolt trap) and keeps its first value
+					capture.hubCardList = capture.hubCardList.map((oneRow) => Object.keys(oneRow.card).reduce((soFar, fieldName) => (oneRow.card[fieldName] === null ? soFar : { ...soFar, [fieldName]: /List$/.test(fieldName) ? oneRow.card[fieldName] : firstValueOf(oneRow.card[fieldName]) }), {}));
 					capture.subjectLabelList = capture.subjectLabelList.map((oneRow) => ({ stableId: oneRow.stableId, label: String(firstValueOf(oneRow.label)) }));
 					writeFileMakingDirs(parameterValueFor('goldCapturePath'), `${JSON.stringify(capture)}\n`);
 					process.stdout.write(`${moduleName}: captured ${capture.cardList.length} cards, ${capture.elementList.length} elements, ${capture.standardList.length} standards from ${capture.goldContainerName} (manifest ${capture.manifestRefId})\n`);
@@ -439,5 +447,28 @@ const publishPublic = () => {
 	process.stdout.write(`${moduleName}: published ${publicFileList.length} gated file(s) into ${publicDestinationDirPath}\n`);
 };
 
-const ACTION_BY_NAME = Object.freeze({ captureGold, render, gate, publishPublic });
+// =====================================================================
+// -renderHubCards ⟪ML3.1c, TQ Q8⟫ one CSV and one JSON-LD per hub release, from the gold capture; a held hub is refused by name
+// =====================================================================
+
+const renderHubCards = () => {
+	const goldCapture = JSON.parse(fs.readFileSync(parameterValueFor('goldCapturePath'), 'utf8'));
+	if (!Array.isArray(goldCapture.hubCardList)) {
+		refuseAndExit(`${parameterValueFor('goldCapturePath')} has no hubCardList: re-run -captureGold (ML3.1c, the card download)`);
+	}
+	const licenceRules = JSON.parse(fs.readFileSync(parameterValueFor('licenceRulesPath'), 'utf8'));
+	const hubBundleTokenByHubName = require(path.join(__dirname, 'layerPublicationRules.json')).hubBundleTokenByHubName;
+	const rendered = exitOnError(require(path.join(__dirname, 'hubCardPublication')).hubCardFileListFor({ cardList: goldCapture.hubCardList, hubBundleTokenByHubName, heldBundleTokenList: licenceRules.licenceHoldList.map((oneHold) => oneHold.bundleToken) }));
+	const report = { goldContainerName: goldCapture.goldContainerName, goldManifestRefId: goldCapture.manifestRefId, hubFileList: [] };
+	rendered.hubFileList.forEach((oneHubFile) => {
+		const releaseDirPath = path.join(parameterValueFor('outputDirPath'), 'hubCards', oneHubFile.hubSegment, oneHubFile.hubReleaseSegment);
+		writeFileMakingDirs(path.join(releaseDirPath, 'cards.csv'), oneHubFile.csvText);
+		writeFileMakingDirs(path.join(releaseDirPath, 'cards.jsonld'), oneHubFile.jsonLdText);
+		report.hubFileList.push({ hubName: oneHubFile.hubName, hubVersion: oneHubFile.hubVersion, hubSegment: oneHubFile.hubSegment, hubReleaseSegment: oneHubFile.hubReleaseSegment, cardCount: oneHubFile.cardCount, csvSha256: sha256Hex(oneHubFile.csvText), jsonLdSha256: sha256Hex(oneHubFile.jsonLdText) });
+	});
+	writeFileMakingDirs(path.join(parameterValueFor('outputDirPath'), 'hubCards', 'hubCards-report.json'), `${JSON.stringify(report, null, '\t')}\n`);
+	process.stdout.write(`${moduleName}: rendered the cards of ${report.hubFileList.map((oneHubFile) => `${oneHubFile.hubName} ${oneHubFile.hubVersion} (${oneHubFile.cardCount})`).join(', ')} into ${parameterValueFor('outputDirPath')}/hubCards\n`);
+};
+
+const ACTION_BY_NAME = Object.freeze({ captureGold, render, gate, publishPublic, renderHubCards });
 ACTION_BY_NAME[actionName]();
