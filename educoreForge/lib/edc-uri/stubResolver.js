@@ -92,13 +92,18 @@ const edcIriFor = (uriOrPath) => {
 
 // assertionRecordFor({ frozenText, assertionIri }) → { record } | { error }: a machine block is JSON; its records are matched by
 // recomputing each planned edge's assertion id from the block header's standards and versions
-const assertionRecordFor = ({ frozenText, assertionIri, decisionBlockHash }) => {
+const assertionRecordFor = ({ frozenText, assertionIri, decisionBlockHash, registry }) => {
 	if (frozenText.charAt(0) !== '{') {
 		// a layer set (SSSOM/TSV): the row whose record_id is this IRI
 		const lineList = frozenText.split('\n').filter((oneLine) => !oneLine.startsWith('#') && oneLine.length > 0);
 		const columnList = lineList.length ? lineList[0].split('\t') : [];
 		const recordIdIndex = columnList.indexOf('record_id');
-		const rowLine = recordIdIndex === -1 ? undefined : lineList.slice(1).find((oneLine) => oneLine.split('\t')[recordIdIndex] === assertionIri);
+		if (recordIdIndex === -1) {
+			// ⟪ML3.1c⟫ a STORED curated set carries no record_id: its ids are computed by the R-c' recipe (s p o author, scoped by the
+			// stored set's hash), as its published rendering wrote them; so each row's id is recomputed here and matched
+			return curatedRecordFor({ frozenText, assertionIri, decisionBlockHash, registry });
+		}
+		const rowLine = lineList.slice(1).find((oneLine) => oneLine.split('\t')[recordIdIndex] === assertionIri);
 		return rowLine === undefined ? { error: 'no row of this set carries that record_id' } : { record: columnList.reduce((soFar, oneColumn, columnIndex) => ({ ...soFar, [oneColumn]: rowLine.split('\t')[columnIndex] }), {}) };
 	}
 	const block = JSON.parse(frozenText);
@@ -117,6 +122,31 @@ const assertionRecordFor = ({ frozenText, assertionIri, decisionBlockHash }) => 
 		return computed.assertionId === assertionIri;
 	});
 	return found === undefined ? { error: 'no edge this block writes has that assertion id' } : { record: { subjectStableId: found.fromStableId, judgedSubjectStableId: found.oneRecord.subjectStableId, predicate: found.oneRecord.predicate, objectStableId: found.oneRecord.objectStableId, resolution: found.oneRecord.resolution, confidence: found.oneRecord.confidence, mappingMethod: found.oneRecord.mappingMethod, judgeIdentity: found.oneRecord.judge && found.oneRecord.judge.judgeModel, subjectSource: header.sourceStandardName, subjectVersion: header.sourceVersion, objectSource: header.hubName, objectVersion: header.hubVersion } };
+};
+
+// ⟪ML3.1c⟫ curatedRecordFor — the curated layer version whose stored set IS this block (wholeSetBlock), each row's R-c' id recomputed
+// (the same recipe layerPublication.curatedVersionSetText writes), the row whose id is this IRI answered
+const curatedRecordFor = ({ frozenText, assertionIri, decisionBlockHash, registry }) => {
+	const owner = registry.layerRegistry.layerList.reduce((soFar, oneLayer) => soFar || oneLayer.versionList.filter((oneVersion) => oneVersion.contentIdBasis === 'frozenSetBytes' && oneVersion.wholeSetBlock && oneVersion.wholeSetBlock.decisionBlockHash === decisionBlockHash).map((oneVersion) => ({ layer: oneLayer, version: oneVersion }))[0], undefined);
+	if (owner === undefined) {
+		return { error: 'no row of this set carries that record_id (the set has no record_id column and no curated layer version holds it)' };
+	}
+	const objectVersionLine = frozenText.split('\n').find((oneLine) => oneLine.startsWith('#object_source_version: '));
+	const objectSourceVersion = objectVersionLine === undefined ? undefined : JSON.parse(objectVersionLine.slice('#object_source_version: '.length));
+	const standardByStandardKey = owner.layer.standardList.reduce((soFar, oneStandard) => ({ ...soFar, [oneStandard.standardKey]: oneStandard }), {});
+	const rowList = setRowListOf(frozenText);
+	for (let rowIndex = 0; rowIndex < rowList.length; rowIndex++) {
+		const oneRow = rowList[rowIndex];
+		const standard = standardByStandardKey[oneRow.subject_id.slice(0, oneRow.subject_id.indexOf(':'))];
+		if (standard === undefined) {
+			continue;
+		}
+		const identity = assertionIdentity.curatedAssertionIdFor({ decisionBlockHash, subjectStableId: oneRow.subject_id, subjectStandardName: standard.standardName, subjectStandardVersion: oneRow.subject_source_version, predicateCurie: oneRow.predicate_id, objectStableId: oneRow.object_id, objectStandardName: owner.layer.hubList[0].hubName, objectStandardVersion: objectSourceVersion, authorIdList: (oneRow.author_id || '').split('|').filter((oneAuthor) => oneAuthor.length) });
+		if (!identity.error && identity.assertionId === assertionIri) {
+			return { record: { ...oneRow, layerKey: owner.layer.layerKey, versionTag: owner.version.administrationRecord.versionTag, sourceRowNumber: rowIndex + 1 } };
+		}
+	}
+	return { error: 'no row of this set carries that record_id' };
 };
 
 // ⟪ML3, the FADED_ORBIT gap⟫ interpretationOf — SPEC §5.3: a PINNED interpretation is the set of that layer version's assertions whose
@@ -499,13 +529,13 @@ const RESOLUTION_BY_KIND = Object.freeze({
 		const version = found.error ? undefined : found.layer.versionList.find((oneVersion) => oneVersion.administrationRecord.contentId === partByName.contentId);
 		done(version === undefined ? answer(404, { error: found.error || `layer '${partByName.layerKey}' has no version with content ${partByName.contentId}` }) : answer(200, { kind: 'layerVersionByContent', layerKey: partByName.layerKey, effectiveRegistrationStatus: registry.effectiveStatusFor({ layerKey: partByName.layerKey, versionTag: version.administrationRecord.versionTag }).registrationStatus, version }));
 	},
-	assertion: ({ partByName, iri, blockTextForHash }, done) => {
+	assertion: ({ partByName, iri, blockTextForHash, registry }, done) => {
 		blockTextForHash(partByName.decisionBlockHash, (readError, frozenText) => {
 			if (readError || frozenText === null) {
 				done(answer(404, { error: readError || `no decision block ${partByName.decisionBlockHash} in the store` }));
 				return;
 			}
-			const found = assertionRecordFor({ frozenText, assertionIri: iri, decisionBlockHash: partByName.decisionBlockHash });
+			const found = assertionRecordFor({ frozenText, assertionIri: iri, decisionBlockHash: partByName.decisionBlockHash, registry });
 			done(found.error ? answer(404, { error: found.error }) : answer(200, { kind: 'assertion', assertionId: iri, decisionBlockHash: partByName.decisionBlockHash, assertion: found.record }));
 		});
 	},

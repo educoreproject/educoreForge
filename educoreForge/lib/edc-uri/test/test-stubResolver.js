@@ -40,7 +40,11 @@ const block = {
 };
 const frozenText = JSON.stringify(block);
 const decisionBlockHash = crypto.createHash('sha256').update(frozenText, 'utf8').digest('hex');
-const blockTextForHash = (requestedHash, done) => done('', requestedHash === decisionBlockHash ? frozenText : null);
+// ⟪ML3.1c⟫ a STORED curated set (no record_id column, as the rater sets are stored): its assertion URIs are recomputed (R-c')
+const RATER_IRI = 'https://w3id.org/EDUcore/agent/raterPseudonym7';
+const curatedSetText = ['#object_source_version: "1.0"', ['subject_id', 'predicate_id', 'object_id', 'subject_source_version', 'author_id'].join('\t'), ['toy:property/Alpha', 'edc:bestMatch', 'https://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa', '1.2.3', RATER_IRI].join('\t')].join('\n') + '\n';
+const curatedSetHash = crypto.createHash('sha256').update(curatedSetText, 'utf8').digest('hex');
+const blockTextForHash = (requestedHash, done) => done('', requestedHash === decisionBlockHash ? frozenText : requestedHash === curatedSetHash ? curatedSetText : null);
 const memberBlockList = [{ pairKey: 'toyhub@1.0::toy@1.2.3::toyDerivedPlugin::inferred', decisionBlockHash }];
 const contentId = crypto.createHash('sha256').update(decisionBlockHash, 'utf8').digest('hex');
 // v0 is an EARLIER version over another block (its own content); v1 is the block above
@@ -52,14 +56,17 @@ const versionFor = ({ versionTag, registrationStatus, publishedAt, versionMember
 	contentIdBasis: 'sortedMemberBlockHashList',
 	memberBlockList: versionMemberBlockList,
 });
-const { registry } = registryFor({
-	agentRegistry: { agentList: [{ agentIri: ORGANISATION_IRI, agentKind: 'organisation', displayName: 'EDUcore' }, { agentIri: JUDGE_IRI, agentKind: 'judge', displayName: 'the debug judge' }] },
+const registryLoad = registryFor({
+	agentRegistry: { agentList: [{ agentIri: ORGANISATION_IRI, agentKind: 'organisation', displayName: 'EDUcore' }, { agentIri: JUDGE_IRI, agentKind: 'judge', displayName: 'the debug judge' }, { agentIri: 'https://w3id.org/EDUcore/agent/raterPseudonym7', agentKind: 'person', displayName: 'rater 7' }] },
 	layerRegistry: {
 		registrationAuthorityIri: ORGANISATION_IRI,
 		registrarIri: ORGANISATION_IRI,
-		layerList: [{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [versionFor({ versionTag: 'v0', registrationStatus: 'Standard', publishedAt: '2026-09-01T00:00:00Z', versionMemberBlockList: earlierMemberBlockList }), versionFor({ versionTag: 'v1', registrationStatus: 'Standard', publishedAt: '2026-10-01T00:00:00Z' })], statusChangeList: [{ versionTag: 'v0', registrationStatus: 'Superseded', changedAt: '2026-10-02T00:00:00Z', changedBy: ORGANISATION_IRI, supersededByVersionTag: 'v1' }] }],
+		layerList: [{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [versionFor({ versionTag: 'v0', registrationStatus: 'Standard', publishedAt: '2026-09-01T00:00:00Z', versionMemberBlockList: earlierMemberBlockList }), versionFor({ versionTag: 'v1', registrationStatus: 'Standard', publishedAt: '2026-10-01T00:00:00Z' })], statusChangeList: [{ versionTag: 'v0', registrationStatus: 'Superseded', changedAt: '2026-10-02T00:00:00Z', changedBy: ORGANISATION_IRI, supersededByVersionTag: 'v1' }] }, { layerKey: 'toyRaters', displayName: 'toy raters', layerKind: 'curated', authorAgentIri: ORGANISATION_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [{ administrationRecord: { registrationAuthority: ORGANISATION_IRI, registrar: ORGANISATION_IRI, submitter: ORGANISATION_IRI, publishedAt: '2026-10-25T00:00:00Z', contentId: curatedSetHash, versionTag: 'r1' }, registrationStatus: 'Candidate', authorAgentIri: ORGANISATION_IRI, contentIdBasis: 'frozenSetBytes', wholeSetBlock: { pairKey: 'layerSet::toyRaters', decisionBlockHash: curatedSetHash }, memberBlockList: [{ pairKey: 'layerSet::toyRaters', decisionBlockHash: curatedSetHash }] }], statusChangeList: [] }],
 	},
 });
+harness.ok('the stated registry (a judge layer and, ML3.1c, a curated layer) loads', registryLoad.error === undefined, registryLoad.error);
+const { registry } = registryLoad;
+
 // ⟪ML3.1⟫ the uriContractReader DOUBLE (the interface lib/uri-contract implements): one manifest, one relationship schema block whose
 // element toy:property/Alpha has an edge to a ToyHub card and one to a CTDL card, plus a licence-held standardBase and decision block
 const sha256Of = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
@@ -97,6 +104,7 @@ const uriContractReader = {
 	layerListFor: (done) => done('', [{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', versionCount: 2, currentStandardVersionTag: 'v1' }]),
 	publishedManifestFor: (address, done) => done('', manifestList.find((oneManifest) => (address.manifestRefId !== undefined ? oneManifest.manifestRefId === address.manifestRefId : oneManifest.publicLabel === address.publicLabel)) || null),
 };
+const curatedAssertionId = assertionIdentity.curatedAssertionIdFor({ decisionBlockHash: curatedSetHash, subjectStableId: 'toy:property/Alpha', subjectStandardName: 'Toy', subjectStandardVersion: '1.2.3', predicateCurie: 'edc:bestMatch', objectStableId: 'https://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa', objectStandardName: 'ToyHub', objectStandardVersion: '1.0', authorIdList: [RATER_IRI] }).assertionId;
 const fanOutAssertionId = assertionIdentity.assertionIdFor({ decisionBlockHash, subjectStableId: 'toy:field/Two', subjectStandardName: 'Toy', subjectStandardVersion: '1.2.3', predicateCurie: 'skos:closeMatch', objectStableId: 'https://w3id.org/EDUcore/ToyHub/hub/1.0/bbbb', objectStandardName: 'ToyHub', objectStandardVersion: '1.0' }).assertionId;
 
 const caseList = [
@@ -106,6 +114,8 @@ const caseList = [
 	{ label: 'a version answers by content', uriOrPath: `edc:layer/toyJudge/sha256/${contentId}`, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.version.administrationRecord.versionTag === 'v1' },
 	{ label: 'an unknown version is 404 with its reason', uriOrPath: '/EDUcore/layer/toyJudge/v9', judge: (resolved) => resolved.httpStatus === 404 && /no version tagged "v9"/.test(resolved.body.error) },
 	{ label: 'a fan-out assertion answers its instance and the judged subject', uriOrPath: fanOutAssertionId, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.assertion.subjectStableId === 'toy:field/Two' && resolved.body.assertion.judgedSubjectStableId === 'toy:question/Q' },
+	{ label: 'ML3.1c: a CURATED assertion URI (stored set, no record_id column) answers its row, its id recomputed by the R-c\' recipe', uriOrPath: curatedAssertionId, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.assertion.subject_id === 'toy:property/Alpha' && resolved.body.assertion.layerKey === 'toyRaters' && resolved.body.assertion.versionTag === 'r1' },
+	{ label: 'ML3.1c: …and a curated assertion URI no row recomputes to is 404 by name', uriOrPath: `/EDUcore/assertion/${curatedSetHash}/${'0'.repeat(64)}`, judge: (resolved) => resolved.httpStatus === 404 && /no row of this set carries that record_id/.test(resolved.body.error) },
 	{ label: 'an assertion in a block the store lacks is 404', uriOrPath: `/EDUcore/assertion/${'c'.repeat(64)}/${'d'.repeat(64)}`, judge: (resolved) => resolved.httpStatus === 404 && /no decision block/.test(resolved.body.error) },
 	{ label: 'an agent answers its registry row', uriOrPath: '/agent/judge/debug:digest', judge: (resolved) => resolved.httpStatus === 200 && resolved.body.agent.displayName === 'the debug judge' },
 	// ⟪ML3⟫ interpretations resolve (SPEC §5.3): the version's assertions for the element, an explicit NoTermFound, never another layer's answer
