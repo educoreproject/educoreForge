@@ -5,11 +5,14 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // layerPublication.js — the public renderings of registered layer versions (mappingLayers ML3-a/b; SPEC §2, §5; DESIGN-ML3a, rulings
 // R-a..R-f and R-c' by BRONZE_CROWN 2026-10-25; TQ Q37). PURE and synchronous: frozen inputs in, text out; no store, no graph, no clock.
 //
-//   machineMemberRowsFor({ member, decisionBlock, cardByStableId })            → { memberRows } | { error }
+//   machineMemberRowsFor({ member, decisionBlock, cardByStableId, subjectLabelByStableId }) → { memberRows } | { error }
 //       one member block of a judge-layer version, its rows built by sssomExporter.blockRowsFor (the SAME code as the per-block export)
 //       and then given their public form: subject_id the encoded CURIE (R-a), object_id the full IRI, subject_source the element base
 //   machineVersionSetText({ layer, version, memberRowsList, publicFilter })  → { setText, rowCount, … } | { error }
-//   curatedVersionSetText({ layer, version, wholeSetText, publicFilter })     → { setText, rowCount, … } | { error }
+//   curatedVersionSetText({ layer, version, wholeSetText, publicFilter, subjectLabelByStableId }) → { setText, rowCount, … } | { error }
+//       ⟪ML3.1, Q42⟫ every rendered set carries subject_label: the standard's OWN name for the element, the value of the forge-written
+//       property layerPublicationRules.json subjectLabelPropertyNameBySubjectPrefix names, as captured from the gold
+//       (subjectLabelByStableId, REQUIRED); never composed. A subject with none gets an empty cell, counted as emptySubjectLabelCount.
 //       ONE SSSOM set per layer version (R-b): mapping_set_id = the pinned layer-version URI, mapping_set_version = the tag,
 //       mapping_set_source = the version it was copied from (only when the registry records one), see_also = the frozen block URN(s)
 //   registryDocumentText({ layer, registry, localNameByVersionTag, publicFilter })  → { documentText } | { error }
@@ -48,6 +51,10 @@ const PUBLIC_FILTER_SLOT_NAME = 'public_filter';
 const CONTEXT_TERM_COLON_ESCAPE = '%3A';
 const CONDITIONAL_COLUMN_ORDER = Object.freeze([JUDGED_SUBJECT_COLUMN, ...JUDGE_SUMMARY_EDGE_PROPERTY_LIST.map((onePropertyName) => SSSOM_COLUMN_BY_EDGE_PROPERTY[onePropertyName]), SSSOM_COLUMN_BY_EDGE_PROPERTY[MAPPING_PROPERTIES.MAPPING_RATIONALE]]);
 const NO_TERM_FOUND_COLUMN_LIST = Object.freeze(['mapping_cardinality', 'comment']);
+const SUBJECT_LABEL_COLUMN = 'subject_label';
+// withSubjectLabelColumn(columnList) — subject_label stands right after subject_id, as SSSOM lists them
+const withSubjectLabelColumn = (columnList) => (columnList.indexOf(SUBJECT_LABEL_COLUMN) !== -1 ? columnList : columnList.reduce((soFar, oneColumn) => soFar.concat(oneColumn === 'subject_id' ? [oneColumn, SUBJECT_LABEL_COLUMN] : [oneColumn]), []));
+const subjectLabelMapRefusal = (subjectLabelByStableId, where) => (subjectLabelByStableId === null || typeof subjectLabelByStableId !== 'object' || Array.isArray(subjectLabelByStableId) ? refusalText('subjectLabelByStableId is required (an object; {} is stated, never assumed)', `${where}: ML3.1 Q42, every set carries subject_label`) : '');
 const BUILT_IN_EXPANSION_BY_PREFIX = Object.freeze({ skos: 'http://www.w3.org/2004/02/skos/core#', owl: 'http://www.w3.org/2002/07/owl#', semapv: 'https://w3id.org/semapv/vocab/', sssom: 'https://w3id.org/sssom/', rdfs: 'http://www.w3.org/2000/01/rdf-schema#' });
 
 const isNonEmptyString = (candidate) => typeof candidate === 'string' && candidate.length > 0;
@@ -86,9 +93,13 @@ const tsvBodyText = (columnList, rowList) => `${columnList.join('\t')}\n${rowLis
 // machine (judge) layer versions
 // ---------------------------------------------------------------------------------------------------------------------------
 
-const machineMemberRowsFor = ({ member, decisionBlock, cardByStableId } = {}) => {
+const machineMemberRowsFor = ({ member, decisionBlock, cardByStableId, subjectLabelByStableId } = {}) => {
 	if (!member || !isNonEmptyString(member.pairKey) || !decisionBlock || !decisionBlock.header || !Array.isArray(decisionBlock.decisionRecordList)) {
-		return { error: refusalText('a member needs { pairKey, decisionBlockHash } and its parsed decision block', 'machineMemberRowsFor({ member, decisionBlock, cardByStableId })') };
+		return { error: refusalText('a member needs { pairKey, decisionBlockHash } and its parsed decision block', 'machineMemberRowsFor({ member, decisionBlock, cardByStableId, subjectLabelByStableId })') };
+	}
+	const labelRefusal = subjectLabelMapRefusal(subjectLabelByStableId, 'machineMemberRowsFor');
+	if (labelRefusal) {
+		return { error: labelRefusal };
 	}
 	const { header } = decisionBlock;
 	if (PUBLICATION_RULES.machineProducerKindList.indexOf(header.producerKind) === -1) {
@@ -117,6 +128,7 @@ const machineMemberRowsFor = ({ member, decisionBlock, cardByStableId } = {}) =>
 	}
 	const subjectExpansionByPrefix = {};
 	const rowList = [];
+	let emptySubjectLabelCount = 0;
 	for (let rowIndex = 0; rowIndex < blockRows.rowList.length; rowIndex++) {
 		const oneRow = blockRows.rowList[rowIndex];
 		const subjectIdentity = subjectCurieLib.subjectCurieFor({ stableId: oneRow.subject_id, standardName, standardVersion });
@@ -132,7 +144,9 @@ const machineMemberRowsFor = ({ member, decisionBlock, cardByStableId } = {}) =>
 		if (objectIdentity.error) {
 			return { error: `${moduleName}: member ${member.pairKey}: object: ${objectIdentity.error}` };
 		}
-		const publicRow = { ...oneRow, subject_id: subjectIdentity.subjectCurie, subject_source: subjectIdentity.expansion, object_id: objectIdentity.iri, [JUDGED_SUBJECT_COLUMN]: judgedIdentity.subjectCurie };
+		const subjectLabel = isNonEmptyString(subjectLabelByStableId[oneRow.subject_id]) ? subjectLabelByStableId[oneRow.subject_id] : '';
+		emptySubjectLabelCount += subjectLabel === '' ? 1 : 0;
+		const publicRow = { ...oneRow, subject_id: subjectIdentity.subjectCurie, [SUBJECT_LABEL_COLUMN]: subjectLabel, subject_source: subjectIdentity.expansion, object_id: objectIdentity.iri, [JUDGED_SUBJECT_COLUMN]: judgedIdentity.subjectCurie };
 		PUBLICATION_RULES.droppedMachineColumnList.forEach((oneColumn) => {
 			delete publicRow[oneColumn];
 		});
@@ -148,6 +162,7 @@ const machineMemberRowsFor = ({ member, decisionBlock, cardByStableId } = {}) =>
 			conditionalColumnList: blockRows.conditionalColumnList,
 			hasNoTermFound: blockRows.noTermFoundPlannedList.length > 0,
 			subjectExpansionByPrefix,
+			emptySubjectLabelCount,
 			rowList,
 		},
 	};
@@ -207,7 +222,7 @@ const machineVersionSetText = ({ layer, version, memberRowsList, publicFilter } 
 	}
 	const conditionalColumnList = CONDITIONAL_COLUMN_ORDER.filter((oneColumn) => keptMemberRowsList.some((oneMemberRows) => oneMemberRows.conditionalColumnList.indexOf(oneColumn) !== -1));
 	const hasNoTermFound = keptMemberRowsList.some((oneMemberRows) => oneMemberRows.hasNoTermFound);
-	const columnList = COLUMN_LIST.filter((oneColumn) => PUBLICATION_RULES.droppedMachineColumnList.indexOf(oneColumn) === -1).concat(conditionalColumnList, [RECORD_ID_COLUMN], hasNoTermFound ? NO_TERM_FOUND_COLUMN_LIST : []);
+	const columnList = withSubjectLabelColumn(COLUMN_LIST.filter((oneColumn) => PUBLICATION_RULES.droppedMachineColumnList.indexOf(oneColumn) === -1)).concat(conditionalColumnList, [RECORD_ID_COLUMN], hasNoTermFound ? NO_TERM_FOUND_COLUMN_LIST : []);
 	const rowList = keptMemberRowsList.reduce((soFar, oneMemberRows) => soFar.concat(oneMemberRows.rowList.map((oneEntry) => oneEntry.row)), []);
 	const memberBlockList = memberRowsList.map((oneMemberRows) => ({ ...oneMemberRows.member, standardKey: oneMemberRows.standardKey, ...oneMemberRows.blockHeaderSummary, rowCount: oneMemberRows.rowList.length, rowsInThisFile: isPublished(oneMemberRows) }));
 	const extensionSlotNameList = ['source_label', 'predicate_asserted_by'].concat(conditionalColumnList, ML3_SET_EXTENSION_SLOT_NAME_LIST, MACHINE_ONLY_EXTENSION_SLOT_NAME_LIST);
@@ -238,16 +253,21 @@ const machineVersionSetText = ({ layer, version, memberRowsList, publicFilter } 
 		standardNameByStandardKey[oneMemberRows.standardKey] = oneMemberRows.standardName;
 		standardVersionByStandardKey[oneMemberRows.standardKey] = oneMemberRows.standardVersion;
 	});
-	return { setText: assembled.setText, mappingSetId: assembled.mappingSetId, rowCount: rowList.length, fullRowCount: memberRowsList.reduce((soFar, oneMemberRows) => soFar + oneMemberRows.rowList.length, 0), subjectStableIdList, standardNameByStandardKey, standardVersionByStandardKey };
+	const emptySubjectLabelCount = rowList.filter((oneRow) => oneRow[SUBJECT_LABEL_COLUMN] === '').length;
+	return { setText: assembled.setText, mappingSetId: assembled.mappingSetId, rowCount: rowList.length, fullRowCount: memberRowsList.reduce((soFar, oneMemberRows) => soFar + oneMemberRows.rowList.length, 0), emptySubjectLabelCount, subjectStableIdList, standardNameByStandardKey, standardVersionByStandardKey };
 };
 
 // ---------------------------------------------------------------------------------------------------------------------------
 // curated (human) layer versions: a RENDERING of the stored set, whose block hash is the version's content id (R-c)
 // ---------------------------------------------------------------------------------------------------------------------------
 
-const curatedVersionSetText = ({ layer, version, wholeSetText, publicFilter } = {}) => {
+const curatedVersionSetText = ({ layer, version, wholeSetText, publicFilter, subjectLabelByStableId } = {}) => {
 	if (!layer || !version || version.contentIdBasis !== 'frozenSetBytes' || !isNonEmptyString(wholeSetText)) {
-		return { error: refusalText('a curated version renders from its stored whole-set text (contentIdBasis frozenSetBytes)', 'curatedVersionSetText({ layer, version, wholeSetText, publicFilter })') };
+		return { error: refusalText('a curated version renders from its stored whole-set text (contentIdBasis frozenSetBytes)', 'curatedVersionSetText({ layer, version, wholeSetText, publicFilter, subjectLabelByStableId })') };
+	}
+	const labelRefusal = subjectLabelMapRefusal(subjectLabelByStableId, 'curatedVersionSetText');
+	if (labelRefusal) {
+		return { error: labelRefusal };
 	}
 	const contentId = version.administrationRecord.contentId;
 	if (sha256Hex(wholeSetText) !== contentId) {
@@ -305,7 +325,7 @@ const curatedVersionSetText = ({ layer, version, wholeSetText, publicFilter } = 
 		legacyCurieMap[subjectIdentity.prefix] = oneRow.subject_source;
 		curatedStandardNameByStandardKey[standardKey] = standard.standardName;
 		curatedStandardVersionByStandardKey[standardKey] = oneRow.subject_source_version;
-		rowList.push({ ...oneRow, subject_id: subjectIdentity.subjectCurie, subject_source: subjectIdentity.expansion, [RECORD_ID_COLUMN]: identity.assertionId });
+		rowList.push({ ...oneRow, subject_id: subjectIdentity.subjectCurie, [SUBJECT_LABEL_COLUMN]: isNonEmptyString(subjectLabelByStableId[oneRow.subject_id]) ? subjectLabelByStableId[oneRow.subject_id] : '', subject_source: subjectIdentity.expansion, [RECORD_ID_COLUMN]: identity.assertionId });
 		subjectStableIdList.push(oneRow.subject_id);
 	}
 	// the stored set's own prefixes that are not subject prefixes (edc for the predicates, urn already) are carried over as declared
@@ -334,10 +354,10 @@ const curatedVersionSetText = ({ layer, version, wholeSetText, publicFilter } = 
 		extensionSlotNameList: ML3_SET_EXTENSION_SLOT_NAME_LIST.slice(),
 		seeAlsoList: [`${MAPPING_SET_ID_URN_BASE}${contentId}`],
 		renderingOf: { layerVersion: versionMint.uri, contentId, contentIdBasis: version.contentIdBasis, renderedBy: PUBLICATION_RULES.renderedBy, statusNote: 'the registration status is in the registry document, never in a set (a status change must not change a set\'s bytes)' },
-		columnList: parsed.columnList.concat([RECORD_ID_COLUMN]),
+		columnList: withSubjectLabelColumn(parsed.columnList).concat([RECORD_ID_COLUMN]),
 		rowList,
 	});
-	return { setText: assembled.setText, mappingSetId: assembled.mappingSetId, rowCount: rowList.length, fullRowCount: parsed.rowList.length, subjectStableIdList: Array.from(new Set(subjectStableIdList)).sort(byCodePoint), standardNameByStandardKey: curatedStandardNameByStandardKey, standardVersionByStandardKey: curatedStandardVersionByStandardKey };
+	return { setText: assembled.setText, mappingSetId: assembled.mappingSetId, rowCount: rowList.length, fullRowCount: parsed.rowList.length, emptySubjectLabelCount: rowList.filter((oneRow) => oneRow[SUBJECT_LABEL_COLUMN] === '').length, subjectStableIdList: Array.from(new Set(subjectStableIdList)).sort(byCodePoint), standardNameByStandardKey: curatedStandardNameByStandardKey, standardVersionByStandardKey: curatedStandardVersionByStandardKey };
 };
 
 // ---------------------------------------------------------------------------------------------------------------------------
@@ -482,4 +502,4 @@ const contextDocumentTextList = ({ layer, version, subjectStableIdList, standard
 	return { contextDocumentList };
 };
 
-module.exports = { machineMemberRowsFor, machineVersionSetText, curatedVersionSetText, recordIdRecomputation, registryDocumentText, siteRegistryDocumentText, contextDocumentTextList, publicFilterFor, PUBLICATION_RULES, moduleName };
+module.exports = { machineMemberRowsFor, machineVersionSetText, curatedVersionSetText, recordIdRecomputation, SUBJECT_LABEL_COLUMN, registryDocumentText, siteRegistryDocumentText, contextDocumentTextList, publicFilterFor, PUBLICATION_RULES, moduleName };

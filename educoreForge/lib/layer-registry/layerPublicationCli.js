@@ -7,8 +7,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 // ACTIONS (exactly one):
 //   -captureGold   read ONE gold READ-ONLY over bolt and freeze what rendering and import need into a JSON file: every HubReference card
-//                  (stableId, uri, name), every ForgedNode element (stableId, _source), every standard root (name, key, version) and the
-//                  passport's manifestRefId. Rendering reads this file, never the graph, so the same file gives the same bytes.
+//                  (stableId, uri, name), every ForgedNode element (stableId, _source), every standard root (name, key, version), the
+//                  passport's manifestRefId and ⟪ML3.1⟫ each element's own name (subjectLabelList, by layerPublicationRules.json). Rendering reads this file, never the graph, so the same file gives the same bytes.
 //       --goldContainerName=<container>  --goldCapturePath=<out.json>
 //   -render        render every registered layer version (machine and curated) as ONE SSSOM set (R-b), one registry document per layer,
 //                  the site registry, and one JSON-LD context per (version, standard), into --outputDirPath; with --publicFilterRulesPath
@@ -94,7 +94,17 @@ const CAPTURE_QUERY_BY_NAME = Object.freeze({
 	// the versions the gold's OWN match edges stamp on their subjects: for SEDM and MedBiquitous they are the pair versions 'unknown_01' /
 	// 'unknown_02' while the standard root says 'unknown' (measured 2026-10-25); an assertion id hashes the edge's version, so both count
 	edgeSubjectVersionList: 'MATCH ()-[r]->() WHERE r.assertionId IS NOT NULL AND r.subjectSource IS NOT NULL RETURN DISTINCT r.subjectSource AS standardName, r.subjectVersion AS standardVersion ORDER BY standardName, standardVersion',
+	// ⟪ML3.1, Q42⟫ each element's OWN name: the forge-written property layerPublicationRules.json names for its subject prefix (O-2)
+	subjectLabelList: 'MATCH (n:ForgedNode) WHERE n.stableId IS NOT NULL AND NOT n:HubReference WITH n, split(n.stableId, \':\')[0] AS subjectPrefix WHERE subjectPrefix IN keys($labelPropertyNameBySubjectPrefix) WITH n, n[$labelPropertyNameBySubjectPrefix[subjectPrefix]] AS label WHERE label IS NOT NULL RETURN n.stableId AS stableId, label ORDER BY stableId',
 });
+// the parameters a capture query takes (DATA beside the queries); a query with no row here takes none
+const SUBJECT_LABEL_RULE_BY_PREFIX = require(path.join(__dirname, 'layerPublicationRules.json')).subjectLabelPropertyNameBySubjectPrefix;
+const LABEL_PROPERTY_NAME_BY_SUBJECT_PREFIX = Object.keys(SUBJECT_LABEL_RULE_BY_PREFIX)
+	.filter((oneSubjectPrefix) => oneSubjectPrefix !== 'about')
+	.reduce((soFar, oneSubjectPrefix) => ({ ...soFar, [oneSubjectPrefix]: SUBJECT_LABEL_RULE_BY_PREFIX[oneSubjectPrefix] }), {});
+const CAPTURE_PARAMETERS_BY_NAME = Object.freeze({ subjectLabelList: { labelPropertyNameBySubjectPrefix: LABEL_PROPERTY_NAME_BY_SUBJECT_PREFIX } });
+// a property arrives as a scalar or, across the bolt boundary, as a one-value list (ML3 trap): the label is its FIRST value, verbatim
+const firstValueOf = (rawValue) => (Array.isArray(rawValue) ? rawValue[0] : rawValue);
 
 const captureGold = () => {
 	const { resolveContainerBolt } = require(path.join(__dirname, '..', 'graph-connection', 'containerBolt'));
@@ -113,6 +123,7 @@ const captureGold = () => {
 						refuseAndExit(`the gold carries ${capture.passportList.length} GraphProvenance passports, not one`);
 					}
 					capture.manifestRefId = capture.passportList[0].manifestRefId;
+					capture.subjectLabelList = capture.subjectLabelList.map((oneRow) => ({ stableId: oneRow.stableId, label: String(firstValueOf(oneRow.label)) }));
 					writeFileMakingDirs(parameterValueFor('goldCapturePath'), `${JSON.stringify(capture)}\n`);
 					process.stdout.write(`${moduleName}: captured ${capture.cardList.length} cards, ${capture.elementList.length} elements, ${capture.standardList.length} standards from ${capture.goldContainerName} (manifest ${capture.manifestRefId})\n`);
 				});
@@ -120,7 +131,7 @@ const captureGold = () => {
 			}
 			const session = driver.session({ defaultAccessMode: neo4j.session.READ });
 			session
-				.run(CAPTURE_QUERY_BY_NAME[queryNameList[queryIndex]])
+				.run(CAPTURE_QUERY_BY_NAME[queryNameList[queryIndex]], CAPTURE_PARAMETERS_BY_NAME[queryNameList[queryIndex]] === undefined ? {} : CAPTURE_PARAMETERS_BY_NAME[queryNameList[queryIndex]])
 				.then((result) => {
 					capture[queryNameList[queryIndex]] = result.records.map((oneRecord) => oneRecord.toObject());
 					session.close().then(() => runNext(queryIndex + 1));
@@ -146,6 +157,14 @@ const render = () => {
 	const goldCapture = JSON.parse(fs.readFileSync(parameterValueFor('goldCapturePath'), 'utf8'));
 	const cardByStableId = goldCapture.cardList.reduce((soFar, oneCard) => {
 		soFar[oneCard.stableId] = { uri: oneCard.uri, name: oneCard.name };
+		return soFar;
+	}, {});
+	// ⟪ML3.1⟫ a capture made before subject labels existed is refused by name, never rendered with every label empty
+	if (!Array.isArray(goldCapture.subjectLabelList)) {
+		refuseAndExit(`${parameterValueFor('goldCapturePath')} has no subjectLabelList: re-run -captureGold (ML3.1 Q42: every set carries subject_label)`);
+	}
+	const subjectLabelByStableId = goldCapture.subjectLabelList.reduce((soFar, oneRow) => {
+		soFar[oneRow.stableId] = oneRow.label;
 		return soFar;
 	}, {});
 	const downloadRules = JSON.parse(fs.readFileSync(parameterValueFor('publicFilterRulesPath'), 'utf8'));
@@ -176,7 +195,7 @@ const render = () => {
 			const memberRowsList = oneVersion.contentIdBasis === 'sortedMemberBlockHashList'
 				? oneVersion.memberBlockList.map((oneMember) => {
 						if (memberRowsByBlockHash[oneMember.decisionBlockHash] === undefined) {
-							memberRowsByBlockHash[oneMember.decisionBlockHash] = exitOnError(layerPublicationLib.machineMemberRowsFor({ member: oneMember, decisionBlock: JSON.parse(frozenTextFor(oneMember.decisionBlockHash)), cardByStableId })).memberRows;
+							memberRowsByBlockHash[oneMember.decisionBlockHash] = exitOnError(layerPublicationLib.machineMemberRowsFor({ member: oneMember, decisionBlock: JSON.parse(frozenTextFor(oneMember.decisionBlockHash)), cardByStableId, subjectLabelByStableId })).memberRows;
 						}
 						return { ...memberRowsByBlockHash[oneMember.decisionBlockHash], member: { pairKey: oneMember.pairKey, decisionBlockHash: oneMember.decisionBlockHash } };
 					})
@@ -185,7 +204,7 @@ const render = () => {
 			renderingList.forEach((oneRendering) => {
 				const rendered = exitOnError(memberRowsList !== undefined
 					? layerPublicationLib.machineVersionSetText({ layer: oneLayer, version: oneVersion, memberRowsList, publicFilter: oneRendering.filter })
-					: layerPublicationLib.curatedVersionSetText({ layer: oneLayer, version: oneVersion, wholeSetText, publicFilter: oneRendering.filter }));
+					: layerPublicationLib.curatedVersionSetText({ layer: oneLayer, version: oneVersion, wholeSetText, publicFilter: oneRendering.filter, subjectLabelByStableId }));
 				const renderingName = oneRendering.filter === undefined ? 'complete' : 'publicFiltered';
 				// a public rendering whose filter leaves no row is not written, and its registry does not list it (an empty set is no set)
 				if (renderingName === 'publicFiltered' && rendered.rowCount === 0) {
@@ -197,7 +216,7 @@ const render = () => {
 				writeFileMakingDirs(path.join(versionDirPath, 'set.sssom.tsv'), rendered.setText);
 				const contexts = exitOnError(layerPublicationLib.contextDocumentTextList({ layer: oneLayer, version: oneVersion, subjectStableIdList: rendered.subjectStableIdList, standardNameByStandardKey: rendered.standardNameByStandardKey, standardVersionByStandardKey: rendered.standardVersionByStandardKey, publicFilter: oneRendering.filter }));
 				contexts.contextDocumentList.forEach((oneContext) => writeFileMakingDirs(path.join(versionDirPath, 'context', `${oneContext.standardKey}.jsonld`), oneContext.documentText));
-				layerReport.versionList.push({ versionTag, rendering: oneRendering.filter === undefined ? 'complete' : 'publicFiltered', mappingSetId: rendered.mappingSetId, rowCount: rendered.rowCount, fullRowCount: rendered.fullRowCount, setSha256: sha256Hex(rendered.setText), contextStandardKeyList: contexts.contextDocumentList.map((oneContext) => oneContext.standardKey) });
+				layerReport.versionList.push({ versionTag, rendering: oneRendering.filter === undefined ? 'complete' : 'publicFiltered', mappingSetId: rendered.mappingSetId, rowCount: rendered.rowCount, fullRowCount: rendered.fullRowCount, emptySubjectLabelCount: rendered.emptySubjectLabelCount, setSha256: sha256Hex(rendered.setText), contextStandardKeyList: contexts.contextDocumentList.map((oneContext) => oneContext.standardKey) });
 			});
 		});
 		renderingList.forEach((oneRendering) => {
