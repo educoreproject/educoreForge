@@ -8,7 +8,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 //   manifestForPublish({ supportStore, manifestRefId }) → { memberList, frozenVectorList, basedOnManifestRefId } | { error }
 //       supportStore  a READ-ONLY better-sqlite3 handle on a support store (blocks, manifests, manifestBlocks, vectors)
-//   answerConflictListFor({ memberList }) → [{ subjectStableId, hubSegment, answerSourceList }]
+//   answerConflictListFor({ memberList }) → { answerKeyCount, answerConflictList: [{ subjectStableId, hubSegment, answerSourceList }] } | { error }
 //   defaultLayerByHubFor({ answerConflictList, declaredDefaultLayerByHub }) → { defaultLayerByHub } | { error }
 //
 // THE QUESTION RULE (ruling (b)): a question URI asks what THIS GRAPH says an element maps to, and answers from the manifest's own
@@ -26,11 +26,10 @@ const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const { embeddingRefListOf } = require(path.join(__dirname, 'uriContract'));
-const edcUri = require(path.join(__dirname, '..', 'edc-uri', 'edcUri'));
+const derivedIndexesLib = require(path.join(__dirname, 'derivedIndexes'));
 
 const refusalText = (what, where) => refuse.byName({ moduleName, what, where }).message;
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
-const ANSWER_EDGE_TYPE_SET = new Set(Object.values(vocabularyLib.SKOS_EDGE_TYPES).concat([vocabularyLib.EDGE_TYPES.DECLARED_CORRESPONDENCE]));
 
 const manifestForPublish = ({ supportStore, manifestRefId } = {}) => {
 	const manifestRow = supportStore.prepare('SELECT refId, basedOnManifestRefId FROM manifests WHERE refId = ?').get(manifestRefId);
@@ -63,37 +62,29 @@ const manifestForPublish = ({ supportStore, manifestRefId } = {}) => {
 	return { memberList, frozenVectorList, basedOnManifestRefId: manifestRow.basedOnManifestRefId === null ? undefined : manifestRow.basedOnManifestRefId };
 };
 
-// answerSourceOf(edge, header) → what answered: the decision schema block the edge was materialised from (every judged and every
-// declared mapping edge carries decisionBlockHash), else the block's producer, named so it can never equal a hash
-const answerSourceOf = (edge, producer) => (edge.properties && Array.isArray(edge.properties.decisionBlockHash) && edge.properties.decisionBlockHash.length ? edge.properties.decisionBlockHash[0] : `producer:${producer}`);
-
+// answerConflictListFor — grouped from the same answer-edge rows the derived index holds (derivedIndexes.js), so the publish-time
+// conflict test and the question resolver read ONE definition of an answer edge; what answered is the edge's decisionBlockHash
 const answerConflictListFor = ({ memberList } = {}) => {
 	const answerSourceSetByAnswerKey = new Map();
-	memberList
-		.filter(({ schemaBlock }) => schemaBlock.kind === vocabularyLib.SCHEMA_BLOCK_KIND.RELATIONSHIP)
-		.forEach(({ schemaBlock }) => {
-			const lineList = schemaBlock.text.split('\n');
-			const header = JSON.parse(lineList[0]);
-			const producer = `${header.producer}${header.discriminator === undefined ? '' : `/${header.discriminator}`}`;
-			lineList.forEach((oneLine) => {
-				if (oneLine.indexOf('"kind":"edge"') === -1) {
-					return;
-				}
-				const edge = JSON.parse(oneLine);
-				const meaning = ANSWER_EDGE_TYPE_SET.has(edge.type) ? edcUri.parse(edge.toRef.id) : { error: 'not an answer edge' };
-				if (meaning.error || meaning.kind !== 'meaning') {
-					return;
-				}
-				const answerKey = `${edge.fromRef.id}\u0000${meaning.partByName.hubSegment}`;
-				if (!answerSourceSetByAnswerKey.has(answerKey)) {
-					answerSourceSetByAnswerKey.set(answerKey, new Set());
-				}
-				answerSourceSetByAnswerKey.get(answerKey).add(answerSourceOf(edge, producer));
-			});
+	for (let memberIndex = 0; memberIndex < memberList.length; memberIndex++) {
+		const derived = derivedIndexesLib.derivedRowsForSchemaBlock(memberList[memberIndex].schemaBlock);
+		if (derived.error) {
+			return { error: derived.error };
+		}
+		derived.answerEdgeRowList.forEach((oneRow) => {
+			const answerKey = `${oneRow.subjectStableId}\u0000${oneRow.hubSegment}`;
+			if (!answerSourceSetByAnswerKey.has(answerKey)) {
+				answerSourceSetByAnswerKey.set(answerKey, new Set());
+			}
+			answerSourceSetByAnswerKey.get(answerKey).add(oneRow.decisionBlockHash === null ? `noDecisionBlock:${oneRow.schemaBlockRefId}` : oneRow.decisionBlockHash);
 		});
-	return [...answerSourceSetByAnswerKey]
-		.filter(([, answerSourceSet]) => answerSourceSet.size > 1)
-		.map(([answerKey, answerSourceSet]) => ({ subjectStableId: answerKey.split('\u0000')[0], hubSegment: answerKey.split('\u0000')[1], answerSourceList: [...answerSourceSet].sort() }));
+	}
+	return {
+		answerKeyCount: answerSourceSetByAnswerKey.size,
+		answerConflictList: [...answerSourceSetByAnswerKey]
+			.filter(([, answerSourceSet]) => answerSourceSet.size > 1)
+			.map(([answerKey, answerSourceSet]) => ({ subjectStableId: answerKey.split('\u0000')[0], hubSegment: answerKey.split('\u0000')[1], answerSourceList: [...answerSourceSet].sort() })),
+	};
 };
 
 // defaultLayerByHubFor — the shape lane A's question kind case reads (AMBER_JOURNEY relay 2026-10-26):
@@ -120,4 +111,4 @@ const defaultLayerByHubFor = ({ answerConflictList, declaredDefaultLayerByHub } 
 	return { defaultLayerByHub: declaredDefaultLayerByHub };
 };
 
-module.exports = { manifestForPublish, answerConflictListFor, defaultLayerByHubFor, ANSWER_EDGE_TYPE_SET, moduleName };
+module.exports = { manifestForPublish, answerConflictListFor, defaultLayerByHubFor, moduleName };

@@ -1,5 +1,5 @@
 {
-	"about": "The nine tables of uriContract.sqlite (ML3.1 Part B; PROPOSAL-dataStoreLayout-102626 section 3 and Appendix B, with the additive columns AMBER_JOURNEY accepted 2026-10-26, and the ninth table frozenVectors ruled the same day: a vector a published schema block references by embeddingRef is part of what RECREATES the graph, not a calculation input). DATA: uriContract.js builds every CREATE TABLE, every write-once trigger and every INSERT from these rows, and refuses by name a row field no table lists. rowRole 'identity' = written once at publish; 'history' = append-only. NO TABLE IS EVER UPDATED OR DELETED FROM: each carries BEFORE UPDATE and BEFORE DELETE triggers that abort, so even raw SQL cannot edit the forever-promise. registrationStatus CHECKs are built from lib/layer-registry/layerRegistrySchema.json registrationStatusList, never restated here.",
+	"about": "The nine IDENTITY and HISTORY tables of uriContract.sqlite, and its four DERIVED tables (rowRole derived: pure functions of the write-once rows, written in the same transaction, verified by -rebuildUriContractIndexes; AMBER_JOURNEY 2026-10-26) — (ML3.1 Part B; PROPOSAL-dataStoreLayout-102626 section 3 and Appendix B, with the additive columns AMBER_JOURNEY accepted 2026-10-26, and the ninth table frozenVectors ruled the same day: a vector a published schema block references by embeddingRef is part of what RECREATES the graph, not a calculation input). DATA: uriContract.js builds every CREATE TABLE, every write-once trigger and every INSERT from these rows, and refuses by name a row field no table lists. rowRole 'identity' = written once at publish; 'history' = append-only. NO TABLE IS EVER UPDATED OR DELETED FROM: each carries BEFORE UPDATE and BEFORE DELETE triggers that abort, so even raw SQL cannot edit the forever-promise. registrationStatus CHECKs are built from lib/layer-registry/layerRegistrySchema.json registrationStatusList, never restated here.",
 	"writeOnceTriggerMessage": "uriContract is write-once: rows are never updated or deleted (a status change is a new history row)",
 	"tableList": [
 		{
@@ -150,8 +150,74 @@
 			],
 			"tableConstraintList": ["FOREIGN KEY (layerKey, versionTag) REFERENCES layerVersions(layerKey, versionTag)"]
 		}
+,
+		{
+			"tableName": "derivedIndexedSources",
+			"rowRole": "derived",
+			"about": "DERIVED. One row per identity source whose derived rows were written (a schema block, or a layer version), with how many: the completeness record -rebuildUriContractIndexes checks, so a source that legitimately yields no rows is distinguishable from one never indexed",
+			"columnList": [
+				{ "columnName": "sourceKind", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (sourceKind IN ('schemaBlock', 'layerVersion'))" },
+				{ "columnName": "sourceIdentity", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "derivedRowCount", "sqlType": "INTEGER", "constraintText": "NOT NULL CHECK (derivedRowCount >= 0)" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (sourceKind, sourceIdentity)"]
+		},
+		{
+			"tableName": "derivedElementIndex",
+			"rowRole": "derived",
+			"about": "DERIVED from schemaBlocks (standardBase): where an element URI resolves (standard name, version, stableId), its parent (the node's parentId), its definition text (verbatim) and its node record without vectors",
+			"columnList": [
+				{ "columnName": "schemaBlockRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES schemaBlocks(refId)" },
+				{ "columnName": "standardName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "standardVersion", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "standardKey", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "elementStableId", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "parentStableId", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "definitionText", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "nodeJson", "sqlType": "TEXT", "constraintText": "NOT NULL" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (schemaBlockRefId, elementStableId)"]
+		},
+		{
+			"tableName": "derivedAnswerEdges",
+			"rowRole": "derived",
+			"about": "DERIVED from schemaBlocks (relationship): every answer edge (a SKOS match or DECLARED_CORRESPONDENCE edge whose target is a meaning card), with the decision schema block it was materialised from",
+			"columnList": [
+				{ "columnName": "schemaBlockRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES schemaBlocks(refId)" },
+				{ "columnName": "subjectStableId", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "subjectStandardName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "subjectStandardVersion", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "meaningIri", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubSegment", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "hubVersion", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "relationType", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "decisionBlockHash", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": ["UNIQUE (schemaBlockRefId, subjectStableId, meaningIri, relationType, decisionBlockHash)"]
+		},
+		{
+			"tableName": "derivedLayerVersionCounts",
+			"rowRole": "derived",
+			"about": "DERIVED from a layer version's member decision schema blocks: per standard (standardKey) and per hub (hubName), rows, mapped and abstained",
+			"columnList": [
+				{ "columnName": "layerKey", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "versionTag", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "countScope", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (countScope IN ('standard', 'hub'))" },
+				{ "columnName": "scopeName", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "rowCount", "sqlType": "INTEGER", "constraintText": "NOT NULL" },
+				{ "columnName": "mappedCount", "sqlType": "INTEGER", "constraintText": "NOT NULL" },
+				{ "columnName": "abstainedCount", "sqlType": "INTEGER", "constraintText": "NOT NULL" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (layerKey, versionTag, countScope, scopeName)", "FOREIGN KEY (layerKey, versionTag) REFERENCES layerVersions(layerKey, versionTag)"]
+		}
 	],
 	"indexList": [
-		"CREATE UNIQUE INDEX IF NOT EXISTS layerStatusChangesOnePublicationRow ON layerStatusChanges(layerKey, versionTag) WHERE statusChangeKind = 'atPublication'"
+		"CREATE UNIQUE INDEX IF NOT EXISTS layerStatusChangesOnePublicationRow ON layerStatusChanges(layerKey, versionTag) WHERE statusChangeKind = 'atPublication'",
+		"CREATE INDEX IF NOT EXISTS derivedElementIndexByElement ON derivedElementIndex(standardName, standardVersion, elementStableId)",
+		"CREATE INDEX IF NOT EXISTS derivedElementIndexByParent ON derivedElementIndex(schemaBlockRefId, parentStableId)",
+		"CREATE INDEX IF NOT EXISTS derivedAnswerEdgesByMeaning ON derivedAnswerEdges(meaningIri)",
+		"CREATE INDEX IF NOT EXISTS derivedAnswerEdgesBySubject ON derivedAnswerEdges(subjectStableId, hubSegment)",
+		"CREATE INDEX IF NOT EXISTS publishedManifestMembersByBlock ON publishedManifestMembers(schemaBlockRefId)"
 	]
 }

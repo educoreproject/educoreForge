@@ -52,6 +52,8 @@ const layerRegistryLib = require(path.join(__dirname, '..', 'layer-registry', 'l
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const edcUri = require(path.join(__dirname, '..', 'edc-uri', 'edcUri'));
 const contentAddress = require(path.join(__dirname, '..', 'content-address', 'content-address'))();
+const derivedIndexesLib = require(path.join(__dirname, 'derivedIndexes'));
+const { uriContractRelationsFor } = require(path.join(__dirname, 'uriContractRelations'));
 
 const URI_CONTRACT_SCHEMA = require(path.join(__dirname, 'uriContractSchema.json'));
 const URI_CONTRACT_RULES = require(path.join(__dirname, 'uriContractRules.json'));
@@ -426,7 +428,67 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 	};
 	const publishedManifestList = () => database.prepare('SELECT manifestRefId, publicLabel, publishedAt FROM publishedManifests ORDER BY rowid').all();
 
-	const readerApi = { accessMode, registryShape, loadRegistry, decisionSchemaBlockTextFor, decisionSchemaBlockFor, schemaBlockFor, frozenVectorFor, agentRecordFor, publishedManifestFor, publishedManifestList, close: () => database.close() };
+	// ⟪derived tables⟫ derivedComparisonFor — every identity source's derived rows RECOMPUTED and compared with the stored ones, column for
+	// column, in a canonical order. absentSourceList = sources never indexed (only the writer may fill them); differenceList = a stored
+	// row set that is not what its source yields (a defect: nothing here changes or removes a row)
+	const DERIVED_COLUMN_LIST_BY_TABLE = URI_CONTRACT_SCHEMA.tableList.filter((oneTable) => oneTable.rowRole === 'derived').reduce((soFar, oneTable) => ({ ...soFar, [oneTable.tableName]: oneTable.columnList.map((oneColumn) => oneColumn.columnName) }), {});
+	const canonicalRowListText = (tableName, rowList) => rowList.map((oneRow) => JSON.stringify(DERIVED_COLUMN_LIST_BY_TABLE[tableName].map((columnName) => (oneRow[columnName] === undefined ? null : oneRow[columnName])))).sort().join('\n');
+	const derivedSourceList = () => {
+		const loaded = loadRegistry();
+		const versionSourceList = loaded.error ? [] : loaded.registry.layerRegistry.layerList.reduce((soFar, oneLayer) => soFar.concat(oneLayer.versionList.map((oneVersion) => ({ sourceKind: 'layerVersion', sourceIdentity: `${oneLayer.layerKey}\u0000${oneVersion.administrationRecord.versionTag}`, layer: oneLayer, version: oneVersion }))), []);
+		return { error: loaded.error, sourceList: database.prepare('SELECT refId FROM schemaBlocks ORDER BY rowid').all().map((oneRow) => ({ sourceKind: 'schemaBlock', sourceIdentity: oneRow.refId })).concat(versionSourceList) };
+	};
+	const computedDerivedRowsFor = (oneSource) => {
+		if (oneSource.sourceKind === 'schemaBlock') {
+			const read = schemaBlockFor(oneSource.sourceIdentity);
+			if (read.error) {
+				return read;
+			}
+			const derived = derivedIndexesLib.derivedRowsForSchemaBlock(read.schemaBlock);
+			return derived.error ? derived : { rowListByTable: { derivedElementIndex: derived.elementRowList, derivedAnswerEdges: derived.answerEdgeRowList } };
+		}
+		const derived = derivedIndexesLib.derivedRowsForLayerVersion({ layer: oneSource.layer, version: oneSource.version, blockTextFor: decisionSchemaBlockTextFor });
+		return derived.error ? derived : { rowListByTable: { derivedLayerVersionCounts: derived.countRowList } };
+	};
+	const storedDerivedRowsFor = (oneSource, tableName) =>
+		oneSource.sourceKind === 'schemaBlock'
+			? database.prepare(`SELECT * FROM ${tableName} WHERE schemaBlockRefId = ?`).all(oneSource.sourceIdentity)
+			: database.prepare(`SELECT * FROM ${tableName} WHERE layerKey = ? AND versionTag = ?`).all(oneSource.layer.layerKey, oneSource.version.administrationRecord.versionTag);
+	const derivedComparisonFor = () => {
+		const listed = derivedSourceList();
+		if (listed.error) {
+			return { error: listed.error };
+		}
+		const absentSourceList = [];
+		const differenceList = [];
+		let verifiedSourceCount = 0;
+		for (let sourceIndex = 0; sourceIndex < listed.sourceList.length; sourceIndex++) {
+			const oneSource = listed.sourceList[sourceIndex];
+			const computed = computedDerivedRowsFor(oneSource);
+			if (computed.error) {
+				return { error: computed.error };
+			}
+			const indexedRow = database.prepare('SELECT derivedRowCount FROM derivedIndexedSources WHERE sourceKind = ? AND sourceIdentity = ?').get(oneSource.sourceKind, oneSource.sourceIdentity);
+			const computedRowCount = Object.keys(computed.rowListByTable).reduce((soFar, tableName) => soFar + computed.rowListByTable[tableName].length, 0);
+			if (indexedRow === undefined) {
+				absentSourceList.push({ ...oneSource, rowListByTable: computed.rowListByTable, computedRowCount });
+				continue;
+			}
+			const differingTable = Object.keys(computed.rowListByTable).find((tableName) => canonicalRowListText(tableName, storedDerivedRowsFor(oneSource, tableName)) !== canonicalRowListText(tableName, computed.rowListByTable[tableName]));
+			if (differingTable !== undefined || indexedRow.derivedRowCount !== computedRowCount) {
+				differenceList.push(`${oneSource.sourceKind} ${oneSource.sourceIdentity.replace('\u0000', '/')}: ${differingTable !== undefined ? `${differingTable} rows differ from a recomputation` : `derivedRowCount ${indexedRow.derivedRowCount}, recomputed ${computedRowCount}`}`);
+			}
+			verifiedSourceCount += 1;
+		}
+		return { verifiedSourceCount, absentSourceList, differenceList };
+	};
+	const verifyDerivedIndexes = () => {
+		const compared = derivedComparisonFor();
+		return compared.error ? compared : { verifiedSourceCount: compared.verifiedSourceCount, absentSourceCount: compared.absentSourceList.length, differenceList: compared.differenceList };
+	};
+
+	const coreReaderApi = { accessMode, registryShape, loadRegistry, verifyDerivedIndexes, decisionSchemaBlockTextFor, decisionSchemaBlockFor, schemaBlockFor, frozenVectorFor, agentRecordFor, publishedManifestFor, publishedManifestList, close: () => database.close() };
+	const readerApi = { ...coreReaderApi, relations: uriContractRelationsFor({ database, uriContract: coreReaderApi }) };
 	if (accessMode === 'read') {
 		return { uriContract: readerApi };
 	}
@@ -463,6 +525,42 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 
 	// agentRefusalFor — the closed field list OF ITS KIND (a person carries no homepage and no configuration), and a person's text
 	// never carries an e-mail address (TQ ruling Q3: persons stay strictly pseudonymous)
+	// ----- DERIVED ROWS, written inside the transaction that writes their source (derivedIndexes.js; README_AI "derived tables")
+	const isIndexed = (sourceKind, sourceIdentity) => database.prepare('SELECT derivedRowCount FROM derivedIndexedSources WHERE sourceKind = ? AND sourceIdentity = ?').get(sourceKind, sourceIdentity) !== undefined;
+	const insertDerivedRows = (tableName, rowList) => {
+		if (rowList.length === 0) {
+			return;
+		}
+		const statement = database.prepare(insertSqlFor(tableName, rowList[0]));
+		rowList.forEach((oneRow) => statement.run(oneRow));
+	};
+	const writeDerivedRowsForSchemaBlock = (schemaBlock) => {
+		if (isIndexed('schemaBlock', schemaBlock.refId)) {
+			return { alreadyPresent: true };
+		}
+		const derived = derivedIndexesLib.derivedRowsForSchemaBlock(schemaBlock);
+		if (derived.error) {
+			return derived;
+		}
+		insertDerivedRows('derivedElementIndex', derived.elementRowList);
+		insertDerivedRows('derivedAnswerEdges', derived.answerEdgeRowList);
+		insertDerivedRows('derivedIndexedSources', [{ sourceKind: 'schemaBlock', sourceIdentity: schemaBlock.refId, derivedRowCount: derived.elementRowList.length + derived.answerEdgeRowList.length }]);
+		return { alreadyPresent: false };
+	};
+	const writeDerivedRowsForLayerVersion = ({ layer, version }) => {
+		const sourceIdentity = `${layer.layerKey}\u0000${version.administrationRecord.versionTag}`;
+		if (isIndexed('layerVersion', sourceIdentity)) {
+			return { alreadyPresent: true };
+		}
+		const derived = derivedIndexesLib.derivedRowsForLayerVersion({ layer, version, blockTextFor: decisionSchemaBlockTextFor });
+		if (derived.error) {
+			return derived;
+		}
+		insertDerivedRows('derivedLayerVersionCounts', derived.countRowList);
+		insertDerivedRows('derivedIndexedSources', [{ sourceKind: 'layerVersion', sourceIdentity, derivedRowCount: derived.countRowList.length }]);
+		return { alreadyPresent: false };
+	};
+
 	const agentRefusalFor = (agent) => {
 		const label = `agent ${JSON.stringify(agent && agent.agentIri)}`;
 		const kindFieldList = isPlainObject(agent) ? URI_CONTRACT_RULES.agentFieldListByKind[agent.agentKind] : undefined;
@@ -535,7 +633,8 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 				return versionOutcome;
 			}
 			database.prepare(insertSqlFor('layerStatusChanges', publicationStatusRowFor({ layer, version }))).run(publicationStatusRowFor({ layer, version }));
-			return { alreadyPresent: false };
+			const derivedOutcome = writeDerivedRowsForLayerVersion({ layer, version });
+			return derivedOutcome.error ? derivedOutcome : { alreadyPresent: false };
 		});
 	};
 
@@ -629,6 +728,10 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 			if (blockOutcome !== undefined) {
 				return blockOutcome;
 			}
+			const derivedOutcome = memberList.map(({ schemaBlock }) => writeDerivedRowsForSchemaBlock(schemaBlock)).find((oneOutcome) => oneOutcome.error);
+			if (derivedOutcome !== undefined) {
+				return derivedOutcome;
+			}
 			const vectorOutcome = frozenVectorList
 				.map((oneVector) => insertIdentityRow({ tableName: 'frozenVectors', row: { vectorId: oneVector.vectorId, modelVersion: oneVector.modelVersion, dims: Number(oneVector.dims), dtype: oneVector.dtype, inputText: oneVector.inputText, vector: oneVector.vector, vectorHash: oneVector.vectorHash }, identityWhereSql: 'vectorId = ?', identityValueList: [oneVector.vectorId] }))
 				.find((oneOutcome) => oneOutcome.error);
@@ -646,7 +749,27 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		});
 	};
 
-	return { uriContract: { ...readerApi, writerActionName, appendAgent, appendLayerVersion, appendLayerStatusChange, publishManifest } };
+	// fillAbsentDerivedIndexes — -rebuildUriContractIndexes: verify every source, REFUSE on any difference, then write the derived rows of
+	// the sources never indexed (in one transaction). It changes and removes nothing.
+	const fillAbsentDerivedIndexes = () => {
+		const compared = derivedComparisonFor();
+		if (compared.error) {
+			return compared;
+		}
+		if (compared.differenceList.length) {
+			return { error: refusalText(`${compared.differenceList.length} derived row set(s) differ from a recomputation of their write-once source: ${compared.differenceList.slice(0, 5).join('; ')}`, 'a derived row that is not what its source yields is a defect to report; this file is never repaired') };
+		}
+		const filled = runWriteTransaction(() => {
+			compared.absentSourceList.forEach((oneSource) => {
+				Object.keys(oneSource.rowListByTable).forEach((tableName) => insertDerivedRows(tableName, oneSource.rowListByTable[tableName]));
+				insertDerivedRows('derivedIndexedSources', [{ sourceKind: oneSource.sourceKind, sourceIdentity: oneSource.sourceIdentity, derivedRowCount: oneSource.computedRowCount }]);
+			});
+			return { filledSourceCount: compared.absentSourceList.length };
+		});
+		return filled.error ? filled : { verifiedSourceCount: compared.verifiedSourceCount, filledSourceCount: filled.filledSourceCount, differenceList: [] };
+	};
+
+	return { uriContract: { ...readerApi, writerActionName, appendAgent, appendLayerVersion, appendLayerStatusChange, publishManifest, fillAbsentDerivedIndexes } };
 };
 
 // openUriContractFile — the ONE place a uriContract file is opened. The path is REQUIRED (no default); 'read' and 'publish'
@@ -706,6 +829,18 @@ const uriContractReaderFor = ({ uriContractFilePath } = {}) => {
 				callback,
 			),
 		agentRecordFor: (agentIri, callback) => answerWith(uriContract.agentRecordFor(agentIri), ({ agentRecord }) => agentRecord, callback),
+		// the COMPUTED RELATIONS (uriContractRelations.js), lane A's shapes, VERBATIM
+		elementRecordFor: (elementSelector, callback) => answerWith(uriContract.relations.elementRecordFor(elementSelector), ({ answer }) => answer, callback),
+		publishedLayerVersionListForStandard: (standardSelector, callback) => answerWith(uriContract.relations.publishedLayerVersionListForStandard(standardSelector), ({ answer }) => answer, callback),
+		mappingsToMeaningFor: (meaningIri, callback) => answerWith(uriContract.relations.mappingsToMeaningFor(meaningIri), ({ answer }) => answer, callback),
+		layerHistoryFor: (layerKey, callback) => answerWith(uriContract.relations.layerHistoryFor(layerKey), ({ answer }) => answer, callback),
+		layerVersionRecordFor: (layerVersionSelector, callback) => answerWith(uriContract.relations.layerVersionRecordFor(layerVersionSelector), ({ answer }) => answer, callback),
+		manifestInventoryFor: (manifestSelector, callback) => answerWith(uriContract.relations.manifestInventoryFor(manifestSelector), ({ answer }) => answer, callback),
+		rootCountsFor: (callback) => answerWith(uriContract.relations.rootCountsFor(), ({ answer }) => answer, callback),
+		publishedManifestListFor: (pageSpec, callback) => answerWith(uriContract.relations.publishedManifestListFor(pageSpec), ({ answer }) => answer, callback),
+		manifestStandardListFor: (manifestSelector, callback) => answerWith(uriContract.relations.manifestStandardListFor(manifestSelector), ({ answer }) => answer, callback),
+		manifestElementListFor: (manifestSelector, listSpec, callback) => answerWith(uriContract.relations.manifestElementListFor(manifestSelector, listSpec), ({ answer }) => answer, callback),
+		agentListFor: (pageSpec, callback) => answerWith(uriContract.relations.agentListFor(pageSpec), ({ answer }) => answer, callback),
 	};
 	return { uriContractReader, uriContract };
 };

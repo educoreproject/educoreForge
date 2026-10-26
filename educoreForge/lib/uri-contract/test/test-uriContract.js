@@ -146,7 +146,7 @@ const rawHandleFor = (filePath) => new Database(filePath, { fileMustExist: true 
 
 // the manifest fixture: two standardBase blocks, the second requiring the first, sharing one edge and carrying one dangling edge
 const headerFor = (standardKey) => ({ blockType: 'standardBase', standardKey, version: '1', stableUriPropertyName: 'stableId', resolutionKey: 'stableId' });
-const nodeFor = (stableId) => ({ ref: { source: 'Toy', id: stableId }, labels: ['ForgedNode', 'ToyNode'], stableId, properties: { name: [stableId] } });
+const nodeFor = (stableId) => ({ ref: { source: 'Toy', id: stableId }, labels: ['ForgedNode', 'ToyNode'], stableId, properties: { name: [stableId], parentId: ['toy:root'], ...(stableId === 'toy:a' ? { definition: ['the toy a'] } : {}) } });
 const edgeFor = (fromStableId, toStableId) => ({ type: 'HAS_PART', fromRef: { source: 'Toy', id: fromStableId }, toRef: { source: 'Toy', id: toStableId }, properties: { provenanceTier: ['structural'] } });
 // one frozen vector, referenced by toy:b's embeddingRef (a 2-dim float32 vector, its id by the grammar-2 recipe)
 const toyVectorBuffer = Buffer.alloc(8);
@@ -156,10 +156,18 @@ const toyVector = { modelVersion: 'toy-model', dims: 2, dtype: 'float32', inputT
 toyVector.vectorId = contentAddress.vectorIdForInput({ modelVersion: toyVector.modelVersion, embeddingDims: toyVector.dims, inputText: toyVector.inputText });
 const baseText = replayBlock.serializeBlock({ header: headerFor('toy'), nodes: [nodeFor('toy:a'), { ...nodeFor('toy:b'), embeddingRef: toyVector.vectorId, embeddingModelVersion: 'toy-model' }], edges: [edgeFor('toy:a', 'toy:b')] });
 const secondText = replayBlock.serializeBlock({ header: headerFor('toy2'), nodes: [nodeFor('toy:c'), nodeFor('toy:a')], edges: [edgeFor('toy:c', 'toy:a'), edgeFor('toy:a', 'toy:b'), edgeFor('toy:c', 'toy:nowhere')] });
+// a relationship block: toy:a EXACT_MATCH one ToyHub meaning card, materialised from judgedMemberBlockList[0]'s decision block
+const TOY_MEANING_IRI = `https://w3id.org/EDUcore/ToyHub/hub/1.0/${'a'.repeat(64)}`;
+const relationshipText = replayBlock.serializeBlock({
+	header: { blockType: 'relationship', pairA: 'toyhub', pairAVersion: '1.0', pairB: 'toy', pairBVersion: '1', producer: 'inferred' },
+	nodes: [{ ref: { source: 'ToyHub', id: TOY_MEANING_IRI }, labels: ['ForgedNode', 'HubReference'], stableId: TOY_MEANING_IRI, properties: { name: ['a toy meaning'] } }],
+	edges: [{ type: 'EXACT_MATCH', fromRef: { source: 'Toy', id: 'toy:a' }, toRef: { source: 'ToyHub', id: TOY_MEANING_IRI }, properties: { mappingKind: ['inferred'], decisionBlockHash: [judgedMemberBlockList[0].decisionBlockHash] } }],
+});
 const schemaBlockFor = (text, requires) => ({ refId: sha256Hex(text), kind: 'standardBase', subject: 'toy@1_base', version: '1', requires, text, producedBy: 'fixture' });
 const memberList = [
 	{ position: 0, schemaBlock: schemaBlockFor(baseText, []) },
 	{ position: 1, schemaBlock: schemaBlockFor(secondText, [sha256Hex(baseText)]) },
+	{ position: 2, schemaBlock: { ...schemaBlockFor(relationshipText, [sha256Hex(baseText)]), kind: 'relationship', subject: 'toyhub@1_0_rel_toy@1_exact' } },
 ];
 const manifestRefId = contentAddress.manifestKeyForMembership(memberList.map((oneMember) => ({ blockId: oneMember.schemaBlock.refId, position: oneMember.position })));
 const publishArgs = { manifestRefId, publicLabel: 'educore-2026-10', memberList, frozenVectorList: [toyVector], defaultLayerByHub: null, recordedNodeCount: 3, recordedEdgeCount: 2, publishedAt: '2026-10-26T00:00:00Z', publishedByAgentIri: ORGANISATION_IRI, registrationStatus: 'Candidate', registrationAuthority: ORGANISATION_IRI };
@@ -316,7 +324,7 @@ harness.match('a manifest whose members do not hash to its refId is refused', ma
 harness.match('a member requiring a block the manifest does not list is refused (the closure is published whole)', manifestWorld.uriContract.publishManifest({ ...publishArgs, memberList: [memberList[1]], manifestRefId: contentAddress.manifestKeyForMembership([{ blockId: memberList[1].schemaBlock.refId, position: 1 }]) }).error, /requires .* which the manifest does not list/);
 harness.match('the reserved label sha256 is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, publicLabel: 'sha256' }).error, /never a reserved word/);
 harness.match('a publish without a registration status is refused (no default)', manifestWorld.uriContract.publishManifest({ ...publishArgs, registrationStatus: undefined }).error, /registrationStatus undefined is not/);
-harness.match('a member whose text does not hash to its refId is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, memberList: [{ position: 0, schemaBlock: { ...memberList[0].schemaBlock, text: `${baseText} ` } }, memberList[1]] }).error, /its text does not hash to its refId/);
+harness.match('a member whose text does not hash to its refId is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, memberList: [{ position: 0, schemaBlock: { ...memberList[0].schemaBlock, text: `${baseText} ` } }, memberList[1], memberList[2]] }).error, /its text does not hash to its refId/);
 harness.match('a manifest offered without a vector its member references is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, frozenVectorList: [] }).error, /references vector .* which frozenVectorList does not carry/);
 harness.match('a vector no member references is refused (ONLY what recreates)', manifestWorld.uriContract.publishManifest({ ...publishArgs, frozenVectorList: [toyVector, { ...toyVector, vectorId: 'e'.repeat(64) }] }).error, /which no member references/);
 harness.match('a vector whose bytes do not hash to its vectorHash is refused before it is written', manifestWorld.uriContract.publishManifest({ ...publishArgs, frozenVectorList: [{ ...toyVector, vectorHash: 'd'.repeat(64) }] }).error, /payload: the vector bytes hash to/);
@@ -326,7 +334,7 @@ harness.ok('the manifest publishes', firstPublish.error === undefined && firstPu
 harness.equal('re-publishing the same manifest under the same label is alreadyPresent', manifestWorld.uriContract.publishManifest(publishArgs).alreadyPresent, true);
 harness.match('the same label for another manifest is refused (a label is never reassigned)', manifestWorld.uriContract.publishManifest({ ...publishArgs, memberList: [memberList[0]], manifestRefId: contentAddress.manifestKeyForMembership([{ blockId: memberList[0].schemaBlock.refId, position: 0 }]) }).error, /already published/);
 const readBack = manifestWorld.uriContract.publishedManifestFor({ publicLabel: 'educore-2026-10' });
-sameValue('it reads back by label with its members, its status and its URIs', [readBack.publishedManifest.memberList.length, readBack.publishedManifest.effectiveRegistrationStatus, readBack.publishedManifest.uri, readBack.publishedManifest.uriByContent], [2, 'Candidate', 'https://w3id.org/EDUcore/manifest/educore-2026-10', `https://w3id.org/EDUcore/manifest/sha256/${manifestRefId}`]);
+sameValue('it reads back by label with its members, its status and its URIs', [readBack.publishedManifest.memberList.length, readBack.publishedManifest.effectiveRegistrationStatus, readBack.publishedManifest.uri, readBack.publishedManifest.uriByContent], [3, 'Candidate', 'https://w3id.org/EDUcore/manifest/educore-2026-10', `https://w3id.org/EDUcore/manifest/sha256/${manifestRefId}`]);
 sameValue('the frozen vector reads back verified, decoded as getVector decodes it', manifestWorld.uriContract.frozenVectorFor(toyVector.vectorId).frozenVector.vector, [0.25, -0.5]);
 harness.equal('…and by hash', manifestWorld.uriContract.publishedManifestFor({ manifestRefId }).publishedManifest.publicLabel, 'educore-2026-10');
 const reader = uriContractLib.uriContractReaderFor({ uriContractFilePath: manifestWorld.uriContractFilePath });
@@ -339,30 +347,68 @@ const answerOf = (readerFunction, argument) => {
 	});
 	return captured;
 };
-sameValue('the uriContractReader lane A is injected with exposes exactly its functions', Object.keys(reader.uriContractReader).sort(), ['agentRecordFor', 'decisionSchemaBlockFor', 'publishedManifestFor', 'schemaBlockFor']);
+sameValue('the uriContractReader lane A is injected with exposes exactly its fifteen functions', Object.keys(reader.uriContractReader).sort(), ['agentListFor', 'agentRecordFor', 'decisionSchemaBlockFor', 'elementRecordFor', 'layerHistoryFor', 'layerVersionRecordFor', 'manifestElementListFor', 'manifestInventoryFor', 'manifestStandardListFor', 'mappingsToMeaningFor', 'publishedLayerVersionListForStandard', 'publishedManifestFor', 'publishedManifestListFor', 'rootCountsFor', 'schemaBlockFor']);
 sameValue('decisionSchemaBlockFor answers { decisionBlockHash, pairKey, frozenText }', Object.keys(answerOf(reader.uriContractReader.decisionSchemaBlockFor, judgedMemberBlockList[0].decisionBlockHash).answer).sort(), ['decisionBlockHash', 'frozenText', 'pairKey']);
 sameValue('schemaBlockFor answers { schemaBlockRefId, blockKind, subject, version, text }', Object.keys(answerOf(reader.uriContractReader.schemaBlockFor, sha256Hex(baseText)).answer).sort(), ['blockKind', 'schemaBlockRefId', 'subject', 'text', 'version']);
 sameValue('an absent hash answers null, not an error', answerOf(reader.uriContractReader.schemaBlockFor, '0'.repeat(64)), { errorText: '', answer: null });
 const manifestAnswer = answerOf(reader.uriContractReader.publishedManifestFor, { publicLabel: 'educore-2026-10' }).answer;
-sameValue('publishedManifestFor answers the identity row, ordered members, latest status and publishedAt', [Object.keys(manifestAnswer).sort(), manifestAnswer.memberList, manifestAnswer.latestStatus], [['defaultLayerByHub', 'latestStatus', 'manifestRefId', 'memberList', 'publicLabel', 'publishedAt'], [{ schemaBlockRefId: sha256Hex(baseText), position: 0 }, { schemaBlockRefId: sha256Hex(secondText), position: 1 }], { registrationStatus: 'Candidate', changedAt: '2026-10-26T00:00:00Z' }]);
+sameValue('publishedManifestFor answers the identity row, ordered members, latest status and publishedAt', [Object.keys(manifestAnswer).sort(), manifestAnswer.memberList, manifestAnswer.latestStatus], [['defaultLayerByHub', 'latestStatus', 'manifestRefId', 'memberList', 'publicLabel', 'publishedAt'], [{ schemaBlockRefId: sha256Hex(baseText), position: 0 }, { schemaBlockRefId: sha256Hex(secondText), position: 1 }, { schemaBlockRefId: sha256Hex(relationshipText), position: 2 }], { registrationStatus: 'Candidate', changedAt: '2026-10-26T00:00:00Z' }]);
 const judgeRecord = answerOf(reader.uriContractReader.agentRecordFor, JUDGE_IRI).answer;
 sameValue('agentRecordFor computes the judge\'s record: its versions, their effective status, their counts', judgeRecord.layersAuthored.map((oneLayer) => [oneLayer.layerKey, oneLayer.versionList.map((oneVersion) => [oneVersion.versionTag, oneVersion.effectiveRegistrationStatus, oneVersion.roleList.join('+'), oneVersion.assertionCount, oneVersion.abstentionCount])]), [['toyJudge', [['base', 'Superseded', 'versionAuthor', 0, 0], ['wave1', 'Standard', 'versionAuthor', 0, 0]]]]);
 sameValue('…its scores and its first and last contribution', [judgeRecord.scores.length, judgeRecord.firstContributionAt, judgeRecord.lastContributionAt], [1, '2026-10-02T00:00:00Z', '2026-10-03T00:00:00Z']);
 const personRecord = answerOf(reader.uriContractReader.agentRecordFor, PERSON_IRI).answer;
 sameValue('a curated set is counted by its rows (one assertion, no abstention)', personRecord.layersAuthored[0].versionList.map((oneVersion) => [oneVersion.assertionCount, oneVersion.abstentionCount]), [[1, 0]]);
 harness.equal('an unknown agent answers null', answerOf(reader.uriContractReader.agentRecordFor, 'https://w3id.org/EDUcore/agent/nobody').answer, null);
+
+// =====================================================================
+harness.section('THE COMPUTED RELATIONS (lane A\'s eleven reader functions) and the DERIVED tables they read');
+// =====================================================================
+const callOf = (readerFunction, ...argumentList) => {
+	const captured = { errorText: 'no callback', answer: undefined };
+	readerFunction(...argumentList, (readError, answer) => {
+		captured.errorText = readError;
+		captured.answer = answer;
+	});
+	return captured;
+};
+const relationReader = reader.uriContractReader;
+sameValue('1 elementRecordFor: the node, its parent, its siblings (code-point order), its definition text verbatim', callOf(relationReader.elementRecordFor, { standardName: 'Toy', standardVersion: '1', elementStableId: 'toy:a' }).answer, { schemaBlockRefId: sha256Hex(baseText), node: { stableId: 'toy:a', labels: ['ForgedNode', 'ToyNode'], properties: { definition: ['the toy a'], name: ['toy:a'], parentId: ['toy:root'] } }, parentStableId: 'toy:root', siblingStableIdList: ['toy:b'], definitionText: 'the toy a' });
+sameValue('…an element no published manifest holds answers null', callOf(relationReader.elementRecordFor, { standardName: 'Toy', standardVersion: '1', elementStableId: 'toy:nowhere' }), { errorText: '', answer: null });
+sameValue('2 publishedLayerVersionListForStandard: the versions with a member block for Toy0@1, with their effective status', callOf(relationReader.publishedLayerVersionListForStandard, { standardName: 'Toy0', standardVersion: '1' }).answer, [{ layerKey: 'toyJudge', versionTag: 'base', registrationStatus: 'Superseded' }, { layerKey: 'toyJudge', versionTag: 'wave1', registrationStatus: 'Standard' }]);
+sameValue('3 mappingsToMeaningFor: per manifest, standard, first-publishing layer version and relation, the element count', callOf(relationReader.mappingsToMeaningFor, TOY_MEANING_IRI).answer, [{ manifestRefId, standardName: 'Toy', standardVersion: '1', layerKey: 'toyJudge', versionTag: 'base', relationType: 'EXACT_MATCH', elementCount: 1 }]);
+const history = callOf(relationReader.layerHistoryFor, 'toyJudge').answer;
+sameValue('4 layerHistoryFor: every version with its whole status history (publication row first) and its scores', history.versionList.map((oneVersion) => [oneVersion.versionTag, oneVersion.statusHistory.map((oneStatus) => oneStatus.registrationStatus), oneVersion.scores === null ? null : oneVersion.scores.length]), [['base', ['Standard', 'Superseded'], null], ['wave1', ['Standard'], 1]]);
+const versionRecord = callOf(relationReader.layerVersionRecordFor, { layerKey: 'toyCurated', versionTag: 'r1' }).answer;
+sameValue('5 layerVersionRecordFor: counts by standard and by hub, from the member blocks; the abstention rate', [versionRecord.countByStandard, versionRecord.countByHub, versionRecord.abstentionRate, versionRecord.latestStatus.registrationStatus], [{ toy: { rowCount: 1, mappedCount: 1, abstainedCount: 0 } }, { ToyHub: { rowCount: 1, mappedCount: 1, abstainedCount: 0 } }, 0, 'Candidate']);
+const inventory = callOf(relationReader.manifestInventoryFor, { publicLabel: 'educore-2026-10' }).answer;
+sameValue('6 manifestInventoryFor: standards, hubs, the wholly-cited layer versions, the recorded counts', [inventory.standardList, inventory.hubList, inventory.layerVersionList, inventory.nodeCount, inventory.edgeCount], [[{ standardName: 'Toy', standardVersion: '1' }], [{ hubName: 'ToyHub', hubVersion: '1.0' }], [{ layerKey: 'toyJudge', versionTag: 'base' }], 3, 2]);
+sameValue('7 rootCountsFor', callOf(relationReader.rootCountsFor).answer, { manifestCount: 1, layerCount: 2, layerVersionCount: 3, agentCount: 3 });
+sameValue('8 publishedManifestListFor, page 1', callOf(relationReader.publishedManifestListFor, { pageNumber: 1, pageSize: 10 }).answer, { totalCount: 1, manifestList: [{ manifestRefId, publicLabel: 'educore-2026-10', publishedAt: '2026-10-26T00:00:00Z', latestStatus: { registrationStatus: 'Candidate', changedAt: '2026-10-26T00:00:00Z' } }] });
+harness.match('…page 0 is refused (pages are numbered from 1)', callOf(relationReader.publishedManifestListFor, { pageNumber: 0, pageSize: 10 }).errorText, /pages are numbered from 1/);
+sameValue('9 manifestStandardListFor: one row per base block with its element count', callOf(relationReader.manifestStandardListFor, { manifestRefId }).answer.standardList, [{ standardName: 'Toy', standardVersion: '1', standardKey: 'toy', elementCount: 2, schemaBlockRefId: sha256Hex(baseText) }, { standardName: 'Toy', standardVersion: '1', standardKey: 'toy2', elementCount: 2, schemaBlockRefId: sha256Hex(secondText) }]);
+sameValue('10 manifestElementListFor: distinct elements in code-point order, paged', callOf(relationReader.manifestElementListFor, { manifestRefId }, { standardName: 'Toy', standardVersion: '1', pageNumber: 2, pageSize: 2 }).answer, { totalCount: 3, elementList: [{ elementStableId: 'toy:c', role: null }] });
+sameValue('11 agentListFor: profiles in registration order', callOf(relationReader.agentListFor, { pageNumber: 1, pageSize: 2 }).answer, { totalCount: 3, agentList: [{ profile: agentRegistry.agentList[0] }, { profile: agentRegistry.agentList[1] }] });
+sameValue('the derived tables verify: every source recomputes to its stored rows, none absent', reader.uriContract.verifyDerivedIndexes(), { verifiedSourceCount: 6, absentSourceCount: 0, differenceList: [] });
 harness.match('the reader factory refuses an absent file', uriContractLib.uriContractReaderFor({ uriContractFilePath: path.join(scratchDirPath, 'absent.sqlite') }).error, /does not exist/);
 reader.uriContract.close();
 const manifestPath = manifestWorld.uriContractFilePath;
 manifestWorld.uriContract.close();
 plantCorruption(manifestPath, 'UPDATE schemaBlocks SET text = ? WHERE refId = ?', [`${baseText}x`, sha256Hex(baseText)]);
-plantCorruption(manifestPath, 'UPDATE publishedManifestMembers SET position = 7 WHERE position = 1', []);
+plantCorruption(manifestPath, 'UPDATE publishedManifestMembers SET position = 7 WHERE position = 2', []);
 plantCorruption(manifestPath, 'UPDATE frozenVectors SET vectorHash = ? WHERE vectorId = ?', ['c'.repeat(64), toyVector.vectorId]);
 const corruptedManifest = uriContractLib.openUriContractFile({ uriContractFilePath: manifestPath, accessMode: 'read' }).uriContract;
 harness.match('a schema block whose text no longer hashes to its refId is refused on read', corruptedManifest.schemaBlockFor(sha256Hex(baseText)).error, /fails verify-on-read/);
 harness.match('a manifest whose membership no longer hashes to its refId is refused on read', corruptedManifest.publishedManifestFor({ manifestRefId }).error, /fails verify-on-read \(its members hash to/);
 harness.match('a frozen vector whose bytes no longer hash to its vectorHash is refused on read', corruptedManifest.frozenVectorFor(toyVector.vectorId).error, /fails verify-on-read: payload/);
 corruptedManifest.close();
+const derivedWorld = seededContract();
+harness.equal('a second world publishes the manifest', derivedWorld.uriContract.publishManifest(publishArgs).alreadyPresent, false);
+derivedWorld.uriContract.close();
+plantCorruption(derivedWorld.uriContractFilePath, "UPDATE derivedElementIndex SET definitionText = 'tampered' WHERE elementStableId = 'toy:a' AND schemaBlockRefId = ?", [sha256Hex(baseText)]);
+const derivedReopened = uriContractLib.openUriContractFile({ uriContractFilePath: derivedWorld.uriContractFilePath, accessMode: 'publish', writerActionName: 'publishManifest' }).uriContract;
+sameValue('TWIN: a tampered derived row is reported by the verification, naming its source and table', derivedReopened.verifyDerivedIndexes().differenceList, [`schemaBlock ${sha256Hex(baseText)}: derivedElementIndex rows differ from a recomputation`]);
+harness.match('…and -rebuildUriContractIndexes refuses rather than repairs it', derivedReopened.fillAbsentDerivedIndexes().error, /1 derived row set\(s\) differ from a recomputation/);
+derivedReopened.close();
 
 // =====================================================================
 harness.section('THE HERMETIC REPLAY COUNT (replay()\'s own deserialize and guards, then MERGE semantics)');
