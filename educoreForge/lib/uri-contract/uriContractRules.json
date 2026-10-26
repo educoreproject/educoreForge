@@ -1,0 +1,20 @@
+{
+	"about": "What uriContract.js may accept and who may write (ML3.1 Part B). DATA: the module reads these lists and refuses by name anything outside them. registrationAuthorityIri and registrarIri are what layers.json carried at its top (AMBER_JOURNEY 2026-10-26: data here, not a ninth table); every new layer version's administration record names them.",
+	"registrationAuthorityIri": "https://w3id.org/EDUcore/agent/org/educore",
+	"registrarIri": "https://w3id.org/EDUcore/agent/org/educore",
+	"accessModeByName": {
+		"read": { "readonly": true, "fileMustExist": true, "fileMustBeAbsent": false, "writerActionRequired": false },
+		"publish": { "readonly": false, "fileMustExist": true, "fileMustBeAbsent": false, "writerActionRequired": true },
+		"create": { "readonly": false, "fileMustExist": false, "fileMustBeAbsent": true, "writerActionRequired": true }
+	},
+	"writerActionNameList": ["publishLayer", "importLayer", "publishManifest", "seedUriContractFromRegistryJson"],
+	"createActionNameList": ["seedUriContractFromRegistryJson"],
+	"reservedPublicLabelList": ["sha256"],
+	"publicLabelPattern": "^[a-z0-9][a-z0-9-]*$",
+	"registryTopFieldList": ["about", "registrationAuthorityIri", "registrarIri", "layerList"],
+	"layerFieldList": ["layerKey", "displayName", "layerKind", "authorAgentIri", "standardList", "hubList", "versionList", "statusChangeList"],
+	"versionFieldList": ["administrationRecord", "registrationStatus", "authorAgentIri", "contentIdBasis", "memberBlockList", "wholeSetBlock", "sssomPath", "importRecord", "copiedFromLayerVersion", "scoreList", "note"],
+	"statusChangeFieldList": ["versionTag", "registrationStatus", "changedAt", "changedBy", "supersededByVersionTag", "note"],
+	"agentFieldList": ["agentIri", "agentKind", "displayName", "aliasIri", "note"],
+	"agentRegistryTopFieldList": ["about", "agentList"]
+}
