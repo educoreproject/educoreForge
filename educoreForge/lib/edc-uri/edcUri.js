@@ -3,19 +3,24 @@
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
 // edcUri.js — mint and parse edc: URIs (mappingLayers ML1-a, SPEC-mappingLayers-102326 §5; design ruled by BRONZE_CROWN
-// 2026-10-24, DESIGN-ML1a-uriSchemeAndAssertionId-102426.md). The kinds are DATA (uriScheme.json beside this file); an
-// unlisted kind is refused by name. PURE and synchronous: every function RETURNS { error } or its result, never throws,
-// except that a malformed uriScheme.json is refused at load (a scheme that cannot be read is no scheme).
+// 2026-10-24, DESIGN-ML1a-uriSchemeAndAssertionId-102426.md; respelled in ML3.1 Part A, DESIGN-ML3.1-uriRespelling-102626.md,
+// ruled by AMBER_JOURNEY 2026-10-26). The kinds are DATA (uriScheme.json beside this file); an unlisted kind is refused by
+// name. PURE and synchronous: every function RETURNS { error } or its result, never throws, except that a malformed
+// uriScheme.json is refused at load (a scheme that cannot be read is no scheme).
 //
 //   mint({ kind, ...partByName }) → { uri, curie, kind } | { error }   every placeholder required; an unknown part refused
 //   parse(uriOrCurie)             → { kind, partByName } | { error }   exactly ONE kind must match (zero: no kind; two: ambiguous)
 //   encodeSegment(text)           → { segmentText } | { error }        NFC, UTF-8, keep the literal list, %XX the rest
 //   decodeSegment(segmentText)    → { text } | { error }               refuses a malformed escape or an unencoded character
+//   encodeElementPath(text)       → { pathText } | { error }           ⟪ML3.1⟫ the path-valued part: each '/'-piece encoded, '/' kept
+//   decodeElementPath(pathText)   → { text } | { error }               ⟪ML3.1⟫ its inverse, piece by piece
 //
-// TRAP: a stableId is NOT URI-safe (measured on the gold: spaces, commas, and '@' in 9,577 SIF ids). Inside a value '/' and
-// '@' are always encoded, which is what lets the interpretation kinds use a literal '@' and a template use literal '/'.
-// TRAP: a placeholder in the FIRST segment may not take a value equal to another kind's literal first segment ('layer',
-// 'agent', …): {standardName}/{standardVersion}/{elementStableId} would otherwise swallow agent/judge/<id>.
+// TRAP: a stableId is NOT URI-safe (measured on the gold: spaces, commas, and '@' in 9,577 SIF ids). Inside a single-segment
+// value '/' and '@' are always encoded; inside the path-valued part (Q42) only '/' is literal, so '@' still ends the path.
+// THE DISJOINTNESS RULE (ML3.1): the path-valued part ENDS its template, and every whole-segment literal of the scheme is a
+// RESERVED WORD no other placeholder may take ('layer', 'hub', 'q', 'sha256', …). Wherever two templates differ, one has a literal
+// where the other has a placeholder that cannot equal it, so a URI is read without a lookup. A path's first piece must carry a
+// CURIE prefix (BR2), which also keeps the CEDS forge's own CEDStandards/layer/... IRIs from reading as elements.
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
@@ -49,34 +54,69 @@ const escapeForPattern = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const literalCharacterSet = new Set(URI_SCHEME.segmentEncoding.literalCharacterList.split(''));
 const ENCODED_VALUE_PATTERN_TEXT = `(?:[${escapeForPattern(URI_SCHEME.segmentEncoding.literalCharacterList).replace(/-/g, '\\-')}]|%[0-9A-F]{2})+`;
 
-// KIND_ROW_BY_KIND — each kind compiled once: its segment token lists, its part names, and one anchored pattern per segment
+// ⟪ML3.1⟫ the one path-valued part: encoded pieces joined by a literal '/'
+const PATH_VALUED_PART_NAME = URI_SCHEME.pathValuedPartName;
+const ELEMENT_PATH_PATTERN_TEXT = `${ENCODED_VALUE_PATTERN_TEXT}(?:/${ENCODED_VALUE_PATTERN_TEXT})*`;
+
+// KIND_ROW_BY_KIND — each kind compiled once: its segment token lists, its part names (in capture order), and ONE anchored pattern
+// over the whole path (a path-valued part spans segments, so segments cannot be matched one by one)
 const compileKindRow = (kindRow) => {
 	const segmentTemplateList = kindRow.template.split('/');
-	const segmentList = segmentTemplateList.map((oneSegmentTemplate) => {
-		const tokenList = templateTokenListFor(oneSegmentTemplate);
-		const patternText = tokenList.map((oneToken) => (oneToken.partName === undefined ? escapeForPattern(oneToken.literalText) : `(${ENCODED_VALUE_PATTERN_TEXT})`)).join('');
-		return { tokenList, segmentPattern: new RegExp(`^${patternText}$`) };
-	});
+	const segmentList = segmentTemplateList.map((oneSegmentTemplate) => ({ tokenList: templateTokenListFor(oneSegmentTemplate) }));
+	const patternFor = (oneToken) => (oneToken.partName === undefined ? escapeForPattern(oneToken.literalText) : oneToken.partName === PATH_VALUED_PART_NAME ? `(${ELEMENT_PATH_PATTERN_TEXT})` : `(${ENCODED_VALUE_PATTERN_TEXT})`);
+	const wholePathPattern = new RegExp(`^${segmentList.map((oneSegment) => oneSegment.tokenList.map(patternFor).join('')).join('/')}$`);
 	const partNameList = segmentList.reduce((soFar, oneSegment) => soFar.concat(oneSegment.tokenList.filter((oneToken) => oneToken.partName !== undefined).map((oneToken) => oneToken.partName)), []);
-	return { ...kindRow, segmentList, partNameList };
+	return { ...kindRow, segmentList, partNameList, wholePathPattern };
 };
 
+// RESERVED_WORD_LIST — every whole-segment literal of every template ('layer', 'hub', 'q', 'sha256', …): no single-segment
+// placeholder may take one as its value (the interior pieces of a path are exempt: the path is a tail)
+const reservedWordListFor = (kindList) =>
+	Array.from(
+		new Set(
+			kindList.reduce((soFar, oneKindRow) => soFar.concat(oneKindRow.template.split('/').map(templateTokenListFor).filter((oneTokenList) => oneTokenList.length === 1 && oneTokenList[0].literalText !== undefined).map((oneTokenList) => oneTokenList[0].literalText)), []),
+		),
+	).sort();
+
 // the scheme is refused AT LOAD when it cannot be read as a scheme: a duplicate kind, a part named twice in one template, a
-// verbatim part the template does not carry, or a literal character list that would let a value contain '/', '@' or '%'
-const schemeLoadRefusal = () => {
-	if (typeof URI_SCHEME.baseIri !== 'string' || !/^https?:\/\/.+\/$/.test(URI_SCHEME.baseIri)) {
-		return `baseIri ${JSON.stringify(URI_SCHEME.baseIri)} is not an http(s) IRI ending in '/'`;
+// verbatim part the template does not carry, a literal character list that would let a value contain '/', '@' or '%', or (ML3.1)
+// a template with anything but a declared suffix after the path-valued part. Takes the scheme as an argument so a test can plant
+// a bad one and watch it refused (the twin of the shipped file).
+const schemeLoadRefusalFor = (scheme) => {
+	const pathValuedPartName = scheme.pathValuedPartName;
+	const schemeLiteralCharacterSet = new Set(scheme.segmentEncoding.literalCharacterList.split(''));
+	if (typeof scheme.baseIri !== 'string' || !/^https?:\/\/.+\/$/.test(scheme.baseIri)) {
+		return `baseIri ${JSON.stringify(scheme.baseIri)} is not an http(s) IRI ending in '/'`;
 	}
-	const unsafeLiteral = ['/', '@', '%', ' '].find((oneCharacter) => literalCharacterSet.has(oneCharacter));
+	const unsafeLiteral = ['/', '@', '%', ' '].find((oneCharacter) => schemeLiteralCharacterSet.has(oneCharacter));
 	if (unsafeLiteral !== undefined) {
 		return `segmentEncoding.literalCharacterList keeps '${unsafeLiteral}' literal; a value carrying it could not be parsed back`;
 	}
-	if (!Array.isArray(URI_SCHEME.kindList) || URI_SCHEME.kindList.length === 0) {
+	if (!Array.isArray(scheme.kindList) || scheme.kindList.length === 0) {
 		return 'kindList is absent or empty';
 	}
+	// ⟪ML3.1⟫ the path-valued part, what may follow it, the first-piece prefix and the hash-shaped parts are all declared, never assumed
+	if (typeof pathValuedPartName !== 'string' || pathValuedPartName.length === 0) {
+		return 'pathValuedPartName is absent (the part that keeps its \'/\' is stated, never assumed)';
+	}
+	if (!Array.isArray(scheme.elementPathSuffixTemplateList) || scheme.elementPathSuffixTemplateList.length === 0) {
+		return 'elementPathSuffixTemplateList is absent or empty';
+	}
+	if (typeof scheme.elementPathFirstPiecePattern !== 'string' || scheme.elementPathFirstPiecePattern.indexOf('^') !== 0) {
+		return `elementPathFirstPiecePattern ${JSON.stringify(scheme.elementPathFirstPiecePattern)} is not an anchored pattern`;
+	}
+	const partPatternByPartName = scheme.partPatternByPartName;
+	if (partPatternByPartName === null || typeof partPatternByPartName !== 'object') {
+		return 'partPatternByPartName is absent (state {} for none)';
+	}
+	const strayPatternPart = Object.keys(partPatternByPartName).filter((onePartName) => onePartName !== 'about').find((onePartName) => !scheme.kindList.some((oneKindRow) => oneKindRow.template.indexOf(`{${onePartName}}`) !== -1) || typeof partPatternByPartName[onePartName] !== 'string' || partPatternByPartName[onePartName].indexOf('^') !== 0);
+	if (strayPatternPart !== undefined) {
+		return `partPatternByPartName names '${strayPatternPart}', which no template carries or whose pattern is not anchored`;
+	}
+	const reservedWordList = reservedWordListFor(scheme.kindList);
 	const seenKindSet = new Set();
-	for (let kindIndex = 0; kindIndex < URI_SCHEME.kindList.length; kindIndex++) {
-		const kindRow = URI_SCHEME.kindList[kindIndex];
+	for (let kindIndex = 0; kindIndex < scheme.kindList.length; kindIndex++) {
+		const kindRow = scheme.kindList[kindIndex];
 		if (seenKindSet.has(kindRow.kind)) {
 			return `kind '${kindRow.kind}' is listed twice`;
 		}
@@ -98,19 +138,38 @@ const schemeLoadRefusal = () => {
 		if (strayClosed !== undefined) {
 			return `kind '${kindRow.kind}' closes part '${strayClosed}', which its template does not carry or whose list is empty`;
 		}
+		const reservedClosedValue = Object.keys(closedValueListByPartName).reduce((soFar, onePartName) => soFar.concat(closedValueListByPartName[onePartName]), []).find((oneValue) => reservedWordList.indexOf(oneValue) !== -1);
+		if (reservedClosedValue !== undefined) {
+			return `kind '${kindRow.kind}' closes a part to the reserved word '${reservedClosedValue}'`;
+		}
+		// ⟪ML3.1, Q42⟫ an element path always ENDS a URI: after it, only a declared suffix (the interpretation '@layer[/version]')
+		const pathPlaceholderText = `{${pathValuedPartName}}`;
+		const pathIndex = kindRow.template.indexOf(pathPlaceholderText);
+		if (pathIndex !== -1) {
+			if (kindRow.verbatimPartList.indexOf(pathValuedPartName) !== -1) {
+				return `kind '${kindRow.kind}' lists the path-valued part '${pathValuedPartName}' as verbatim`;
+			}
+			const suffixText = kindRow.template.slice(pathIndex + pathPlaceholderText.length);
+			if (scheme.elementPathSuffixTemplateList.indexOf(suffixText) === -1) {
+				return `kind '${kindRow.kind}' has '${suffixText}' after {${pathValuedPartName}} in '${kindRow.template}'; an element path ends a URI, and only ${JSON.stringify(scheme.elementPathSuffixTemplateList)} may follow it`;
+			}
+		}
 	}
 	return '';
 };
-const loadRefusalText = schemeLoadRefusal();
+const loadRefusalText = schemeLoadRefusalFor(URI_SCHEME);
 if (loadRefusalText) {
 	throw refuse.byName({ moduleName, what: `uriScheme.json REFUSED AT LOAD: ${loadRefusalText}`, where: 'lib/edc-uri/uriScheme.json' });
 }
 
 const KIND_ROW_BY_KIND = Object.freeze(URI_SCHEME.kindList.reduce((soFar, oneKindRow) => ({ ...soFar, [oneKindRow.kind]: compileKindRow(oneKindRow) }), {}));
 const KIND_LIST = Object.freeze(Object.keys(KIND_ROW_BY_KIND));
-// the literal first segments ('layer', 'manifest', 'assertion', 'agent'): a first-segment placeholder may not take one of these
-const RESERVED_FIRST_SEGMENT_LIST = Object.freeze(
-	Array.from(new Set(KIND_LIST.map((oneKind) => KIND_ROW_BY_KIND[oneKind].segmentList[0].tokenList).filter((oneTokenList) => oneTokenList.length === 1 && oneTokenList[0].literalText !== undefined).map((oneTokenList) => oneTokenList[0].literalText))).sort(),
+const RESERVED_WORD_LIST = Object.freeze(reservedWordListFor(URI_SCHEME.kindList));
+const ELEMENT_PATH_FIRST_PIECE_PATTERN = new RegExp(URI_SCHEME.elementPathFirstPiecePattern);
+const PART_PATTERN_BY_PART_NAME = Object.freeze(
+	Object.keys(URI_SCHEME.partPatternByPartName)
+		.filter((onePartName) => onePartName !== 'about')
+		.reduce((soFar, onePartName) => ({ ...soFar, [onePartName]: new RegExp(URI_SCHEME.partPatternByPartName[onePartName]) }), {}),
 );
 
 const encodeSegment = (text) => {
@@ -161,6 +220,58 @@ const decodeSegment = (segmentText) => {
 	return { text };
 };
 
+// ⟪ML3.1, Q42⟫ the path-valued part keeps '/': each piece is a segment value (so '', '.' and '..' pieces are refused by encodeSegment)
+const encodeElementPath = (text) => {
+	if (typeof text !== 'string') {
+		return { error: refuse.byName({ moduleName, what: `an element path ${JSON.stringify(text)} is not a string`, where: 'encodeElementPath(text)' }).message };
+	}
+	const pieceList = text.split('/');
+	const encodedPieceList = [];
+	for (let pieceIndex = 0; pieceIndex < pieceList.length; pieceIndex++) {
+		const encoded = encodeSegment(pieceList[pieceIndex]);
+		if (encoded.error) {
+			return { error: `${moduleName}: piece ${pieceIndex} of element path ${JSON.stringify(text)}: ${encoded.error}` };
+		}
+		encodedPieceList.push(encoded.segmentText);
+	}
+	return { pathText: encodedPieceList.join('/') };
+};
+
+const decodeElementPath = (pathText) => {
+	if (typeof pathText !== 'string' || pathText.length === 0) {
+		return { error: refuse.byName({ moduleName, what: `element path ${JSON.stringify(pathText)} is not a non-empty string`, where: 'decodeElementPath(pathText)' }).message };
+	}
+	const pieceList = pathText.split('/');
+	const decodedPieceList = [];
+	for (let pieceIndex = 0; pieceIndex < pieceList.length; pieceIndex++) {
+		const decoded = decodeSegment(pieceList[pieceIndex]);
+		if (decoded.error) {
+			return { error: `${moduleName}: piece ${pieceIndex} of element path '${pathText}': ${decoded.error}` };
+		}
+		// one spelling per element: a '/' in a stableId is written literally, so an escaped one ('%2F', the edc-uri-1 spelling) is refused
+		if (decoded.text.indexOf('/') !== -1) {
+			return { error: refuse.byName({ moduleName, what: `piece ${pieceIndex} of element path '${pathText}' carries an escaped '/'`, where: "inside an element path '/' is literal (Q42); '%2F' there is the retired edc-uri-1 spelling" }).message };
+		}
+		decodedPieceList.push(decoded.text);
+	}
+	return { text: decodedPieceList.join('/') };
+};
+
+// partValueRefusal(kindRow, partName, partText) → '' | reason: what a DECODED part value may not be, checked at mint and at parse alike
+const partValueRefusal = (kindRow, partName, partText) => {
+	if (partName === PATH_VALUED_PART_NAME) {
+		return ELEMENT_PATH_FIRST_PIECE_PATTERN.test(partText.split('/')[0]) ? '' : `kind '${kindRow.kind}' part '${partName}' ${JSON.stringify(partText)} does not begin with a CURIE prefix (uriScheme.json elementPathFirstPiecePattern ${URI_SCHEME.elementPathFirstPiecePattern}; RULING BR2)`;
+	}
+	if (RESERVED_WORD_LIST.indexOf(partText) !== -1) {
+		return `kind '${kindRow.kind}' part '${partName}' may not be the reserved word '${partText}' (reserved: ${RESERVED_WORD_LIST.join(', ')})`;
+	}
+	const partPattern = PART_PATTERN_BY_PART_NAME[partName];
+	if (partPattern !== undefined && !partPattern.test(partText)) {
+		return `kind '${kindRow.kind}' part '${partName}' ${JSON.stringify(partText)} does not match ${partPattern} (uriScheme.json partPatternByPartName)`;
+	}
+	return closedValueRefusal(kindRow, partName, partText);
+};
+
 // pathTextFor(uriOrCurie) → { pathText } | { error }: the part after baseIri or after 'edc:'
 const pathTextFor = (uriOrCurie) => {
 	if (typeof uriOrCurie !== 'string') {
@@ -182,35 +293,28 @@ const closedValueRefusal = (kindRow, partName, partText) => {
 	return closedValueList === undefined || closedValueList.indexOf(partText) !== -1 ? '' : `kind '${kindRow.kind}' part '${partName}' takes only ${closedValueList.join(', ')} (got ${JSON.stringify(partText)})`;
 };
 
-// matchKind(kindRow, segmentTextList) → { partByName } | null
-const matchKind = (kindRow, segmentTextList) => {
-	if (kindRow.segmentList.length !== segmentTextList.length) {
+// matchKind(kindRow, pathText) → { partByName } | null
+const matchKind = (kindRow, pathText) => {
+	const matched = kindRow.wholePathPattern.exec(pathText);
+	if (matched === null) {
 		return null;
 	}
 	const partByName = {};
-	for (let segmentIndex = 0; segmentIndex < segmentTextList.length; segmentIndex++) {
-		const { tokenList, segmentPattern } = kindRow.segmentList[segmentIndex];
-		const matched = segmentPattern.exec(segmentTextList[segmentIndex]);
-		if (matched === null) {
+	for (let partIndex = 0; partIndex < kindRow.partNameList.length; partIndex++) {
+		const onePartName = kindRow.partNameList[partIndex];
+		const encodedText = matched[partIndex + 1];
+		if (kindRow.verbatimPartList.indexOf(onePartName) !== -1) {
+			if (RESERVED_WORD_LIST.indexOf(encodedText) !== -1) {
+				return null;
+			}
+			partByName[onePartName] = encodedText;
+			continue;
+		}
+		const decoded = onePartName === PATH_VALUED_PART_NAME ? decodeElementPath(encodedText) : decodeSegment(encodedText);
+		if (decoded.error || partValueRefusal(kindRow, onePartName, decoded.text)) {
 			return null;
 		}
-		const partTokenList = tokenList.filter((oneToken) => oneToken.partName !== undefined);
-		for (let partIndex = 0; partIndex < partTokenList.length; partIndex++) {
-			const onePartName = partTokenList[partIndex].partName;
-			const encodedText = matched[partIndex + 1];
-			if (segmentIndex === 0 && RESERVED_FIRST_SEGMENT_LIST.indexOf(encodedText) !== -1) {
-				return null;
-			}
-			if (kindRow.verbatimPartList.indexOf(onePartName) !== -1) {
-				partByName[onePartName] = encodedText;
-				continue;
-			}
-			const decoded = decodeSegment(encodedText);
-			if (decoded.error || closedValueRefusal(kindRow, onePartName, decoded.text)) {
-				return null;
-			}
-			partByName[onePartName] = decoded.text;
-		}
+		partByName[onePartName] = decoded.text;
 	}
 	return { partByName };
 };
@@ -220,8 +324,7 @@ const parse = (uriOrCurie) => {
 	if (located.error) {
 		return located;
 	}
-	const segmentTextList = located.pathText.split('/');
-	const matchList = KIND_LIST.map((oneKind) => ({ kind: oneKind, matched: matchKind(KIND_ROW_BY_KIND[oneKind], segmentTextList) })).filter((oneCandidate) => oneCandidate.matched !== null);
+	const matchList = KIND_LIST.map((oneKind) => ({ kind: oneKind, matched: matchKind(KIND_ROW_BY_KIND[oneKind], located.pathText) })).filter((oneCandidate) => oneCandidate.matched !== null);
 	if (matchList.length === 0) {
 		return { error: refuse.byName({ moduleName, what: `'${uriOrCurie}' matches no kind`, where: `uriScheme.json kindList (${KIND_LIST.join(', ')})` }).message };
 	}
@@ -244,9 +347,9 @@ const mint = ({ kind, ...partByName } = {}) => {
 	if (absentPartName !== undefined) {
 		return { error: refuse.byName({ moduleName, what: `kind '${kind}' needs part '${absentPartName}' (got ${JSON.stringify(partByName[absentPartName])})`, where: `template '${kindRow.template}'; no part is ever defaulted` }).message };
 	}
-	const closedReason = kindRow.partNameList.map((onePartName) => closedValueRefusal(kindRow, onePartName, partByName[onePartName])).find((oneReason) => oneReason !== '');
-	if (closedReason !== undefined) {
-		return { error: refuse.byName({ moduleName, what: closedReason, where: 'uriScheme.json closedValueListByPartName' }).message };
+	const valueReason = kindRow.partNameList.map((onePartName) => partValueRefusal(kindRow, onePartName, kindRow.verbatimPartList.indexOf(onePartName) !== -1 ? partByName[onePartName] : partByName[onePartName].normalize('NFC'))).find((oneReason) => oneReason !== '');
+	if (valueReason !== undefined) {
+		return { error: refuse.byName({ moduleName, what: valueReason, where: 'uriScheme.json (reserved words, elementPathFirstPiecePattern, partPatternByPartName, closedValueListByPartName)' }).message };
 	}
 	const segmentTextList = [];
 	for (let segmentIndex = 0; segmentIndex < kindRow.segmentList.length; segmentIndex++) {
@@ -267,11 +370,11 @@ const mint = ({ kind, ...partByName } = {}) => {
 				segmentText += partText;
 				continue;
 			}
-			const encoded = encodeSegment(partText);
+			const encoded = oneToken.partName === PATH_VALUED_PART_NAME ? encodeElementPath(partText) : encodeSegment(partText);
 			if (encoded.error) {
 				return { error: `${moduleName}: kind '${kind}' part '${oneToken.partName}': ${encoded.error}` };
 			}
-			segmentText += encoded.segmentText;
+			segmentText += oneToken.partName === PATH_VALUED_PART_NAME ? encoded.pathText : encoded.segmentText;
 		}
 		segmentTextList.push(segmentText);
 	}
@@ -289,4 +392,4 @@ const mint = ({ kind, ...partByName } = {}) => {
 	return { uri, curie: `${URI_SCHEME.curiePrefix}:${pathText}`, kind };
 };
 
-module.exports = { mint, parse, encodeSegment, decodeSegment, KIND_LIST, RESERVED_FIRST_SEGMENT_LIST, URI_SCHEME, moduleName };
+module.exports = { mint, parse, encodeSegment, decodeSegment, encodeElementPath, decodeElementPath, schemeLoadRefusalFor, KIND_LIST, RESERVED_WORD_LIST, URI_SCHEME, moduleName };

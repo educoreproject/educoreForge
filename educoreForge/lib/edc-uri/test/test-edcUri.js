@@ -35,7 +35,7 @@ const edcUri = require('../edcUri');
 const assertionIdentity = require('../assertionIdentity');
 const goldUriFixture = require('./fixtures/goldUriFixture.json');
 
-const { mint, parse, encodeSegment, decodeSegment, KIND_LIST, URI_SCHEME } = edcUri;
+const { mint, parse, encodeSegment, decodeSegment, encodeElementPath, schemeLoadRefusalFor, KIND_LIST, RESERVED_WORD_LIST, URI_SCHEME } = edcUri;
 
 // the parts each kind is minted from: real gold values where the gold has the thing, labelled examples where it does not yet
 const meaningRow = goldUriFixture.meaningList[0];
@@ -50,6 +50,8 @@ const hubSegmentOf = (namespace) => namespace.slice(URI_SCHEME.baseIri.length).s
 const hubReleaseSegmentOf = (cardUri, namespace) => cardUri.slice(namespace.length).split('/')[0];
 const manifestRefId = goldUriFixture.capturedFrom.manifestRefId;
 const judgeIdentity = goldUriFixture.judgeIdentityList[0];
+// ⟪ML3.1⟫ a real schema block id: goldWave3's SIF 260928 standardBase block (measured on the store copy, 2026-10-26)
+const sifStandardBaseRefId = '4002ade8ba2d8c3297bf17ec8008a622c6bd46d35205302d1beddd4c242afed3';
 
 const PART_BY_NAME_BY_KIND = {
 	meaning: { hubSegment: hubSegmentOf(meaningRow.namespace), hubReleaseSegment: hubReleaseSegmentOf(meaningRow.uri, meaningRow.namespace), addressSignature: meaningRow.addressSignature },
@@ -62,8 +64,12 @@ const PART_BY_NAME_BY_KIND = {
 	interpretationFloating: { standardName: fanOutEdge.subjectSource, standardVersion: fanOutEdge.subjectVersion, elementStableId: fanOutEdge.subjectStableId, layerKey: 'jev' },
 	manifest: { publicLabel: 'zeroBacklog-261023' },
 	manifestByContent: { manifestRefId },
-	question: { publicLabel: 'zeroBacklog-261023', standardName: sifAtEdge.subjectSource, elementStableId: sifAtEdge.subjectStableId },
-	questionForHub: { publicLabel: 'zeroBacklog-261023', standardName: sifAtEdge.subjectSource, elementStableId: sifAtEdge.subjectStableId, hubSegment: hubSegmentOf(meaningRow.namespace) },
+	question: { publicLabel: 'zeroBacklog-261023', standardName: sifAtEdge.subjectSource, standardVersion: sifAtEdge.subjectVersion, elementStableId: sifAtEdge.subjectStableId },
+	questionForHub: { publicLabel: 'zeroBacklog-261023', hubSegment: hubSegmentOf(meaningRow.namespace), standardName: sifAtEdge.subjectSource, standardVersion: sifAtEdge.subjectVersion, elementStableId: sifAtEdge.subjectStableId },
+	questionByContent: { manifestRefId, standardName: sifAtEdge.subjectSource, standardVersion: sifAtEdge.subjectVersion, elementStableId: sifAtEdge.subjectStableId }, // ⟪ML3.1, Q43⟫
+	questionForHubByContent: { manifestRefId, hubSegment: hubSegmentOf(meaningRow.namespace), standardName: sifAtEdge.subjectSource, standardVersion: sifAtEdge.subjectVersion, elementStableId: sifAtEdge.subjectStableId },
+	schemaBlock: { schemaBlockRefId: sifStandardBaseRefId }, // ⟪ML3.1, Q51⟫
+	decisionSchemaBlock: { decisionBlockHash: sifAtEdge.decisionBlockHash },
 	agentPerson: { userRefId: 'f3c1a9e0-0000-4000-8000-000000000005' },
 	agentJudge: { judgeIdentity },
 	agentOrganisation: { organisationSlug: 'educore' },
@@ -115,7 +121,7 @@ harness.section('Refusals, each by name');
 harness.match('an unlisted kind is refused by name', mint({ kind: 'mappingRegistry', layerKey: 'jev' }).error, /kind "mappingRegistry" is not in the scheme/);
 harness.match('a stray part is refused by name', mint({ kind: 'layer', layerKey: 'jev', versionTag: 'r1' }).error, /kind 'layer' has no part 'versionTag'/);
 harness.match('an absent part is refused, never defaulted', mint({ kind: 'layerVersion', layerKey: 'jev' }).error, /needs part 'versionTag'/);
-harness.match("a standard named like a reserved first segment ('agent') is refused", mint({ kind: 'element', standardName: 'agent', standardVersion: 'judge', elementStableId: 'x' }).error, /parses back as 'agentJudge'/);
+harness.match("a standard named like a reserved word ('agent') is refused", mint({ kind: 'element', standardName: 'agent', standardVersion: 'judge', elementStableId: 'x:y' }).error, /may not be the reserved word 'agent'/);
 harness.match("a forbidden segment ('..') is refused", mint({ kind: 'layer', layerKey: '..' }).error, /is forbidden/);
 harness.match('a lower-case escape is refused (one spelling per value)', decodeSegment('a%2fb').error, /malformed escape/);
 harness.match('an unencoded character is refused', decodeSegment('a b').error, /unencoded character ' '/);
@@ -123,6 +129,48 @@ harness.match('an escape that is not UTF-8 is refused', decodeSegment('%FF').err
 harness.match('a verbatim part that is not already encoded is refused', mint({ kind: 'meaning', hubSegment: 'CTDL', hubReleaseSegment: 'Release 20260927', addressSignature: 'ab' }).error, /is not an already-encoded segment/);
 harness.match('a URI outside the base is refused', parse('https://example.org/x').error, /neither under/);
 harness.match('a path that names no kind is refused', parse('edc:layer/jev/sha256/x/y').error, /matches no kind/);
+
+// =====================================================================
+harness.section('ML3.1 (Q41-Q43, Q51): real slashes, the element path ends the URI, reserved words, the hub ahead of the standard');
+// =====================================================================
+
+const sifElement = mint({ kind: 'element', ...PART_BY_NAME_BY_KIND.element });
+harness.ok("the element path keeps '/' and still encodes '@' (no %2F anywhere in it)", sifElement.uri.indexOf('%2F') === -1 && sifElement.uri.indexOf('%40') !== -1 && sifElement.uri.split('/').length > 6, sifElement.uri);
+harness.equal("encodeElementPath encodes piece by piece and keeps '/'", encodeElementPath('sedm:entity/Parent%2FGuardian/element/Telephone N').pathText, 'sedm:entity/Parent%252FGuardian/element/Telephone%20N');
+const sedmElement = mint({ kind: 'element', standardName: 'SEDM', standardVersion: 'unknown_01', elementStableId: 'sedm:entity/Parent%2FGuardian/element/Telephone N' });
+harness.equal("a stableId that already holds a literal '%' round-trips ('%25' inside, measured on SEDM)", parse(sedmElement.uri).partByName.elementStableId, 'sedm:entity/Parent%2FGuardian/element/Telephone N');
+// THE AMBIGUITY THE WORK ORDER NAMED: CTDL is a hub segment AND a standard name; the reserved literal 'hub' decides, no lookup
+const ctdlAsBoth = { publicLabel: 'educore-2026-10', hubSegment: 'CTDL', standardName: 'CTDL', standardVersion: 'Release 20260927', elementStableId: 'financialAid:AcademicAssistantship/x y' };
+const ctdlHubQuestion = mint({ kind: 'questionForHub', ...ctdlAsBoth });
+harness.equal('a hub question whose hub segment equals its standard name (CTDL) parses back as questionForHub', JSON.stringify(parse(ctdlHubQuestion.uri)), JSON.stringify({ kind: 'questionForHub', partByName: ctdlAsBoth }));
+const { hubSegment: ctdlHubSegment, ...ctdlNoHub } = ctdlAsBoth;
+harness.equal('…and the same question without a hub parses as question, with the standard first', JSON.stringify(parse(mint({ kind: 'question', ...ctdlNoHub }).uri)), JSON.stringify({ kind: 'question', partByName: ctdlNoHub }));
+harness.equal('the hub question is spelled hub-ahead: manifest/<label>/q/hub/<hub>/<standard>/<version>/<path>', ctdlHubQuestion.curie, `edc:manifest/educore-2026-10/q/hub/${ctdlHubSegment}/CTDL/Release%2020260927/financialAid:AcademicAssistantship/x%20y`);
+harness.match("a standard named 'hub' is refused (it would read as the hub literal)", mint({ kind: 'question', ...ctdlNoHub, standardName: 'hub' }).error, /reserved word 'hub'/);
+harness.match("'sha256' is never a manifest label (Q43)", mint({ kind: 'manifest', publicLabel: 'sha256' }).error, /reserved word 'sha256'/);
+harness.match('a manifest hash that is not 64 lowercase hex is refused', mint({ kind: 'manifestByContent', manifestRefId: 'educore-2026-10' }).error, /does not match/);
+harness.match('a schema block id that is not 64 lowercase hex is refused', mint({ kind: 'schemaBlock', schemaBlockRefId: sifStandardBaseRefId.toUpperCase() }).error, /does not match/);
+harness.match("an element path with an empty piece is refused ('a//b')", mint({ kind: 'element', standardName: 'EdFi', standardVersion: '5.2.0', elementStableId: 'edfi:a//b' }).error, /is forbidden/);
+harness.match("an element path with a '..' piece is refused", mint({ kind: 'element', standardName: 'EdFi', standardVersion: '5.2.0', elementStableId: 'edfi:a/../b' }).error, /is forbidden/);
+harness.match('an element path with a trailing slash is refused', mint({ kind: 'element', standardName: 'EdFi', standardVersion: '5.2.0', elementStableId: 'edfi:a/' }).error, /is forbidden/);
+harness.match('an element path without a CURIE prefix is refused (BR2)', mint({ kind: 'element', standardName: 'EdFi', standardVersion: '5.2.0', elementStableId: 'property/x' }).error, /does not begin with a CURIE prefix/);
+harness.match("the retired edc-uri-1 spelling ('%2F' inside the path) is refused: one spelling per element", parse('https://w3id.org/EDUcore/EdFi/5.2.0/edfi:property%2FabstractEntity.EducationOrganization.Address').error, /matches no kind/);
+harness.match("decodeElementPath names the escaped '/'", edcUri.decodeElementPath('edfi:property%2FX').error, /carries an escaped '\/'/);
+harness.match("a parsed '.' piece is refused, never normalised away", parse('edc:EdFi/5.2.0/edfi:a/./b').error, /matches no kind/);
+// O-5 (finding, left alone): the CEDS forge mints its own IRIs under the base; the parser must keep refusing them
+['https://w3id.org/EDUcore/CEDStandards/layer/guide/14/concept/Resource', 'https://w3id.org/EDUcore/CEDStandards/layer/textRepair/14_0_0_0/repair/OV000050129949%2Fname%2F0'].forEach((oneForgeIri) => {
+	harness.match(`a CEDS-forge IRI is not read as any kind: ${oneForgeIri.slice(25, 70)}…`, parse(oneForgeIri).error, /matches no kind/);
+});
+const pinnedWithSlash = { standardName: 'SIF260928', standardVersion: '4.3', elementStableId: 'sif260928:field/A/B/@RefId', layerKey: 'jev', versionTag: 'cfg-cf8d41f82791.wave3-261025' };
+harness.equal("a pinned interpretation of a slash path parses back (the first '@' ends the path)", JSON.stringify(parse(mint({ kind: 'interpretationPinned', ...pinnedWithSlash }).uri)), JSON.stringify({ kind: 'interpretationPinned', partByName: pinnedWithSlash }));
+harness.equal('the reserved words are exactly the scheme\'s whole-segment literals', RESERVED_WORD_LIST.join(','), 'agent,assertion,decisionSchemaBlock,hub,judge,layer,layers,manifest,org,q,registry,schemaBlock,sha256');
+// THE LOAD-TIME SELF-CHECK and its twins: the shipped scheme passes; a planted bad one is refused by name
+const plantedScheme = (kindRowEdit) => ({ ...URI_SCHEME, kindList: URI_SCHEME.kindList.map((oneRow) => (oneRow.kind === kindRowEdit.kind ? { ...oneRow, ...kindRowEdit } : oneRow)) });
+harness.equal('the shipped uriScheme.json passes its own load check', schemeLoadRefusalFor(URI_SCHEME), '');
+harness.match('TWIN: a template with a segment after {elementStableId} is refused at load', schemeLoadRefusalFor(plantedScheme({ kind: 'question', template: 'manifest/{publicLabel}/q/{standardName}/{standardVersion}/{elementStableId}/{hubSegment}', verbatimPartList: ['hubSegment'] })), /an element path ends a URI/);
+harness.match('TWIN: a path part declared verbatim is refused at load', schemeLoadRefusalFor(plantedScheme({ kind: 'element', verbatimPartList: ['elementStableId'] })), /path-valued part 'elementStableId' as verbatim/);
+harness.match('TWIN: a closed value equal to a reserved word is refused at load', schemeLoadRefusalFor(plantedScheme({ kind: 'vocabularyTerm', closedValueListByPartName: { termName: ['bestMatch', 'hub'] } })), /reserved word 'hub'/);
+harness.match('TWIN: a hash pattern for a part no template carries is refused at load', schemeLoadRefusalFor({ ...URI_SCHEME, partPatternByPartName: { ...URI_SCHEME.partPatternByPartName, ghostRefId: '^x$' } }), /names 'ghostRefId'/);
 
 // =====================================================================
 harness.section('assertionIdentity: the recipe, pinned');
@@ -146,10 +194,11 @@ const KNOWN_TRIPLE = {
 	objectStandardName: 'ToyHub',
 	objectStandardVersion: '1.0',
 };
-// printf 'https://w3id.org/EDUcore/EdFi/5.2.0/edfi:value%%2FAbsenceEventCategory.Jury%%20duty\nhttp://www.w3.org/2004/02/skos/core#exactMatch\nhttps://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa' | shasum -a 256
-const KNOWN_ASSERTION_HASH = '8cb3a7dd6d34c179ad6723b5e0e72a90377a310f3bf95d1fdd2760f3061af022';
+// ⟪ML3.1⟫ re-pinned for the respelled element IRI (real '/', Q42); the edc-uri-1 answer was 8cb3a7dd…af022 over '%2F'
+// printf 'https://w3id.org/EDUcore/EdFi/5.2.0/edfi:value/AbsenceEventCategory.Jury%%20duty\nhttp://www.w3.org/2004/02/skos/core#exactMatch\nhttps://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa' | shasum -a 256
+const KNOWN_ASSERTION_HASH = 'b800fc6e53390b057ec24653c1f7e50753cc6cacb7ca7568e9f3970e4c4d6226';
 const knownAnswer = assertionIdentity.assertionIdFor(KNOWN_TRIPLE);
-harness.equal('subject expands to the edc element IRI (percent-encoded)', knownAnswer.subjectIri, 'https://w3id.org/EDUcore/EdFi/5.2.0/edfi:value%2FAbsenceEventCategory.Jury%20duty');
+harness.equal("subject expands to the edc element IRI ('/' real, space encoded)", knownAnswer.subjectIri, 'https://w3id.org/EDUcore/EdFi/5.2.0/edfi:value/AbsenceEventCategory.Jury%20duty');
 harness.equal('predicate expands through predicatePrefixExpansion', knownAnswer.predicateIri, 'http://www.w3.org/2004/02/skos/core#exactMatch');
 harness.equal('an object that is already an IRI is its own IRI', knownAnswer.objectIri, KNOWN_TRIPLE.objectStableId);
 harness.equal('assertionHash = sha256(subjectIri \\n predicateIri \\n objectIri) (known answer)', knownAnswer.assertionHash, KNOWN_ASSERTION_HASH);
