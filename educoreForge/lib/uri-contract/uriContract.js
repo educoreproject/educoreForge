@@ -363,13 +363,13 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		if (row === undefined) {
 			return { publishedManifest: null };
 		}
-		const memberList = database.prepare('SELECT position, schemaBlockRefId FROM publishedManifestMembers WHERE manifestRefId = ? ORDER BY position').all(row.manifestRefId);
+		const memberList = database.prepare('SELECT position, schemaBlockRefId, memberDescription, producedByRecipeName FROM publishedManifestMembers WHERE manifestRefId = ? ORDER BY position').all(row.manifestRefId);
 		const recomputedRefId = contentAddress.manifestKeyForMembership(memberList.map((oneMember) => ({ blockId: oneMember.schemaBlockRefId, position: oneMember.position })));
 		if (recomputedRefId !== row.manifestRefId) {
 			return { error: refusalText(`published manifest ${row.manifestRefId} fails verify-on-read (its members hash to ${recomputedRefId})`, 'a corrupted row is a defect to report; this file is never repaired') };
 		}
 		const statusChangeList = database.prepare('SELECT * FROM manifestStatusChanges WHERE manifestRefId = ? ORDER BY rowId').all(row.manifestRefId);
-		return { publishedManifest: { ...row, defaultLayerByHub: row.defaultLayerByHubJson === null ? null : JSON.parse(row.defaultLayerByHubJson), memberList, statusChangeList, effectiveRegistrationStatus: statusChangeList[statusChangeList.length - 1].registrationStatus } };
+		return { publishedManifest: { ...row, defaultLayerByHub: row.defaultLayerByHubJson === null ? null : JSON.parse(row.defaultLayerByHubJson), manifestRecord: JSON.parse(row.manifestRecordJson), ancestorRecordList: JSON.parse(row.ancestorRecordListJson), memberList, statusChangeList, effectiveRegistrationStatus: statusChangeList[statusChangeList.length - 1].registrationStatus } };
 	};
 	// ⟪TQ ruling Q3⟫ agentRecordFor — the agent's PROFILE (its row) plus a RECORD computed, never stored: every layer version in which
 	// it holds a role, that version's effective status and its assertion and abstention counts (summed from derivedLayerVersionCounts,
@@ -654,7 +654,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 	// publishManifest — the identity row, its members in order, every member schema block (the closure: a member's requires
 	// must be members too), and the first status row, in ONE transaction. Re-publishing the same manifest under the same label
 	// answers alreadyPresent and writes nothing; a second label for one manifest, or one label for two, is refused.
-	const publishManifest = ({ manifestRefId, publicLabel, memberList, frozenVectorList, decisionSchemaBlockList, defaultLayerByHub, basedOnManifestRefId, recordedNodeCount, recordedEdgeCount, publishedAt, publishedByAgentIri, registrationStatus, registrationAuthority, note } = {}) => {
+	const publishManifest = ({ manifestRefId, publicLabel, memberList, frozenVectorList, decisionSchemaBlockList, manifestRecord, ancestorRecordList, defaultLayerByHub, basedOnManifestRefId, recordedNodeCount, recordedEdgeCount, publishedAt, publishedByAgentIri, registrationStatus, registrationAuthority, note } = {}) => {
 		if (!isNonEmptyString(publicLabel) || !new RegExp(URI_CONTRACT_RULES.publicLabelPattern).test(publicLabel) || URI_CONTRACT_RULES.reservedPublicLabelList.indexOf(publicLabel) !== -1) {
 			return { error: refusalText(`publicLabel ${JSON.stringify(publicLabel)} must match ${URI_CONTRACT_RULES.publicLabelPattern} and is never a reserved word (${URI_CONTRACT_RULES.reservedPublicLabelList.join(', ')})`, 'uriContractRules.json; the label is TQ\'s to choose') };
 		}
@@ -663,6 +663,12 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		}
 		if (!Array.isArray(memberList) || memberList.length === 0 || !(defaultLayerByHub === null || isPlainObject(defaultLayerByHub)) || !Number.isInteger(recordedNodeCount) || !Number.isInteger(recordedEdgeCount) || !new RegExp(LAYER_REGISTRY_SCHEMA.publishedAtPattern).test(String(publishedAt))) {
 			return { error: refusalText('memberList (non-empty), defaultLayerByHub (null, or an object naming the producer that answers a conflicted pair), whole-number recordedNodeCount and recordedEdgeCount, and an ISO UTC publishedAt are required', 'publishManifest({ ... }); nothing here is defaulted') };
+		}
+		// the store metadata the graph's recipe subgraph is generated from (manifest-recipe-finisher): this manifest's row and its
+		// basedOn ancestors' rows, copied as the support store holds them
+		const recordFault = [['manifestRecord', manifestRecord]].concat((Array.isArray(ancestorRecordList) ? ancestorRecordList : [null]).map((oneRecord) => ['an ancestor record', oneRecord])).find(([, oneRecord]) => !isPlainObject(oneRecord) || unknownFieldOf(oneRecord, URI_CONTRACT_RULES.manifestRecordFieldList) !== undefined);
+		if (recordFault !== undefined) {
+			return { error: refusalText(`${recordFault[0]} must be an object carrying only ${URI_CONTRACT_RULES.manifestRecordFieldList.join(', ')} (and ancestorRecordList a list)`, 'publishManifest copies the manifest metadata the recipe subgraph is generated from') };
 		}
 		const agentIriSet = new Set(registryShape().agentRegistry.agentList.map((oneAgent) => oneAgent.agentIri));
 		const unknownAgent = [publishedByAgentIri, registrationAuthority].find((agentIri) => !agentIriSet.has(agentIri));
@@ -723,7 +729,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		if (uriMint.error || uriByContentMint.error) {
 			return { error: uriMint.error || uriByContentMint.error };
 		}
-		const manifestRow = { manifestRefId, publicLabel, uri: uriMint.uri, uriByContent: uriByContentMint.uri, defaultLayerByHubJson: defaultLayerByHub === null ? null : JSON.stringify(defaultLayerByHub), basedOnManifestRefId: isNonEmptyString(basedOnManifestRefId) ? basedOnManifestRefId : null, recordedNodeCount, recordedEdgeCount, publishedAt, publishedByAgentIri };
+		const manifestRow = { manifestRefId, publicLabel, uri: uriMint.uri, uriByContent: uriByContentMint.uri, defaultLayerByHubJson: defaultLayerByHub === null ? null : JSON.stringify(defaultLayerByHub), basedOnManifestRefId: isNonEmptyString(basedOnManifestRefId) ? basedOnManifestRefId : null, recordedNodeCount, recordedEdgeCount, manifestRecordJson: JSON.stringify(manifestRecord), ancestorRecordListJson: JSON.stringify(ancestorRecordList), publishedAt, publishedByAgentIri };
 		const existingRow = database.prepare('SELECT * FROM publishedManifests WHERE manifestRefId = ? OR publicLabel = ?').get(manifestRefId, publicLabel);
 		if (existingRow !== undefined) {
 			const sameIdentity = existingRow.manifestRefId === manifestRefId && existingRow.publicLabel === publicLabel;
@@ -752,7 +758,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 			}
 			database.prepare(insertSqlFor('publishedManifests', manifestRow)).run(manifestRow);
 			memberList.forEach((oneMember) => {
-				const memberRow = { manifestRefId, position: oneMember.position, schemaBlockRefId: oneMember.schemaBlock.refId };
+				const memberRow = { manifestRefId, position: oneMember.position, schemaBlockRefId: oneMember.schemaBlock.refId, memberDescription: isNonEmptyString(oneMember.memberDescription) ? oneMember.memberDescription : null, producedByRecipeName: isNonEmptyString(oneMember.producedByRecipeName) ? oneMember.producedByRecipeName : null };
 				database.prepare(insertSqlFor('publishedManifestMembers', memberRow)).run(memberRow);
 			});
 			const statusRow = { manifestRefId, registrationStatus, registrationAuthority, changedAt: publishedAt, changedByAgentIri: publishedByAgentIri, note: isNonEmptyString(note) ? note : null };

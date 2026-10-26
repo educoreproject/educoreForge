@@ -6,7 +6,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // their schema blocks, the frozen vectors they reference, the counts a replay of them yields, and whether a question URI needs a
 // declared default (AMBER_JOURNEY ruling (b), 2026-10-26).
 //
-//   manifestForPublish({ supportStore, manifestRefId }) → { memberList, frozenVectorList, decisionSchemaBlockList, basedOnManifestRefId } | { error }
+//   manifestForPublish({ supportStore, manifestRefId }) → { memberList, frozenVectorList, decisionSchemaBlockList, manifestRecord, ancestorRecordList,
+//       basedOnManifestRefId } | { error }
 //       supportStore  a READ-ONLY better-sqlite3 handle on a support store (blocks, manifests, manifestBlocks, vectors)
 //   answerConflictListFor({ memberList }) → { answerSlotCount, answerConflictList: [{ subjectStableId, hubSegment, answerSourceList }] } | { error }
 //   defaultLayerByHubFor({ answerConflictList, declaredDefaultLayerByHub }) → { defaultLayerByHub } | { error }
@@ -32,21 +33,22 @@ const refusalText = (what, where) => refuse.byName({ moduleName, what, where }).
 const isPlainObject = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 
 const manifestForPublish = ({ supportStore, manifestRefId } = {}) => {
-	const manifestRow = supportStore.prepare('SELECT refId, basedOnManifestRefId FROM manifests WHERE refId = ?').get(manifestRefId);
+	const manifestRecordStatement = supportStore.prepare('SELECT refId, name, description, recipeName, recipeHash, recipeFileName, basedOnManifestRefId, createdAt FROM manifests WHERE refId = ?');
+	const manifestRow = manifestRecordStatement.get(manifestRefId);
 	if (manifestRow === undefined) {
 		return { error: refusalText(`manifest ${manifestRefId} is not in the support store`, '-publishManifest publishes a manifest a build stored; name its refId') };
 	}
-	const memberRowList = supportStore.prepare('SELECT schemaBlockRefId, position FROM manifestBlocks WHERE manifestRefId = ? ORDER BY position').all(manifestRefId);
+	const memberRowList = supportStore.prepare('SELECT schemaBlockRefId, position, description, producedByRecipeName FROM manifestBlocks WHERE manifestRefId = ? ORDER BY position').all(manifestRefId);
 	const blockStatement = supportStore.prepare('SELECT refId, kind, subject, version, requires, text, producedBy FROM blocks WHERE refId = ?');
 	const memberList = [];
 	for (let memberIndex = 0; memberIndex < memberRowList.length; memberIndex++) {
-		const { schemaBlockRefId, position } = memberRowList[memberIndex];
+		const { schemaBlockRefId, position, description: memberDescription, producedByRecipeName } = memberRowList[memberIndex];
 		const blockRow = blockStatement.get(schemaBlockRefId);
 		if (blockRow === undefined || !Number.isInteger(position)) {
 			return { error: refusalText(`manifest ${manifestRefId} member ${schemaBlockRefId} ${blockRow === undefined ? 'is not in the blocks table' : 'has no position'}`, 'a published manifest is whole and ordered') };
 		}
 		// requires is copied as the store holds it: NULL stays null (the block names no requirement), never rewritten to []
-		memberList.push({ position, schemaBlock: { refId: blockRow.refId, kind: blockRow.kind, subject: blockRow.subject === null ? undefined : blockRow.subject, version: blockRow.version === null ? undefined : blockRow.version, requires: blockRow.requires === null ? null : JSON.parse(blockRow.requires), text: String(blockRow.text), producedBy: blockRow.producedBy === null ? undefined : blockRow.producedBy } });
+		memberList.push({ position, memberDescription, producedByRecipeName, schemaBlock: { refId: blockRow.refId, kind: blockRow.kind, subject: blockRow.subject === null ? undefined : blockRow.subject, version: blockRow.version === null ? undefined : blockRow.version, requires: blockRow.requires === null ? null : JSON.parse(blockRow.requires), text: String(blockRow.text), producedBy: blockRow.producedBy === null ? undefined : blockRow.producedBy } });
 	}
 	const vectorIdSet = new Set(memberList.reduce((soFar, { schemaBlock }) => soFar.concat(embeddingRefListOf(schemaBlock.text)), []));
 	const vectorStatement = supportStore.prepare('SELECT vectorId, modelVersion, dims, dtype, inputText, vector, vectorHash FROM vectors WHERE vectorId = ?');
@@ -70,7 +72,24 @@ const manifestForPublish = ({ supportStore, manifestRefId } = {}) => {
 		}
 		decisionSchemaBlockList.push({ pairKey: decisionRow.pairKey, producerKind: decisionRow.pairKey.split('::').slice(-1)[0], frozenText: decisionRow.frozenText });
 	}
-	return { memberList, frozenVectorList, decisionSchemaBlockList, basedOnManifestRefId: manifestRow.basedOnManifestRefId === null ? undefined : manifestRow.basedOnManifestRefId };
+	// the basedOn ancestors the recipe finisher walks, as the store holds them: the chain ends where the store's ends (a pruned parent),
+	// and a cycle is refused (the finisher refuses one too)
+	const ancestorRecordList = [];
+	const seenRefIdList = [manifestRefId];
+	let parentRefId = manifestRow.basedOnManifestRefId;
+	while (parentRefId) {
+		if (seenRefIdList.indexOf(parentRefId) !== -1) {
+			return { error: refusalText(`manifest ${manifestRefId}'s basedOn ancestry cycles at ${parentRefId}`, 'the recipe finisher refuses a cycle; so does the publish') };
+		}
+		seenRefIdList.push(parentRefId);
+		const parentRow = manifestRecordStatement.get(parentRefId);
+		if (parentRow === undefined) {
+			break;
+		}
+		ancestorRecordList.push(parentRow);
+		parentRefId = parentRow.basedOnManifestRefId;
+	}
+	return { memberList, frozenVectorList, decisionSchemaBlockList, manifestRecord: manifestRow, ancestorRecordList, basedOnManifestRefId: manifestRow.basedOnManifestRefId === null ? undefined : manifestRow.basedOnManifestRefId };
 };
 
 // answerConflictListFor — grouped from the same answer-edge rows the derived index holds (derivedIndexes.js), so the publish-time

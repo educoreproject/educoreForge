@@ -130,7 +130,7 @@ const taskList = new taskListPlus();
 taskList.push((args, next) => standardsDatabaseModule.open({ databaseFilePath: supportStorePath }, (openError, standardsDatabase) => next(openError, { ...args, standardsDatabase })));
 taskList.push((args, next) => args.standardsDatabase.saveBlock({ text: baseText, kind: 'standardBase', subject: 'toy@1_base', version: '1', requires: [], producedBy: 'fixture' }, (saveError) => next(saveError, args)));
 taskList.push((args, next) => args.standardsDatabase.saveBlock({ text: relationshipText, kind: 'relationship', subject: 'toyhub@1_0_rel_toy@1_exact', version: '1', requires: [sha256Hex(baseText)], producedBy: 'fixture' }, (saveError) => next(saveError, args)));
-taskList.push((args, next) => args.standardsDatabase.saveManifest({ name: 'toyManifest', members: [{ schemaBlockRefId: sha256Hex(baseText), position: 0 }, { schemaBlockRefId: sha256Hex(relationshipText), position: 1 }] }, (saveError, saved) => next(saveError, { ...args, manifestRefId: saved && saved.refId })));
+taskList.push((args, next) => args.standardsDatabase.saveManifest({ name: 'toyManifest', description: 'a stated manifest', recipeName: 'toyRecipe', recipeHash: 'a'.repeat(64), recipeFileName: 'toy.recipe.jsonc', members: [{ schemaBlockRefId: sha256Hex(baseText), position: 0 }, { schemaBlockRefId: sha256Hex(relationshipText), position: 1 }] }, (saveError, saved) => next(saveError, { ...args, manifestRefId: saved && saved.refId })));
 taskList.push((args, next) => {
 	const vectorStore = vectorStoreModule({});
 	vectorStore.init({ dbPath: supportStorePath }, (initError) => (initError ? next(initError, args) : vectorStore.putVector({ modelVersion: 'toy-model', inputText: 'toy b text', vector: vectorFloatList, embeddingRefGrammar: 2 }, (putError) => next(putError, args))));
@@ -194,6 +194,42 @@ const runGates = (setupError, setup) => {
 	twinHandle.exec(uriContractLib.schemaSqlList().find((oneStatement) => oneStatement.indexOf('CREATE TRIGGER publishedManifestsNoUpdate') === 0));
 	twinHandle.close();
 	harness.match('TWIN: a recorded count the hermetic replay does not reproduce goes RED', runGraphBuilder(['-replayOldest', `--uriContractFilePath=${twinPath}`]).outputText, /REFUSED — the hermetic replay gives 3 nodes \/ 2 edges; toy-2026-10 was published with 4 \/ 2/);
+	// the --live export, hermetically (the replay into Docker is the READY-time run): a manifest naming a parent the export store lacks
+	// must still export (basedOnManifestRefId is provenance, never carried), and the vectors land in the store's vectors table
+	const exportStorePath = path.join(scratchDirPath, 'export.sqlite');
+	const exportReader = uriContractLib.openUriContractFile({ uriContractFilePath: uriContractPath, accessMode: 'read' }).uriContract;
+	const exportedManifest = { ...exportReader.publishedManifestFor({ manifestRefId }).publishedManifest, basedOnManifestRefId: 'f'.repeat(64) };
+	const exportLib = require('../../../apps/graph-builder/lib/uri-contract-actions');
+	const recipeFinisher = require('../../../apps/graph-builder/apps/replay-manager/lib/finishing/lib/manifest-recipe-finisher')({ vocabulary: require('../../vocabulary/vocabulary') });
+	const sourceRow = new Database(supportStorePath, { readonly: true }).prepare('SELECT name, description, recipeName, recipeHash, recipeFileName, createdAt FROM manifests WHERE refId = ?').get(manifestRefId);
+	// recipeMismatchOf(storeReader, done) → '' | the fields the recipe finisher reads differently from the SOURCE store's manifest row
+	const recipeMismatchOf = (storeReader, done) =>
+		recipeFinisher.emit({ storeReader, manifestRefId }, (emitError, emitted) => {
+			if (emitError) {
+				done(emitError);
+				return;
+			}
+			const rootNode = emitted.nodes.find((oneNode) => oneNode.properties.isRootOfThisGraph === true);
+			done(Object.keys(sourceRow).filter((fieldName) => rootNode.properties[fieldName] !== sourceRow[fieldName]).join(', '));
+		});
+	exportLib.exportManifestStore({ uriContract: exportReader, publishedManifest: exportedManifest, exportStoreFilePath: exportStorePath }, (exportError, exported) => setImmediate(() => {
+		harness.ok('the --live export writes the manifest under its own refId although it names a parent the export store lacks', !exportError && exported.exportedManifestRefId === manifestRefId && exported.exportedVectorCount === 1, exportError);
+		recipeMismatchOf(exported.standardsDatabase, (mismatchText) => setImmediate(() => {
+			harness.equal('the recipe finisher reads the exported manifest exactly as the source store holds it (name, description, recipe, createdAt)', mismatchText, '');
+			const twinExportPath = path.join(scratchDirPath, 'exportTwin.sqlite');
+			exportLib.exportManifestStore({ uriContract: exportReader, publishedManifest: { ...exportedManifest, manifestRecord: {} }, exportStoreFilePath: twinExportPath }, (twinError, twinExported) => setImmediate(() => {
+				exportReader.close();
+				recipeMismatchOf(twinExported.standardsDatabase, (twinMismatchText) => setImmediate(() => {
+					harness.match('TWIN: an export that drops the manifest record goes RED (the recipe subgraph would differ)', twinMismatchText, /name, description, recipeName, recipeHash, recipeFileName, createdAt/);
+					continueAfterExport();
+				}));
+			}));
+		}));
+	}));
+};
+const continueAfterExport = () => {
+	const contractFlag = `--uriContractFilePath=${uriContractPath}`;
+	const storeFlag = `--standardsDatabaseFilePath=${supportStorePath}`;
 	harness.match('--live without a new export store is refused', runGraphBuilder(['-replayOldest', contractFlag, '--live=true']).outputText, /--exportStoreFilePath=<a NEW scratch store path> is REQUIRED/);
 
 	// =====================================================================

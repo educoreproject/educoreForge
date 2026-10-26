@@ -51,7 +51,7 @@
 		{
 			"tableName": "publishedManifests",
 			"rowRole": "identity",
-			"about": "one row per published manifest; manifestRefId = content-address manifestKeyForMembership of its members; the label is never 'sha256' and never reassigned; defaultLayerByHubJson is NULL unless one standard-hub pair carries edges from two producers (AMBER_JOURNEY ruling (b) 2026-10-26: a question URI answers from the manifest's own relationship schema blocks)",
+			"about": "one row per published manifest; manifestRecordJson is the support store's manifests row metadata (name, description, recipeName, recipeHash, recipeFileName, createdAt) and ancestorRecordListJson the basedOn chain of such rows the finisher walks (the published graph's :ManifestRecipe subgraph is generated from them; found by the first live replay 2026-10-26); manifestRefId = content-address manifestKeyForMembership of its members; the label is never 'sha256' and never reassigned; defaultLayerByHubJson is NULL unless one standard-hub pair carries edges from two producers (AMBER_JOURNEY ruling (b) 2026-10-26: a question URI answers from the manifest's own relationship schema blocks)",
 			"columnList": [
 				{ "columnName": "manifestRefId", "sqlType": "TEXT", "constraintText": "PRIMARY KEY CHECK (length(manifestRefId) = 64)" },
 				{ "columnName": "publicLabel", "sqlType": "TEXT", "constraintText": "NOT NULL UNIQUE CHECK (publicLabel <> 'sha256' AND publicLabel <> '')" },
@@ -61,6 +61,8 @@
 				{ "columnName": "basedOnManifestRefId", "sqlType": "TEXT", "constraintText": "" },
 				{ "columnName": "recordedNodeCount", "sqlType": "INTEGER", "constraintText": "NOT NULL CHECK (recordedNodeCount >= 0)" },
 				{ "columnName": "recordedEdgeCount", "sqlType": "INTEGER", "constraintText": "NOT NULL CHECK (recordedEdgeCount >= 0)" },
+				{ "columnName": "manifestRecordJson", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "ancestorRecordListJson", "sqlType": "TEXT", "constraintText": "NOT NULL" },
 				{ "columnName": "publishedAt", "sqlType": "TEXT", "constraintText": "NOT NULL" },
 				{ "columnName": "publishedByAgentIri", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES agents(agentIri)" }
 			],
@@ -69,11 +71,13 @@
 		{
 			"tableName": "publishedManifestMembers",
 			"rowRole": "identity",
-			"about": "the assembly of each manifest, written once with it, in replay order",
+			"about": "the assembly of each manifest, written once with it, in replay order; memberDescription and producedByRecipeName are the membership metadata the :RecipeBlock nodes carry",
 			"columnList": [
 				{ "columnName": "manifestRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES publishedManifests(manifestRefId)" },
 				{ "columnName": "position", "sqlType": "INTEGER", "constraintText": "NOT NULL" },
-				{ "columnName": "schemaBlockRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES schemaBlocks(refId)" }
+				{ "columnName": "schemaBlockRefId", "sqlType": "TEXT", "constraintText": "NOT NULL REFERENCES schemaBlocks(refId)" },
+				{ "columnName": "memberDescription", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "producedByRecipeName", "sqlType": "TEXT", "constraintText": "" }
 			],
 			"tableConstraintList": ["PRIMARY KEY (manifestRefId, schemaBlockRefId)", "UNIQUE (manifestRefId, position)"]
 		},

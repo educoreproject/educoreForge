@@ -232,6 +232,8 @@ const publishManifestAction = ({ resolveStoreFamilyPath }) => (callback) => {
 		memberList: gathered.memberList,
 		frozenVectorList: gathered.frozenVectorList,
 		decisionSchemaBlockList: gathered.decisionSchemaBlockList,
+		manifestRecord: gathered.manifestRecord,
+		ancestorRecordList: gathered.ancestorRecordList,
 		defaultLayerByHub: defaulted.defaultLayerByHub,
 		basedOnManifestRefId: gathered.basedOnManifestRefId,
 		recordedNodeCount: counted.nodeCount,
@@ -256,7 +258,9 @@ const publishManifestAction = ({ resolveStoreFamilyPath }) => (callback) => {
 // -replayOldest [--live=true --exportStoreFilePath=<new scratch store>]
 // ---------------------------------------------------------------------
 // exportManifestStore — the manifest's blocks, membership and frozen vectors written from uriContract ALONE into a FRESH support store
-// through the store modules' own writers, so -replay reads it exactly as it reads any store
+// (blocks and vectors through the store modules' own writers; the manifest rows with the metadata the recipe finisher reads, exactly as
+// published, ancestors included), so -replay reads it exactly as it reads any store. TRAPS found by the first live runs: the parent a
+// manifest names is not in the export unless its record is (FOREIGN KEY); 213,773 synchronous callbacks overflow the stack
 const exportManifestStore = ({ uriContract, publishedManifest, exportStoreFilePath }, callback) => {
 	const { taskListPlus, pipeRunner } = new (require('qtools-asynchronous-pipe-plus'))();
 	const standardsDatabaseModule = require(path.join(TREE_LIB, 'standards-database', 'standards-database'))();
@@ -276,11 +280,38 @@ const exportManifestStore = ({ uriContract, publishedManifest, exportStoreFilePa
 				return;
 			}
 			const { schemaBlock } = read;
-			args.standardsDatabase.saveBlock({ text: schemaBlock.text, kind: schemaBlock.kind, subject: schemaBlock.subject, version: schemaBlock.version, requires: schemaBlock.requires, producedBy: schemaBlock.producedBy }, (saveError) => (saveError ? next(saveError, args) : saveNext(memberIndex + 1)));
+			args.standardsDatabase.saveBlock({ text: schemaBlock.text, kind: schemaBlock.kind, subject: schemaBlock.subject, version: schemaBlock.version, requires: schemaBlock.requires, producedBy: schemaBlock.producedBy }, (saveError) => (saveError ? next(saveError, args) : setImmediate(() => saveNext(memberIndex + 1))));
 		};
 		saveNext(0);
 	});
-	taskList.push((args, next) => args.standardsDatabase.saveManifest({ name: `uriContract export of ${publishedManifest.publicLabel}`, description: 'written by -replayOldest --live from uriContract alone', basedOnManifestRefId: publishedManifest.basedOnManifestRefId || undefined, members: publishedManifest.memberList.map((oneMember) => ({ schemaBlockRefId: oneMember.schemaBlockRefId, position: oneMember.position })) }, (saveError, saved) => next(saveError, { ...args, savedManifest: saved })));
+	// the manifest rows the recipe finisher reads, written EXACTLY as published (createdAt included, which saveManifest would stamp anew):
+	// the basedOn ancestors deepest first as metadata-only rows, then this manifest with its members' metadata. A raw connection on the
+	// SCRATCH export store, foreign keys off only so an ancestor may name the parent its own store had already pruned.
+	taskList.push((args, next) => {
+		const Database = require(path.join(__dirname, '..', '..', '..', 'node_modules', 'better-sqlite3'));
+		const exportConnection = new Database(exportStoreFilePath, { fileMustExist: true });
+		exportConnection.pragma('foreign_keys = OFF');
+		const manifestStatement = exportConnection.prepare('INSERT INTO manifests (refId, name, description, recipeName, recipeHash, recipeFileName, basedOnManifestRefId, createdAt) VALUES (@refId, @name, @description, @recipeName, @recipeHash, @recipeFileName, @basedOnManifestRefId, @createdAt)');
+		const memberStatement = exportConnection.prepare('INSERT INTO manifestBlocks (manifestRefId, schemaBlockRefId, position, description, producedByRecipeName) VALUES (?, ?, ?, ?, ?)');
+		const recordRowOf = (oneRecord) => ['refId', 'name', 'description', 'recipeName', 'recipeHash', 'recipeFileName', 'basedOnManifestRefId', 'createdAt'].reduce((soFar, fieldName) => ({ ...soFar, [fieldName]: oneRecord[fieldName] === undefined ? null : oneRecord[fieldName] }), {});
+		exportConnection.exec('BEGIN IMMEDIATE');
+		publishedManifest.ancestorRecordList.slice().reverse().forEach((oneRecord) => manifestStatement.run(recordRowOf(oneRecord)));
+		manifestStatement.run(recordRowOf({ ...publishedManifest.manifestRecord, refId: publishedManifest.manifestRefId }));
+		publishedManifest.memberList.forEach((oneMember) => memberStatement.run(publishedManifest.manifestRefId, oneMember.schemaBlockRefId, oneMember.position, oneMember.memberDescription, oneMember.producedByRecipeName));
+		exportConnection.exec('COMMIT');
+		exportConnection.close();
+		next('', args);
+	});
+	// read back through the store module: the manifest exists and holds every member, so -replay will find what was published
+	taskList.push((args, next) =>
+		args.standardsDatabase.getManifest({ refId: publishedManifest.manifestRefId }, (readError, manifestRow) => {
+			if (readError || !manifestRow || (manifestRow.members || []).length !== publishedManifest.memberList.length) {
+				next(readError || `the export store does not answer manifest ${publishedManifest.manifestRefId} with its ${publishedManifest.memberList.length} members`, args);
+				return;
+			}
+			next('', { ...args, savedManifest: { refId: manifestRow.refId } });
+		}),
+	);
 	taskList.push((args, next) => {
 		const vectorStore = vectorStoreModule({});
 		vectorStore.init({ dbPath: exportStoreFilePath }, (initError) => next(initError, { ...args, vectorStore }));
@@ -299,7 +330,8 @@ const exportManifestStore = ({ uriContract, publishedManifest, exportStoreFilePa
 			}
 			const { frozenVector } = read;
 			const embeddingRefGrammar = contentAddress.vectorIdForInput({ modelVersion: frozenVector.modelVersion, embeddingDims: frozenVector.dims, inputText: frozenVector.inputText }) === frozenVector.vectorId ? 2 : 1;
-			args.vectorStore.putVector({ modelVersion: frozenVector.modelVersion, inputText: frozenVector.inputText, vector: frozenVector.vector, embeddingRefGrammar }, (putError) => (putError ? next(putError, args) : putNext(vectorIndex + 1)));
+			// setImmediate: the store answers synchronously, and 213,773 nested callbacks overflow the stack (found by the first export of goldWave3)
+			args.vectorStore.putVector({ modelVersion: frozenVector.modelVersion, inputText: frozenVector.inputText, vector: frozenVector.vector, embeddingRefGrammar }, (putError) => (putError ? next(putError, args) : setImmediate(() => putNext(vectorIndex + 1))));
 		};
 		putNext(0);
 	});

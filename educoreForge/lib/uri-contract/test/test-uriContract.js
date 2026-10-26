@@ -173,7 +173,8 @@ const memberList = [
 	{ position: 3, schemaBlock: { ...schemaBlockFor(relationshipText, [sha256Hex(baseText), sha256Hex(hubBaseText)]), kind: 'relationship', subject: 'toyhub@1_0_rel_toy@1_exact' } },
 ];
 const manifestRefId = contentAddress.manifestKeyForMembership(memberList.map((oneMember) => ({ blockId: oneMember.schemaBlock.refId, position: oneMember.position })));
-const publishArgs = { manifestRefId, publicLabel: 'educore-2026-10', memberList, frozenVectorList: [toyVector], decisionSchemaBlockList: [], defaultLayerByHub: null, recordedNodeCount: 3, recordedEdgeCount: 2, publishedAt: '2026-10-26T00:00:00Z', publishedByAgentIri: ORGANISATION_IRI, registrationStatus: 'Candidate', registrationAuthority: ORGANISATION_IRI };
+const toyManifestRecord = { refId: manifestRefId, name: 'toyManifest', description: 'a stated manifest', recipeName: 'toyRecipe', recipeHash: 'a'.repeat(64), recipeFileName: 'toy.recipe.jsonc', basedOnManifestRefId: null, createdAt: '2026-10-26 00:00:00' };
+const publishArgs = { manifestRefId, publicLabel: 'educore-2026-10', memberList, frozenVectorList: [toyVector], decisionSchemaBlockList: [], manifestRecord: toyManifestRecord, ancestorRecordList: [], defaultLayerByHub: null, recordedNodeCount: 3, recordedEdgeCount: 2, publishedAt: '2026-10-26T00:00:00Z', publishedByAgentIri: ORGANISATION_IRI, registrationStatus: 'Candidate', registrationAuthority: ORGANISATION_IRI };
 // =====================================================================
 harness.section('NO UPDATE OR DELETE PATH: the module source (static) and the file (the write-once triggers)');
 // =====================================================================
@@ -347,6 +348,8 @@ const nullRequiresManifestRefId = contentAddress.manifestKeyForMembership([{ blo
 harness.equal('a member whose requires is NULL (the store\'s "no requirement") publishes', nullRequiresWorld.uriContract.publishManifest({ ...publishArgs, manifestRefId: nullRequiresManifestRefId, publicLabel: 'null-requires', memberList: nullRequiresMemberList }).alreadyPresent, false);
 harness.equal('…and reads back as null, never rewritten to []', nullRequiresWorld.uriContract.schemaBlockFor(memberList[0].schemaBlock.refId).schemaBlock.requires, null);
 nullRequiresWorld.uriContract.close();
+harness.match('a publish without the manifest record (the recipe subgraph\'s source) is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, manifestRecord: undefined }).error, /manifestRecord must be an object/);
+harness.match('…and an ancestor record with a field the store does not hold is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, ancestorRecordList: [{ refId: 'x', stray: 1 }] }).error, /an ancestor record must be an object carrying only/);
 const firstPublish = manifestWorld.uriContract.publishManifest(publishArgs);
 harness.ok('the manifest publishes', firstPublish.error === undefined && firstPublish.alreadyPresent === false, firstPublish.error);
 harness.equal('re-publishing the same manifest under the same label is alreadyPresent', manifestWorld.uriContract.publishManifest(publishArgs).alreadyPresent, true);
@@ -354,6 +357,7 @@ harness.match('the same label for another manifest is refused (a label is never 
 const readBack = manifestWorld.uriContract.publishedManifestFor({ publicLabel: 'educore-2026-10' });
 sameValue('it reads back by label with its members, its status and its URIs', [readBack.publishedManifest.memberList.length, readBack.publishedManifest.effectiveRegistrationStatus, readBack.publishedManifest.uri, readBack.publishedManifest.uriByContent], [4, 'Candidate', 'https://w3id.org/EDUcore/manifest/educore-2026-10', `https://w3id.org/EDUcore/manifest/sha256/${manifestRefId}`]);
 sameValue('the frozen vector reads back verified, decoded as getVector decodes it', manifestWorld.uriContract.frozenVectorFor(toyVector.vectorId).frozenVector.vector, [0.25, -0.5]);
+sameValue('the manifest record and ancestors read back as published', [manifestWorld.uriContract.publishedManifestFor({ manifestRefId }).publishedManifest.manifestRecord, manifestWorld.uriContract.publishedManifestFor({ manifestRefId }).publishedManifest.ancestorRecordList], [toyManifestRecord, []]);
 harness.equal('…and by hash', manifestWorld.uriContract.publishedManifestFor({ manifestRefId }).publishedManifest.publicLabel, 'educore-2026-10');
 const reader = uriContractLib.uriContractReaderFor({ uriContractFilePath: manifestWorld.uriContractFilePath });
 // answerOf(readerFunction, argument) → { errorText, answer }: the reader is callback-style (lane A's interface) and answers synchronously

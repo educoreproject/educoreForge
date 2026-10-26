@@ -24,6 +24,7 @@
 	},
 	"personTextRefusalPattern": "[^\\s@]+@[^\\s@]+\\.[^\\s@]+",
 	"agentRegistryTopFieldList": ["about", "agentList"],
+	"manifestRecordFieldList": ["refId", "name", "description", "recipeName", "recipeHash", "recipeFileName", "basedOnManifestRefId", "createdAt"],
 	"hubCardDefinitionPropertyListByTier": {
 		"about": "where a HubReference card's DEFINITION is read, per referenceTier, the first present property winning (measured on goldWave3 2026-10-26: value cards carry valueDefinition on 26,651 of 97,335, so a value card without its own definition answers its property's); a tier not listed is refused by name when indexed",
 		"value": ["valueDefinition", "propertyDefinition"],
