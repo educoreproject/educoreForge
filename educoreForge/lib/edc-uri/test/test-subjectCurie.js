@@ -33,11 +33,11 @@ const sha256Hex = (text) => crypto.createHash('sha256').update(text, 'utf8').dig
 
 // real stableId shapes from the gold (DESIGN-ML1a §1): '/', a space and a comma, an '@', and PESC's ':'-bearing local parts
 const caseList = [
-	{ stableId: 'edfi:property/abstractEntity.EducationOrganization.Address', standardName: 'EdFi', standardVersion: '5.2.0', expectedCurie: 'edfi:property%2FabstractEntity.EducationOrganization.Address' },
-	{ stableId: 'edfi:value/AbsenceEventCategory.Jury duty, civic', standardName: 'EdFi', standardVersion: '5.2.0', expectedCurie: 'edfi:value%2FAbsenceEventCategory.Jury%20duty%2C%20civic' },
-	{ stableId: 'sif260928:field/StudentPersonal/@RefId', standardName: 'SIF260928', standardVersion: '4.3', expectedCurie: 'sif260928:field%2FStudentPersonal%2F%40RefId' },
-	{ stableId: 'pescacademiceportfolio1v0v0:group/urn:org:pesc:core:CoreMain:v1.16.0#X/el/1:Y', standardName: 'PESC-AcademicEportfolio-1.0.0', standardVersion: '1.0.0', expectedCurie: 'pescacademiceportfolio1v0v0:group%2Furn:org:pesc:core:CoreMain:v1.16.0%23X%2Fel%2F1:Y' },
-	{ stableId: 'ctdl:property/ceterms:name', standardName: 'CTDL', standardVersion: 'Release 20260927', expectedCurie: 'ctdl:property%2Fceterms:name' },
+	{ stableId: 'edfi:property/abstractEntity.EducationOrganization.Address', standardName: 'EdFi', standardVersion: '5.2.0', expectedCurie: 'edfi:property/abstractEntity.EducationOrganization.Address' },
+	{ stableId: 'edfi:value/AbsenceEventCategory.Jury duty, civic', standardName: 'EdFi', standardVersion: '5.2.0', expectedCurie: 'edfi:value/AbsenceEventCategory.Jury%20duty%2C%20civic' },
+	{ stableId: 'sif260928:field/StudentPersonal/@RefId', standardName: 'SIF260928', standardVersion: '4.3', expectedCurie: 'sif260928:field/StudentPersonal/%40RefId' },
+	{ stableId: 'pescacademiceportfolio1v0v0:group/urn:org:pesc:core:CoreMain:v1.16.0#X/el/1:Y', standardName: 'PESC-AcademicEportfolio-1.0.0', standardVersion: '1.0.0', expectedCurie: 'pescacademiceportfolio1v0v0:group/urn:org:pesc:core:CoreMain:v1.16.0%23X/el/1:Y' },
+	{ stableId: 'ctdl:property/ceterms:name', standardName: 'CTDL', standardVersion: 'Release 20260927', expectedCurie: 'ctdl:property/ceterms:name' },
 ];
 
 // =====================================================================
@@ -55,7 +55,9 @@ harness.equal('the expansion depends only on prefix and standard version', subje
 harness.match('a stableId with no prefix is refused', subjectCurieFor({ stableId: 'noPrefixHere', standardName: 'EdFi', standardVersion: '5.2.0' }).error, /is not '<prefix>:<local part>'/);
 harness.match('a prefix the encoding would alter is refused', subjectCurieFor({ stableId: 'ed-fi:property/X', standardName: 'EdFi', standardVersion: '5.2.0' }).error, /does not match/);
 harness.match('a malformed escape does not decode', stableIdOfSubjectCurie('edfi:property%2fX').error, /malformed escape/);
-harness.match('an unencoded "/" does not decode (a verbatim subject is not an encoded one)', stableIdOfSubjectCurie('edfi:property/X').error, /unencoded character/);
+harness.match('an unencoded "@" does not decode (a verbatim subject is not an encoded one)', stableIdOfSubjectCurie('sif260928:field/X/@RefId').error, /unencoded character '@'/);
+harness.equal("⟪ML3.1⟫ a real '/' decodes as itself", stableIdOfSubjectCurie('edfi:property/X').stableId, 'edfi:property/X');
+harness.match("⟪ML3.1⟫ an empty piece is refused ('a//b')", subjectCurieFor({ stableId: 'edfi:a//b', standardName: 'EdFi', standardVersion: '5.2.0' }).error, /is forbidden/);
 
 // =====================================================================
 harness.section("the curated recipe (R-c'): s p o author; the machine recipe untouched");
@@ -63,7 +65,7 @@ harness.section("the curated recipe (R-c'): s p o author; the machine recipe unt
 
 const blockHash = 'b'.repeat(64);
 const rowParts = { decisionBlockHash: blockHash, subjectStableId: caseList[0].stableId, subjectStandardName: 'EdFi', subjectStandardVersion: '5.2.0', predicateCurie: 'edc:bestMatch', objectStableId: 'https://w3id.org/EDUcore/CEDStandards/hub/14.0.0.0/f00d', objectStandardName: 'CEDS', objectStandardVersion: '14.0.0.0' };
-const subjectIri = 'https://w3id.org/EDUcore/EdFi/5.2.0/edfi:property%2FabstractEntity.EducationOrganization.Address';
+const subjectIri = 'https://w3id.org/EDUcore/EdFi/5.2.0/edfi:property/abstractEntity.EducationOrganization.Address';
 const authorIri = 'https://w3id.org/EDUcore/agent/raterA';
 const curated = assertionIdentity.curatedAssertionIdFor({ ...rowParts, authorIdList: [authorIri] });
 harness.equal('the curated hash is sha256(s \\n p \\n o \\n author) over the expanded IRIs (known answer)', curated.assertionHash, sha256Hex([subjectIri, 'https://w3id.org/EDUcore/bestMatch', rowParts.objectStableId, authorIri].join('\n')));

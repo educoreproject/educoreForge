@@ -51,7 +51,10 @@ const PESC_HASH = 'a'.repeat(64);
 const memberList = [{ pairKey: 'ceds@14.0.0.0::edfi@5.2.0::edfiCedsDerivedPlugin::inferred', decisionBlockHash: EDFI_HASH }, { pairKey: 'ceds@14.0.0.0::pesccollegetranscript1v7v0@1.7.0::pescCollegeTranscript1v7v0CedsDerivedPlugin::inferred', decisionBlockHash: PESC_HASH }];
 const machineLayer = { layerKey: 'jevToy', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI };
 const machineVersion = { administrationRecord: { versionTag: 'base', contentId: 'c'.repeat(64), publishedAt: '2026-10-25T00:00:00Z' }, registrationStatus: 'Standard', authorAgentIri: JUDGE_IRI, contentIdBasis: 'sortedMemberBlockHashList', memberBlockList: memberList, copiedFromLayerVersion: 'https://w3id.org/EDUcore/layer/jev/cfg-03f64470322c' };
-const memberRowsList = [[memberList[0], edfiSlice], [memberList[1], pescSlice]].map(([member, decisionBlock]) => publication.machineMemberRowsFor({ member, decisionBlock, cardByStableId }));
+// ⟪ML3.1, Q42⟫ STATED subject labels (test text): every Ed-Fi subject but the first; no PESC subject (so every PESC label is empty)
+const edfiSubjectStableIdList = Array.from(new Set(edfiSlice.decisionRecordList.reduce((soFar, oneRecord) => soFar.concat(oneRecord.instanceStableIdList === undefined ? [oneRecord.subjectStableId] : oneRecord.instanceStableIdList), [])));
+const subjectLabelByStableId = edfiSubjectStableIdList.slice(1).reduce((soFar, oneStableId) => ({ ...soFar, [oneStableId]: `stated label ${oneStableId.slice(oneStableId.lastIndexOf('.') + 1)}` }), { 'edfi:property/abstractEntity.X': 'EducationOrganization.X' });
+const memberRowsList = [[memberList[0], edfiSlice], [memberList[1], pescSlice]].map(([member, decisionBlock]) => publication.machineMemberRowsFor({ member, decisionBlock, cardByStableId, subjectLabelByStableId }));
 const publicFilter = publication.publicFilterFor({ licenceHoldList: [{ bundleToken: 'edfi' }, { bundleToken: 'jedx' }], filterSourceText: 'a stated hold list' }).publicFilter;
 const headerScalarOf = (setText, slotName) => {
 	const line = setText.split('\n').find((oneLine) => oneLine.startsWith(`#${slotName}: `));
@@ -69,13 +72,17 @@ harness.section('machine member rows: the exporter\'s own rows, given their publ
 
 harness.ok('both real slices render as member rows', memberRowsList.every((oneResult) => oneResult.error === undefined), memberRowsList.map((oneResult) => oneResult.error).join(' | '));
 const edfiMemberRows = memberRowsList[0].memberRows;
-harness.ok('every subject_id is an encoded CURIE (no raw "/")', edfiMemberRows.rowList.every((oneEntry) => oneEntry.row.subject_id.indexOf('/') === -1 && oneEntry.row.subject_id.indexOf('edfi:') === 0));
+harness.ok("⟪ML3.1, Q42⟫ every subject_id keeps its real '/' and no '%2F'", edfiMemberRows.rowList.every((oneEntry) => oneEntry.row.subject_id.indexOf('/') !== -1 && oneEntry.row.subject_id.indexOf('%2F') === -1 && oneEntry.row.subject_id.indexOf('edfi:') === 0));
+harness.ok('⟪ML3.1, Q42⟫ subject_label is the stated label, verbatim, where one exists', edfiMemberRows.rowList.every((oneEntry) => oneEntry.row.subject_label === (subjectLabelByStableId[oneEntry.subjectStableId] || '')));
+harness.equal('⟪ML3.1⟫ a subject with no label gets an EMPTY cell, counted (never composed)', edfiMemberRows.emptySubjectLabelCount, edfiMemberRows.rowList.filter((oneEntry) => oneEntry.subjectStableId === edfiSubjectStableIdList[0]).length);
+harness.ok('⟪ML3.1⟫ the PESC slice, with no stated labels, renders every label empty', memberRowsList[1].memberRows.emptySubjectLabelCount === memberRowsList[1].memberRows.rowList.length && memberRowsList[1].memberRows.rowList.length > 0);
+harness.match('⟪ML3.1⟫ TWIN: no label map is refused by name, never defaulted to {}', publication.machineMemberRowsFor({ member: memberList[0], decisionBlock: edfiSlice, cardByStableId }).error, /subjectLabelByStableId is required/);
 harness.ok('every subject_id decodes back to its forged stableId', edfiMemberRows.rowList.every((oneEntry) => subjectCurieLib.stableIdOfSubjectCurie(oneEntry.row.subject_id).stableId === oneEntry.subjectStableId));
 harness.ok('every object_id is a full IRI or sssom:NoTermFound', edfiMemberRows.rowList.every((oneEntry) => /^https:\/\//.test(oneEntry.row.object_id) || oneEntry.row.object_id === 'sssom:NoTermFound'));
 harness.ok('the match-field columns are gone (one hub per curie_map prefix; a version spans hubs)', edfiMemberRows.rowList.every((oneEntry) => oneEntry.row.subject_match_field === undefined && oneEntry.row.object_match_field === undefined));
 harness.ok("R-c' (2): a machine row carries NO row-level author_id", memberRowsList.every((oneResult) => oneResult.memberRows.rowList.every((oneEntry) => oneEntry.row.author_id === undefined)));
-harness.equal('the PESC fan-out slice carries its judged subject, encoded too', pescSlice.decisionRecordList.some((oneRecord) => oneRecord.instanceStableIdList !== undefined) && memberRowsList[1].memberRows.rowList.every((oneEntry) => oneEntry.row.judged_subject_id.indexOf('/') === -1), true);
-harness.match('an authored block is refused (machine layers render judge blocks only)', publication.machineMemberRowsFor({ member: memberList[0], decisionBlock: { ...edfiSlice, header: { ...edfiSlice.header, producerKind: 'authored' } }, cardByStableId }).error, /producerKind 'authored'/);
+harness.equal("the PESC fan-out slice carries its judged subject, spelled as the subject is (real '/', no '%2F')", pescSlice.decisionRecordList.some((oneRecord) => oneRecord.instanceStableIdList !== undefined) && memberRowsList[1].memberRows.rowList.every((oneEntry) => oneEntry.row.judged_subject_id.indexOf('/') !== -1 && oneEntry.row.judged_subject_id.indexOf('%2F') === -1), true);
+harness.match('an authored block is refused (machine layers render judge blocks only)', publication.machineMemberRowsFor({ member: memberList[0], decisionBlock: { ...edfiSlice, header: { ...edfiSlice.header, producerKind: 'authored' } }, cardByStableId, subjectLabelByStableId }).error, /producerKind 'authored'/);
 
 // =====================================================================
 harness.section('one set per layer version (R-b): pinned identity, recomputable record_id, deterministic bytes');
@@ -100,12 +107,14 @@ const tamperedSetText = (() => {
 	const lineList = machineSet.setText.split('\n');
 	const firstRowIndex = lineList.findIndex((oneLine) => oneLine.length && !oneLine.startsWith('#')) + 1;
 	const cellList = lineList[firstRowIndex].split('\t');
-	cellList[1] = cellList[1] === 'skos:relatedMatch' ? 'skos:exactMatch' : 'skos:relatedMatch';
+	// ⟪ML3.1⟫ found by column NAME: subject_label now stands at index 1
+	const predicateIndex = lineList[firstRowIndex - 1].split('\t').indexOf('predicate_id');
+	cellList[predicateIndex] = cellList[predicateIndex] === 'skos:relatedMatch' ? 'skos:exactMatch' : 'skos:relatedMatch';
 	lineList[firstRowIndex] = cellList.join('\t');
 	return lineList.join('\n');
 })();
 harness.match('a row whose predicate was changed no longer recomputes (the gate can fail)', publication.recordIdRecomputation({ setText: tamperedSetText }).error, /does not recompute from the row/);
-const machineSetAgain = publication.machineVersionSetText({ layer: machineLayer, version: machineVersion, memberRowsList: [[memberList[0], edfiSlice], [memberList[1], pescSlice]].map(([member, decisionBlock]) => publication.machineMemberRowsFor({ member, decisionBlock, cardByStableId }).memberRows) });
+const machineSetAgain = publication.machineVersionSetText({ layer: machineLayer, version: machineVersion, memberRowsList: [[memberList[0], edfiSlice], [memberList[1], pescSlice]].map(([member, decisionBlock]) => publication.machineMemberRowsFor({ member, decisionBlock, cardByStableId, subjectLabelByStableId }).memberRows) });
 harness.equal('the same inputs give the same bytes', sha256Hex(machineSetAgain.setText), sha256Hex(machineSet.setText));
 harness.ok('no status is written into a set (a status change must not change a set\'s bytes)', machineSet.setText.indexOf('"Standard"') === -1);
 harness.match('members out of registry order are refused', publication.machineVersionSetText({ layer: machineLayer, version: machineVersion, memberRowsList: memberRowsList.map((oneResult) => oneResult.memberRows).reverse() }).error, /out of registry order/);
@@ -146,20 +155,24 @@ const curatedSetText = [
 ].join('\n') + '\n';
 const curatedLayer = { layerKey: 'ratersToy', displayName: 'toy raters', layerKind: 'curated', authorAgentIri: ORGANISATION_IRI, standardList: [{ standardKey: 'edfi', standardName: 'EdFi', sourceIri: 'urn:educore:edfi:' }], hubList: [{ hubKey: 'ceds', hubName: 'CEDS', sourceIri: 'urn:educore:hub:CEDS:' }] };
 const curatedVersion = { administrationRecord: { versionTag: 'r1', contentId: sha256Hex(curatedSetText), publishedAt: '2026-10-25T00:00:00Z' }, registrationStatus: 'Candidate', authorAgentIri: ORGANISATION_IRI, contentIdBasis: 'frozenSetBytes', wholeSetBlock: { pairKey: 'layerSet::ratersToy', decisionBlockHash: sha256Hex(curatedSetText) }, memberBlockList: [] };
-const curatedSet = publication.curatedVersionSetText({ layer: curatedLayer, version: curatedVersion, wholeSetText: curatedSetText });
+const curatedSet = publication.curatedVersionSetText({ layer: curatedLayer, version: curatedVersion, wholeSetText: curatedSetText, subjectLabelByStableId });
 harness.ok('the stored curated set renders', curatedSet.error === undefined, curatedSet.error);
 const curatedRows = curatedSet.error ? { rowList: [] } : rowsOf(curatedSet.setText);
 harness.equal('row for row equal to the stored set (no collapse)', curatedRows.rowList.length, 3);
+harness.equal('⟪ML3.1⟫ the curated rendering carries subject_label right after subject_id', curatedRows.columnList.slice(0, 2).join(','), 'subject_id,subject_label');
+harness.equal('⟪ML3.1⟫ …with the stated label for X and an empty one for Y', curatedRows.rowList.map((oneRow) => oneRow.subject_label).join('|'), 'EducationOrganization.X|EducationOrganization.X|');
+harness.equal('⟪ML3.1⟫ …and the empty one counted', curatedSet.emptySubjectLabelCount, 1);
+harness.match('⟪ML3.1⟫ TWIN: a curated rendering with no label map is refused by name', publication.curatedVersionSetText({ layer: curatedLayer, version: curatedVersion, wholeSetText: curatedSetText }).error, /subjectLabelByStableId is required/);
 harness.ok('every record_id is scoped by the stored block hash (the version content id)', curatedRows.rowList.every((oneRow) => oneRow.record_id.indexOf(`/assertion/${sha256Hex(curatedSetText)}/`) !== -1));
 harness.ok("R-c': two raters asserting one triple get TWO record_ids", curatedRows.rowList.length === 3 && curatedRows.rowList[0].record_id !== curatedRows.rowList[1].record_id);
 harness.ok('the curated record_ids recompute from the row (s p o author)', !curatedSet.error && publication.recordIdRecomputation({ setText: curatedSet.setText }).error === undefined);
 harness.equal('mapping_set_id stays the version URI (the rendering is OF r1)', curatedSet.error ? '' : headerScalarOf(curatedSet.setText, 'mapping_set_id'), 'https://w3id.org/EDUcore/layer/ratersToy/r1');
 harness.ok('see_also names the stored block URN', !curatedSet.error && curatedSet.setText.indexOf(`#  - "urn:educore:decisionBlock:${sha256Hex(curatedSetText)}"`) !== -1);
-harness.match("R-c' (1): a curated row with NO author is refused by name", publication.curatedVersionSetText({ layer: curatedLayer, version: { ...curatedVersion, administrationRecord: { ...curatedVersion.administrationRecord, contentId: sha256Hex(curatedSetText.replace(`\t${RATER_B_IRI}\t`, '\t\t')) } }, wholeSetText: curatedSetText.replace(`\t${RATER_B_IRI}\t`, '\t\t') }).error, /not exactly one absolute IRI/);
+harness.match("R-c' (1): a curated row with NO author is refused by name", publication.curatedVersionSetText({ layer: curatedLayer, version: { ...curatedVersion, administrationRecord: { ...curatedVersion.administrationRecord, contentId: sha256Hex(curatedSetText.replace(`\t${RATER_B_IRI}\t`, '\t\t')) } }, wholeSetText: curatedSetText.replace(`\t${RATER_B_IRI}\t`, '\t\t'), subjectLabelByStableId }).error, /not exactly one absolute IRI/);
 const twoAuthorText = curatedSetText.replace(`\t${RATER_B_IRI}\t`, `\t${RATER_B_IRI}|${RATER_A_IRI}\t`);
-harness.match("R-c' (1): a curated row with SEVERAL authors is refused by name", publication.curatedVersionSetText({ layer: curatedLayer, version: { ...curatedVersion, administrationRecord: { ...curatedVersion.administrationRecord, contentId: sha256Hex(twoAuthorText) } }, wholeSetText: twoAuthorText }).error, /not exactly one absolute IRI/);
-harness.match('a stored text that does not hash to the content id is refused', publication.curatedVersionSetText({ layer: curatedLayer, version: curatedVersion, wholeSetText: `${curatedSetText}\n` }).error, /not the version's content id/);
-const publicCurated = publication.curatedVersionSetText({ layer: curatedLayer, version: curatedVersion, wholeSetText: curatedSetText, publicFilter });
+harness.match("R-c' (1): a curated row with SEVERAL authors is refused by name", publication.curatedVersionSetText({ layer: curatedLayer, version: { ...curatedVersion, administrationRecord: { ...curatedVersion.administrationRecord, contentId: sha256Hex(twoAuthorText) } }, wholeSetText: twoAuthorText, subjectLabelByStableId }).error, /not exactly one absolute IRI/);
+harness.match('a stored text that does not hash to the content id is refused', publication.curatedVersionSetText({ layer: curatedLayer, version: curatedVersion, wholeSetText: `${curatedSetText}\n`, subjectLabelByStableId }).error, /not the version's content id/);
+const publicCurated = publication.curatedVersionSetText({ layer: curatedLayer, version: curatedVersion, wholeSetText: curatedSetText, publicFilter, subjectLabelByStableId });
 harness.equal('a curated public rendering also omits the held standards', publicCurated.rowCount, 0);
 
 // =====================================================================

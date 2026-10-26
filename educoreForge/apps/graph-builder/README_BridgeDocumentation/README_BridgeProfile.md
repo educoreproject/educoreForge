@@ -178,6 +178,18 @@ version yet names. `object_id` is always a full IRI. Recipe: `record_id` = `edc:
 hash = sha256(subject IRI \n predicate IRI \n object IRI) for a machine row, with `\n` + the row's ONE `author_id`
 appended for a curated row.
 
+**Amendment (mappingLayers ML3.1, TQ Q42, ruled 2026-10-26).** The element IRI keeps the stableId's `/` literal
+(edc-uri-2): each `/`-separated piece is encoded as before (space, `@`, `%`, `,`, `#` and every other character outside
+the literal list stay `%XX`) and the pieces are joined with a literal `/`. So `subject_id` is now `edfi:property/X`
+(no `%2F`), its expansion is unchanged, and plain CURIE expansion still yields the element IRI byte for byte. A
+`%2F` inside an element path is the retired edc-uri-1 spelling and is refused by name (one spelling per element).
+An element path always ends a URI (only `@<layer>[/<version>]` may follow). sssom-py 0.4.21 accepts such local
+parts and drops none (measured on 73,209 rows). Forge-made `%` in a stableId (SEDM, LIF, MedBiquitous, JEDx) is
+itself encoded, so those IRIs carry `%25`: a forge's spelling, never respelled here. Every published set also
+carries `subject_label`: the standard's OWN name for the element, read verbatim from the forge-written node
+property `layerPublicationRules.json` names per standard (SIF `xpath`, Ed-Fi `path`, PESC XSD `name`, …); a
+subject whose node has none gets an empty cell, never a composed one.
+
 ### 4.2 mapping_justification
 
 `mapping_justification` is a closed enum, regex-bound to thirteen `semapv` terms. A forge cannot

@@ -91,10 +91,10 @@ const HUB_NAME = toyEmbedTextBoltGraphLib.HUB_NAME;
 // the two questions and their Fields; the object names are SIF's, so the shipped domain file labels them
 const MODEL_QUESTION = 'sif260928:question/toyModelLocalId';
 const METADATA_QUESTION = 'sif260928:question/toyMetadataTimeElementType';
-const STUDENT_LOCAL_ID = 'sif260928:field//StudentPersonals/StudentPersonal/LocalId';
-const STAFF_LOCAL_ID = 'sif260928:field//StaffPersonals/StaffPersonal/LocalId';
-const STUDENT_METADATA_TYPE = 'sif260928:field//StudentPersonals/StudentPersonal/SIF_Metadata/TimeElements/TimeElement/Type';
-const STAFF_METADATA_TYPE = 'sif260928:field//StaffPersonals/StaffPersonal/SIF_Metadata/TimeElements/TimeElement/Type';
+const STUDENT_LOCAL_ID = 'sif260928:field/StudentPersonals/StudentPersonal/LocalId';
+const STAFF_LOCAL_ID = 'sif260928:field/StaffPersonals/StaffPersonal/LocalId';
+const STUDENT_METADATA_TYPE = 'sif260928:field/StudentPersonals/StudentPersonal/SIF_Metadata/TimeElements/TimeElement/Type';
+const STAFF_METADATA_TYPE = 'sif260928:field/StaffPersonals/StaffPersonal/SIF_Metadata/TimeElements/TimeElement/Type';
 // THE UNIT LITERAL (b): read by hand from the shipped domain file (StudentPersonal → K12 Student Enrollment, StaffPersonal
 // → K12 Staff Employment) and the declared rule (SIF_Metadata is one unit), sorted by subject then label
 const UNIT_LITERAL = Object.freeze([
