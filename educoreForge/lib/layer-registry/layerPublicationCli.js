@@ -10,11 +10,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                  (stableId, uri, name), every ForgedNode element (stableId, _source), every standard root (name, key, version), the
 //                  passport's manifestRefId and ⟪ML3.1⟫ each element's own name (subjectLabelList, by layerPublicationRules.json). Rendering reads this file, never the graph, so the same file gives the same bytes.
 //       --goldContainerName=<container>  --goldCapturePath=<out.json>
+//   -renderHubCards ⟪ML3.1c, TQ Q8⟫ the CARD DOWNLOAD: one cards.csv and one cards.jsonld per hub release from the capture's hubCardList
+//                  (meaning URI, tier, domain, property, range, value, term, definition, each read from the card); a hub on the
+//                  licence-hold list is refused by name.  --goldCapturePath  --licenceRulesPath=<downloadArtifactsRules.json>  --outputDirPath
+//   -indexPublication ⟪ML3.1c⟫ write <gold>/publicationDownloads.json, the listing the educore downloads page reads, over every file
+//                  under <gold>/mappingLayers and <gold>/hubCards.  --goldDownloadsDirPath  --uriContractFilePath  --hubCardsReportPath
+//                  --publicLabel  --manifestRefId  --generatedAt=YYYY-MM-DD
 //   -render        render every registered layer version (machine and curated) as ONE SSSOM set (R-b), one registry document per layer,
 //                  the site registry, and one JSON-LD context per (version, standard), into --outputDirPath; with --publicFilterRulesPath
 //                  ALSO a public filtered rendering of each (TQ Q37) under <outputDirPath>/public, never anywhere else.
 //       --uriContractFilePath=<uriContract.sqlite> | --layerRegistryFilePath=<recipes/layers.json> --agentRegistryFilePath=<recipes/agents.json>  --storePath=<support store COPY>
-//       --goldCapturePath=<capture.json>  --outputDirPath=<dir>  --publicFilterRulesPath=<downloadArtifactsRules.json>
+//       --goldCapturePath=<capture.json>  --outputDirPath=<dir>  --publicFilterMode=licenceHoldList|none [--publicFilterRulesPath=<downloadArtifactsRules.json>, licenceHoldList only]
 //   -gate          run the publication gates over a rendered tree (complete AND public) and write ONE gate report binding each file's
 //                  sha256: (1) every record_id recomputes from its row; (2) sssom-py 'validate' exits 0 AND 'parse' keeps every row (a
 //                  silent drop is a red, never a pass); (3) every registry document passes linkml-validate against sssom-schema; (4) ROUND
@@ -22,7 +28,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                  layer version's (decision blocks, or the stored curated set), held standards removed for a public set; (5) the public
 //                  tree carries 0 subjects of a held standard. Exit 0 only when every gate is green.
 //       --renderedDirPath=<render -outputDirPath>  --layerRegistryFilePath  --agentRegistryFilePath  --storePath  --goldCapturePath
-//       --publicFilterRulesPath  --sssomValidatorPath=<sssom-py sssom>  --linkmlValidatorPath=<linkml-validate>
+//       --publicFilterMode [--publicFilterRulesPath]  --sssomValidatorPath=<sssom-py sssom>  --linkmlValidatorPath=<linkml-validate>
 //       --sssomSchemaPath=<sssom_schema.yaml>  --gateReportPath=<out.json>
 //   -publishPublic copy <renderedDirPath>/public to the downloads tree ONLY when the gate report is green and every file's bytes still
 //                  match the sha256 the gate bound (TQ Q37: nothing reaches downloadArtifacts ungated). The destination must be a
@@ -55,9 +61,11 @@ if (argumentList.some((oneArgument) => ['-help', '--help', '-h'].indexOf(oneArgu
 }
 const REQUIRED_PARAMETER_NAME_LIST_BY_ACTION = Object.freeze({
 	captureGold: ['goldContainerName', 'goldCapturePath'],
-	render: ['storePath', 'goldCapturePath', 'outputDirPath', 'publicFilterRulesPath'],
-	gate: ['renderedDirPath', 'storePath', 'goldCapturePath', 'publicFilterRulesPath', 'sssomValidatorPath', 'linkmlValidatorPath', 'sssomSchemaPath', 'gateReportPath'],
+	render: ['storePath', 'goldCapturePath', 'outputDirPath', 'publicFilterMode'],
+	gate: ['renderedDirPath', 'storePath', 'goldCapturePath', 'publicFilterMode', 'sssomValidatorPath', 'linkmlValidatorPath', 'sssomSchemaPath', 'gateReportPath'],
 	publishPublic: ['renderedDirPath', 'gateReportPath', 'publicDestinationDirPath'],
+	renderHubCards: ['goldCapturePath', 'licenceRulesPath', 'outputDirPath'],
+	indexPublication: ['goldDownloadsDirPath', 'uriContractFilePath', 'hubCardsReportPath', 'publicLabel', 'manifestRefId', 'generatedAt'],
 });
 const actionList = Object.keys(REQUIRED_PARAMETER_NAME_LIST_BY_ACTION).filter((actionName) => argumentList.indexOf(`-${actionName}`) !== -1);
 if (actionList.length !== 1) {
@@ -68,6 +76,26 @@ const missingParameterList = REQUIRED_PARAMETER_NAME_LIST_BY_ACTION[actionName].
 if (missingParameterList.length) {
 	refuseAndExit(`-${actionName}: ${missingParameterList.map((parameterName) => `--${parameterName}`).join(', ')} REQUIRED, with no default`);
 }
+
+// ⟪ML3.1c, TQ Q38: "mapping is not distribution"⟫ THE PUBLIC FILTER IS STATED, never defaulted: --publicFilterMode names one row of this
+// map. licenceHoldList: the downloads rules' held standards are left out of the public renderings (--publicFilterRulesPath REQUIRED);
+// none: nothing is left out, and every public set says public_filter "none" (it reads no rules file, so it can name none it ignored)
+const PUBLIC_FILTER_BY_MODE = Object.freeze({
+	licenceHoldList: () => {
+		const rulesFilePath = parameterValueFor('publicFilterRulesPath');
+		if (!rulesFilePath) {
+			return { error: `-${actionName}: --publicFilterMode=licenceHoldList needs --publicFilterRulesPath` };
+		}
+		const downloadRules = JSON.parse(fs.readFileSync(rulesFilePath, 'utf8'));
+		const filtered = require(path.join(__dirname, 'layerPublication')).publicFilterFor({ licenceHoldList: downloadRules.licenceHoldList, filterSourceText: `${path.basename(rulesFilePath)} licenceHoldList, sha256 ${sha256Hex(fs.readFileSync(rulesFilePath)).slice(0, 12)}` });
+		return filtered.error ? filtered : { publicFilter: filtered.publicFilter, heldStandardKeyList: filtered.publicFilter.excludedStandardKeyList };
+	},
+	none: () => (parameterValueFor('publicFilterRulesPath') ? { error: `-${actionName}: --publicFilterMode=none reads no rules file; --publicFilterRulesPath is refused beside it` } : { publicFilter: require(path.join(__dirname, 'layerPublication')).NO_PUBLIC_FILTER, heldStandardKeyList: [] }),
+});
+const publicFilterFromMode = () => {
+	const modeName = parameterValueFor('publicFilterMode');
+	return PUBLIC_FILTER_BY_MODE[modeName] === undefined ? { error: `-${actionName}: --publicFilterMode=${JSON.stringify(modeName)} is not one of ${Object.keys(PUBLIC_FILTER_BY_MODE).join(', ')}` } : PUBLIC_FILTER_BY_MODE[modeName]();
+};
 
 // ⟪ML3.1b, by AMBER_JOURNEY's grant⟫ -render and -gate read the registry from EXACTLY ONE source: --uriContractFilePath (the registry of
 // record once Part C retires the JSON) or --layerRegistryFilePath with --agentRegistryFilePath (until then)
@@ -109,6 +137,8 @@ const CAPTURE_QUERY_BY_NAME = Object.freeze({
 	// 'unknown_02' while the standard root says 'unknown' (measured 2026-10-25); an assertion id hashes the edge's version, so both count
 	edgeSubjectVersionList: 'MATCH ()-[r]->() WHERE r.assertionId IS NOT NULL AND r.subjectSource IS NOT NULL RETURN DISTINCT r.subjectSource AS standardName, r.subjectVersion AS standardVersion ORDER BY standardName, standardVersion',
 	// ⟪ML3.1, Q42⟫ each element's OWN name: the forge-written property layerPublicationRules.json names for its subject prefix (O-2)
+	// ⟪ML3.1c, TQ Q8⟫ every hub card's own fields, for the card download per hub release (hubCardPublication.js)
+	hubCardList: 'MATCH (h:HubReference) WHERE h.uri IS NOT NULL RETURN h{.uri, .hubName, .hubVersion, .referenceTier, .domainId, .domainName, .propertyKey, .propertyName, .rangeOptionSetName, .rangeClassName, .rangeDatatype, .rangeOptionSetNameList, .rangeClassNameList, .rangeDatatypeList, .valueKey, .valueName, .termIri, .termName, .valueDefinition, .propertyDefinition, .termDefinition} AS card ORDER BY h.uri',
 	subjectLabelList: 'MATCH (n:ForgedNode) WHERE n.stableId IS NOT NULL AND NOT n:HubReference WITH n, split(n.stableId, \':\')[0] AS subjectPrefix WHERE subjectPrefix IN keys($labelPropertyNameBySubjectPrefix) WITH n, n[$labelPropertyNameBySubjectPrefix[subjectPrefix]] AS label WHERE label IS NOT NULL RETURN n.stableId AS stableId, label ORDER BY stableId',
 });
 // the parameters a capture query takes (DATA beside the queries); a query with no row here takes none
@@ -137,6 +167,8 @@ const captureGold = () => {
 						refuseAndExit(`the gold carries ${capture.passportList.length} GraphProvenance passports, not one`);
 					}
 					capture.manifestRefId = capture.passportList[0].manifestRefId;
+					// a field named *List stays a list; any other arrives as a scalar or a one-value list (the bolt trap) and keeps its first value
+					capture.hubCardList = capture.hubCardList.map((oneRow) => Object.keys(oneRow.card).reduce((soFar, fieldName) => (oneRow.card[fieldName] === null ? soFar : { ...soFar, [fieldName]: /List$/.test(fieldName) ? oneRow.card[fieldName] : firstValueOf(oneRow.card[fieldName]) }), {}));
 					capture.subjectLabelList = capture.subjectLabelList.map((oneRow) => ({ stableId: oneRow.stableId, label: String(firstValueOf(oneRow.label)) }));
 					writeFileMakingDirs(parameterValueFor('goldCapturePath'), `${JSON.stringify(capture)}\n`);
 					process.stdout.write(`${moduleName}: captured ${capture.cardList.length} cards, ${capture.elementList.length} elements, ${capture.standardList.length} standards from ${capture.goldContainerName} (manifest ${capture.manifestRefId})\n`);
@@ -181,8 +213,7 @@ const render = () => {
 		soFar[oneRow.stableId] = oneRow.label;
 		return soFar;
 	}, {});
-	const downloadRules = JSON.parse(fs.readFileSync(parameterValueFor('publicFilterRulesPath'), 'utf8'));
-	const { publicFilter } = exitOnError(layerPublicationLib.publicFilterFor({ licenceHoldList: downloadRules.licenceHoldList, filterSourceText: `downloadArtifactsRules.json licenceHoldList (TQ Q37), sha256 ${sha256Hex(fs.readFileSync(parameterValueFor('publicFilterRulesPath'))).slice(0, 12)}` }));
+	const { publicFilter } = exitOnError(publicFilterFromMode());
 	const store = new Database(parameterValueFor('storePath'), { readonly: true, fileMustExist: true });
 	const frozenTextFor = (decisionBlockHash) => {
 		const stored = store.prepare('SELECT frozenText FROM decisionBlocks WHERE decisionBlockHash = ?').get(decisionBlockHash);
@@ -276,8 +307,7 @@ const gate = () => {
 	const renderedDirPath = parameterValueFor('renderedDirPath');
 	const { registry } = exitOnError(registryFromSource());
 	const goldCapture = JSON.parse(fs.readFileSync(parameterValueFor('goldCapturePath'), 'utf8'));
-	const downloadRules = JSON.parse(fs.readFileSync(parameterValueFor('publicFilterRulesPath'), 'utf8'));
-	const heldStandardKeyList = downloadRules.licenceHoldList.map((oneHold) => oneHold.bundleToken);
+	const { heldStandardKeyList } = exitOnError(publicFilterFromMode());
 	const store = new Database(parameterValueFor('storePath'), { readonly: true, fileMustExist: true });
 	const frozenTextFor = (decisionBlockHash) => {
 		const stored = store.prepare('SELECT frozenText FROM decisionBlocks WHERE decisionBlockHash = ?').get(decisionBlockHash);
@@ -421,5 +451,51 @@ const publishPublic = () => {
 	process.stdout.write(`${moduleName}: published ${publicFileList.length} gated file(s) into ${publicDestinationDirPath}\n`);
 };
 
-const ACTION_BY_NAME = Object.freeze({ captureGold, render, gate, publishPublic });
+// =====================================================================
+// -renderHubCards ⟪ML3.1c, TQ Q8⟫ one CSV and one JSON-LD per hub release, from the gold capture; a held hub is refused by name
+// =====================================================================
+
+const renderHubCards = () => {
+	const goldCapture = JSON.parse(fs.readFileSync(parameterValueFor('goldCapturePath'), 'utf8'));
+	if (!Array.isArray(goldCapture.hubCardList)) {
+		refuseAndExit(`${parameterValueFor('goldCapturePath')} has no hubCardList: re-run -captureGold (ML3.1c, the card download)`);
+	}
+	const licenceRules = JSON.parse(fs.readFileSync(parameterValueFor('licenceRulesPath'), 'utf8'));
+	const hubBundleTokenByHubName = require(path.join(__dirname, 'layerPublicationRules.json')).hubBundleTokenByHubName;
+	const rendered = exitOnError(require(path.join(__dirname, 'hubCardPublication')).hubCardFileListFor({ cardList: goldCapture.hubCardList, hubBundleTokenByHubName, heldBundleTokenList: licenceRules.licenceHoldList.map((oneHold) => oneHold.bundleToken) }));
+	const report = { goldContainerName: goldCapture.goldContainerName, goldManifestRefId: goldCapture.manifestRefId, hubFileList: [] };
+	rendered.hubFileList.forEach((oneHubFile) => {
+		const releaseDirPath = path.join(parameterValueFor('outputDirPath'), 'hubCards', oneHubFile.hubSegment, oneHubFile.hubReleaseSegment);
+		writeFileMakingDirs(path.join(releaseDirPath, 'cards.csv'), oneHubFile.csvText);
+		writeFileMakingDirs(path.join(releaseDirPath, 'cards.jsonld'), oneHubFile.jsonLdText);
+		report.hubFileList.push({ hubName: oneHubFile.hubName, hubVersion: oneHubFile.hubVersion, hubSegment: oneHubFile.hubSegment, hubReleaseSegment: oneHubFile.hubReleaseSegment, cardCount: oneHubFile.cardCount, csvSha256: sha256Hex(oneHubFile.csvText), jsonLdSha256: sha256Hex(oneHubFile.jsonLdText) });
+	});
+	writeFileMakingDirs(path.join(parameterValueFor('outputDirPath'), 'hubCards', 'hubCards-report.json'), `${JSON.stringify(report, null, '\t')}\n`);
+	process.stdout.write(`${moduleName}: rendered the cards of ${report.hubFileList.map((oneHubFile) => `${oneHubFile.hubName} ${oneHubFile.hubVersion} (${oneHubFile.cardCount})`).join(', ')} into ${parameterValueFor('outputDirPath')}/hubCards\n`);
+};
+
+// =====================================================================
+// -indexPublication ⟪ML3.1c⟫ the listing the educore downloads page reads: <gold>/publicationDownloads.json over every published
+// mapping-set and card file (kind by layerPublicationRules.json publicationFileKindList; titles and statuses from uriContract)
+// =====================================================================
+
+const PUBLICATION_INDEX_FILE_NAME = 'publicationDownloads.json';
+const PUBLICATION_SUBDIR_NAME_LIST = Object.freeze(['mappingLayers', 'hubCards']);
+
+const indexPublication = () => {
+	const goldDownloadsDirPath = path.resolve(parameterValueFor('goldDownloadsDirPath'));
+	const { registry } = exitOnError(registryFromSource());
+	const layerFactByLayerKey = registry.layerRegistry.layerList.reduce((soFar, oneLayer) => ({ ...soFar, [oneLayer.layerKey]: { displayName: oneLayer.displayName, statusByVersionTag: oneLayer.versionList.reduce((soFarInner, oneVersion) => ({ ...soFarInner, [oneVersion.administrationRecord.versionTag]: exitOnError(registry.effectiveStatusFor({ layerKey: oneLayer.layerKey, versionTag: oneVersion.administrationRecord.versionTag })).registrationStatus }), {}) } }), {});
+	const hubCardsReport = JSON.parse(fs.readFileSync(parameterValueFor('hubCardsReportPath'), 'utf8'));
+	const hubFactByRelease = hubCardsReport.hubFileList.reduce((soFar, oneHubFile) => ({ ...soFar, [`${oneHubFile.hubSegment}/${oneHubFile.hubReleaseSegment}`]: { hubName: oneHubFile.hubName, hubVersion: oneHubFile.hubVersion, cardCount: oneHubFile.cardCount } }), {});
+	const fileFactList = PUBLICATION_SUBDIR_NAME_LIST.filter((subdirName) => fs.existsSync(path.join(goldDownloadsDirPath, subdirName))).reduce((soFar, subdirName) => soFar.concat(listFilesUnder(path.join(goldDownloadsDirPath, subdirName))), []).map((oneFilePath) => {
+		const contentBuffer = fs.readFileSync(oneFilePath);
+		return { relativePath: path.relative(goldDownloadsDirPath, oneFilePath).split(path.sep).join('/'), byteSize: contentBuffer.length, sha256: sha256Hex(contentBuffer) };
+	});
+	const indexed = exitOnError(require(path.join(__dirname, 'publicationIndex')).publicationIndexFor({ graphName: path.basename(goldDownloadsDirPath), publicLabel: parameterValueFor('publicLabel'), manifestRefId: parameterValueFor('manifestRefId'), generatedAt: parameterValueFor('generatedAt'), fileFactList, layerFactByLayerKey, hubFactByRelease }));
+	writeFileMakingDirs(path.join(goldDownloadsDirPath, PUBLICATION_INDEX_FILE_NAME), `${JSON.stringify(indexed.publicationIndex, null, '\t')}\n`);
+	process.stdout.write(`${moduleName}: indexed ${indexed.publicationIndex.entryList.length} published file(s) into ${path.join(goldDownloadsDirPath, PUBLICATION_INDEX_FILE_NAME)}\n`);
+};
+
+const ACTION_BY_NAME = Object.freeze({ captureGold, render, gate, publishPublic, renderHubCards, indexPublication });
 ACTION_BY_NAME[actionName]();

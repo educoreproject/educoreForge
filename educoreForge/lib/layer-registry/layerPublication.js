@@ -70,6 +70,12 @@ const mintUri = (partByName) => {
 	return minted.error ? { error: minted.error } : { uri: minted.uri };
 };
 
+// ⟪ML3.1c, TQ Q38: "mapping is not distribution"⟫ NO_PUBLIC_FILTER — the public rendering that excludes nothing. Its sets keep the
+// version URI as mapping_set_id (they ARE the version's set) and declare public_filter "none", never the name of a list they ignored
+const NO_PUBLIC_FILTER = Object.freeze({ excludedStandardKeyList: Object.freeze([]), filterSource: 'none', filterDigest: null, isNoFilter: true });
+const isFiltering = (publicFilter) => publicFilter !== undefined && publicFilter.isNoFilter !== true;
+const publicMappingSetIdFor = (versionUri, publicFilter) => (isFiltering(publicFilter) ? `${versionUri}${PUBLICATION_RULES.publicFilterFragmentPrefix}${publicFilter.filterDigest}` : versionUri);
+
 // publicFilterFor({ licenceHoldList, filterSourceText }) → { publicFilter } — the excluded standards, as data from the downloads rules
 const publicFilterFor = ({ licenceHoldList, filterSourceText }) => {
 	if (!Array.isArray(licenceHoldList) || licenceHoldList.length === 0 || !licenceHoldList.every((oneHold) => isNonEmptyString(oneHold.bundleToken)) || !isNonEmptyString(filterSourceText)) {
@@ -170,7 +176,7 @@ const machineMemberRowsFor = ({ member, decisionBlock, cardByStableId, subjectLa
 
 // assembleSetText — the parts every rendering shares: identity slots, curie_map, extensions, body
 const assembleSetText = ({ versionUri, version, layer, publicFilter, curieMap, legacyCurieMap, headerExtraLineList, extensionSlotNameList, seeAlsoList, renderingOf, columnList, rowList }) => {
-	const mappingSetId = publicFilter === undefined ? versionUri : `${versionUri}${PUBLICATION_RULES.publicFilterFragmentPrefix}${publicFilter.filterDigest}`;
+	const mappingSetId = publicMappingSetIdFor(versionUri, publicFilter);
 	const declaredSlotNameList = extensionSlotNameList.concat(publicFilter === undefined ? [] : [PUBLIC_FILTER_SLOT_NAME]);
 	const headerLineList = [
 		'#curie_map:',
@@ -179,7 +185,7 @@ const assembleSetText = ({ versionUri, version, layer, publicFilter, curieMap, l
 			.map((onePrefix) => `#  ${onePrefix}: ${yamlScalar(curieMap[onePrefix])}`),
 		`#mapping_set_id: ${yamlScalar(mappingSetId)}`,
 		`#mapping_set_version: ${yamlScalar(version.administrationRecord.versionTag)}`,
-		`#mapping_set_title: ${yamlScalar(`${layer.displayName}, version ${version.administrationRecord.versionTag}${publicFilter === undefined ? '' : ' (public filtered rendering)'}`)}`,
+		`#mapping_set_title: ${yamlScalar(`${layer.displayName}, version ${version.administrationRecord.versionTag}${isFiltering(publicFilter) ? ' (public filtered rendering)' : ''}`)}`,
 		...(isNonEmptyString(version.copiedFromLayerVersion) ? headerListLines('mapping_set_source', [version.copiedFromLayerVersion]) : []),
 		...headerListLines('see_also', seeAlsoList),
 		`#sssom_version: ${yamlScalar(SSSOM_VERSION_FOR_ONE_ONE_SLOTS)}`,
@@ -188,7 +194,8 @@ const assembleSetText = ({ versionUri, version, layer, publicFilter, curieMap, l
 		`#sssom_schema_release: ${yamlScalar(PUBLICATION_RULES.sssomSchemaReleaseText)}`,
 		`#legacy_curie_map: ${yamlScalar(JSON.stringify(legacyCurieMap))}`,
 		`#rendering_of: ${yamlScalar(JSON.stringify(renderingOf))}`,
-		...(publicFilter === undefined ? [] : [`#${PUBLIC_FILTER_SLOT_NAME}: ${yamlScalar(JSON.stringify({ ...publicFilter, fullVersionId: versionUri, fullVersionContentId: version.administrationRecord.contentId, note: 'rows whose subject belongs to an excluded standard are OMITTED; this file is NOT the complete version set' }))}`]),
+		...(publicFilter !== undefined && !isFiltering(publicFilter) ? [`#${PUBLIC_FILTER_SLOT_NAME}: ${yamlScalar('none')}`] : []),
+		...(!isFiltering(publicFilter) ? [] : [`#${PUBLIC_FILTER_SLOT_NAME}: ${yamlScalar(JSON.stringify({ ...publicFilter, fullVersionId: versionUri, fullVersionContentId: version.administrationRecord.contentId, note: 'rows whose subject belongs to an excluded standard are OMITTED; this file is NOT the complete version set' }))}`]),
 	];
 	return { setText: `${headerLineList.join('\n')}\n${tsvBodyText(columnList, rowList)}`, mappingSetId };
 };
@@ -430,13 +437,13 @@ const registryDocumentText = ({ layer, registry, localNameByVersionTag, publicFi
 		}
 		const statusChangeList = layer.statusChangeList.filter((oneChange) => oneChange.versionTag === versionTag);
 		const statusDate = (statusChangeList.length ? statusChangeList[statusChangeList.length - 1].changedAt : publishedAt).slice(0, 10);
-		const mappingSetId = publicFilter === undefined ? versionMint.uri : `${versionMint.uri}${PUBLICATION_RULES.publicFilterFragmentPrefix}${publicFilter.filterDigest}`;
+		const mappingSetId = publicMappingSetIdFor(versionMint.uri, publicFilter);
 		referenceLineList.push(`  - mapping_set_id: ${yamlScalar(mappingSetId)}`, `    mirror_from: ${yamlScalar(contentMint.uri)}`, `    mapping_set_group: ${yamlScalar(effective.registrationStatus)}`, `    last_updated: ${yamlScalar(statusDate)}`, `    local_name: ${yamlScalar(localNameByVersionTag[versionTag])}`);
 	}
 	const documentText = [
 		`mapping_registry_id: ${yamlScalar(layerMint.uri)}`,
-		`mapping_registry_title: ${yamlScalar(`${layer.displayName}${publicFilter === undefined ? '' : ' (public filtered renderings)'}`)}`,
-		`mapping_registry_description: ${yamlScalar(`${REGISTRY_DESCRIPTION_TEXT}${publicFilter === undefined ? '' : ` PUBLIC FILTERED: every set listed here omits the rows whose subject belongs to ${publicFilter.excludedStandardKeyList.join(', ')} (${publicFilter.filterSource}); its own public_filter slot names the full version.`}`)}`,
+		`mapping_registry_title: ${yamlScalar(`${layer.displayName}${isFiltering(publicFilter) ? ' (public filtered renderings)' : ''}`)}`,
+		`mapping_registry_description: ${yamlScalar(`${REGISTRY_DESCRIPTION_TEXT}${!isFiltering(publicFilter) ? '' : ` PUBLIC FILTERED: every set listed here omits the rows whose subject belongs to ${publicFilter.excludedStandardKeyList.join(', ')} (${publicFilter.filterSource}); its own public_filter slot names the full version.`}`)}`,
 		'mapping_set_references:',
 		...referenceLineList,
 	].join('\n');
@@ -452,7 +459,7 @@ const siteRegistryDocumentText = ({ layerKeyList, publicFilter } = {}) => {
 	}
 	const documentText = [
 		`mapping_registry_id: ${yamlScalar(siteMint.uri)}`,
-		`mapping_registry_title: ${yamlScalar(`EDUcore mapping layers${publicFilter === undefined ? '' : ' (public filtered renderings)'}`)}`,
+		`mapping_registry_title: ${yamlScalar(`EDUcore mapping layers${isFiltering(publicFilter) ? ' (public filtered renderings)' : ''}`)}`,
 		`mapping_registry_description: ${yamlScalar('Every EDUcore mapping layer; each import is one layer\'s registry, whose id is the layer\'s floating URI (layer/<layerKey>) and which lists its versions.')}`,
 		'imports:',
 		...layerMintList.map((oneMint) => `  - ${yamlScalar(oneMint.uri)}`),
@@ -502,4 +509,4 @@ const contextDocumentTextList = ({ layer, version, subjectStableIdList, standard
 	return { contextDocumentList };
 };
 
-module.exports = { machineMemberRowsFor, machineVersionSetText, curatedVersionSetText, recordIdRecomputation, SUBJECT_LABEL_COLUMN, registryDocumentText, siteRegistryDocumentText, contextDocumentTextList, publicFilterFor, PUBLICATION_RULES, moduleName };
+module.exports = { NO_PUBLIC_FILTER, machineMemberRowsFor, machineVersionSetText, curatedVersionSetText, recordIdRecomputation, SUBJECT_LABEL_COLUMN, registryDocumentText, siteRegistryDocumentText, contextDocumentTextList, publicFilterFor, PUBLICATION_RULES, moduleName };

@@ -8,6 +8,9 @@
 //   graph   the standard written back out of the graph by its own round-trip validator, with the validation files.
 // A graph entry is available only when the golden holds the bundle; otherwise it is listed with its reason. A licence hold
 // (rules licenceHoldList) lists an entry unavailable with the hold's reason. Nothing offered is ever left off the list.
+// ⟪ML3.1c⟫ A LICENCE NOTICE (rules licenceNoticeList) rides in EVERY facet zip of its bundle: NOTICE.txt (the licence's required
+// notices, verbatim, and the permission on record) and a copy of the agreement, verified against its stated sha256 (JEDx: HR Open
+// §2.c/d/e, offered by TQ's permission 2026-10-26).
 //
 // THE COMPARISON GATE: the validators are re-run against the golden; each fresh verdict's compared totals must equal the
 // build's verdict for the same token, or the run refuses before a single zip is written (freshVerdictComparisonFor).
@@ -61,8 +64,11 @@ const parsedJsonFileOf = (filePath) => {
 // RULES — the registry, checked once
 // ---------------------------------------------------------------------------------------------------------------------
 
-const REQUIRED_RULE_FIELD_LIST = Object.freeze(['offeredBundleList', 'licenceHoldList', 'snapshotCompanionFileNameList', 'snapshotExcludedPathList', 'documentationFileNameList', 'earlierCertificationFileName', 'comparedVerdictTotalNameList', 'verdictRunMeasurementList', 'verdictLocalPathNoteText']);
+const REQUIRED_RULE_FIELD_LIST = Object.freeze(['offeredBundleList', 'licenceHoldList', 'licenceNoticeList', 'snapshotCompanionFileNameList', 'snapshotExcludedPathList', 'documentationFileNameList', 'earlierCertificationFileName', 'comparedVerdictTotalNameList', 'verdictRunMeasurementList', 'verdictLocalPathNoteText']);
 const REQUIRED_OFFERED_FIELD_LIST = Object.freeze(['bundleToken', 'forgeDeclarationRelativePath', 'groupName', 'graphEmissionKind', 'layerTokenList', 'descriptionText']);
+const REQUIRED_NOTICE_FIELD_LIST = Object.freeze(['bundleToken', 'licenceName', 'requiredNoticeTextList', 'permissionRecordText', 'agreementRelativePath', 'agreementSha256']);
+const NOTICE_FILE_NAME = 'NOTICE.txt';
+const AGREEMENT_ZIP_DIR_NAME = 'licence';
 
 const rulesFaultOf = ({ rules, graphEmissionKindList }) => {
 	if (!rules || typeof rules !== 'object') {
@@ -100,7 +106,47 @@ const rulesFaultOf = ({ rules, graphEmissionKindList }) => {
 			faultList.push(`licence hold on '${oneHold.bundleToken}' gives no unavailableReason`);
 		}
 	});
+	const noticedTokenSet = new Set();
+	rules.licenceNoticeList.forEach((oneNotice, rowIndex) => {
+		const absentList = REQUIRED_NOTICE_FIELD_LIST.filter((fieldName) => oneNotice[fieldName] === undefined || oneNotice[fieldName] === '' || (Array.isArray(oneNotice[fieldName]) && oneNotice[fieldName].length === 0));
+		if (absentList.length) {
+			faultList.push(`licenceNoticeList[${rowIndex}] lacks ${absentList.join(', ')}`);
+			return;
+		}
+		if (!seenTokenSet.has(oneNotice.bundleToken)) {
+			faultList.push(`licence notice names bundle '${oneNotice.bundleToken}', which is not offered`);
+		}
+		if (noticedTokenSet.has(oneNotice.bundleToken)) {
+			faultList.push(`bundle '${oneNotice.bundleToken}' has two licence notices`);
+		}
+		noticedTokenSet.add(oneNotice.bundleToken);
+		if (!/^[0-9a-f]{64}$/.test(oneNotice.agreementSha256)) {
+			faultList.push(`licence notice on '${oneNotice.bundleToken}' states agreementSha256 ${JSON.stringify(oneNotice.agreementSha256)}, not 64 lowercase hex`);
+		}
+	});
 	return faultList.length ? `download rules: ${faultList.join('; ')}` : '';
+};
+
+// licenceNoticeZipEntryListFor — the notice entries EVERY facet zip of a noticed bundle carries; a bundle with no notice row gets none.
+// The agreement is read from the bundle's snapshot and verified against the rule's sha256 (a different file is refused by name).
+// -> { zipEntryList, noticeFileNameList } | { error }
+const licenceNoticeZipEntryListFor = ({ rules, oneStandard }) => {
+	const notice = rules.licenceNoticeList.find((oneNotice) => oneNotice.bundleToken === oneStandard.bundleToken);
+	if (notice === undefined) {
+		return { zipEntryList: [], noticeFileNameList: [], readmeSectionText: '' };
+	}
+	const agreementFilePath = path.join(oneStandard.snapshotDirPath, ...notice.agreementRelativePath.split('/'));
+	if (!fs.existsSync(agreementFilePath)) {
+		return { error: `licence notice for '${oneStandard.bundleToken}': the agreement ${agreementFilePath} does not exist (every copy must carry it)` };
+	}
+	const agreementBuffer = fs.readFileSync(agreementFilePath);
+	if (sha256Of(agreementBuffer) !== notice.agreementSha256) {
+		return { error: `licence notice for '${oneStandard.bundleToken}': ${agreementFilePath} hashes to ${sha256Of(agreementBuffer)}, not the stated agreementSha256 ${notice.agreementSha256}` };
+	}
+	const agreementEntryPath = `${AGREEMENT_ZIP_DIR_NAME}/${path.basename(agreementFilePath)}`;
+	const noticeText = [`${notice.licenceName}: notices every copy of this download carries`, '', ...notice.requiredNoticeTextList, '', `A copy of the agreement: ${agreementEntryPath}`, '', `Permission on record: ${notice.permissionRecordText}`, ''].join('\n');
+	const readmeSectionText = ['', '## Licence notices', '', `This download is offered under the ${notice.licenceName}. \`${NOTICE_FILE_NAME}\` carries its required notices verbatim and the permission on record; \`${agreementEntryPath}\` is a copy of the agreement.`, ''].join('\n');
+	return { zipEntryList: [{ entryPath: NOTICE_FILE_NAME, contentBuffer: Buffer.from(noticeText, 'utf8') }, { entryPath: agreementEntryPath, contentBuffer: agreementBuffer }], noticeFileNameList: [NOTICE_FILE_NAME, agreementEntryPath], readmeSectionText };
 };
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -543,6 +589,8 @@ module.exports = {
 	graphEmissionReaderByKind,
 	statementListingTextFor,
 	validationZipEntryListFor,
+	licenceNoticeZipEntryListFor,
+	NOTICE_FILE_NAME,
 	sourceReadmeTextFor,
 	graphReadmeTextFor,
 	snapshotIdentityLineOf,

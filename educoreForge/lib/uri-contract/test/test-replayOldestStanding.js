@@ -7,8 +7,8 @@
 // equal the counts recorded when it was published. A code change that makes replay unable to read a block format it once wrote turns
 // this RED, whatever else that change fixes (uriContract README_AI rule 7). It reads only; it writes nothing.
 //
-// BEFORE THE FIRST PUBLICATION (ML3.1 Part C) the real file does not exist; that is reported as a DECLARED GAP (harness.note), never
-// as a pass. The mechanism itself (pass, and the RED twin of a recorded count the replay does not reproduce) is gated hermetically in
+// Since the FIRST publication (ML3.1 Part C, 2026-10-26) the configured file must exist: its absence FAILS (it was a declared gap
+// before). An instance that configures no uriContract path is still a declared gap (harness.note), never a pass. The mechanism itself (pass, and the RED twin of a recorded count the replay does not reproduce) is gated hermetically in
 // test-uriContractActions on a stated world.
 //
 // Run: node lib/uri-contract/test/test-replayOldestStanding.js
@@ -41,12 +41,13 @@ const run = spawnSync('node', ['--max-old-space-size=12000', GRAPH_BUILDER, '-re
 const outputText = `${run.stdout}\n${run.stderr}`;
 
 harness.section('the oldest published manifest replays to the counts recorded at its publication');
-if (run.status !== 0 && /uriContract .* does not exist/.test(outputText)) {
-	harness.note('DECLARED GAP: the configured uriContract does not exist yet (nothing is published before ML3.1 Part C); replay-the-oldest is NOT exercised on real data by this run');
-} else if (run.status !== 0 && /no uriContract path resolved/.test(outputText)) {
+// ⟪ML3.1c⟫ the FIRST publication happened on 2026-10-26 (educore-2026-10-26, manifest 3a5e87cb), so a configured file that does not exist
+// is no longer a gap but a FAILURE: the forever store is missing
+if (run.status !== 0 && /no uriContract path resolved/.test(outputText)) {
 	harness.note('DECLARED GAP: graphBuilder.ini names no [stores] uriContractFilePath on this instance; replay-the-oldest is NOT exercised by this run');
 } else {
 	harness.ok('graphBuilder -replayOldest exits 0 on the real uriContract', run.status === 0, outputText.slice(-3000));
 	harness.match('…saying the hermetic count equals the recorded count', outputText, /"verdict": "hermetic count equals recorded"/);
+	harness.match('…over a NON-EMPTY manifest (the first publication, ML3.1 Part C)', outputText, /"nodeCount": [1-9][0-9]*/);
 }
 harness.report();

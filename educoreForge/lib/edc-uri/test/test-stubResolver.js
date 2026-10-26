@@ -40,7 +40,11 @@ const block = {
 };
 const frozenText = JSON.stringify(block);
 const decisionBlockHash = crypto.createHash('sha256').update(frozenText, 'utf8').digest('hex');
-const blockTextForHash = (requestedHash, done) => done('', requestedHash === decisionBlockHash ? frozenText : null);
+// ⟪ML3.1c⟫ a STORED curated set (no record_id column, as the rater sets are stored): its assertion URIs are recomputed (R-c')
+const RATER_IRI = 'https://w3id.org/EDUcore/agent/raterPseudonym7';
+const curatedSetText = ['#object_source_version: "1.0"', ['subject_id', 'predicate_id', 'object_id', 'subject_source_version', 'author_id'].join('\t'), ['toy:property/Alpha', 'edc:bestMatch', 'https://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa', '1.2.3', RATER_IRI].join('\t')].join('\n') + '\n';
+const curatedSetHash = crypto.createHash('sha256').update(curatedSetText, 'utf8').digest('hex');
+const blockTextForHash = (requestedHash, done) => done('', requestedHash === decisionBlockHash ? frozenText : requestedHash === curatedSetHash ? curatedSetText : null);
 const memberBlockList = [{ pairKey: 'toyhub@1.0::toy@1.2.3::toyDerivedPlugin::inferred', decisionBlockHash }];
 const contentId = crypto.createHash('sha256').update(decisionBlockHash, 'utf8').digest('hex');
 // v0 is an EARLIER version over another block (its own content); v1 is the block above
@@ -52,14 +56,17 @@ const versionFor = ({ versionTag, registrationStatus, publishedAt, versionMember
 	contentIdBasis: 'sortedMemberBlockHashList',
 	memberBlockList: versionMemberBlockList,
 });
-const { registry } = registryFor({
-	agentRegistry: { agentList: [{ agentIri: ORGANISATION_IRI, agentKind: 'organisation', displayName: 'EDUcore' }, { agentIri: JUDGE_IRI, agentKind: 'judge', displayName: 'the debug judge' }] },
+const registryLoad = registryFor({
+	agentRegistry: { agentList: [{ agentIri: ORGANISATION_IRI, agentKind: 'organisation', displayName: 'EDUcore' }, { agentIri: JUDGE_IRI, agentKind: 'judge', displayName: 'the debug judge' }, { agentIri: 'https://w3id.org/EDUcore/agent/raterPseudonym7', agentKind: 'person', displayName: 'rater 7' }] },
 	layerRegistry: {
 		registrationAuthorityIri: ORGANISATION_IRI,
 		registrarIri: ORGANISATION_IRI,
-		layerList: [{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [versionFor({ versionTag: 'v0', registrationStatus: 'Standard', publishedAt: '2026-09-01T00:00:00Z', versionMemberBlockList: earlierMemberBlockList }), versionFor({ versionTag: 'v1', registrationStatus: 'Standard', publishedAt: '2026-10-01T00:00:00Z' })], statusChangeList: [{ versionTag: 'v0', registrationStatus: 'Superseded', changedAt: '2026-10-02T00:00:00Z', changedBy: ORGANISATION_IRI, supersededByVersionTag: 'v1' }] }],
+		layerList: [{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [versionFor({ versionTag: 'v0', registrationStatus: 'Standard', publishedAt: '2026-09-01T00:00:00Z', versionMemberBlockList: earlierMemberBlockList }), versionFor({ versionTag: 'v1', registrationStatus: 'Standard', publishedAt: '2026-10-01T00:00:00Z' })], statusChangeList: [{ versionTag: 'v0', registrationStatus: 'Superseded', changedAt: '2026-10-02T00:00:00Z', changedBy: ORGANISATION_IRI, supersededByVersionTag: 'v1' }] }, { layerKey: 'toyRaters', displayName: 'toy raters', layerKind: 'curated', authorAgentIri: ORGANISATION_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [{ administrationRecord: { registrationAuthority: ORGANISATION_IRI, registrar: ORGANISATION_IRI, submitter: ORGANISATION_IRI, publishedAt: '2026-10-25T00:00:00Z', contentId: curatedSetHash, versionTag: 'r1' }, registrationStatus: 'Candidate', authorAgentIri: ORGANISATION_IRI, contentIdBasis: 'frozenSetBytes', wholeSetBlock: { pairKey: 'layerSet::toyRaters', decisionBlockHash: curatedSetHash }, memberBlockList: [{ pairKey: 'layerSet::toyRaters', decisionBlockHash: curatedSetHash }] }], statusChangeList: [] }],
 	},
 });
+harness.ok('the stated registry (a judge layer and, ML3.1c, a curated layer) loads', registryLoad.error === undefined, registryLoad.error);
+const { registry } = registryLoad;
+
 // ⟪ML3.1⟫ the uriContractReader DOUBLE (the interface lib/uri-contract implements): one manifest, one relationship schema block whose
 // element toy:property/Alpha has an edge to a ToyHub card and one to a CTDL card, plus a licence-held standardBase and decision block
 const sha256Of = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
@@ -68,7 +75,7 @@ const relationshipText = [JSON.stringify({ kind: 'header', blockType: 'relations
 const relationshipRefId = sha256Of(relationshipText);
 const heldText = JSON.stringify({ kind: 'header', blockType: 'standardBase', standardKey: 'edfi', version: '5.2.0' });
 const heldRefId = sha256Of(heldText);
-const heldFrozenText = JSON.stringify({ header: { sourceStandardName: 'EdFi' }, decisionRecordList: [] });
+const heldFrozenText = JSON.stringify({ header: { sourceStandardName: 'EdFi' }, decisionRecordList: [{ subjectStableId: 'edfi:property/Student.Name', predicate: 'exactMatch', objectStableId: 'https://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa' }] });
 const heldDecisionBlockHash = sha256Of(heldFrozenText);
 const toyManifestRefId = sha256Of('toy manifest');
 const schemaBlockByRefId = { [relationshipRefId]: { schemaBlockRefId: relationshipRefId, blockKind: 'relationship', subject: 'toyhub@1_0_rel_toy@1_2_3_close', version: '1.0', text: relationshipText }, [heldRefId]: { schemaBlockRefId: heldRefId, blockKind: 'standardBase', subject: 'edfi@5_2_0_base', version: '5.2.0', text: heldText } };
@@ -76,8 +83,8 @@ const manifestFor = (publicLabel, defaultLayerByHub) => ({ manifestRefId: public
 const manifestList = [manifestFor('toyLabel', null), manifestFor('settledLabel', { ToyHub: { decisionBlockHashList: ['9'.repeat(64)] } })];
 const uriContractReader = {
 	schemaBlockFor: (schemaBlockRefId, done) => done('', schemaBlockByRefId[schemaBlockRefId] === undefined ? null : schemaBlockByRefId[schemaBlockRefId]),
-	decisionSchemaBlockFor: (requestedHash, done) => done('', requestedHash === decisionBlockHash ? { decisionBlockHash, pairKey: memberBlockList[0].pairKey, frozenText } : requestedHash === heldDecisionBlockHash ? { decisionBlockHash: heldDecisionBlockHash, pairKey: 'ceds@14.0.0.0::edfi@5.2.0::edfiBridging::inferred', frozenText: heldFrozenText } : null),
-	agentRecordFor: (agentIri, done) => done('', agentIri === 'https://w3id.org/EDUcore/agent/raterPseudonym7' ? { profile: { agentIri, agentKind: 'person', displayName: 'rater 7', emailAddress: 'leak@example.org', userName: 'realName' }, layersAuthored: [{ layerKey: 'rater-07', versionTag: 'r1' }], scores: { agreementWithRaters: 0.8 } } : null),
+	decisionSchemaBlockFor: (requestedHash, done) => done('', requestedHash === decisionBlockHash ? { decisionBlockHash, pairKey: memberBlockList[0].pairKey, frozenText } : requestedHash === heldDecisionBlockHash ? { decisionBlockHash: heldDecisionBlockHash, pairKey: 'ceds@14.0.0.0::sif260928@4.3::firstUseOfThisBlock::inferred', frozenText: heldFrozenText } : null),
+	agentRecordFor: (agentIri, done) => done('', agentIri === 'https://w3id.org/EDUcore/agent/raterPseudonym7' ? { profile: { agentIri, agentKind: 'person', displayName: 'rater 7', aliasIriList: ['https://orcid.org/0000-0000-0000-0007'], emailAddress: 'leak@example.org', userName: 'realName' }, layersAuthored: [{ layerKey: 'rater-07', versionTag: 'r1' }], scores: { agreementWithRaters: 0.8 } } : null),
 	// ⟪ML3.1, Q4 / Q5⟫ the relation and discovery functions, as stated data
 	elementRecordFor: (address, done) => done('', address.elementStableId === 'toy:property/Alpha' ? { schemaBlockRefId: heldRefId, node: { stableId: 'toy:property/Alpha', labels: ['DmeProperty'], properties: { name: 'Alpha' } }, parentStableId: 'toy:class/Root', siblingStableIdList: ['toy:property/Gamma'], definitionText: 'the alpha slot' } : null),
 	publishedLayerVersionListForStandard: (address, done) => done('', address.standardName === 'Toy' ? [{ layerKey: 'toyJudge', versionTag: 'v1', registrationStatus: 'Standard' }] : []),
@@ -97,6 +104,7 @@ const uriContractReader = {
 	layerListFor: (done) => done('', [{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', versionCount: 2, currentStandardVersionTag: 'v1' }]),
 	publishedManifestFor: (address, done) => done('', manifestList.find((oneManifest) => (address.manifestRefId !== undefined ? oneManifest.manifestRefId === address.manifestRefId : oneManifest.publicLabel === address.publicLabel)) || null),
 };
+const curatedAssertionId = assertionIdentity.curatedAssertionIdFor({ decisionBlockHash: curatedSetHash, subjectStableId: 'toy:property/Alpha', subjectStandardName: 'Toy', subjectStandardVersion: '1.2.3', predicateCurie: 'edc:bestMatch', objectStableId: 'https://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa', objectStandardName: 'ToyHub', objectStandardVersion: '1.0', authorIdList: [RATER_IRI] }).assertionId;
 const fanOutAssertionId = assertionIdentity.assertionIdFor({ decisionBlockHash, subjectStableId: 'toy:field/Two', subjectStandardName: 'Toy', subjectStandardVersion: '1.2.3', predicateCurie: 'skos:closeMatch', objectStableId: 'https://w3id.org/EDUcore/ToyHub/hub/1.0/bbbb', objectStandardName: 'ToyHub', objectStandardVersion: '1.0' }).assertionId;
 
 const caseList = [
@@ -106,6 +114,8 @@ const caseList = [
 	{ label: 'a version answers by content', uriOrPath: `edc:layer/toyJudge/sha256/${contentId}`, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.version.administrationRecord.versionTag === 'v1' },
 	{ label: 'an unknown version is 404 with its reason', uriOrPath: '/EDUcore/layer/toyJudge/v9', judge: (resolved) => resolved.httpStatus === 404 && /no version tagged "v9"/.test(resolved.body.error) },
 	{ label: 'a fan-out assertion answers its instance and the judged subject', uriOrPath: fanOutAssertionId, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.assertion.subjectStableId === 'toy:field/Two' && resolved.body.assertion.judgedSubjectStableId === 'toy:question/Q' },
+	{ label: 'ML3.1c: a CURATED assertion URI (stored set, no record_id column) answers its row, its id recomputed by the R-c\' recipe', uriOrPath: curatedAssertionId, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.assertion.subject_id === 'toy:property/Alpha' && resolved.body.assertion.layerKey === 'toyRaters' && resolved.body.assertion.versionTag === 'r1' },
+	{ label: 'ML3.1c: …and a curated assertion URI no row recomputes to is 404 by name', uriOrPath: `/EDUcore/assertion/${curatedSetHash}/${'0'.repeat(64)}`, judge: (resolved) => resolved.httpStatus === 404 && /no row of this set carries that record_id/.test(resolved.body.error) },
 	{ label: 'an assertion in a block the store lacks is 404', uriOrPath: `/EDUcore/assertion/${'c'.repeat(64)}/${'d'.repeat(64)}`, judge: (resolved) => resolved.httpStatus === 404 && /no decision block/.test(resolved.body.error) },
 	{ label: 'an agent answers its registry row', uriOrPath: '/agent/judge/debug:digest', judge: (resolved) => resolved.httpStatus === 200 && resolved.body.agent.displayName === 'the debug judge' },
 	// ⟪ML3⟫ interpretations resolve (SPEC §5.3): the version's assertions for the element, an explicit NoTermFound, never another layer's answer
@@ -126,10 +136,10 @@ const caseList = [
 	{ label: 'ML3.1: a schema block of an unheld standard answers its text', uriOrPath: `/EDUcore/schemaBlock/sha256/${relationshipRefId}`, withReader: true, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.text === relationshipText && resolved.body.standardKeyList.join(',') === 'toyhub,toy' },
 	{ label: 'ML3.1: a schema block naming a licence-held standard (edfi) is 451 with metadata and the reason, never a bare 404', uriOrPath: `/EDUcore/schemaBlock/sha256/${heldRefId}`, withReader: true, judge: (resolved) => resolved.httpStatus === 451 && resolved.body.text === undefined && resolved.body.blockKind === 'standardBase' && resolved.body.version === '5.2.0' && /Ed-Fi Alliance License/.test(resolved.body.withheldReasonList[0].unavailableReason) },
 	{ label: 'ML3.1: a decision schema block of an unheld pair answers its text', uriOrPath: `/EDUcore/decisionSchemaBlock/sha256/${decisionBlockHash}`, withReader: true, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.text === frozenText },
-	{ label: 'ML3.1: a decision schema block of a held pair (edfi) is 451 with the reason', uriOrPath: `/EDUcore/decisionSchemaBlock/sha256/${heldDecisionBlockHash}`, withReader: true, judge: (resolved) => resolved.httpStatus === 451 && resolved.body.pairKey.indexOf('edfi@') !== -1 && resolved.body.withheldReasonList.length === 1 },
+	{ label: 'ML3.1: a decision schema block whose own subjects are a held standard (edfi) is 451, whatever its stored first-use pairKey says (ruling c)', uriOrPath: `/EDUcore/decisionSchemaBlock/sha256/${heldDecisionBlockHash}`, withReader: true, judge: (resolved) => resolved.httpStatus === 451 && resolved.body.standardKeyList.join(',') === 'edfi' && resolved.body.withheldReasonList.length === 1 },
 	{ label: 'ML3.1: a schema block uriContract lacks is 404 by name', uriOrPath: `/EDUcore/schemaBlock/sha256/${'f'.repeat(64)}`, withReader: true, judge: (resolved) => resolved.httpStatus === 404 && /not in uriContract/.test(resolved.body.error) },
 	{ label: 'ML3.1: without a uriContract reader a question is 501 by name', uriOrPath: '/EDUcore/manifest/toyLabel/q/Toy/1.2.3/toy:property/Alpha', judge: (resolved) => resolved.httpStatus === 501 && /without a uriContract reader/.test(resolved.body.error) },
-	{ label: 'ML3.1 (Q3): a person answers a profile plus a computed record, and ONLY the declared fields (no e-mail, no username)', uriOrPath: '/EDUcore/agent/raterPseudonym7', withReader: true, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.kind === 'agentPerson' && resolved.body.displayName === 'rater 7' && resolved.body.layersAuthored.length === 1 && resolved.body.scores.agreementWithRaters === 0.8 && resolved.body.emailAddress === undefined && resolved.body.userName === undefined },
+	{ label: 'ML3.1 (Q3): a person answers a profile plus a computed record, and ONLY the declared fields (no e-mail, no username)', uriOrPath: '/EDUcore/agent/raterPseudonym7', withReader: true, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.kind === 'agentPerson' && resolved.body.displayName === 'rater 7' && (resolved.body.aliasIriList || [])[0] === 'https://orcid.org/0000-0000-0000-0007' && resolved.body.layersAuthored.length === 1 && resolved.body.scores.agreementWithRaters === 0.8 && resolved.body.emailAddress === undefined && resolved.body.userName === undefined },
 	{ label: 'ML3.1 (Q3): an agent uriContract lacks is 404 by name', uriOrPath: '/EDUcore/agent/judge/nobody', withReader: true, judge: (resolved) => resolved.httpStatus === 404 && /not in uriContract/.test(resolved.body.error) },
 	{ label: 'ML3.1: without a uriContract reader a manifest is 501 by name', uriOrPath: '/EDUcore/manifest/toyLabel', judge: (resolved) => resolved.httpStatus === 501 && /without a uriContract reader/.test(resolved.body.error) },
 	// ⟪ML3.1, TQ Q4⟫ every URI answers the thing PLUS its relations

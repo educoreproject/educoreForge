@@ -3,8 +3,8 @@
 
 // test-layerRegistry.js — the mapping-layer registry's refusals and its seed (mappingLayers ML1-b; SPEC §3.3, §4.5, §7; rulings
 // R-1, R-2, R-3 of DESIGN-ML1a). Each named refusal is OBSERVED on a fixture that STATES its fault (it is built from a small
-// literal registry here, never by spreading the production file, so a later change to recipes/layers.json cannot quietly heal a
-// twin). The seeded recipes/layers.json loads, and each Jev version's content id re-derives from its member blocks.
+// literal registry here, never by spreading the production registry, so a later change to uriContract's registry cannot quietly heal a
+// twin). The registry of record (uriContract, since ML3.1 Part C) loads, and each Jev version's content id re-derives from its member blocks.
 //
 // Run: node lib/layer-registry/test/test-layerRegistry.js
 
@@ -118,10 +118,16 @@ harness.match('withAppendedVersion refuses a reused tag and mutates nothing', ap
 harness.equal('  …the registry it was called on still has two versions', stated.registry.layerRegistry.layerList[0].versionList.length, 2);
 
 // =====================================================================
-harness.section('the seeded registry (recipes/layers.json, recipes/agents.json)');
+harness.section('the registry of record: uriContract.sqlite (ML3.1 Part C retired recipes/layers.json and recipes/agents.json)');
 // =====================================================================
 
-const seeded = loadRegistry({ layerRegistryFilePath: path.join(TREE_ROOT, 'recipes', 'layers.json'), agentRegistryFilePath: path.join(TREE_ROOT, 'recipes', 'agents.json') });
+// ⟪ML3.1c⟫ the registry now lives ONLY in uriContract ([stores] uriContractFilePath, opened READ-ONLY). The JSON was retired after
+// -seedUriContractFromRegistryJson proved the tables equal it row for row; the same assertions now read the tables, so they still
+// prove the seeded history (an absent or unconfigured file is a failure, never a skip)
+const storesConfig = process.global.getConfig('stores') || {};
+const openedUriContract = require('../../uri-contract/uriContract').openUriContractFile({ uriContractFilePath: storesConfig.uriContractFilePath, accessMode: 'read' });
+harness.ok('the configured uriContract opens read-only', openedUriContract.error === undefined, openedUriContract.error);
+const seeded = openedUriContract.error ? loadRegistry({ layerRegistryFilePath: '/nonexistent/layers.json', agentRegistryFilePath: '/nonexistent/agents.json' }) : openedUriContract.uriContract.loadRegistry();
 harness.ok('the seeded registry loads', seeded.error === undefined, seeded.error);
 const jevLayer = seeded.registry.layerFor('jev').layer;
 // the seed (the zeroBacklog gold's two configurations) and the wave-1 append (BRONZE_CROWN 2026-10-24): JEDx, LIF and Open Badges were

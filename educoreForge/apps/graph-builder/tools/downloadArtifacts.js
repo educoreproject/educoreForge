@@ -380,7 +380,13 @@ taskList.push((args, next) => {
 			zipEntryList = [...emission.zipEntryList, ...validation.zipEntryList];
 			readmeText = downloadArtifacts.graphReadmeTextFor({ entryPlan, ...commonStamp, snapshotIdentityLine, verdict: verdictRead.parsed, layerVerdictList, emissionNoteText: emission.emissionNoteText, documentationFileNameList: validation.documentationFileNameList, rules });
 		}
-		const zipBuild = buildZipBuffer({ zipEntryList: [{ entryPath: downloadArtifacts.DOWNLOAD_README_FILE_NAME, contentBuffer: Buffer.from(readmeText, 'utf8') }, ...zipEntryList] });
+		// ⟪ML3.1c⟫ a noticed bundle's notices and agreement ride in EVERY facet zip (licenceNoticeList)
+		const licenceNotice = downloadArtifacts.licenceNoticeZipEntryListFor({ rules, oneStandard });
+		if (licenceNotice.error) {
+			next(`${moduleName}: ${entryPlan.downloadId}: ${licenceNotice.error}`);
+			return;
+		}
+		const zipBuild = buildZipBuffer({ zipEntryList: [{ entryPath: downloadArtifacts.DOWNLOAD_README_FILE_NAME, contentBuffer: Buffer.from(`${readmeText}${licenceNotice.readmeSectionText}`, 'utf8') }, ...licenceNotice.zipEntryList, ...zipEntryList] });
 		if (zipBuild.error) {
 			next(`${moduleName}: ${entryPlan.downloadId}: ${zipBuild.error}`);
 			return;
