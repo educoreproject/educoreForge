@@ -42,6 +42,13 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //           cb(err, { totalCount, elementList: [{ elementStableId, role | null }] } | null))   ordered by stableId (code point)
 //       agentListFor({ pageNumber, pageSize }, cb(err, { totalCount, agentList: [{ profile }] }))
 //       layerListFor(cb(err, [{ layerKey, displayName, layerKind, versionCount, currentStandardVersionTag | null }]))   the site registry
+//     ⟪ML3.1, TQ Q7: card listings; a hub's domains are the distinct domainId its cards carry, read verbatim (the hub's own classes)⟫
+//       manifestHubListFor({ publicLabel } | { manifestRefId }, cb(err, { manifestRefId, publicLabel, hubList: [{ hubName, hubVersion,
+//           hubSegment, hubReleaseSegment, cardCount, domainCount }] } | null))
+//       hubDomainListFor(address, { hubSegment, hubReleaseSegment, pageNumber, pageSize }, cb(err, { totalCount, domainList: [{ domainId,
+//           domainName, domainUri, domainDefinition, cardCount }] } | null))   ordered by domainId (code point)
+//       hubDomainCardListFor(address, { hubSegment, hubReleaseSegment, domainId, pageNumber, pageSize }, cb(err, { totalCount,
+//           cardList: [{ meaningIri, label, definition, propertyName, propertyKey, referenceTier }] } | null))   ordered by meaningIri
 //       Every hash the reader hands over it has verified on read; null means "not published", never an error.
 //
 // ANSWERS: layer → its current STANDARD version (never merely the newest); layerVersion / layerVersionByContent → the version's
@@ -412,6 +419,42 @@ const manifestElementListAnswerFor = ({ kind, partByName, iri, pageNumber, uriCo
 		done(pagedAnswer({ kind, iri, pageNumber, totalCount: page.totalCount, itemListName: 'elementList', extra: { manifest: manifestUriOf(manifestAddress), standardName, standardVersion }, itemList: page.elementList.map((oneElement) => ({ ...oneElement, element: mintUriOf({ kind: 'element', standardName, standardVersion, elementStableId: oneElement.elementStableId }), question: mintUriOf({ kind: questionKind, ...manifestAddress, standardName, standardVersion, elementStableId: oneElement.elementStableId }) })) }));
 	});
 };
+// ⟪ML3.1, Q7⟫ the hub, domain and card listings: every URI in them minted through edcUri, the manifest form kept (label or hash)
+const kindFor = (manifestAddress, labelKind) => (manifestAddress.manifestRefId !== undefined ? `${labelKind}ByContent` : labelKind);
+const manifestHubListAnswerFor = ({ kind, partByName, iri, uriContractReader }, done) => {
+	const manifestAddress = manifestAddressOf(partByName);
+	uriContractReader.manifestHubListFor(manifestAddress, (readError, found) =>
+		done(readerAnswer({ kind, readError, found, notFoundText: `no published manifest ${JSON.stringify(manifestAddress)}` }, (hubListing) => ({
+			listing: iri,
+			manifest: manifestUriOf(manifestAddress),
+			manifestRefId: hubListing.manifestRefId,
+			publicLabel: hubListing.publicLabel,
+			hubList: hubListing.hubList.map((oneHub) => ({ ...oneHub, domainListing: mintUriOf({ kind: kindFor(manifestAddress, 'hubDomainList'), ...manifestAddress, hubSegment: oneHub.hubSegment, hubReleaseSegment: oneHub.hubReleaseSegment }) })),
+		}))),
+	);
+};
+const hubDomainListAnswerFor = ({ kind, partByName, iri, pageNumber, uriContractReader }, done) => {
+	const manifestAddress = manifestAddressOf(partByName);
+	const { hubSegment, hubReleaseSegment } = partByName;
+	uriContractReader.hubDomainListFor(manifestAddress, { hubSegment, hubReleaseSegment, pageNumber, pageSize: LISTING_PAGING.pageSize }, (readError, page) => {
+		if (readError || page === null) {
+			done(readError ? answer(500, { kind, error: readError }) : answer(404, { kind, error: `no published manifest ${JSON.stringify(manifestAddress)} holds hub ${hubSegment} ${hubReleaseSegment}` }));
+			return;
+		}
+		done(pagedAnswer({ kind, iri, pageNumber, totalCount: page.totalCount, itemListName: 'domainList', extra: { manifest: manifestUriOf(manifestAddress), hubSegment, hubReleaseSegment }, itemList: page.domainList.map((oneDomain) => ({ ...oneDomain, cardListing: mintUriOf({ kind: kindFor(manifestAddress, 'hubDomainCardList'), ...manifestAddress, hubSegment, hubReleaseSegment, domainId: oneDomain.domainId }) })) }));
+	});
+};
+const hubDomainCardListAnswerFor = ({ kind, partByName, iri, pageNumber, uriContractReader }, done) => {
+	const manifestAddress = manifestAddressOf(partByName);
+	const { hubSegment, hubReleaseSegment, domainId } = partByName;
+	uriContractReader.hubDomainCardListFor(manifestAddress, { hubSegment, hubReleaseSegment, domainId, pageNumber, pageSize: LISTING_PAGING.pageSize }, (readError, page) => {
+		if (readError || page === null) {
+			done(readError ? answer(500, { kind, error: readError }) : answer(404, { kind, error: `no published manifest ${JSON.stringify(manifestAddress)} holds domain ${domainId} of hub ${hubSegment} ${hubReleaseSegment}` }));
+			return;
+		}
+		done(pagedAnswer({ kind, iri, pageNumber, totalCount: page.totalCount, itemListName: 'cardList', extra: { manifest: manifestUriOf(manifestAddress), hubSegment, hubReleaseSegment, domainId }, itemList: page.cardList }));
+	});
+};
 const profileOf = (profile) => AGENT_PROFILE_FIELD_LIST.reduce((soFar, oneFieldName) => (profile === null || typeof profile !== 'object' || profile[oneFieldName] === undefined ? soFar : { ...soFar, [oneFieldName]: profile[oneFieldName] }), {});
 
 // RESOLUTION_BY_KIND — one row per kind the stub answers (DATA, no branch); a kind with no row is answered 501 by name
@@ -522,6 +565,12 @@ const RESOLUTION_BY_KIND = Object.freeze({
 	manifestStandardListByContent: withReader('manifestStandardListByContent', (context, done) => manifestStandardListAnswerFor({ ...context, kind: 'manifestStandardListByContent' }, done)),
 	manifestElementList: withReader('manifestElementList', (context, done) => manifestElementListAnswerFor({ ...context, kind: 'manifestElementList' }, done)),
 	manifestElementListByContent: withReader('manifestElementListByContent', (context, done) => manifestElementListAnswerFor({ ...context, kind: 'manifestElementListByContent' }, done)),
+	manifestHubList: withReader('manifestHubList', (context, done) => manifestHubListAnswerFor({ ...context, kind: 'manifestHubList' }, done)),
+	manifestHubListByContent: withReader('manifestHubListByContent', (context, done) => manifestHubListAnswerFor({ ...context, kind: 'manifestHubListByContent' }, done)),
+	hubDomainList: withReader('hubDomainList', (context, done) => hubDomainListAnswerFor({ ...context, kind: 'hubDomainList' }, done)),
+	hubDomainListByContent: withReader('hubDomainListByContent', (context, done) => hubDomainListAnswerFor({ ...context, kind: 'hubDomainListByContent' }, done)),
+	hubDomainCardList: withReader('hubDomainCardList', (context, done) => hubDomainCardListAnswerFor({ ...context, kind: 'hubDomainCardList' }, done)),
+	hubDomainCardListByContent: withReader('hubDomainCardListByContent', (context, done) => hubDomainCardListAnswerFor({ ...context, kind: 'hubDomainCardListByContent' }, done)),
 	agentList: withReader('agentList', ({ iri, pageNumber, uriContractReader }, done) =>
 		uriContractReader.agentListFor({ pageNumber, pageSize: LISTING_PAGING.pageSize }, (readError, page) =>
 			done(readError ? answer(500, { kind: 'agentList', error: readError }) : pagedAnswer({ kind: 'agentList', iri, pageNumber, totalCount: page.totalCount, itemListName: 'agentList', itemList: page.agentList.map((oneAgent) => profileOf(oneAgent.profile)) })),

@@ -84,6 +84,13 @@ const PART_BY_NAME_BY_KIND = {
 	manifestElementList: { publicLabel: 'zeroBacklog-261023', standardName: sifAtEdge.subjectSource, standardVersion: sifAtEdge.subjectVersion },
 	manifestElementListByContent: { manifestRefId, standardName: sifAtEdge.subjectSource, standardVersion: sifAtEdge.subjectVersion },
 	agentList: {},
+	// ⟪ML3.1, Q7⟫ the card listings (the hub segment and release copied verbatim from a real card uri)
+	manifestHubList: { publicLabel: 'zeroBacklog-261023' },
+	manifestHubListByContent: { manifestRefId },
+	hubDomainList: { publicLabel: 'zeroBacklog-261023', hubSegment: hubSegmentOf(meaningRow.namespace), hubReleaseSegment: hubReleaseSegmentOf(meaningRow.uri, meaningRow.namespace) },
+	hubDomainListByContent: { manifestRefId, hubSegment: hubSegmentOf(meaningRow.namespace), hubReleaseSegment: hubReleaseSegmentOf(meaningRow.uri, meaningRow.namespace) },
+	hubDomainCardList: { publicLabel: 'zeroBacklog-261023', hubSegment: hubSegmentOf(meaningRow.namespace), hubReleaseSegment: hubReleaseSegmentOf(meaningRow.uri, meaningRow.namespace), domainId: 'C200010' },
+	hubDomainCardListByContent: { manifestRefId, hubSegment: 'CTDL', hubReleaseSegment: 'Release_20260927', domainId: 'ceterms:Diploma' },
 };
 
 // =====================================================================
@@ -174,7 +181,8 @@ harness.match("a parsed '.' piece is refused, never normalised away", parse('edc
 });
 const pinnedWithSlash = { standardName: 'SIF260928', standardVersion: '4.3', elementStableId: 'sif260928:field/A/B/@RefId', layerKey: 'jev', versionTag: 'cfg-cf8d41f82791.wave3-261025' };
 harness.equal("a pinned interpretation of a slash path parses back (the first '@' ends the path)", JSON.stringify(parse(mint({ kind: 'interpretationPinned', ...pinnedWithSlash }).uri)), JSON.stringify({ kind: 'interpretationPinned', partByName: pinnedWithSlash }));
-harness.equal('the reserved words are exactly the scheme\'s whole-segment literals (Q5 adds agents, elements, manifests, scheme, standards)', RESERVED_WORD_LIST.join(','), 'agent,agents,assertion,decisionSchemaBlock,elements,hub,judge,layer,layers,manifest,manifests,org,q,registry,schemaBlock,scheme,sha256,standards');
+harness.equal('the reserved words are exactly the scheme\'s whole-segment literals (Q5 adds agents, elements, manifests, scheme, standards)', RESERVED_WORD_LIST.join(','), 'agent,agents,assertion,cards,decisionSchemaBlock,domains,elements,hub,hubs,judge,layer,layers,manifest,manifests,org,q,registry,schemaBlock,scheme,sha256,standards');
+harness.match("Q7: a domain id equal to a reserved word ('cards') is refused", mint({ kind: 'hubDomainCardList', publicLabel: 'educore-2026-10', hubSegment: 'CTDL', hubReleaseSegment: 'Release_20260927', domainId: 'cards' }).error, /reserved word 'cards'/);
 harness.equal('Q5: the base IRI itself is the root kind', JSON.stringify(parse('https://w3id.org/EDUcore/')), JSON.stringify({ kind: 'root', partByName: {} }));
 harness.equal("Q5: 'edc:' alone is the root too", parse('edc:').kind, 'root');
 harness.match("Q5: a standard named 'elements' is refused (a listing literal)", mint({ kind: 'manifestElementList', publicLabel: 'educore-2026-10', standardName: 'elements', standardVersion: '1.0' }).error, /reserved word 'elements'/);

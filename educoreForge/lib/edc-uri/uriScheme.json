@@ -21,7 +21,7 @@
 		"queryParameterName": "page",
 		"pageSize": 500,
 		"firstPageNumber": 1,
-		"listingKindList": ["manifestList", "manifestElementList", "manifestElementListByContent", "agentList"]
+		"listingKindList": ["manifestList", "manifestElementList", "manifestElementListByContent", "agentList", "hubDomainList", "hubDomainListByContent", "hubDomainCardList", "hubDomainCardListByContent"]
 	},
 	"absoluteIriPrefixList": ["https://", "http://"],
 	"predicatePrefixExpansion": {
@@ -53,6 +53,12 @@
 		{ "kind": "manifestStandardListByContent", "template": "manifest/sha256/{manifestRefId}/standards", "verbatimPartList": [], "about": "(ML3.1 Q5) the same, the manifest addressed by its membership hash" },
 		{ "kind": "manifestElementList", "template": "manifest/{publicLabel}/standards/{standardName}/{standardVersion}/elements", "verbatimPartList": [], "about": "(ML3.1 Q5) one standard's elements in a manifest, ordered by stableId (code point); a paged listing" },
 		{ "kind": "manifestElementListByContent", "template": "manifest/sha256/{manifestRefId}/standards/{standardName}/{standardVersion}/elements", "verbatimPartList": [], "about": "(ML3.1 Q5) the same, the manifest addressed by its membership hash" },
+		{ "kind": "manifestHubList", "template": "manifest/{publicLabel}/hubs", "verbatimPartList": [], "about": "(ML3.1 Q7) a manifest's hubs with card and domain counts" },
+		{ "kind": "manifestHubListByContent", "template": "manifest/sha256/{manifestRefId}/hubs", "verbatimPartList": [], "about": "(ML3.1 Q7) the same, the manifest by its membership hash" },
+		{ "kind": "hubDomainList", "template": "manifest/{publicLabel}/hubs/{hubSegment}/{hubReleaseSegment}/domains", "verbatimPartList": ["hubSegment", "hubReleaseSegment"], "about": "(ML3.1 Q7) a hub release's domains AS THE HUB ORGANISES THEM: the distinct domainId its cards carry (CEDS class, CTDL class), read verbatim; a paged listing" },
+		{ "kind": "hubDomainListByContent", "template": "manifest/sha256/{manifestRefId}/hubs/{hubSegment}/{hubReleaseSegment}/domains", "verbatimPartList": ["hubSegment", "hubReleaseSegment"], "about": "(ML3.1 Q7) the same, the manifest by its membership hash" },
+		{ "kind": "hubDomainCardList", "template": "manifest/{publicLabel}/hubs/{hubSegment}/{hubReleaseSegment}/domains/{domainId}/cards", "verbatimPartList": ["hubSegment", "hubReleaseSegment"], "about": "(ML3.1 Q7) the cards of one domain, each with its meaning URI, label and definition; a paged listing" },
+		{ "kind": "hubDomainCardListByContent", "template": "manifest/sha256/{manifestRefId}/hubs/{hubSegment}/{hubReleaseSegment}/domains/{domainId}/cards", "verbatimPartList": ["hubSegment", "hubReleaseSegment"], "about": "(ML3.1 Q7) the same, the manifest by its membership hash" },
 		{ "kind": "question", "template": "manifest/{publicLabel}/q/{standardName}/{standardVersion}/{elementStableId}", "verbatimPartList": [], "about": "manifest x element, answered from the manifest's own relationship schema blocks for every hub (Q41: the version is in the URI; ruling (b) AMBER_JOURNEY 2026-10-26)" },
 		{ "kind": "questionForHub", "template": "manifest/{publicLabel}/q/hub/{hubSegment}/{standardName}/{standardVersion}/{elementStableId}", "verbatimPartList": ["hubSegment"], "about": "manifest x hub x element; the reserved literal 'hub' puts the hub AHEAD of the standard, so the element path ends the URI (Q42)" },
 		{ "kind": "questionByContent", "template": "manifest/sha256/{manifestRefId}/q/{standardName}/{standardVersion}/{elementStableId}", "verbatimPartList": [], "about": "manifest (by membership hash) x element (Q43)" },
