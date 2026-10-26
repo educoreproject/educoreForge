@@ -1,5 +1,5 @@
 {
-	"comment": "The standard downloads registry (tools/downloadArtifacts.js; WORKORDER-standardDownloads-101526). One row per forge bundle offered for download. family is NOT here: it is read from the graph (StandardDefinition.standardFamily) or, for a bundle the graph does not hold, from the bundle's own forge declaration. version likewise comes from the graph; versionText is used only for a bundle the graph does not hold. A graph standard with no row here is refused by name, never quietly left out.",
+	"comment": "The standard downloads registry (tools/downloadArtifacts.js; WORKORDER-standardDownloads-101526). One row per forge bundle offered for download. family is NOT here: it is read from the graph (StandardDefinition.standardFamily) or, for a bundle the graph does not hold, from the bundle's own forge declaration. version likewise comes from the graph; versionText is used only for a bundle the graph does not hold. A graph standard with no row here is refused by name, never quietly left out. licenceNoticeList (ML3.1c, 2026-10-26): a bundle whose licence requires notices on every copy; each facet zip carries NOTICE.txt (requiredNoticeTextList verbatim, permissionRecordText) and the agreement at agreementRelativePath under the snapshot, verified against agreementSha256. State [] for none.",
 	"offeredBundleList": [
 		{ "bundleToken": "ceds", "forgeDeclarationRelativePath": "lib/cedsForgeDeclaration.js", "groupName": "CEDS Ontology", "graphEmissionKind": "cedsRdfDirectory", "layerTokenList": ["ceds:guide", "ceds:textRepair"], "descriptionText": "Common Education Data Standards ontology (RDF/XML), with the Ontology Guide and text-repair layers" },
 		{ "bundleToken": "edfi", "forgeDeclarationRelativePath": "lib/edfiForgeDeclaration.js", "groupName": "Ed-Fi Data Standard", "graphEmissionKind": "statementListing", "layerTokenList": [], "descriptionText": "Ed-Fi Data Standard (MetaEd model and descriptor code values)" },
@@ -43,12 +43,6 @@
 			"rulingText": "TQ 2026-10-23 (plan nextStandards-102326 Q-N1, via BRONZE_CROWN): 1EdTech standards are treated like Ed-Fi, forged and bridged with both download facets withheld"
 		},
 		{
-			"bundleToken": "jedx",
-			"facetList": ["source", "graph"],
-			"unavailableReason": "Withheld under the HR Open Standards Consortium License Agreement (May 1, 2014; forges/jedx/assets/standardSourceData/02/licence/): its §2.a permits reproducing, distributing and preparing derivative works, but §2.f forbids facilitating any other HR-technology Standards Organization in distributing or publishing the Work, or creating a derivative for publishing by any Standards Organization or similar entity, without HR Open's written approval; TQ has not yet read that clause against this publisher. When offered, every copy must carry: 'Copyright © The HR Open Standards Consortium. All Rights Reserved. http://www.hropenstandards.org' (§2.d), the derivative notice 'This product implements and complies with the JEDx Open API Specification Version 1.0.0 (HR Open Standards schema types 4.3.0 and 4.5.0) as published by the HR Open Standards Consortium at http://www.hropenstandards.org' (§2.e), and a copy of the agreement (§2.c). The round trip was still run against this graph; its totals are shown.",
-			"rulingText": "BRONZE_CROWN 2026-10-24 (IMCS, nextStandards-102326 lane B): downloads held per HR Open licence §2.f, superseding WORKORDER-jedx B3's available:true, until TQ reads §2.f"
-		},
-		{
 			"bundleToken": "case",
 			"facetList": ["source", "graph"],
 			"unavailableReason": "Withheld under the 1EdTech Specification Document License (https://www.imsglobal.org/license.html; the CASE YAML's own header: 'Use of this specification to develop products or services is governed by the license with 1EdTech'): its §4 licenses using the Specification to develop and distribute PRODUCTS that implement it, and §5 grants no right to create modifications or derivatives of 1EdTech documents, so neither the specification's bytes nor a graph derived from them is redistributed here. The round trip was still run against this graph; its totals are shown.",
@@ -89,6 +83,16 @@
 			"facetList": ["source", "graph"],
 			"unavailableReason": "Withheld under the 1EdTech Specification Document License (https://www.imsglobal.org/license.html; the OneRoster 1.2 Resources OpenAPI document's own info.license names it 'IMS Global Specification Document License', and its publisher package's SKILL.md says 'license: proprietary'): its §4 licenses using the Specification to develop and distribute PRODUCTS that implement it, and §5 grants no right to create modifications or derivatives of 1EdTech documents, so neither the specification's bytes nor a graph derived from them is redistributed here. The round trip was still run against this graph; its totals are shown.",
 			"rulingText": "TQ 2026-10-23 (plan nextStandards-102326 Q-N1, via BRONZE_CROWN; wave-3 work order 2026-10-24): 1EdTech standards are treated like Ed-Fi, forged and bridged with both download facets withheld"
+		}
+	],
+	"licenceNoticeList": [
+		{
+			"bundleToken": "jedx",
+			"licenceName": "HR Open Standards Consortium License Agreement (May 1, 2014)",
+			"requiredNoticeTextList": ["Copyright © The HR Open Standards Consortium. All Rights Reserved. http://www.hropenstandards.org (agreement §2.d)", "This product implements and complies with the JEDx Open API Specification Version 1.0.0 (HR Open Standards schema types 4.3.0 and 4.5.0) as published by the HR Open Standards Consortium at http://www.hropenstandards.org (agreement §2.e)"],
+			"permissionRecordText": "TQ, 2026-10-26 (D-JEDX-HOLD, recorded in DECISIONS-mappingLayers-102326.md): \"JEDx comes off the license-held list. I have gotten explicit permission from them to download.\" This lifts the hold BRONZE_CROWN placed on 2026-10-24 under §2.f. A copy of the agreement rides in every download (§2.c).",
+			"agreementRelativePath": "licence/HR_Open_Standards_License_Agreement-cf2ff5d3.pdf",
+			"agreementSha256": "9f3f111089cf90f3197e4d4f43f80bb1178d717820692ed43770be9d1047d771"
 		}
 	],
 	"snapshotCompanionFileNameList": ["README_PROVENANCE.md", "SHA256SUMS", "standardSourceLocation", "layerSourceLocation", "LICENSE", "manifest.json"],
