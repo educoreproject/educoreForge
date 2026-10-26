@@ -304,7 +304,37 @@ const conjunctJudgeByRefId = {
 	},
 };
 
+// ⟪ML3.1c⟫ THE LICENCE NOTICE (JEDx, HR Open §2.c/d/e): a noticed bundle's every facet zip carries NOTICE.txt (the required notices
+// verbatim and the permission on record) and the agreement, verified against its stated sha256; a row lacking a field is refused
+conjunctJudgeByRefId.n_licenceNoticeInEveryFacet = (mutationList, done) => {
+	const lib = libFor(mutationList);
+	const snapshotDirPath = path.join(scratchRootPath, 'noticeSnapshot');
+	fs.mkdirSync(path.join(snapshotDirPath, 'licence'), { recursive: true });
+	const agreementBuffer = Buffer.from('the toy agreement, §2.c');
+	fs.writeFileSync(path.join(snapshotDirPath, 'licence', 'toyAgreement.pdf'), agreementBuffer);
+	const noticeRow = { bundleToken: 'pesctoy1v0v0', licenceName: 'Toy Licence', requiredNoticeTextList: ['Copyright (c) Toy (§2.d)', 'This product implements Toy (§2.e)'], permissionRecordText: 'TQ 2026-10-26: permission on record', agreementRelativePath: 'licence/toyAgreement.pdf', agreementSha256: lib.sha256Of(agreementBuffer) };
+	const rules = { ...TOY_RULES, licenceNoticeList: [noticeRow] };
+	const oneStandard = { bundleToken: 'pesctoy1v0v0', snapshotDirPath };
+	const noticed = lib.licenceNoticeZipEntryListFor({ rules, oneStandard });
+	const noticeEntry = noticed.zipEntryList ? noticed.zipEntryList.find((oneEntry) => oneEntry.entryPath === lib.NOTICE_FILE_NAME) : undefined;
+	const agreementEntry = noticed.zipEntryList ? noticed.zipEntryList.find((oneEntry) => oneEntry.entryPath === 'licence/toyAgreement.pdf') : undefined;
+	const unnoticed = lib.licenceNoticeZipEntryListFor({ rules, oneStandard: { bundleToken: 'pesctoyaggregate', snapshotDirPath } });
+	const wrongHash = lib.licenceNoticeZipEntryListFor({ rules: { ...rules, licenceNoticeList: [{ ...noticeRow, agreementSha256: 'f'.repeat(64) }] }, oneStandard });
+	const fieldFault = lib.rulesFaultOf({ rules: { ...rules, licenceNoticeList: [{ ...noticeRow, requiredNoticeTextList: [] }] }, graphEmissionKindList: Object.keys(lib.graphEmissionReaderByKind) });
+	const realFault = lib.rulesFaultOf({ rules: RULES, graphEmissionKindList: Object.keys(lib.graphEmissionReaderByKind) });
+	const pass = noticeEntry !== undefined && noticeEntry.contentBuffer.toString('utf8').indexOf('Copyright (c) Toy (§2.d)') !== -1 && noticeEntry.contentBuffer.toString('utf8').indexOf('This product implements Toy (§2.e)') !== -1 && noticeEntry.contentBuffer.toString('utf8').indexOf('permission on record') !== -1
+		&& agreementEntry !== undefined && Buffer.compare(agreementEntry.contentBuffer, agreementBuffer) === 0
+		&& unnoticed.zipEntryList.length === 0
+		&& /hashes to .*not the stated agreementSha256/.test(wrongHash.error || '')
+		&& /licenceNoticeList\[0\] lacks requiredNoticeTextList/.test(fieldFault)
+		&& realFault === '';
+	done({ pass, detail: JSON.stringify({ noticed: noticed.error || (noticed.noticeFileNameList || []).join(','), unnoticed: unnoticed.zipEntryList && unnoticed.zipEntryList.length, wrongHash: wrongHash.error, fieldFault, realFault }) });
+};
+
 const TWIN_LIST = [
+	{ conjunctRefId: 'n_licenceNoticeInEveryFacet', twinName: 'noticeRowIgnored', libraryName: 'lib', find: '	const notice = rules.licenceNoticeList.find((oneNotice) => oneNotice.bundleToken === oneStandard.bundleToken);', replace: '	const notice = undefined;' },
+	{ conjunctRefId: 'n_licenceNoticeInEveryFacet', twinName: 'agreementUnverified', libraryName: 'lib', find: '	if (sha256Of(agreementBuffer) !== notice.agreementSha256) {', replace: '	if (false) {' },
+	{ conjunctRefId: 'n_licenceNoticeInEveryFacet', twinName: 'noticeFieldsUnchecked', libraryName: 'lib', find: '		const absentList = REQUIRED_NOTICE_FIELD_LIST.filter(', replace: '		const absentList = [].filter(' },
 	{ conjunctRefId: 'g_freshBuildDisagreementRefused', twinName: 'totalIgnored', libraryName: 'lib', find: "		const differenceList = comparedTotalNameList\n", replace: "		const differenceList = comparedTotalNameList.slice(0, 1)\n" },
 	{ conjunctRefId: 'f_strayFileRefusedByName', twinName: 'strayAccepted', libraryName: 'lib', find: '		strayPathList.push(relativePath);', replace: '		companionPathList.push(relativePath);' },
 	{ conjunctRefId: 'd_manifestEntries', twinName: 'holdIgnored', libraryName: 'lib', find: "			const licenceHold = holdOf(oneStandard.bundleToken, facet);", replace: '			const licenceHold = undefined;' },
