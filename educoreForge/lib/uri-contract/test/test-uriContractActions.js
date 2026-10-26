@@ -264,6 +264,8 @@ const continueAfterExport = () => {
 	// =====================================================================
 	const port = 20000 + (process.pid % 20000);
 	const server = spawn('node', [STUB_SERVER, `--port=${port}`, contractFlag], { stdio: ['ignore', 'pipe', 'pipe'] });
+	// the server dies with this test however it ends: a crash in a probe once left two servers running for an hour (AMBER_JOURNEY saw them)
+	process.on('exit', () => server.kill());
 	const probeList = [
 		['layer (floating, its Standard version)', 'layer/toyJudge', 200, (body) => body.currentStandardVersionTag === 'base' && body.versionList.length === 1],
 		['layer version by tag (with its computed counts)', 'layer/toyJudge/base', 200, (body) => body.latestStatus.registrationStatus === 'Standard' && body.countByStandard.toy.mappedCount === 1],
@@ -282,9 +284,13 @@ const continueAfterExport = () => {
 	};
 	const probeNext = (probeIndex) => {
 		if (probeIndex >= probeList.length) {
+			server.removeAllListeners('exit');
+			server.on('exit', () => {
+				harness.ok('the stub server this test started is gone when the test ends (no server survives a run)', server.exitCode !== null || server.signalCode !== null);
+				fs.rmSync(scratchDirPath, { recursive: true, force: true });
+				harness.report();
+			});
 			server.kill();
-			fs.rmSync(scratchDirPath, { recursive: true, force: true });
-			harness.report();
 			return;
 		}
 		const [label, requestPath, expectedStatus, bodyCheck] = probeList[probeIndex];
