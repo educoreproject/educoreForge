@@ -18,7 +18,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //       publishedManifestFor({ publicLabel } | { manifestRefId }, cb(err, { manifestRefId, publicLabel, publishedAt,
 //           latestStatus: { registrationStatus, changedAt }, memberList: [{ schemaBlockRefId, position }],
 //           defaultLayerByHub: null | { <hubSegment>: { decisionBlockHashList } } } | null))
-//       agentRecordFor(agentIri, cb(err, { profile: { agentIri, agentKind, displayName, aliasIri }, layersAuthored: [...], scores: {...} } | null))
+//       agentRecordFor(agentIri, cb(err, { profile: { agentIri, agentKind, displayName, aliasIriList }, layersAuthored: [...], scores: {...} } | null))
 //           ⟪TQ ruling Q3, relayed by AMBER_JOURNEY 2026-10-26⟫ a profile plus a computed record; the stub answers ONLY the profile
 //           fields AGENT_PROFILE_FIELD_LIST names, so nothing else a reader carries can leak (persons are strictly pseudonymous)
 //     ⟪ML3.1, TQ Q4: every URI answers the thing PLUS its relations, computed from uriContract, never stored⟫
@@ -251,7 +251,7 @@ const withheldAnswerFor = ({ standardKeyList, metadata }) => {
 	return heldList.length === 0 ? null : answer(451, { ...metadata, standardKeyList, textWithheld: true, withheldReasonList: heldList.map((oneStandardKey) => ({ standardKey: oneStandardKey, unavailableReason: LICENCE_HOLD_BY_STANDARD_KEY[oneStandardKey].unavailableReason })) });
 };
 // the fields an agent answer may carry (DATA): a profile and the computed record, never a username, e-mail or any other identifying field
-const AGENT_PROFILE_FIELD_LIST = Object.freeze(['agentIri', 'agentKind', 'displayName', 'aliasIri']);
+const AGENT_PROFILE_FIELD_LIST = Object.freeze(['agentIri', 'agentKind', 'displayName', 'aliasIriList']); // uriContract's agents row carries aliasIriList (Q3)
 const agentRecordAnswerFor = ({ kind, iri, uriContractReader }, done) =>
 	uriContractReader.agentRecordFor(iri, (readError, agentRecord) => {
 		if (readError || agentRecord === null) {
