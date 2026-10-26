@@ -15,8 +15,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                       without it. lib/uri-contract implements it (lane B); a test passes a double. @interface UriContractReader:
 //       schemaBlockFor(schemaBlockRefId, cb(err, { schemaBlockRefId, blockKind, subject, version, text } | null))
 //       decisionSchemaBlockFor(decisionBlockHash, cb(err, { decisionBlockHash, pairKey, frozenText } | null))
-//       publishedManifestFor({ publicLabel } | { manifestRefId }, cb(err, { manifestRefId, publicLabel,
-//           memberList: [{ schemaBlockRefId, position }], defaultLayerByHub: null | { <hubSegment>: { decisionBlockHashList } } } | null))
+//       publishedManifestFor({ publicLabel } | { manifestRefId }, cb(err, { manifestRefId, publicLabel, publishedAt,
+//           latestStatus: { registrationStatus, changedAt }, memberList: [{ schemaBlockRefId, position }],
+//           defaultLayerByHub: null | { <hubSegment>: { decisionBlockHashList } } } | null))
+//       agentRecordFor(agentIri, cb(err, { profile: { agentIri, agentKind, displayName, aliasIri }, layersAuthored: [...], scores: {...} } | null))
+//           ⟪TQ ruling Q3, relayed by AMBER_JOURNEY 2026-10-26⟫ a profile plus a computed record; the stub answers ONLY the profile
+//           fields AGENT_PROFILE_FIELD_LIST names, so nothing else a reader carries can leak (persons are strictly pseudonymous)
 //       Every hash the reader hands over it has verified on read; null means "not published", never an error.
 //
 // ANSWERS: layer → its current STANDARD version (never merely the newest); layerVersion / layerVersionByContent → the version's
@@ -218,6 +222,19 @@ const withheldAnswerFor = ({ standardKeyList, metadata }) => {
 	const heldList = standardKeyList.filter((oneStandardKey) => LICENCE_HOLD_BY_STANDARD_KEY[oneStandardKey] !== undefined);
 	return heldList.length === 0 ? null : answer(451, { ...metadata, standardKeyList, textWithheld: true, withheldReasonList: heldList.map((oneStandardKey) => ({ standardKey: oneStandardKey, unavailableReason: LICENCE_HOLD_BY_STANDARD_KEY[oneStandardKey].unavailableReason })) });
 };
+// the fields an agent answer may carry (DATA): a profile and the computed record, never a username, e-mail or any other identifying field
+const AGENT_PROFILE_FIELD_LIST = Object.freeze(['agentIri', 'agentKind', 'displayName', 'aliasIri']);
+const agentRecordAnswerFor = ({ kind, iri, uriContractReader }, done) =>
+	uriContractReader.agentRecordFor(iri, (readError, agentRecord) => {
+		if (readError || agentRecord === null) {
+			done(answer(404, { kind, error: readError || `agent ${iri} is not in uriContract` }));
+			return;
+		}
+		const profile = agentRecord.profile === null || typeof agentRecord.profile !== 'object' ? {} : agentRecord.profile;
+		done(answer(200, { ...AGENT_PROFILE_FIELD_LIST.reduce((soFar, oneFieldName) => (profile[oneFieldName] === undefined ? soFar : { ...soFar, [oneFieldName]: profile[oneFieldName] }), { kind }), layersAuthored: agentRecord.layersAuthored, scores: agentRecord.scores }));
+	});
+// an agent kind answers from uriContract when the stub has a reader; without one, from the registry row as in ML1 (lane B repoints it)
+const agentResolutionFor = (kind) => ({ iri, registry, uriContractReader }, done) => (uriContractReader === undefined ? done(agentAnswerFor({ iri, registry })) : agentRecordAnswerFor({ kind, iri, uriContractReader }, done));
 const NO_READER_ERROR = (kind) => `the stub was started without a uriContract reader, so kind '${kind}' (served from uriContract.sqlite) cannot be answered`;
 
 // ⟪ML3.1, ruling (b)⟫ questionAnswerFor — read the manifest's relationship schema blocks, keep the edges whose from-node is the element
@@ -236,7 +253,7 @@ const questionAnswerFor = ({ kind, partByName, iri, uriContractReader }, done) =
 		const rowList = [];
 		const readNext = (memberIndex) => {
 			if (memberIndex >= orderedMemberList.length) {
-				done(answer(200, { kind, question: iri, manifestRefId: manifest.manifestRefId, publicLabel: manifest.publicLabel, element: edcUri.mint({ kind: 'element', standardName, standardVersion, elementStableId }).uri, hubSegment: hubSegment === undefined ? null : hubSegment, answer: rowList.length === 0 ? 'sssom:NoTermFound' : 'rowList', answerNote: rowList.length === 0 ? `no relationship schema block of this manifest maps this element${hubSegment === undefined ? '' : ` to the ${hubSegment} hub`}` : `${rowList.length} row(s) from this manifest's own relationship schema blocks`, rowList }));
+				done(answer(200, { kind, question: iri, manifestRefId: manifest.manifestRefId, publicLabel: manifest.publicLabel, manifestPublishedAt: manifest.publishedAt, manifestLatestStatus: manifest.latestStatus, element: edcUri.mint({ kind: 'element', standardName, standardVersion, elementStableId }).uri, hubSegment: hubSegment === undefined ? null : hubSegment, answer: rowList.length === 0 ? 'sssom:NoTermFound' : 'rowList', answerNote: rowList.length === 0 ? `no relationship schema block of this manifest maps this element${hubSegment === undefined ? '' : ` to the ${hubSegment} hub`}` : `${rowList.length} row(s) from this manifest's own relationship schema blocks`, rowList }));
 				return;
 			}
 			uriContractReader.schemaBlockFor(orderedMemberList[memberIndex].schemaBlockRefId, (blockError, schemaBlock) => {
@@ -305,9 +322,9 @@ const RESOLUTION_BY_KIND = Object.freeze({
 			done(found.error ? answer(404, { error: found.error }) : answer(200, { kind: 'assertion', assertionId: iri, decisionBlockHash: partByName.decisionBlockHash, assertion: found.record }));
 		});
 	},
-	agentPerson: ({ iri, registry }, done) => done(agentAnswerFor({ iri, registry })),
-	agentJudge: ({ iri, registry }, done) => done(agentAnswerFor({ iri, registry })),
-	agentOrganisation: ({ iri, registry }, done) => done(agentAnswerFor({ iri, registry })),
+	agentPerson: agentResolutionFor('agentPerson'),
+	agentJudge: agentResolutionFor('agentJudge'),
+	agentOrganisation: agentResolutionFor('agentOrganisation'),
 	interpretationPinned: ({ partByName, registry, blockTextForHash }, done) => {
 		const found = registry.versionFor({ layerKey: partByName.layerKey, versionTag: partByName.versionTag });
 		if (found.error) {
@@ -381,4 +398,4 @@ const resolveEdcUri = ({ uriOrPath, registry, blockTextForHash, uriContractReade
 	resolution({ partByName: parsed.partByName, iri: edcUri.mint({ kind: parsed.kind, ...parsed.partByName }).uri, registry, blockTextForHash, uriContractReader }, (resolved) => callback('', resolved));
 };
 
-module.exports = { resolveEdcUri, edcIriFor, RESOLUTION_BY_KIND, LICENCE_HOLD_BY_STANDARD_KEY, W3ID_PATH_PREFIX, moduleName };
+module.exports = { resolveEdcUri, edcIriFor, RESOLUTION_BY_KIND, LICENCE_HOLD_BY_STANDARD_KEY, AGENT_PROFILE_FIELD_LIST, W3ID_PATH_PREFIX, moduleName };
