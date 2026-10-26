@@ -170,7 +170,7 @@ const memberList = [
 	{ position: 2, schemaBlock: { ...schemaBlockFor(relationshipText, [sha256Hex(baseText)]), kind: 'relationship', subject: 'toyhub@1_0_rel_toy@1_exact' } },
 ];
 const manifestRefId = contentAddress.manifestKeyForMembership(memberList.map((oneMember) => ({ blockId: oneMember.schemaBlock.refId, position: oneMember.position })));
-const publishArgs = { manifestRefId, publicLabel: 'educore-2026-10', memberList, frozenVectorList: [toyVector], defaultLayerByHub: null, recordedNodeCount: 3, recordedEdgeCount: 2, publishedAt: '2026-10-26T00:00:00Z', publishedByAgentIri: ORGANISATION_IRI, registrationStatus: 'Candidate', registrationAuthority: ORGANISATION_IRI };
+const publishArgs = { manifestRefId, publicLabel: 'educore-2026-10', memberList, frozenVectorList: [toyVector], decisionSchemaBlockList: [], defaultLayerByHub: null, recordedNodeCount: 3, recordedEdgeCount: 2, publishedAt: '2026-10-26T00:00:00Z', publishedByAgentIri: ORGANISATION_IRI, registrationStatus: 'Candidate', registrationAuthority: ORGANISATION_IRI };
 // =====================================================================
 harness.section('NO UPDATE OR DELETE PATH: the module source (static) and the file (the write-once triggers)');
 // =====================================================================
@@ -329,6 +329,12 @@ harness.match('a manifest offered without a vector its member references is refu
 harness.match('a vector no member references is refused (ONLY what recreates)', manifestWorld.uriContract.publishManifest({ ...publishArgs, frozenVectorList: [toyVector, { ...toyVector, vectorId: 'e'.repeat(64) }] }).error, /which no member references/);
 harness.match('a vector whose bytes do not hash to its vectorHash is refused before it is written', manifestWorld.uriContract.publishManifest({ ...publishArgs, frozenVectorList: [{ ...toyVector, vectorHash: 'd'.repeat(64) }] }).error, /payload: the vector bytes hash to/);
 harness.match('a vector whose determinants do not hash to its vectorId is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, frozenVectorList: [{ ...toyVector, inputText: 'another text' }] }).error, /determinants: .* hash to/);
+const bareWorld = createContract();
+bareWorld.uriContract.appendAgent(agentRegistry.agentList[0]);
+harness.match('an edge citing a decision schema block that is neither held nor offered is refused (assertion URIs must resolve)', bareWorld.uriContract.publishManifest({ ...publishArgs, decisionSchemaBlockList: [] }).error, /cites decision schema block .* which is neither held nor offered/);
+sameValue('…and offering it publishes', bareWorld.uriContract.publishManifest({ ...publishArgs, decisionSchemaBlockList: [{ pairKey: judgedMemberBlockList[0].pairKey, producerKind: 'inferred', frozenText: judgedMemberTextList[0] }] }).alreadyPresent, false);
+bareWorld.uriContract.close();
+harness.match('a decision schema block no member edge cites is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, decisionSchemaBlockList: [{ pairKey: 'x::y::z::authored', producerKind: 'authored', frozenText: 'an uncited block' }] }).error, /which no member edge cites/);
 const firstPublish = manifestWorld.uriContract.publishManifest(publishArgs);
 harness.ok('the manifest publishes', firstPublish.error === undefined && firstPublish.alreadyPresent === false, firstPublish.error);
 harness.equal('re-publishing the same manifest under the same label is alreadyPresent', manifestWorld.uriContract.publishManifest(publishArgs).alreadyPresent, true);

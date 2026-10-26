@@ -231,6 +231,7 @@ const publishManifestAction = ({ resolveStoreFamilyPath }) => (callback) => {
 		publicLabel: firstValue(commandLineParameters, 'publicLabel'),
 		memberList: gathered.memberList,
 		frozenVectorList: gathered.frozenVectorList,
+		decisionSchemaBlockList: gathered.decisionSchemaBlockList,
 		defaultLayerByHub: defaulted.defaultLayerByHub,
 		basedOnManifestRefId: gathered.basedOnManifestRefId,
 		recordedNodeCount: counted.nodeCount,
@@ -246,7 +247,7 @@ const publishManifestAction = ({ resolveStoreFamilyPath }) => (callback) => {
 		callback(`graphBuilder ${actionName}: ${published.error}`);
 		return;
 	}
-	const report = { manifestRefId, publicLabel: firstValue(commandLineParameters, 'publicLabel'), alreadyPresent: published.alreadyPresent, uri: published.uri, uriByContent: published.uriByContent, memberCount: gathered.memberList.length, frozenVectorCount: gathered.frozenVectorList.length, recordedNodeCount: counted.nodeCount, recordedEdgeCount: counted.edgeCount, danglingEdgeCount: counted.danglingEdgeCount, answerKeyCount: conflicts.answerKeyCount, answerConflictCount: conflicts.answerConflictList.length, defaultLayerByHub: defaulted.defaultLayerByHub, uriContractFilePath: resolved.filePath };
+	const report = { manifestRefId, publicLabel: firstValue(commandLineParameters, 'publicLabel'), alreadyPresent: published.alreadyPresent, uri: published.uri, uriByContent: published.uriByContent, memberCount: gathered.memberList.length, frozenVectorCount: gathered.frozenVectorList.length, citedDecisionSchemaBlockCount: gathered.decisionSchemaBlockList.length, recordedNodeCount: counted.nodeCount, recordedEdgeCount: counted.edgeCount, danglingEdgeCount: counted.danglingEdgeCount, answerKeyCount: conflicts.answerKeyCount, answerConflictCount: conflicts.answerConflictList.length, defaultLayerByHub: defaulted.defaultLayerByHub, uriContractFilePath: resolved.filePath };
 	xLog.status(`graphBuilder: [publishManifest] ${published.alreadyPresent ? 'alreadyPresent' : 'published'} ${report.publicLabel} (${manifestRefId}): ${report.memberCount} blocks, ${report.frozenVectorCount} vectors, recorded ${report.recordedNodeCount} nodes / ${report.recordedEdgeCount} edges`);
 	callback('', { exitCode: 0, resultText: JSON.stringify(report, null, 2) });
 };

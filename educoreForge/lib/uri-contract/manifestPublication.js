@@ -6,7 +6,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // their schema blocks, the frozen vectors they reference, the counts a replay of them yields, and whether a question URI needs a
 // declared default (AMBER_JOURNEY ruling (b), 2026-10-26).
 //
-//   manifestForPublish({ supportStore, manifestRefId }) → { memberList, frozenVectorList, basedOnManifestRefId } | { error }
+//   manifestForPublish({ supportStore, manifestRefId }) → { memberList, frozenVectorList, decisionSchemaBlockList, basedOnManifestRefId } | { error }
 //       supportStore  a READ-ONLY better-sqlite3 handle on a support store (blocks, manifests, manifestBlocks, vectors)
 //   answerConflictListFor({ memberList }) → { answerKeyCount, answerConflictList: [{ subjectStableId, hubSegment, answerSourceList }] } | { error }
 //   defaultLayerByHubFor({ answerConflictList, declaredDefaultLayerByHub }) → { defaultLayerByHub } | { error }
@@ -25,7 +25,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
-const { embeddingRefListOf } = require(path.join(__dirname, 'uriContract'));
+const { embeddingRefListOf, decisionBlockHashListOf } = require(path.join(__dirname, 'uriContract'));
 const derivedIndexesLib = require(path.join(__dirname, 'derivedIndexes'));
 
 const refusalText = (what, where) => refuse.byName({ moduleName, what, where }).message;
@@ -59,7 +59,18 @@ const manifestForPublish = ({ supportStore, manifestRefId } = {}) => {
 		}
 		frozenVectorList.push({ ...vectorRow, dims: Number(vectorRow.dims) });
 	}
-	return { memberList, frozenVectorList, basedOnManifestRefId: manifestRow.basedOnManifestRefId === null ? undefined : manifestRow.basedOnManifestRefId };
+	// every decision block the members' edges cite, with the pairKey and producer kind the support store holds it under
+	const decisionStatement = supportStore.prepare('SELECT pairKey, CAST(frozenText AS TEXT) AS frozenText FROM decisionBlocks WHERE decisionBlockHash = ? ORDER BY seq LIMIT 1');
+	const citedHashList = [...new Set(memberList.reduce((soFar, { schemaBlock }) => soFar.concat(decisionBlockHashListOf(schemaBlock.text)), []))];
+	const decisionSchemaBlockList = [];
+	for (let hashIndex = 0; hashIndex < citedHashList.length; hashIndex++) {
+		const decisionRow = decisionStatement.get(citedHashList[hashIndex]);
+		if (decisionRow === undefined) {
+			return { error: refusalText(`manifest ${manifestRefId} cites decision block ${citedHashList[hashIndex]}, which the support store does not hold`, 'every decision block a published edge cites is copied into uriContract') };
+		}
+		decisionSchemaBlockList.push({ pairKey: decisionRow.pairKey, producerKind: decisionRow.pairKey.split('::').slice(-1)[0], frozenText: decisionRow.frozenText });
+	}
+	return { memberList, frozenVectorList, decisionSchemaBlockList, basedOnManifestRefId: manifestRow.basedOnManifestRefId === null ? undefined : manifestRow.basedOnManifestRefId };
 };
 
 // answerConflictListFor — grouped from the same answer-edge rows the derived index holds (derivedIndexes.js), so the publish-time

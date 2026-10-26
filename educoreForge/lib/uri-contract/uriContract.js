@@ -27,8 +27,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     appendAgent(agent)                                         → { alreadyPresent } | { error }
 //     appendLayerVersion({ layer, version, decisionSchemaBlockList }) → { alreadyPresent } | { error }
 //     appendLayerStatusChange({ layerKey, statusChange })         → { rowId } | { error }
-//     publishManifest({ ... , frozenVectorList })                 → { alreadyPresent } | { error }   with exactly the frozen
-//                                                                    vectors its members reference by embeddingRef
+//     publishManifest({ ... , frozenVectorList, decisionSchemaBlockList }) → { alreadyPresent } | { error }   with exactly the
+//                                                                    frozen vectors its members reference by embeddingRef, and the
+//                                                                    decision schema blocks their edges cite that uriContract lacks
 //
 // THE RULES THIS MODULE KEEPS, each a refusal by name:
 //   * NO UPDATE, NO DELETE. The module issues neither; the schema adds BEFORE UPDATE / BEFORE DELETE triggers on all nine tables, so
@@ -247,6 +248,16 @@ const embeddingRefListOf = (blockText) =>
 		.filter((oneLine) => oneLine.indexOf('"kind":"node"') !== -1 && oneLine.indexOf('"embeddingRef"') !== -1)
 		.map((oneLine) => JSON.parse(oneLine).embeddingRef)
 		.filter((embeddingRef) => typeof embeddingRef === 'string' && embeddingRef.length > 0);
+
+// decisionBlockHashListOf(blockText) → every decisionBlockHash a schema block's edge lines carry (each edge line parsed): the decision
+// schema blocks a published manifest's assertion URIs resolve through
+const decisionBlockHashListOf = (blockText) =>
+	blockText
+		.split('\n')
+		.filter((oneLine) => oneLine.indexOf('"kind":"edge"') !== -1 && oneLine.indexOf('"decisionBlockHash"') !== -1)
+		.map((oneLine) => JSON.parse(oneLine).properties.decisionBlockHash)
+		.filter((hashValue) => Array.isArray(hashValue) && typeof hashValue[0] === 'string')
+		.map((hashValue) => hashValue[0]);
 
 // identityRowsEqual(left, right) → the two rows say the same thing, column for column
 const identityRowsEqual = (leftRow, rightRow) => Object.keys(rightRow).every((columnName) => (Buffer.isBuffer(rightRow[columnName]) ? Buffer.isBuffer(leftRow[columnName]) && leftRow[columnName].equals(rightRow[columnName]) : leftRow[columnName] === rightRow[columnName]));
@@ -669,7 +680,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 	// publishManifest — the identity row, its members in order, every member schema block (the closure: a member's requires
 	// must be members too), and the first status row, in ONE transaction. Re-publishing the same manifest under the same label
 	// answers alreadyPresent and writes nothing; a second label for one manifest, or one label for two, is refused.
-	const publishManifest = ({ manifestRefId, publicLabel, memberList, frozenVectorList, defaultLayerByHub, basedOnManifestRefId, recordedNodeCount, recordedEdgeCount, publishedAt, publishedByAgentIri, registrationStatus, registrationAuthority, note } = {}) => {
+	const publishManifest = ({ manifestRefId, publicLabel, memberList, frozenVectorList, decisionSchemaBlockList, defaultLayerByHub, basedOnManifestRefId, recordedNodeCount, recordedEdgeCount, publishedAt, publishedByAgentIri, registrationStatus, registrationAuthority, note } = {}) => {
 		if (!isNonEmptyString(publicLabel) || !new RegExp(URI_CONTRACT_RULES.publicLabelPattern).test(publicLabel) || URI_CONTRACT_RULES.reservedPublicLabelList.indexOf(publicLabel) !== -1) {
 			return { error: refusalText(`publicLabel ${JSON.stringify(publicLabel)} must match ${URI_CONTRACT_RULES.publicLabelPattern} and is never a reserved word (${URI_CONTRACT_RULES.reservedPublicLabelList.join(', ')})`, 'uriContractRules.json; the label is TQ\'s to choose') };
 		}
@@ -719,6 +730,18 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		if (badVector !== undefined) {
 			return { error: refusalText(`frozen vector ${badVector.vectorId}: ${badVector.fault}`, 'a vector is verified before it is written, as on every read') };
 		}
+		// the decision schema blocks the members' edges cite (an assertion URI on a published edge resolves through its block): each
+		// either already held (a published layer version's) or offered here; nothing offered that no edge cites
+		if (!Array.isArray(decisionSchemaBlockList)) {
+			return { error: refusalText('decisionSchemaBlockList is required (an empty list is stated, never assumed)', 'publishManifest copies every decision schema block its members\' edges cite') };
+		}
+		const citedHashSet = new Set(memberList.reduce((soFar, { schemaBlock }) => soFar.concat(decisionBlockHashListOf(schemaBlock.text)), []));
+		const offeredBlockHashSet = new Set(decisionSchemaBlockList.map((oneBlock) => (isNonEmptyString(oneBlock.frozenText) ? sha256Hex(oneBlock.frozenText) : '')));
+		const uncitedHash = [...offeredBlockHashSet].find((oneHash) => !citedHashSet.has(oneHash));
+		const unheldCitedHash = [...citedHashSet].find((oneHash) => !offeredBlockHashSet.has(oneHash) && decisionSchemaBlockTextFor(oneHash).frozenText === null);
+		if (uncitedHash !== undefined || unheldCitedHash !== undefined) {
+			return { error: refusalText(unheldCitedHash !== undefined ? `a member edge cites decision schema block ${unheldCitedHash}, which is neither held nor offered` : `decisionSchemaBlockList offers ${uncitedHash}, which no member edge cites`, 'uriContract holds all and ONLY the decision schema blocks its published URIs resolve through') };
+		}
 		const uriMint = edcUri.mint({ kind: 'manifest', publicLabel });
 		const uriByContentMint = edcUri.mint({ kind: 'manifestByContent', manifestRefId });
 		if (uriMint.error || uriByContentMint.error) {
@@ -736,6 +759,10 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 				.find((oneOutcome) => oneOutcome.error);
 			if (blockOutcome !== undefined) {
 				return blockOutcome;
+			}
+			const decisionOutcome = decisionSchemaBlockList.map(appendDecisionSchemaBlockRow).find((oneOutcome) => oneOutcome.error);
+			if (decisionOutcome !== undefined) {
+				return decisionOutcome;
 			}
 			const derivedOutcome = memberList.map(({ schemaBlock }) => writeDerivedRowsForSchemaBlock(schemaBlock)).find((oneOutcome) => oneOutcome.error);
 			if (derivedOutcome !== undefined) {
@@ -855,4 +882,4 @@ const uriContractReaderFor = ({ uriContractFilePath } = {}) => {
 	return { uriContractReader, uriContract };
 };
 
-module.exports = { openUriContractFile, uriContractFor, uriContractReaderFor, schemaSqlList, embeddingRefListOf, URI_CONTRACT_SCHEMA, URI_CONTRACT_RULES, moduleName };
+module.exports = { openUriContractFile, uriContractFor, uriContractReaderFor, schemaSqlList, embeddingRefListOf, decisionBlockHashListOf, URI_CONTRACT_SCHEMA, URI_CONTRACT_RULES, moduleName };
