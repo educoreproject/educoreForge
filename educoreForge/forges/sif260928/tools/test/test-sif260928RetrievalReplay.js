@@ -65,9 +65,9 @@ const DECLARED_RETRIEVAL = shippedDeclaration().candidateRetrieval;
 const MODEL_QUESTION = 'sif260928:question/toyModelLocalId';
 const METADATA_QUESTION = 'sif260928:question/toyMetadataTimeElementType';
 const FIELD_LIST = Object.freeze([
-	{ stableId: 'sif260928:field//StudentPersonals/StudentPersonal/LocalId', objectName: 'StudentPersonal', questionStableId: MODEL_QUESTION, sharedBlock: 'model' },
-	{ stableId: 'sif260928:field//StaffPersonals/StaffPersonal/LocalId', objectName: 'StaffPersonal', questionStableId: MODEL_QUESTION, sharedBlock: 'model' },
-	{ stableId: 'sif260928:field//StudentPersonals/StudentPersonal/SIF_Metadata/TimeElements/TimeElement/Type', objectName: 'StudentPersonal', questionStableId: METADATA_QUESTION, sharedBlock: 'SIF_Metadata' },
+	{ stableId: 'sif260928:field/StudentPersonals/StudentPersonal/LocalId', objectName: 'StudentPersonal', questionStableId: MODEL_QUESTION, sharedBlock: 'model' },
+	{ stableId: 'sif260928:field/StaffPersonals/StaffPersonal/LocalId', objectName: 'StaffPersonal', questionStableId: MODEL_QUESTION, sharedBlock: 'model' },
+	{ stableId: 'sif260928:field/StudentPersonals/StudentPersonal/SIF_Metadata/TimeElements/TimeElement/Type', objectName: 'StudentPersonal', questionStableId: METADATA_QUESTION, sharedBlock: 'SIF_Metadata' },
 ]);
 const CONTEXT_ONLY_CARD = 'toyhub:card/P000008.C3';
 const CARD_VECTOR_BY_CARD_STABLE_ID = Object.freeze({
