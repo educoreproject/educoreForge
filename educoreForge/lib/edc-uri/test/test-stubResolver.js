@@ -115,7 +115,7 @@ const caseList = [
 	{ label: 'ML3.1 (Q3): a person answers a profile plus a computed record, and ONLY the declared fields (no e-mail, no username)', uriOrPath: '/EDUcore/agent/raterPseudonym7', withReader: true, judge: (resolved) => resolved.httpStatus === 200 && resolved.body.kind === 'agentPerson' && resolved.body.displayName === 'rater 7' && resolved.body.layersAuthored.length === 1 && resolved.body.scores.agreementWithRaters === 0.8 && resolved.body.emailAddress === undefined && resolved.body.userName === undefined },
 	{ label: 'ML3.1 (Q3): an agent uriContract lacks is 404 by name', uriOrPath: '/EDUcore/agent/judge/nobody', withReader: true, judge: (resolved) => resolved.httpStatus === 404 && /not in uriContract/.test(resolved.body.error) },
 	{ label: 'a manifest is 501 by name (ML5)', uriOrPath: '/EDUcore/manifest/toyLabel', judge: (resolved) => resolved.httpStatus === 501 && /does not resolve kind 'manifest'/.test(resolved.body.error) },
-	{ label: 'a path naming no kind is 400', uriOrPath: '/EDUcore/a/b/c/d/e/f/g', judge: (resolved) => resolved.httpStatus === 400 && /matches no kind/.test(resolved.body.error) },
+	{ label: 'a path naming no kind is 400', uriOrPath: '/EDUcore/a/b', judge: (resolved) => resolved.httpStatus === 400 && /matches no kind/.test(resolved.body.error) },
 	{ label: 'every answer says it came from the local stub', uriOrPath: '/EDUcore/layer/toyJudge', judge: (resolved) => /LOCAL STUB/.test(resolved.body.stubNote) },
 ];
 

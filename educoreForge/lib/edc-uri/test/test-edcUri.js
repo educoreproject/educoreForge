@@ -75,6 +75,15 @@ const PART_BY_NAME_BY_KIND = {
 	agentOrganisation: { organisationSlug: 'educore' },
 	siteLayerRegistry: {}, // ⟪ML3-b⟫ the site registry: a template of literals only
 	vocabularyTerm: { termName: 'bestMatch' }, // ⟪ML3-a⟫ the r1 rater sets' own predicate, spelled as already registered
+	// ⟪ML3.1, Q5⟫ the discovery forms
+	root: {},
+	scheme: {},
+	manifestList: {},
+	manifestStandardList: { publicLabel: 'zeroBacklog-261023' },
+	manifestStandardListByContent: { manifestRefId },
+	manifestElementList: { publicLabel: 'zeroBacklog-261023', standardName: sifAtEdge.subjectSource, standardVersion: sifAtEdge.subjectVersion },
+	manifestElementListByContent: { manifestRefId, standardName: sifAtEdge.subjectSource, standardVersion: sifAtEdge.subjectVersion },
+	agentList: {},
 };
 
 // =====================================================================
@@ -153,7 +162,9 @@ harness.match('a schema block id that is not 64 lowercase hex is refused', mint(
 harness.match("an element path with an empty piece is refused ('a//b')", mint({ kind: 'element', standardName: 'EdFi', standardVersion: '5.2.0', elementStableId: 'edfi:a//b' }).error, /is forbidden/);
 harness.match("an element path with a '..' piece is refused", mint({ kind: 'element', standardName: 'EdFi', standardVersion: '5.2.0', elementStableId: 'edfi:a/../b' }).error, /is forbidden/);
 harness.match('an element path with a trailing slash is refused', mint({ kind: 'element', standardName: 'EdFi', standardVersion: '5.2.0', elementStableId: 'edfi:a/' }).error, /is forbidden/);
-harness.match('an element path without a CURIE prefix is refused (BR2)', mint({ kind: 'element', standardName: 'EdFi', standardVersion: '5.2.0', elementStableId: 'property/x' }).error, /does not begin with a CURIE prefix/);
+// R-1 (a): BR2 is NOT edcUri's to check (subjectCurie.js and the exporter refuse it by name); disjointness rests on the reserved words
+harness.equal('R-1 (a): a prefixless element path mints and parses back (BR2 is enforced in subjectCurie and the exporter, not here)', parse(mint({ kind: 'element', standardName: 'EdFi', standardVersion: '5.2.0', elementStableId: 'property/x' }).uri).partByName.elementStableId, 'property/x');
+harness.match("R-1 (a): …but an element whose version is the reserved word 'hub' is refused, so a meaning can never read as an element", mint({ kind: 'element', standardName: 'CEDStandards', standardVersion: 'hub', elementStableId: '14.0.0.0/abc' }).error, /reserved word 'hub'/);
 harness.match("the retired edc-uri-1 spelling ('%2F' inside the path) is refused: one spelling per element", parse('https://w3id.org/EDUcore/EdFi/5.2.0/edfi:property%2FabstractEntity.EducationOrganization.Address').error, /matches no kind/);
 harness.match("decodeElementPath names the escaped '/'", edcUri.decodeElementPath('edfi:property%2FX').error, /carries an escaped '\/'/);
 harness.match("a parsed '.' piece is refused, never normalised away", parse('edc:EdFi/5.2.0/edfi:a/./b').error, /matches no kind/);
@@ -163,13 +174,20 @@ harness.match("a parsed '.' piece is refused, never normalised away", parse('edc
 });
 const pinnedWithSlash = { standardName: 'SIF260928', standardVersion: '4.3', elementStableId: 'sif260928:field/A/B/@RefId', layerKey: 'jev', versionTag: 'cfg-cf8d41f82791.wave3-261025' };
 harness.equal("a pinned interpretation of a slash path parses back (the first '@' ends the path)", JSON.stringify(parse(mint({ kind: 'interpretationPinned', ...pinnedWithSlash }).uri)), JSON.stringify({ kind: 'interpretationPinned', partByName: pinnedWithSlash }));
-harness.equal('the reserved words are exactly the scheme\'s whole-segment literals', RESERVED_WORD_LIST.join(','), 'agent,assertion,decisionSchemaBlock,hub,judge,layer,layers,manifest,org,q,registry,schemaBlock,sha256');
+harness.equal('the reserved words are exactly the scheme\'s whole-segment literals (Q5 adds agents, elements, manifests, scheme, standards)', RESERVED_WORD_LIST.join(','), 'agent,agents,assertion,decisionSchemaBlock,elements,hub,judge,layer,layers,manifest,manifests,org,q,registry,schemaBlock,scheme,sha256,standards');
+harness.equal('Q5: the base IRI itself is the root kind', JSON.stringify(parse('https://w3id.org/EDUcore/')), JSON.stringify({ kind: 'root', partByName: {} }));
+harness.equal("Q5: 'edc:' alone is the root too", parse('edc:').kind, 'root');
+harness.match("Q5: a standard named 'elements' is refused (a listing literal)", mint({ kind: 'manifestElementList', publicLabel: 'educore-2026-10', standardName: 'elements', standardVersion: '1.0' }).error, /reserved word 'elements'/);
+harness.equal("Q5: a standards listing and a question differ at the reserved literal ('standards' vs 'q')", [parse('edc:manifest/educore-2026-10/standards').kind, parse('edc:manifest/educore-2026-10/q/SIF260928/4.3/sif260928:field/A').kind].join(','), 'manifestStandardList,question');
+harness.ok('Q5: the paging rule is data in the scheme (fixed page size, query parameter, listing kinds that exist)', URI_SCHEME.listingPaging.queryParameterName === 'page' && Number.isInteger(URI_SCHEME.listingPaging.pageSize) && URI_SCHEME.listingPaging.listingKindList.every((oneKind) => KIND_LIST.indexOf(oneKind) !== -1));
 // THE LOAD-TIME SELF-CHECK and its twins: the shipped scheme passes; a planted bad one is refused by name
 const plantedScheme = (kindRowEdit) => ({ ...URI_SCHEME, kindList: URI_SCHEME.kindList.map((oneRow) => (oneRow.kind === kindRowEdit.kind ? { ...oneRow, ...kindRowEdit } : oneRow)) });
 harness.equal('the shipped uriScheme.json passes its own load check', schemeLoadRefusalFor(URI_SCHEME), '');
 harness.match('TWIN: a template with a segment after {elementStableId} is refused at load', schemeLoadRefusalFor(plantedScheme({ kind: 'question', template: 'manifest/{publicLabel}/q/{standardName}/{standardVersion}/{elementStableId}/{hubSegment}', verbatimPartList: ['hubSegment'] })), /an element path ends a URI/);
 harness.match('TWIN: a path part declared verbatim is refused at load', schemeLoadRefusalFor(plantedScheme({ kind: 'element', verbatimPartList: ['elementStableId'] })), /path-valued part 'elementStableId' as verbatim/);
 harness.match('TWIN: a closed value equal to a reserved word is refused at load', schemeLoadRefusalFor(plantedScheme({ kind: 'vocabularyTerm', closedValueListByPartName: { termName: ['bestMatch', 'hub'] } })), /reserved word 'hub'/);
+harness.match('TWIN (Q5): a paging rule naming a kind the scheme lacks is refused at load', schemeLoadRefusalFor({ ...URI_SCHEME, listingPaging: { ...URI_SCHEME.listingPaging, listingKindList: ['manifestList', 'ghostList'] } }), /names 'ghostList'/);
+harness.match('TWIN (Q5): a page size of 0 is refused at load', schemeLoadRefusalFor({ ...URI_SCHEME, listingPaging: { ...URI_SCHEME.listingPaging, pageSize: 0 } }), /listingPaging is absent or malformed/);
 harness.match('TWIN: a hash pattern for a part no template carries is refused at load', schemeLoadRefusalFor({ ...URI_SCHEME, partPatternByPartName: { ...URI_SCHEME.partPatternByPartName, ghostRefId: '^x$' } }), /names 'ghostRefId'/);
 
 // =====================================================================

@@ -19,8 +19,10 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // value '/' and '@' are always encoded; inside the path-valued part (Q42) only '/' is literal, so '@' still ends the path.
 // THE DISJOINTNESS RULE (ML3.1): the path-valued part ENDS its template, and every whole-segment literal of the scheme is a
 // RESERVED WORD no other placeholder may take ('layer', 'hub', 'q', 'sha256', …). Wherever two templates differ, one has a literal
-// where the other has a placeholder that cannot equal it, so a URI is read without a lookup. A path's first piece must carry a
-// CURIE prefix (BR2), which also keeps the CEDS forge's own CEDStandards/layer/... IRIs from reading as elements.
+// where the other has a placeholder that cannot equal it, so a URI is read without a lookup (the reserved word 'layer' also keeps
+// the CEDS forge's own CEDStandards/layer/... IRIs from reading as elements). BR2 (a stableId begins with its CURIE prefix) is NOT
+// checked here: ruled R-1 (a), AMBER_JOURNEY 2026-10-26, measured redundant for disjointness, and enforcing it here shadowed the
+// exporter's own named refusal; subjectCurie.js and sssomExporter.js enforce it.
 
 const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
@@ -95,15 +97,12 @@ const schemeLoadRefusalFor = (scheme) => {
 	if (!Array.isArray(scheme.kindList) || scheme.kindList.length === 0) {
 		return 'kindList is absent or empty';
 	}
-	// ⟪ML3.1⟫ the path-valued part, what may follow it, the first-piece prefix and the hash-shaped parts are all declared, never assumed
+	// ⟪ML3.1⟫ the path-valued part, what may follow it and the hash-shaped parts are all declared, never assumed
 	if (typeof pathValuedPartName !== 'string' || pathValuedPartName.length === 0) {
 		return 'pathValuedPartName is absent (the part that keeps its \'/\' is stated, never assumed)';
 	}
 	if (!Array.isArray(scheme.elementPathSuffixTemplateList) || scheme.elementPathSuffixTemplateList.length === 0) {
 		return 'elementPathSuffixTemplateList is absent or empty';
-	}
-	if (typeof scheme.elementPathFirstPiecePattern !== 'string' || scheme.elementPathFirstPiecePattern.indexOf('^') !== 0) {
-		return `elementPathFirstPiecePattern ${JSON.stringify(scheme.elementPathFirstPiecePattern)} is not an anchored pattern`;
 	}
 	const partPatternByPartName = scheme.partPatternByPartName;
 	if (partPatternByPartName === null || typeof partPatternByPartName !== 'object') {
@@ -112,6 +111,15 @@ const schemeLoadRefusalFor = (scheme) => {
 	const strayPatternPart = Object.keys(partPatternByPartName).filter((onePartName) => onePartName !== 'about').find((onePartName) => !scheme.kindList.some((oneKindRow) => oneKindRow.template.indexOf(`{${onePartName}}`) !== -1) || typeof partPatternByPartName[onePartName] !== 'string' || partPatternByPartName[onePartName].indexOf('^') !== 0);
 	if (strayPatternPart !== undefined) {
 		return `partPatternByPartName names '${strayPatternPart}', which no template carries or whose pattern is not anchored`;
+	}
+	// ⟪ML3.1, Q5⟫ paging is declared: a fixed positive page size, the query parameter, and listing kinds the scheme carries
+	const listingPaging = scheme.listingPaging;
+	if (listingPaging === null || typeof listingPaging !== 'object' || !Number.isInteger(listingPaging.pageSize) || listingPaging.pageSize < 1 || !Number.isInteger(listingPaging.firstPageNumber) || typeof listingPaging.queryParameterName !== 'string' || !/^[a-z][A-Za-z]*$/.test(listingPaging.queryParameterName) || !Array.isArray(listingPaging.listingKindList)) {
+		return 'listingPaging is absent or malformed (pageSize and firstPageNumber integers, queryParameterName, listingKindList)';
+	}
+	const strayListingKind = listingPaging.listingKindList.find((oneKind) => !scheme.kindList.some((oneKindRow) => oneKindRow.kind === oneKind));
+	if (strayListingKind !== undefined) {
+		return `listingPaging.listingKindList names '${strayListingKind}', which is not a kind`;
 	}
 	const reservedWordList = reservedWordListFor(scheme.kindList);
 	const seenKindSet = new Set();
@@ -165,7 +173,6 @@ if (loadRefusalText) {
 const KIND_ROW_BY_KIND = Object.freeze(URI_SCHEME.kindList.reduce((soFar, oneKindRow) => ({ ...soFar, [oneKindRow.kind]: compileKindRow(oneKindRow) }), {}));
 const KIND_LIST = Object.freeze(Object.keys(KIND_ROW_BY_KIND));
 const RESERVED_WORD_LIST = Object.freeze(reservedWordListFor(URI_SCHEME.kindList));
-const ELEMENT_PATH_FIRST_PIECE_PATTERN = new RegExp(URI_SCHEME.elementPathFirstPiecePattern);
 const PART_PATTERN_BY_PART_NAME = Object.freeze(
 	Object.keys(URI_SCHEME.partPatternByPartName)
 		.filter((onePartName) => onePartName !== 'about')
@@ -260,7 +267,7 @@ const decodeElementPath = (pathText) => {
 // partValueRefusal(kindRow, partName, partText) → '' | reason: what a DECODED part value may not be, checked at mint and at parse alike
 const partValueRefusal = (kindRow, partName, partText) => {
 	if (partName === PATH_VALUED_PART_NAME) {
-		return ELEMENT_PATH_FIRST_PIECE_PATTERN.test(partText.split('/')[0]) ? '' : `kind '${kindRow.kind}' part '${partName}' ${JSON.stringify(partText)} does not begin with a CURIE prefix (uriScheme.json elementPathFirstPiecePattern ${URI_SCHEME.elementPathFirstPiecePattern}; RULING BR2)`;
+		return '';
 	}
 	if (RESERVED_WORD_LIST.indexOf(partText) !== -1) {
 		return `kind '${kindRow.kind}' part '${partName}' may not be the reserved word '${partText}' (reserved: ${RESERVED_WORD_LIST.join(', ')})`;
@@ -349,7 +356,7 @@ const mint = ({ kind, ...partByName } = {}) => {
 	}
 	const valueReason = kindRow.partNameList.map((onePartName) => partValueRefusal(kindRow, onePartName, kindRow.verbatimPartList.indexOf(onePartName) !== -1 ? partByName[onePartName] : partByName[onePartName].normalize('NFC'))).find((oneReason) => oneReason !== '');
 	if (valueReason !== undefined) {
-		return { error: refuse.byName({ moduleName, what: valueReason, where: 'uriScheme.json (reserved words, elementPathFirstPiecePattern, partPatternByPartName, closedValueListByPartName)' }).message };
+		return { error: refuse.byName({ moduleName, what: valueReason, where: 'uriScheme.json (reserved words, partPatternByPartName, closedValueListByPartName)' }).message };
 	}
 	const segmentTextList = [];
 	for (let segmentIndex = 0; segmentIndex < kindRow.segmentList.length; segmentIndex++) {

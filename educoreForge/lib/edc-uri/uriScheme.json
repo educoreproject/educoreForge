@@ -1,5 +1,5 @@
 {
-	"about": "The edc: URI scheme (mappingLayers ML1-a, ruled by BRONZE_CROWN 2026-10-24; respelled in ML3.1 Part A, ruled by AMBER_JOURNEY 2026-10-26: Q41-Q43, Q51). Kinds are DATA: edcUri.js mints and parses only the kinds listed here, and an unlisted kind is refused by name. A template is '/'-separated segments after baseIri; a segment is literal text and {placeholders}. Every placeholder value is encoded by segmentEncoding unless the kind lists it under verbatimPartList (a part copied from an already-minted URI, whose spelling another module owns). The ONE path-valued part (pathValuedPartName) keeps '/' literal: it is encoded piece by piece and joined with '/', must END its template (only an elementPathSuffixTemplateList entry may follow it) and must begin with a CURIE prefix (elementPathFirstPiecePattern, RULING BR2). Every whole-segment literal of every template is a RESERVED WORD that no single-segment placeholder may take as its value; that is what makes the templates disjoint without a lookup. A published URI is never respelled; a scheme change is a new prefix segment (D-URI). Nothing here is published yet (w3id ruled NO public registration; a local stub resolves).",
+	"about": "The edc: URI scheme (mappingLayers ML1-a, ruled by BRONZE_CROWN 2026-10-24; respelled in ML3.1 Part A, ruled by AMBER_JOURNEY 2026-10-26: Q41-Q43, Q51). Kinds are DATA: edcUri.js mints and parses only the kinds listed here, and an unlisted kind is refused by name. A template is '/'-separated segments after baseIri; a segment is literal text and {placeholders}. Every placeholder value is encoded by segmentEncoding unless the kind lists it under verbatimPartList (a part copied from an already-minted URI, whose spelling another module owns). The ONE path-valued part (pathValuedPartName) keeps '/' literal: it is encoded piece by piece and joined with '/', must END its template (only an elementPathSuffixTemplateList entry may follow it); that it begins with its standard's CURIE prefix (RULING BR2) is enforced by subjectCurie.js and the exporter, not here (ruled R-1 (a), AMBER_JOURNEY 2026-10-26: measured redundant for disjointness). Every whole-segment literal of every template is a RESERVED WORD that no single-segment placeholder may take as its value; that is what makes the templates disjoint without a lookup. A published URI is never respelled; a scheme change is a new prefix segment (D-URI). Nothing here is published yet (w3id ruled NO public registration; a local stub resolves).",
 	"schemeVersion": "edc-uri-2",
 	"baseIri": "https://w3id.org/EDUcore/",
 	"curiePrefix": "edc",
@@ -10,12 +10,18 @@
 	},
 	"pathValuedPartName": "elementStableId",
 	"elementPathSuffixTemplateList": ["", "@{layerKey}", "@{layerKey}/{versionTag}"],
-	"elementPathFirstPiecePattern": "^[A-Za-z_][A-Za-z0-9_]*:",
 	"partPatternByPartName": {
 		"about": "a part listed here must match its pattern at mint and at parse (Q43, Q51: a content hash is 64 lowercase hex, so a label can never pass for one)",
 		"manifestRefId": "^[0-9a-f]{64}$",
 		"schemaBlockRefId": "^[0-9a-f]{64}$",
 		"decisionBlockHash": "^[0-9a-f]{64}$"
+	},
+	"listingPaging": {
+		"about": "(ML3.1 Q5) a listing kind answers one page at a time: <listing URI>?<queryParameterName>=N, N an integer from firstPageNumber; absent = the first page; 0, negative, non-integer or past the end is refused by name (no clamping). pageSize is FIXED (no client page size), so a cited page means the same slice for everyone.",
+		"queryParameterName": "page",
+		"pageSize": 500,
+		"firstPageNumber": 1,
+		"listingKindList": ["manifestList", "manifestElementList", "manifestElementListByContent", "agentList"]
 	},
 	"absoluteIriPrefixList": ["https://", "http://"],
 	"predicatePrefixExpansion": {
@@ -28,6 +34,8 @@
 		"sssom:NoTermFound": "https://w3id.org/sssom/NoTermFound"
 	},
 	"kindList": [
+		{ "kind": "root", "template": "", "verbatimPartList": [], "about": "(ML3.1 Q5) the base IRI itself: the entry points (scheme, manifests, layer registry, agents) with counts" },
+		{ "kind": "scheme", "template": "scheme", "verbatimPartList": [], "about": "(ML3.1 Q5) this scheme as data, generated from the same object the parser compiles, so it can never disagree with it" },
 		{ "kind": "meaning", "template": "{hubSegment}/hub/{hubReleaseSegment}/{addressSignature}", "verbatimPartList": ["hubSegment", "hubReleaseSegment"], "about": "a HubReference card (exists; minted by the hub framework as namespace + release segment + '/' + addressSignature)" },
 		{ "kind": "element", "template": "{standardName}/{standardVersion}/{elementStableId}", "verbatimPartList": [], "about": "a standard's slot; standardName is the _source name the graph stamps on every node and edge; elementStableId keeps its '/' (Q42)" },
 		{ "kind": "layer", "template": "layer/{layerKey}", "verbatimPartList": [], "about": "a mapping layer, floating: resolves to its current Standard version" },
@@ -40,6 +48,11 @@
 		{ "kind": "interpretationFloating", "template": "{standardName}/{standardVersion}/{elementStableId}@{layerKey}", "verbatimPartList": [], "about": "element x layer, follows the layer" },
 		{ "kind": "manifest", "template": "manifest/{publicLabel}", "verbatimPartList": [], "about": "a published manifest by its label (an alias)" },
 		{ "kind": "manifestByContent", "template": "manifest/sha256/{manifestRefId}", "verbatimPartList": [], "about": "a manifest by its membership hash" },
+		{ "kind": "manifestList", "template": "manifests", "verbatimPartList": [], "about": "(ML3.1 Q5) every published manifest (label, status, publishedAt); a paged listing" },
+		{ "kind": "manifestStandardList", "template": "manifest/{publicLabel}/standards", "verbatimPartList": [], "about": "(ML3.1 Q5) a manifest's standards and versions with element counts" },
+		{ "kind": "manifestStandardListByContent", "template": "manifest/sha256/{manifestRefId}/standards", "verbatimPartList": [], "about": "(ML3.1 Q5) the same, the manifest addressed by its membership hash" },
+		{ "kind": "manifestElementList", "template": "manifest/{publicLabel}/standards/{standardName}/{standardVersion}/elements", "verbatimPartList": [], "about": "(ML3.1 Q5) one standard's elements in a manifest, ordered by stableId (code point); a paged listing" },
+		{ "kind": "manifestElementListByContent", "template": "manifest/sha256/{manifestRefId}/standards/{standardName}/{standardVersion}/elements", "verbatimPartList": [], "about": "(ML3.1 Q5) the same, the manifest addressed by its membership hash" },
 		{ "kind": "question", "template": "manifest/{publicLabel}/q/{standardName}/{standardVersion}/{elementStableId}", "verbatimPartList": [], "about": "manifest x element, answered from the manifest's own relationship schema blocks for every hub (Q41: the version is in the URI; ruling (b) AMBER_JOURNEY 2026-10-26)" },
 		{ "kind": "questionForHub", "template": "manifest/{publicLabel}/q/hub/{hubSegment}/{standardName}/{standardVersion}/{elementStableId}", "verbatimPartList": ["hubSegment"], "about": "manifest x hub x element; the reserved literal 'hub' puts the hub AHEAD of the standard, so the element path ends the URI (Q42)" },
 		{ "kind": "questionByContent", "template": "manifest/sha256/{manifestRefId}/q/{standardName}/{standardVersion}/{elementStableId}", "verbatimPartList": [], "about": "manifest (by membership hash) x element (Q43)" },
@@ -47,6 +60,7 @@
 		{ "kind": "agentPerson", "template": "agent/{userRefId}", "verbatimPartList": [], "about": "a person, by educore user refId, never the username (D-AUTHOR)" },
 		{ "kind": "agentJudge", "template": "agent/judge/{judgeIdentity}", "verbatimPartList": [], "about": "a machine author, by its judge identity" },
 		{ "kind": "agentOrganisation", "template": "agent/org/{organisationSlug}", "verbatimPartList": [], "about": "an organisation" },
+		{ "kind": "agentList", "template": "agents", "verbatimPartList": [], "about": "(ML3.1 Q5) every agent, profile fields only (persons pseudonymous); a paged listing" },
 		{ "kind": "siteLayerRegistry", "template": "registry/layers", "verbatimPartList": [], "about": "(ML3-b) the whole site's SSSOM mapping registry: it imports every layer's registry (each layer's registry id is its floating layer URI, layer/{layerKey})" },
 		{ "kind": "vocabularyTerm", "template": "{termName}", "verbatimPartList": [], "closedValueListByPartName": { "termName": ["bestMatch", "alsoAcceptable"] }, "about": "(ML3-a) a mapping predicate EDUcore declares, spelled as the r1 rater sets already expand it (edc:bestMatch = https://w3id.org/EDUcore/bestMatch; registered, so never respelled). CLOSED: only a term listed here and defined in vocabularyTermDefinitionByName is minted or parsed. D-RATERPRED." }
 	],
