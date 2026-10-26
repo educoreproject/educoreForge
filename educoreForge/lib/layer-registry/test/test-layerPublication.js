@@ -174,6 +174,15 @@ harness.match("R-c' (1): a curated row with SEVERAL authors is refused by name",
 harness.match('a stored text that does not hash to the content id is refused', publication.curatedVersionSetText({ layer: curatedLayer, version: curatedVersion, wholeSetText: `${curatedSetText}\n`, subjectLabelByStableId }).error, /not the version's content id/);
 const publicCurated = publication.curatedVersionSetText({ layer: curatedLayer, version: curatedVersion, wholeSetText: curatedSetText, publicFilter, subjectLabelByStableId });
 harness.equal('a curated public rendering also omits the held standards', publicCurated.rowCount, 0);
+// ⟪ML3.1c, TQ Q38: "mapping is not distribution"⟫ the public rendering with NO filter: every row, the version URI as its id, public_filter "none"
+const noFilterMachine = publication.machineVersionSetText({ layer: machineLayer, version: machineVersion, memberRowsList: memberRowsList.map((oneResult) => oneResult.memberRows), publicFilter: publication.NO_PUBLIC_FILTER });
+harness.equal('Q38: a no-filter public machine set keeps EVERY row (held standards included)', noFilterMachine.rowCount, machineSet.rowCount);
+harness.equal("Q38: …its mapping_set_id is the version URI itself (it IS the version's set)", headerScalarOf(noFilterMachine.setText, 'mapping_set_id'), 'https://w3id.org/EDUcore/layer/jevToy/base');
+harness.equal('Q38: …and it declares public_filter "none", never the name of a list it ignored', headerScalarOf(noFilterMachine.setText, 'public_filter'), 'none');
+harness.ok('Q38: …with public_filter declared as an extension slot', noFilterMachine.setText.indexOf('slot_name: "public_filter"') !== -1);
+harness.ok('Q38: …and no "filtered" wording in its title', headerScalarOf(noFilterMachine.setText, 'mapping_set_title').indexOf('filtered') === -1);
+const noFilterCurated = publication.curatedVersionSetText({ layer: curatedLayer, version: curatedVersion, wholeSetText: curatedSetText, publicFilter: publication.NO_PUBLIC_FILTER, subjectLabelByStableId });
+harness.equal('Q38: a no-filter curated set keeps every row', noFilterCurated.rowCount, 3);
 
 // =====================================================================
 harness.section('registry documents and contexts (ML3-b)');
@@ -194,6 +203,8 @@ harness.ok('its id is the floating layer URI', registryDocument.documentText.ind
 harness.ok('mapping_set_group is the EFFECTIVE status: the appended change (Standard), not the published Candidate', registryDocument.documentText.indexOf('mapping_set_group: "Standard"') !== -1 && registryDocument.documentText.indexOf('Candidate') === -1);
 harness.ok('last_updated is the date of that status, quoted (linkml types it a string)', registryDocument.documentText.indexOf('last_updated: "2026-10-26"') !== -1);
 harness.ok('mirror_from is the content-addressed URI', registryDocument.documentText.indexOf(`mirror_from: "https://w3id.org/EDUcore/layer/ratersToy/sha256/${sha256Hex(curatedSetText)}"`) !== -1);
+const noFilterRegistryDocument = publication.registryDocumentText({ layer: statedRegistry.registry.layerRegistry.layerList[0], registry: statedRegistry.registry, localNameByVersionTag: { r1: 'r1/set.sssom.tsv' }, publicFilter: publication.NO_PUBLIC_FILTER });
+harness.ok('Q38: a no-filter public registry lists the version URI and says nothing of filtering', noFilterRegistryDocument.documentText.indexOf('#publicFilter-') === -1 && noFilterRegistryDocument.documentText.indexOf('PUBLIC FILTERED') === -1 && noFilterRegistryDocument.documentText.indexOf('mapping_set_id: "https://w3id.org/EDUcore/layer/') !== -1, noFilterRegistryDocument.documentText);
 harness.match('a version with no rendered set is refused', publication.registryDocumentText({ layer: statedRegistry.registry.layerRegistry.layerList[0], registry: statedRegistry.registry, localNameByVersionTag: {} }).error, /no rendered set is named/);
 const siteDocument = publication.siteRegistryDocumentText({ layerKeyList: ['ratersToy', 'jevToy'] });
 harness.ok('the site registry imports every layer registry', siteDocument.documentText.indexOf('mapping_registry_id: "https://w3id.org/EDUcore/registry/layers"') === 0 && siteDocument.documentText.indexOf('  - "https://w3id.org/EDUcore/layer/jevToy"') !== -1);

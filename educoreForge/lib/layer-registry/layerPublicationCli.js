@@ -14,7 +14,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                  the site registry, and one JSON-LD context per (version, standard), into --outputDirPath; with --publicFilterRulesPath
 //                  ALSO a public filtered rendering of each (TQ Q37) under <outputDirPath>/public, never anywhere else.
 //       --uriContractFilePath=<uriContract.sqlite> | --layerRegistryFilePath=<recipes/layers.json> --agentRegistryFilePath=<recipes/agents.json>  --storePath=<support store COPY>
-//       --goldCapturePath=<capture.json>  --outputDirPath=<dir>  --publicFilterRulesPath=<downloadArtifactsRules.json>
+//       --goldCapturePath=<capture.json>  --outputDirPath=<dir>  --publicFilterMode=licenceHoldList|none [--publicFilterRulesPath=<downloadArtifactsRules.json>, licenceHoldList only]
 //   -gate          run the publication gates over a rendered tree (complete AND public) and write ONE gate report binding each file's
 //                  sha256: (1) every record_id recomputes from its row; (2) sssom-py 'validate' exits 0 AND 'parse' keeps every row (a
 //                  silent drop is a red, never a pass); (3) every registry document passes linkml-validate against sssom-schema; (4) ROUND
@@ -22,7 +22,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                  layer version's (decision blocks, or the stored curated set), held standards removed for a public set; (5) the public
 //                  tree carries 0 subjects of a held standard. Exit 0 only when every gate is green.
 //       --renderedDirPath=<render -outputDirPath>  --layerRegistryFilePath  --agentRegistryFilePath  --storePath  --goldCapturePath
-//       --publicFilterRulesPath  --sssomValidatorPath=<sssom-py sssom>  --linkmlValidatorPath=<linkml-validate>
+//       --publicFilterMode [--publicFilterRulesPath]  --sssomValidatorPath=<sssom-py sssom>  --linkmlValidatorPath=<linkml-validate>
 //       --sssomSchemaPath=<sssom_schema.yaml>  --gateReportPath=<out.json>
 //   -publishPublic copy <renderedDirPath>/public to the downloads tree ONLY when the gate report is green and every file's bytes still
 //                  match the sha256 the gate bound (TQ Q37: nothing reaches downloadArtifacts ungated). The destination must be a
@@ -55,8 +55,8 @@ if (argumentList.some((oneArgument) => ['-help', '--help', '-h'].indexOf(oneArgu
 }
 const REQUIRED_PARAMETER_NAME_LIST_BY_ACTION = Object.freeze({
 	captureGold: ['goldContainerName', 'goldCapturePath'],
-	render: ['storePath', 'goldCapturePath', 'outputDirPath', 'publicFilterRulesPath'],
-	gate: ['renderedDirPath', 'storePath', 'goldCapturePath', 'publicFilterRulesPath', 'sssomValidatorPath', 'linkmlValidatorPath', 'sssomSchemaPath', 'gateReportPath'],
+	render: ['storePath', 'goldCapturePath', 'outputDirPath', 'publicFilterMode'],
+	gate: ['renderedDirPath', 'storePath', 'goldCapturePath', 'publicFilterMode', 'sssomValidatorPath', 'linkmlValidatorPath', 'sssomSchemaPath', 'gateReportPath'],
 	publishPublic: ['renderedDirPath', 'gateReportPath', 'publicDestinationDirPath'],
 });
 const actionList = Object.keys(REQUIRED_PARAMETER_NAME_LIST_BY_ACTION).filter((actionName) => argumentList.indexOf(`-${actionName}`) !== -1);
@@ -68,6 +68,26 @@ const missingParameterList = REQUIRED_PARAMETER_NAME_LIST_BY_ACTION[actionName].
 if (missingParameterList.length) {
 	refuseAndExit(`-${actionName}: ${missingParameterList.map((parameterName) => `--${parameterName}`).join(', ')} REQUIRED, with no default`);
 }
+
+// ⟪ML3.1c, TQ Q38: "mapping is not distribution"⟫ THE PUBLIC FILTER IS STATED, never defaulted: --publicFilterMode names one row of this
+// map. licenceHoldList: the downloads rules' held standards are left out of the public renderings (--publicFilterRulesPath REQUIRED);
+// none: nothing is left out, and every public set says public_filter "none" (it reads no rules file, so it can name none it ignored)
+const PUBLIC_FILTER_BY_MODE = Object.freeze({
+	licenceHoldList: () => {
+		const rulesFilePath = parameterValueFor('publicFilterRulesPath');
+		if (!rulesFilePath) {
+			return { error: `-${actionName}: --publicFilterMode=licenceHoldList needs --publicFilterRulesPath` };
+		}
+		const downloadRules = JSON.parse(fs.readFileSync(rulesFilePath, 'utf8'));
+		const filtered = require(path.join(__dirname, 'layerPublication')).publicFilterFor({ licenceHoldList: downloadRules.licenceHoldList, filterSourceText: `${path.basename(rulesFilePath)} licenceHoldList, sha256 ${sha256Hex(fs.readFileSync(rulesFilePath)).slice(0, 12)}` });
+		return filtered.error ? filtered : { publicFilter: filtered.publicFilter, heldStandardKeyList: filtered.publicFilter.excludedStandardKeyList };
+	},
+	none: () => (parameterValueFor('publicFilterRulesPath') ? { error: `-${actionName}: --publicFilterMode=none reads no rules file; --publicFilterRulesPath is refused beside it` } : { publicFilter: require(path.join(__dirname, 'layerPublication')).NO_PUBLIC_FILTER, heldStandardKeyList: [] }),
+});
+const publicFilterFromMode = () => {
+	const modeName = parameterValueFor('publicFilterMode');
+	return PUBLIC_FILTER_BY_MODE[modeName] === undefined ? { error: `-${actionName}: --publicFilterMode=${JSON.stringify(modeName)} is not one of ${Object.keys(PUBLIC_FILTER_BY_MODE).join(', ')}` } : PUBLIC_FILTER_BY_MODE[modeName]();
+};
 
 // ⟪ML3.1b, by AMBER_JOURNEY's grant⟫ -render and -gate read the registry from EXACTLY ONE source: --uriContractFilePath (the registry of
 // record once Part C retires the JSON) or --layerRegistryFilePath with --agentRegistryFilePath (until then)
@@ -181,8 +201,7 @@ const render = () => {
 		soFar[oneRow.stableId] = oneRow.label;
 		return soFar;
 	}, {});
-	const downloadRules = JSON.parse(fs.readFileSync(parameterValueFor('publicFilterRulesPath'), 'utf8'));
-	const { publicFilter } = exitOnError(layerPublicationLib.publicFilterFor({ licenceHoldList: downloadRules.licenceHoldList, filterSourceText: `downloadArtifactsRules.json licenceHoldList (TQ Q37), sha256 ${sha256Hex(fs.readFileSync(parameterValueFor('publicFilterRulesPath'))).slice(0, 12)}` }));
+	const { publicFilter } = exitOnError(publicFilterFromMode());
 	const store = new Database(parameterValueFor('storePath'), { readonly: true, fileMustExist: true });
 	const frozenTextFor = (decisionBlockHash) => {
 		const stored = store.prepare('SELECT frozenText FROM decisionBlocks WHERE decisionBlockHash = ?').get(decisionBlockHash);
@@ -276,8 +295,7 @@ const gate = () => {
 	const renderedDirPath = parameterValueFor('renderedDirPath');
 	const { registry } = exitOnError(registryFromSource());
 	const goldCapture = JSON.parse(fs.readFileSync(parameterValueFor('goldCapturePath'), 'utf8'));
-	const downloadRules = JSON.parse(fs.readFileSync(parameterValueFor('publicFilterRulesPath'), 'utf8'));
-	const heldStandardKeyList = downloadRules.licenceHoldList.map((oneHold) => oneHold.bundleToken);
+	const { heldStandardKeyList } = exitOnError(publicFilterFromMode());
 	const store = new Database(parameterValueFor('storePath'), { readonly: true, fileMustExist: true });
 	const frozenTextFor = (decisionBlockHash) => {
 		const stored = store.prepare('SELECT frozenText FROM decisionBlocks WHERE decisionBlockHash = ?').get(decisionBlockHash);
