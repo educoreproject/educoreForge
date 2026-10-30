@@ -1,0 +1,398 @@
+{
+  "$explanation": "EDUcore Enhanced Cockburn v0.11 case document. Source: educore_use_cases issue #5 (Vetted). This is a SUMMARY-level case that the project has already modeled in depth: it restates uc:fs002-package-submission from the v0.8 FS002 worked example, and its single narrative step 1 is the whole of uc:fs002-compilation. Rendered faithfully to the issue, then related to the existing cases so the duplication is visible in the graph rather than invisible across two documents. Actor, event, and condition identifiers are REUSED from the existing FS002 family.  [Consistency edits applied by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ: two shared-actor names in the incoming text were overridden to the corpus-canonical spellings, chosen by majority across the cases sharing each identifier: 'EDFacts Coordinator / State System' -> 'SEA EDFacts Coordinator' (actor:sea-edfacts-coordinator, 3 of 4 cases), and 'SEA Special Education Policy Director' -> 'SEA Policy / Special Education Director' (actor:sea-policy-sped-director, 2 of 3 cases). A shared node has one name; before this edit the name depended on load order. Caught by the dedup-by-identifier invariant the first time it ran over the corpus. Additionally 'EDFacts EDPass System' -> 'EDPass' (actor:edpass, shared with uc:fs002-package-submission; a 1-1 tie with no majority, resolved to the system's proper name on the principle that a node's name is its identity while its job belongs to the role property on the edge).]  [Ordering verified by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ: the dependency DAG was checked against the step prose and found complete -- the package flows 1->2->2a entirely by data (submission package, then EDPass status); step 1 is the sole free start. orderingAsserted: true.]  [Identity-contract migration applied by Milo (AI), session WILD_ORBIT, 2026-07-29, per workOrder-identityPhase2-072926 (supervisor BRONZE_LOOM): 22 CEDS space-form identifiers normalized to P-form shorthand or (000144) its DME-verified stableId URL; the two orphan:fs002-submission-package sites converted to kind:subject citations of this case's own Subject subj:fs002-package (adjudicated: the role text names the aggregate-count data package, not the three-part EDPass submission); orphan:edpass-submission-status reclassified kind:intermediate; the two art: identifiers normalized to artifact:. No role or name text was altered.]",
+  "id": "uc:fs002-federal-reporting",
+  "shortName": "FS002 Federal Reporting",
+  "longName": "Fulfill the EDFacts FS002 Special Education Federal Reporting Requirement",
+  "level": "summary",
+  "scope": "One SEA's annual FS002 submission to EDFacts, end to end: assembly and validation in the state system through acceptance by EDPass.",
+  "frequency": "Annually, on the federal EDFacts submission cycle.",
+  "keyConcepts": [
+    {
+      "term": "EDFacts",
+      "definition": "A U.S. Department of Education initiative that centralizes K-12 performance data supplied by state education agencies with other departmental data assets, to support policy, management, and budget decisions."
+    },
+    {
+      "term": "FS002",
+      "definition": "The EDFacts file specification for IDEA Part B child count and educational environments \u2014 19 data elements, reported as aggregate counts derived from per-student source data."
+    },
+    {
+      "term": "EDPass",
+      "definition": "The modernized, centralized data submission application the Department uses to collect, validate, and process elementary and secondary education data from SEAs."
+    }
+  ],
+  "openIssues": [
+    "DATA TABLE TO REVISIT. Issue #5's Data table cites Credential Award (CEDS C200079), Credential Definition (C200087), Competency Definition (C200065), and the IMS OpenBadge v3p0 JSON schema \u2014 the same rows that appear in the LER issuance issues, which look to have carried over while the issue template was being worked out. An IDEA Part B child count wants a different set. The case is grounded here on the FS002 elements carried by the already-authored FS002 family, and the original rows are noted so the authors can swap them in at leisure. Worth noting for the standard's own sake: rendering them as given would still have satisfied the data-grounding invariant, since they are real CEDS classes with real identifiers. A conformance check cannot tell a correct citation from a relevant one \u2014 a useful thing to learn early.",
+    "OVERLAP WITH AN EXISTING CASE. This case covers the same ground as uc:fs002-package-submission, authored in the v0.8 worked example at summary level with the same primary actor, trigger, and scope. That the two were written independently is exactly what one expects while a corpus is being seeded. It is rendered here as its own node and related by `duplicate` so an editor can decide whether to merge them \u2014 which, under the standard's editor-adjudication rule, is a human decision by design rather than something the loader should guess.",
+    "Issue #5's two steps sit at different altitudes. Step 1 ('assemble and validate the 19 data elements, generate the aggregate counts, enable quality control and analysis') is an entire user-goal case \u2014 uc:fs002-compilation \u2014 held in one line. Step 2 is EDPass's side of the submission. At summary level that compression is perfectly legitimate; it is simply why this case reads as brief beside its siblings.",
+    "Brandon assigned the field completion to Greg Nadeau in the issue comments, so the issue is vetted for relevance with its detail still to come. Several slots below are PROPOSED from the EDFacts documentation and the existing FS002 family rather than supplied by the issue, and are offered as a starting point for that work.",
+    "The FS002 family's own long-standing open item applies here: the stated methodology and the applied methodology must agree (cond:stated-equals-applied-methodology), which no step in this summary rendering enforces."
+  ],
+  "primaryActor": "actor:sea-edfacts-coordinator",
+  "actors": [
+    {
+      "actor": "SEA EDFacts Coordinator",
+      "identifier": "actor:sea-edfacts-coordinator",
+      "kind": "human",
+      "role": "The designated SEA official who acts as primary liaison with the U.S. Department of Education for submission of annual K-12 performance, demographic, and program data.",
+      "interest": "The state meets its federal reporting obligation accurately and on time."
+    },
+    {
+      "actor": "EDPass",
+      "identifier": "actor:edpass",
+      "kind": "system",
+      "role": "Receives, validates, and processes the submitted FS002 data.",
+      "interest": "Submitted data conforms to the published FS002 specification."
+    },
+    {
+      "actor": "SEA IDEA Part B Data Manager",
+      "identifier": "actor:sea-idea-partb-data-manager",
+      "kind": "human",
+      "role": "Produces the child count and educational environments data file from state source data.",
+      "interest": "Counts are unduplicated, reproducible, and defensible."
+    }
+  ],
+  "interestedParties": [
+    {
+      "party": "OSEP State Lead",
+      "identifier": "actor:osep-state-lead",
+      "interest": "The state's IDEA Section 618 reporting is complete and timely.",
+      "kind": "regulatory"
+    },
+    {
+      "party": "SEA Policy / Special Education Director",
+      "identifier": "actor:sea-policy-sped-director",
+      "interest": "Reported environments reflect actual state placement practice.",
+      "kind": "affected"
+    }
+  ],
+  "triggeredBy": {
+    "ref": "event:fs002-federal-deadline"
+  },
+  "assumes": [
+    {
+      "ref": "cond:fs002-spec-published"
+    },
+    {
+      "ref": "cond:edpass-operational"
+    },
+    {
+      "ref": "cond:count-date-oct-dec"
+    }
+  ],
+  "guarantees": [
+    {
+      "role": "success",
+      "condition": {
+        "statement": "The SEA's FS002 submission is accepted by EDPass, and the state has met the federal IDEA Part B child count and educational environments reporting requirement.",
+        "identifier": "cond:fs002-submission-accepted"
+      }
+    },
+    {
+      "role": "minimum",
+      "condition": {
+        "statement": "No FS002 package is transmitted that the state cannot reproduce from its source data and stated methodology; a failed submission leaves the state's record of what was reported unchanged.",
+        "identifier": "cond:reproducible-from-source-and-methodology"
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "ref": "cond:unduplicated-count"
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "ref": "cond:audit-trail-complete"
+      }
+    }
+  ],
+  "valueDrivers": [
+    {
+      "valueDriver": {
+        "ref": "vd:idea-618-compliance"
+      }
+    },
+    {
+      "valueDriver": {
+        "ref": "vd:accurate-child-representation"
+      }
+    },
+    {
+      "valueDriver": {
+        "ref": "vd:auditable-provenance"
+      }
+    }
+  ],
+  "scenario": [
+    {
+      "codedNotation": "1",
+      "kind": "main",
+      "story": {
+        "identifier": "us:fs002-assemble-and-validate-package",
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "assembles and validates the 19 FS002 data elements, generates the aggregate counts, and enables quality control and analysis for the fact tables",
+        "intention": "a submission-ready FS002 package exists that the state can defend",
+        "benefit": "so that the state meets the EDFacts FS002 reporting requirement with counts it can reproduce",
+        "consumes": [
+          {
+            "kind": "element",
+            "identifier": "P000151",
+            "standard": "CEDS",
+            "name": "IDEA Indicator",
+            "role": "identifies students in the child count"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000218",
+            "standard": "CEDS",
+            "name": "Primary Disability Type",
+            "role": "disability category dimension"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000535",
+            "standard": "CEDS",
+            "name": "IDEA Educational Environment for School Age",
+            "role": "school-age environment dimension"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000559",
+            "standard": "CEDS",
+            "name": "IDEA Educational Environment for Early Childhood",
+            "role": "early-childhood environment dimension"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000033",
+            "standard": "CEDS",
+            "name": "Birthdate",
+            "role": "derives age as of the count date"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000255",
+            "standard": "CEDS",
+            "name": "Sex",
+            "role": "demographic dimension"
+          },
+          {
+            "kind": "element",
+            "identifier": "https://w3id.org/CEDStandards/terms/NI001943162284",
+            "standard": "CEDS",
+            "name": "Hispanic or Latino Ethnicity",
+            "role": "demographic dimension"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000180",
+            "standard": "CEDS",
+            "name": "English Learner Status",
+            "role": "demographic dimension"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000243",
+            "standard": "CEDS",
+            "name": "School Year",
+            "role": "reporting period"
+          },
+          {
+            "kind": "element",
+            "identifier": "P001068",
+            "standard": "CEDS",
+            "name": "LEA Identifier",
+            "role": "reporting organization"
+          },
+          {
+            "kind": "artifact",
+            "name": "FS002 File Specification",
+            "origin": "U.S. Department of Education, EDFacts",
+            "role": "the authority defining the 19 elements, permitted values, and aggregation rules",
+            "identifier": "artifact:fs002-file-specification"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "subject",
+            "ref": "subj:fs002-package",
+            "role": "the validated aggregate-count file ready for transmission"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "2",
+      "kind": "main",
+      "story": {
+        "identifier": "us:fs002-edpass-receive-and-process",
+        "actor": "actor:edpass",
+        "action": "receives, validates, and processes data meeting the FS002 requirements",
+        "intention": "the state's submission is accepted into the federal collection",
+        "consumes": [
+          {
+            "kind": "subject",
+            "ref": "subj:fs002-package",
+            "role": "the package under federal validation"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:edpass-submission-status",
+            "name": "EDPass Submission Status",
+            "role": "accepted, or rejected with errors"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "2a",
+      "kind": "exception",
+      "branchesFrom": "2",
+      "condition": "EDPass rejects the package with validation errors",
+      "story": {
+        "identifier": "us:fs002-correct-and-resubmit",
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "reviews the EDPass validation errors, corrects the source data or the aggregation, and resubmits",
+        "intention": "the state reaches an accepted submission before the federal deadline",
+        "consumes": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:edpass-submission-status",
+            "name": "EDPass Submission Status",
+            "role": "the rejection and its error detail"
+          }
+        ]
+      }
+    }
+  ],
+  "subject": {
+    "name": "FS002 IDEA Part B Child Count and Educational Environments Data Package",
+    "identifier": "subj:fs002-package",
+    "comprises": [
+      {
+        "kind": "element",
+        "identifier": "P000151",
+        "standard": "CEDS",
+        "name": "IDEA Indicator",
+        "role": "child count membership"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000218",
+        "standard": "CEDS",
+        "name": "Primary Disability Type",
+        "role": "disability category"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000535",
+        "standard": "CEDS",
+        "name": "IDEA Educational Environment for School Age",
+        "role": "school-age environment"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000559",
+        "standard": "CEDS",
+        "name": "IDEA Educational Environment for Early Childhood",
+        "role": "early-childhood environment"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000243",
+        "standard": "CEDS",
+        "name": "School Year",
+        "role": "reporting period"
+      },
+      {
+        "kind": "element",
+        "identifier": "P001068",
+        "standard": "CEDS",
+        "name": "LEA Identifier",
+        "role": "reporting organization"
+      }
+    ]
+  },
+  "sourceDataRequired": [
+    {
+      "kind": "artifact",
+      "name": "FS002 File Specification",
+      "origin": "U.S. Department of Education, EDFacts",
+      "role": "governs the 19 elements and their aggregation",
+      "identifier": "artifact:fs002-file-specification"
+    },
+    {
+      "kind": "element",
+      "identifier": "P000097",
+      "standard": "CEDS",
+      "name": "Enrollment Entry Date",
+      "role": "enrollment window for count-date membership"
+    },
+    {
+      "kind": "element",
+      "identifier": "P000107",
+      "standard": "CEDS",
+      "name": "Enrollment Exit Date",
+      "role": "enrollment window for count-date membership"
+    },
+    {
+      "kind": "element",
+      "identifier": "P000100",
+      "standard": "CEDS",
+      "name": "Entry Grade Level",
+      "role": "grade dimension"
+    },
+    {
+      "kind": "element",
+      "identifier": "P000577",
+      "standard": "CEDS",
+      "name": "Disability Status",
+      "role": "disability determination"
+    },
+    {
+      "kind": "element",
+      "identifier": "P000590",
+      "standard": "CEDS",
+      "name": "Program Participation Start Date",
+      "role": "IDEA program participation window"
+    },
+    {
+      "kind": "element",
+      "identifier": "P000591",
+      "standard": "CEDS",
+      "name": "Program Participation Exit Date",
+      "role": "IDEA program participation window"
+    }
+  ],
+  "resources": [
+    {
+      "url": "https://github.com/educoreproject/educore_use_cases/issues/5",
+      "title": "Source issue #5 \u2014 Use Case: Special Education Federal Reporting FS002 (Vetted)"
+    },
+    {
+      "url": "https://edfacts.communities.ed.gov/#program/data-submission-organizer",
+      "title": "EDFacts Data Submission Organizer (official site; cited as the issue's Key Concepts reference)"
+    }
+  ],
+  "relatedUseCases": [
+    {
+      "useCase": "uc:fs002-package-submission",
+      "relationship": "duplicate",
+      "notes": "The same summary-level case, already authored in depth in the v0.8 FS002 worked example: same primary actor, same trigger, same scope. An editor must adjudicate whether these are one node."
+    },
+    {
+      "useCase": "uc:fs002-compilation",
+      "relationship": "includes",
+      "notes": "The whole of this case's step 1 \u2014 producing the annual IDEA Part B child count data file \u2014 is that user-goal case."
+    },
+    {
+      "useCase": "uc:fs5003-confirmation",
+      "relationship": "includes",
+      "notes": "Confirms the IDEA Environments school-age methodology responses that FS002's environment counts depend on."
+    }
+  ],
+  "orderingAsserted": true
+}

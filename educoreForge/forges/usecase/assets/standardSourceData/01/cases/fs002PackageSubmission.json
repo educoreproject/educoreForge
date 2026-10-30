@@ -1,0 +1,388 @@
+{
+  "$explanation": "EDUcore Enhanced Cockburn v0.11 case document -- the kite/summary-level FS002 package submission, forward-ported from the v0.8 worked example (fs002PackageSubmission-kite-v0.8.md). Ported verbatim except for one change: the scenario key `_invokesChild` became the first-class `invokes`. v0.8 had no construct for a step that delegates to another case, so the authors carried the call out of band under an underscore-prefixed key; v0.11 makes it a real UseCase-[:INVOKES]->UseCase edge. Everything else in v0.8 is carried forward unchanged by the standard, so no other edit was needed.  [Consistency edit applied by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ: the trigger event:fs002-federal-deadline was referenced here and in uc:fs002-federal-reporting but DEFINED NOWHERE in the corpus -- a shared Event that existed only as a name. An inline definition was authored here (this case is the kite-level home of the FS002 family); the name is AI-drafted from the case's own frequency and scope text. Caught by the SHACL projection the first time it ran -- the renderer's checks never tested whether shared refs resolve.]  [Ordering analysis applied by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ, responding to the 2026-07-28 independent evaluation finding that absent dependency edges falsely asserted step independence: step 3's wrapper now records what its invoked child delivers (subj:fs5003-responses via child case, mirroring step 2's existing pattern), so the upload (5) derives both invocation arms and the proposal's diamond materializes. Control gates: the three component efforts (2,3,4) await the SSP confirmation (1) and are deliberately parallel; upload awaits the FS5002 metadata (5<-4, cross-file BRSI needs all three components); then resolve (6), confirm Ready (7), submit (8), acknowledge (9) in sequence. orderingAsserted: true.]  [Identity-contract migration applied by Milo (AI), session WILD_ORBIT, 2026-07-29, per workOrder-identityPhase2-072926 (supervisor BRONZE_LOOM): 1 CEDS space-form identifier normalized to P-form shorthand; 4 subj:-as-element pun sites converted to kind:subject citations of the child cases' Subjects. No role or name text was altered.]",
+  "id": "uc:fs002-package-submission",
+  "shortName": "FS002 Package Submission",
+  "longName": "Submit the Annual IDEA Part B Child Count and Educational Environments Federal Data Package",
+  "level": "summary",
+  "scope": "The SEA's annual federal submission of the FS002 data file, FS5003 metadata, and FS5002 metadata via EDPass, through to acknowledged Submitted status for all three. Out of scope: LEA-level collection; OSEP review beyond first acknowledgement.",
+  "frequency": "Annually, per SEA. 60 Part B reporting entities. Deadline ~April 1 of the following year.",
+  "primaryActor": "actor:sea-edfacts-coordinator",
+  "actors": [
+    {
+      "actor": "SEA EDFacts Coordinator",
+      "identifier": "actor:sea-edfacts-coordinator",
+      "kind": "human",
+      "role": "Federally-named accountable EDPass interface; drives the cycle, uploads, resolves errors, submits.",
+      "interest": "A clean cycle ending in Submitted with no late corrections."
+    },
+    {
+      "actor": "SEA IDEA Part B Data Manager",
+      "identifier": "actor:sea-idea-partb-data-manager",
+      "kind": "human",
+      "role": "Reviews aggregation outputs; signs off on data accuracy; drafts data-note rationale.",
+      "interest": "Submitted counts reflect state systems."
+    },
+    {
+      "actor": "SEA Policy / Special Education Director",
+      "identifier": "actor:sea-policy-sped-director",
+      "kind": "human",
+      "role": "Approves FS5002/FS5003 methodology; arbitrates methodology-change decisions.",
+      "interest": "Methodology reflects current policy and survives year over year."
+    },
+    {
+      "actor": "OSEP State Lead",
+      "identifier": "actor:osep-state-lead",
+      "kind": "organization",
+      "role": "Receives the submitted package; reviews; may return it.",
+      "interest": "A clean, well-noted submission cleared without bouncing back."
+    },
+    {
+      "actor": "PSC Helpdesk Technician",
+      "identifier": "actor:psc-helpdesk",
+      "kind": "service",
+      "role": "Resolves tickets opened in deviations.",
+      "interest": "Manageable ticket volume."
+    },
+    {
+      "actor": "EDPass",
+      "identifier": "actor:edpass",
+      "kind": "system",
+      "role": "Runs cross-file BRSI rules; reports results; acknowledges Submitted; routes to OSEP.",
+      "interest": "n/a (system)"
+    }
+  ],
+  "interestedParties": [
+    {
+      "party": "Children with disabilities",
+      "identifier": "ip:children-with-disabilities",
+      "kind": "affected",
+      "interest": "Counted accurately and categorized to reflect educational reality."
+    },
+    {
+      "party": "U.S. Office of Special Education Programs (OSEP)",
+      "identifier": "ip:osep",
+      "kind": "regulatory",
+      "interest": "Timely, valid, longitudinally consistent data."
+    },
+    {
+      "party": "Auditors / OIG",
+      "identifier": "ip:auditors-oig",
+      "kind": "regulatory",
+      "interest": "A traceable submission record and audit trail of data notes."
+    }
+  ],
+  "triggeredBy": {
+    "name": "The annual federal FS002 submission deadline approaches",
+    "identifier": "event:fs002-federal-deadline"
+  },
+  "assumes": [
+    {
+      "statement": "The SEA has an EDFacts Coordinator with active EDPass access, and the SSP identifies FS002/FS5003/FS5002 as required and scheduled.",
+      "identifier": "cond:ssp-lists-fs002-package"
+    },
+    {
+      "ref": "cond:count-date-oct-dec"
+    },
+    {
+      "statement": "EDPass is operational for the submission window.",
+      "identifier": "cond:edpass-operational"
+    }
+  ],
+  "scenario": [
+    {
+      "codedNotation": "1",
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "confirms the State Submission Plan lists FS002, FS5003, and FS5002 as required and on schedule",
+        "intention": "the cycle scope is correct before work begins",
+        "consumes": [
+          {
+            "kind": "element",
+            "identifier": "P000243",
+            "standard": "CEDS",
+            "role": "School Year"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "2",
+      "dependsOn": [
+        "1"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "initiates FS002 Compilation to produce the year's data file",
+        "intention": "the data artifact exists, validated",
+        "produces": [
+          {
+            "kind": "subject",
+            "ref": "subj:fs002-data-file:SY2025-26",
+            "role": "FS002 Data File (via child case)"
+          }
+        ]
+      },
+      "invokes": "uc:fs002-compilation"
+    },
+    {
+      "codedNotation": "3",
+      "dependsOn": [
+        "1"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "initiates FS5003 Confirmation to confirm/update the environments methodology responses",
+        "intention": "the interpreting metadata is current and signed off",
+        "produces": [
+          {
+            "kind": "subject",
+            "ref": "subj:fs5003-responses:SY2025-26",
+            "role": "FS5003 Methodology Responses (via child case)"
+          }
+        ]
+      },
+      "invokes": "uc:fs5003-confirmation"
+    },
+    {
+      "codedNotation": "4",
+      "dependsOn": [
+        "1"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-policy-sped-director",
+        "action": "confirms/updates the FS5002 IDEA Child Count metadata responses",
+        "intention": "the umbrella methodology is current"
+      }
+    },
+    {
+      "codedNotation": "5",
+      "dependsOn": [
+        "4"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "uploads the FS002 data file to EDPass; EDPass runs cross-file BRSI rules against the upload combined with the methodology responses and reports results",
+        "intention": "cross-file consistency is checked federally",
+        "consumes": [
+          {
+            "kind": "subject",
+            "ref": "subj:fs002-data-file:SY2025-26",
+            "role": "the data file"
+          },
+          {
+            "kind": "subject",
+            "ref": "subj:fs5003-responses:SY2025-26",
+            "role": "the methodology responses"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "6",
+      "dependsOn": [
+        "5"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "resolves business-rule errors by correcting data, adjusting methodology responses, or attaching a data note drafted with the Data Manager",
+        "intention": "every rule passes or has an accepted note"
+      }
+    },
+    {
+      "codedNotation": "7",
+      "dependsOn": [
+        "6"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "confirms all three components are at Ready to Submit",
+        "intention": "nothing is left in an error or draft state"
+      }
+    },
+    {
+      "codedNotation": "8",
+      "dependsOn": [
+        "7"
+      ],
+      "kind": "main",
+      "story": {
+        "identifier": "us:submit-edpass-package",
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "submits the package via EDPass",
+        "intention": "the single authorized act that completes the federal record",
+        "benefit": "the federal record for the school year is complete and internally consistent in one cycle"
+      }
+    },
+    {
+      "codedNotation": "9",
+      "dependsOn": [
+        "8"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:edpass",
+        "action": "acknowledges Submitted across FS002, FS5003, FS5002 and routes to the OSEP State Lead",
+        "intention": "the package enters OSEP's review queue"
+      }
+    },
+    {
+      "codedNotation": "2a",
+      "kind": "exception",
+      "branchesFrom": "2",
+      "condition": "FS002 Compilation returns failure (LEA aggregation, format, schema)",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "addresses the cause with the Data Manager and re-invokes the child case; resume at step 2",
+        "intention": "a clean file is obtained"
+      }
+    },
+    {
+      "codedNotation": "3a",
+      "kind": "extension",
+      "branchesFrom": "3",
+      "condition": "methodology-change requirements surface needing SEA policy review",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "coordinates with the Policy / SpEd Director; responses are updated; resume",
+        "intention": "methodology reflects current policy"
+      }
+    },
+    {
+      "codedNotation": "5a",
+      "kind": "exception",
+      "branchesFrom": "5",
+      "condition": "EDPass upload fails (format, file-size, transient)",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "corrects format and retries; if EDPass is unavailable, opens a PSC Helpdesk ticket",
+        "intention": "the upload succeeds"
+      }
+    },
+    {
+      "codedNotation": "5b",
+      "kind": "exception",
+      "branchesFrom": "5",
+      "condition": "EDPass returns Errors on cross-file BRSI rules",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "reviews the DQ Results page, corrects the relevant component and re-uploads, or proceeds to step 6 to attach data notes",
+        "intention": "cross-file rules pass or are noted"
+      }
+    },
+    {
+      "codedNotation": "8a",
+      "kind": "exception",
+      "branchesFrom": "8",
+      "condition": "the federal deadline is missed",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "notifies PSC and the OSEP State Lead; the SSP is updated; late submission proceeds under exception protocol",
+        "intention": "the cycle's state is never silently stale"
+      }
+    },
+    {
+      "codedNotation": "9a",
+      "kind": "exception",
+      "branchesFrom": "9",
+      "condition": "OSEP review identifies new quality issues and returns the package",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "addresses the issues and resubmits within the OSEP window",
+        "intention": "the package clears review"
+      }
+    }
+  ],
+  "valueDrivers": [
+    {
+      "valueDriver": {
+        "title": "Federal IDEA Section 618 Compliance",
+        "identifier": "vd:idea-618-compliance",
+        "motivation": "The SEA must discharge its mandatory Section 618 reporting obligation on time and in valid form."
+      }
+    },
+    {
+      "valueDriver": {
+        "title": "Longitudinal Comparability",
+        "identifier": "vd:longitudinal-comparability",
+        "motivation": "Counts must be comparable year over year; methodology drift silently corrupts trend analysis."
+      }
+    },
+    {
+      "valueDriver": {
+        "title": "Auditable Provenance",
+        "identifier": "vd:auditable-provenance",
+        "motivation": "A reproducible trail from each federal number back to source, methodology, and any deviation."
+      }
+    },
+    {
+      "valueDriver": {
+        "title": "Accurate Representation of Children with Disabilities",
+        "identifier": "vd:accurate-child-representation",
+        "motivation": "Each child counted once and categorized to reflect educational reality."
+      }
+    }
+  ],
+  "guarantees": [
+    {
+      "role": "success",
+      "condition": {
+        "statement": "FS002, FS5003, and FS5002 all carry Submitted status in EDPass within the federal deadline.",
+        "identifier": "cond:all-three-submitted"
+      }
+    },
+    {
+      "role": "success",
+      "condition": {
+        "statement": "Every applicable BRSI rule has passed or carries an accepted data note."
+      }
+    },
+    {
+      "role": "minimum",
+      "condition": {
+        "statement": "On failure or abort, each component is left in a known intermediate EDPass status -- never partially or ambiguously submitted -- and the Coordinator can resume."
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "ref": "cond:audit-trail-complete"
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "statement": "No Submitted-status mismatch persists between FS002 and FS5003 after any re-upload; cross-file business-rule integrity is preserved.",
+        "identifier": "cond:no-cross-file-status-mismatch"
+      }
+    }
+  ],
+  "subject": {
+    "name": "The FS002 Submission",
+    "identifier": "subj:fs002-submission:SY2025-26",
+    "constituents": [
+      "subj:fs002-data-file:SY2025-26",
+      "subj:fs5003-responses:SY2025-26",
+      "subj:fs5002-metadata:SY2025-26"
+    ]
+  },
+  "relatedUseCases": [
+    {
+      "useCase": "uc:fs002-compilation",
+      "relationship": "child",
+      "notes": "produces the FS002 data file uploaded in step 5"
+    },
+    {
+      "useCase": "uc:fs5003-confirmation",
+      "relationship": "child",
+      "notes": "confirms the methodology combined with the upload in step 5"
+    }
+  ],
+  "orderingAsserted": true
+}

@@ -1,0 +1,490 @@
+{
+  "$explanation": "EDUcore Enhanced Cockburn v0.11 case document. Source: educore_use_cases issue #2 (Vetted). Upgraded from the v0.8 rendering (archived at ../zArchive/v08/ler-worked-example/lerIssuance-v0.8.md). CANONICAL member of the LER issuance family: defines the shared Actor / UserStory / Condition / Subject nodes inline; siblings reuse them by ref. Values the source issue does not supply are either marked PROPOSED (a defensible value awaiting author confirmation, per the editor-adjudication rule) or the optional slot is simply omitted. Nothing is silently invented.  [Ordering verified by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ: the dependency DAG was checked against the step prose and found complete -- eight of nine steps are data-ordered; the two free steps are true starts: KYC identification (1) and DID/key publication (5), which genuinely precedes verification rather than issuance. orderingAsserted: true.]  [Identity-contract migration applied by Milo (AI), session WILD_ORBIT, 2026-07-29, per workOrder-identityPhase2-072926 (supervisor BRONZE_LOOM): 18 CEDS space-form identifiers normalized to C-form shorthand; 3 prose standard values normalized to registry keys (W3C-VC x2, W3C-DID x1) and 2 to OpenBadges; the four orphan bench products (holder-identity-verification-result, vc-delivered-to-holder, holder-review-decision, wallet-stored-credential) reclassified kind:intermediate. No role or name text was altered.]",
+  "id": "uc:ler-issuance",
+  "shortName": "LER Issuance",
+  "longName": "Issue a Learning and Employment Record to a Holder's Digital Wallet",
+  "level": "user-goal",
+  "scope": "One Issuer issuing one LER to one Holder's wallet. PROPOSED \u2014 the issue states no scope; this is the boundary its narrative implies.",
+  "keyConcepts": [
+    {
+      "term": "Trust Triangle",
+      "definition": "The three-party structure of verifiable-credential exchange: an Issuer who asserts, a Holder who keeps and presents, and a Verifier who checks \u2014 supported by registries that supply identity, skill definitions, and trust signals."
+    },
+    {
+      "term": "LER",
+      "definition": "Learning and Employment Record. Here, a single micro-credential assertion (an OpenBadge v3) wrapped in a Verifiable Credential and delivered to a learner's digital wallet."
+    }
+  ],
+  "openIssues": [
+    "No trigger is stated in the source issue \u2014 unsurprising, since the issues were written before this standard made the trigger a required slot. The value below is PROPOSED from the issue's own framing and awaits author confirmation.",
+    "Step 5 is an OPTIONAL main-path step ('if using a record/trust registry'). The standard inherits spec Issue C: kind/branchesFrom/condition machinery is built for deviations that branch from a main step, not for a main step that sometimes does not happen. Rendered as a main step carrying a condition.",
+    "Verification \u2014 the Verifier's half of the Trust Triangle \u2014 is out of scope here. Nothing in this case consumes the published issuer key, which is why step 5 is unordered (see below). A companion LER Verification case would consume it and would order it.",
+    "The issue's Key Concepts section is empty; the two concepts above are PROPOSED from the Introduction and Scenario prose."
+  ],
+  "primaryActor": "actor:ler-issuer",
+  "actors": [
+    {
+      "actor": "Issuer / Issuing System",
+      "identifier": "actor:ler-issuer",
+      "kind": "system",
+      "role": "Issues the LER into the Holder's wallet.",
+      "interest": "A Holder's digital wallet receives a valid LER."
+    },
+    {
+      "actor": "Holder / Holder's Digital Wallet",
+      "identifier": "actor:ler-holder",
+      "kind": "human",
+      "role": "Receives, reviews, and stores the LER.",
+      "interest": "As a learner and worker, my wallet receives and stores an LER I can present later."
+    },
+    {
+      "actor": "Identity Registry",
+      "identifier": "actor:identity-registry",
+      "kind": "service",
+      "role": "Provides identity verification for the know-your-customer step.",
+      "interest": "Identity assertions it supplies are relied upon correctly."
+    },
+    {
+      "actor": "Skills Registry",
+      "identifier": "actor:skills-registry",
+      "kind": "service",
+      "role": "Provides skill definitions and their metadata, addressable by globally unique URI.",
+      "interest": "Credentials cite registered skill definitions rather than free text."
+    },
+    {
+      "actor": "Verifiable Data Registry",
+      "identifier": "actor:verifiable-data-registry",
+      "kind": "service",
+      "role": "Publishes the Issuer's DID and public key as a trust signal.",
+      "interest": "Verifiers can later confirm the Issuer's signature."
+    }
+  ],
+  "interestedParties": [
+    {
+      "party": "Prospective Employer",
+      "identifier": "actor:prospective-employer",
+      "interest": "Can rely on the credential later without re-testing or re-training the worker.",
+      "kind": "affected"
+    }
+  ],
+  "triggeredBy": {
+    "name": "Issuer determines that a Holder has earned a credential",
+    "identifier": "event:issuer-determines-credential-earned"
+  },
+  "assumes": [
+    {
+      "statement": "The learner/worker as Holder has a digital wallet or passport application able to receive the LER.",
+      "identifier": "cond:holder-has-wallet"
+    },
+    {
+      "statement": "The Issuer controls a signing key pair and a resolvable decentralized identifier.",
+      "identifier": "cond:issuer-has-signing-identity"
+    },
+    {
+      "statement": "The skill or competency being asserted has a registered definition addressable by a globally unique URI.",
+      "identifier": "cond:skill-definition-registered"
+    }
+  ],
+  "guarantees": [
+    {
+      "role": "success",
+      "condition": {
+        "statement": "The Holder's wallet holds a stored, verifiable LER; the learner/worker is empowered with their data as verifiable credentials.",
+        "identifier": "cond:holder-empowered-with-vc"
+      }
+    },
+    {
+      "role": "minimum",
+      "condition": {
+        "statement": "No unsigned or unverifiable credential is delivered to the Holder's wallet; a failed issuance leaves the wallet unchanged.",
+        "identifier": "cond:no-unverifiable-credential-delivered"
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "statement": "Every claim in the issued credential cites a registered skill definition by globally unique URI rather than free text.",
+        "identifier": "cond:claims-cite-registered-skill"
+      }
+    }
+  ],
+  "valueDrivers": [
+    {
+      "valueDriver": {
+        "title": "Learner data portability",
+        "motivation": "A learner and worker holds and carries their own verified record, rather than depending on an institution to re-issue it on request.",
+        "identifier": "vd:learner-data-portability"
+      }
+    },
+    {
+      "valueDriver": {
+        "title": "Eliminate redundant re-training",
+        "motivation": "Verifiable evidence of demonstrated proficiency lets a later employer accept what has already been proven.",
+        "identifier": "vd:eliminate-redundant-retraining"
+      }
+    }
+  ],
+  "scenario": [
+    {
+      "codedNotation": "1",
+      "kind": "main",
+      "story": {
+        "identifier": "us:ler-identify-holder",
+        "actor": "actor:ler-issuer",
+        "action": "identifies the Holder by performing know-your-customer (see KYC use cases)",
+        "intention": "the Holder is verified before issuance",
+        "benefit": "so that the credential is bound to the right person",
+        "produces": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:holder-identity-verification-result",
+            "name": "Holder Identity Verification Result",
+            "role": "the verified identity of the Holder, to which claims will be bound"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "2",
+      "kind": "main",
+      "story": {
+        "identifier": "us:ler-generate-credential",
+        "actor": "actor:ler-issuer",
+        "action": "generates the credential: creates a digital document with specific claims linked to a registered skill definition",
+        "intention": "a claims document exists",
+        "consumes": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:holder-identity-verification-result",
+            "name": "Holder Identity Verification Result",
+            "role": "the subject the claims are about"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "element",
+            "identifier": "C200079",
+            "standard": "CEDS",
+            "name": "Credential Award",
+            "role": "the credential being awarded"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "3",
+      "kind": "main",
+      "story": {
+        "identifier": "us:ler-use-authoritative-skill-reference",
+        "actor": "actor:ler-issuer",
+        "action": "includes a globally unique URI for a registered skill definition and its metadata (e.g., registered proficiency level)",
+        "intention": "claims are anchored to an authoritative skill",
+        "benefit": "so that a later verifier reads the same skill the issuer meant",
+        "consumes": [
+          {
+            "kind": "element",
+            "identifier": "C200079",
+            "standard": "CEDS",
+            "name": "Credential Award",
+            "role": "the award being annotated"
+          },
+          {
+            "kind": "element",
+            "identifier": "C200065",
+            "standard": "CEDS",
+            "name": "Competency Definition",
+            "role": "the authoritative skill/competency reference"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "4",
+      "kind": "main",
+      "dependsOn": [
+        "3"
+      ],
+      "story": {
+        "identifier": "us:ler-sign-credential",
+        "actor": "actor:ler-issuer",
+        "action": "digitally signs the VC using the Issuer's private key",
+        "intention": "the credential is tamper-evident and attributable to the Issuer",
+        "consumes": [
+          {
+            "kind": "element",
+            "identifier": "C200079",
+            "standard": "CEDS",
+            "name": "Credential Award",
+            "role": "the payload being signed"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "standard-wholesale",
+            "standard": "W3C-VC",
+            "role": "the signed VC envelope carrying the award"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "5",
+      "kind": "main",
+      "condition": "if using a record/trust registry",
+      "story": {
+        "identifier": "us:ler-publish-public-key",
+        "actor": "actor:verifiable-data-registry",
+        "action": "publishes the Issuer's DID and public key for future verification, or attaches verifiable linked credentials",
+        "intention": "verifiers can later confirm the signature",
+        "produces": [
+          {
+            "kind": "standard-wholesale",
+            "standard": "W3C-DID",
+            "role": "the published issuer DID document carrying the verification key"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "6",
+      "kind": "main",
+      "story": {
+        "identifier": "us:ler-transmit-vc",
+        "actor": "actor:ler-issuer",
+        "action": "securely transmits the signed VC to the Holder (e.g., via QR code or direct link)",
+        "intention": "the Holder receives the credential",
+        "consumes": [
+          {
+            "kind": "standard-wholesale",
+            "standard": "W3C-VC",
+            "role": "the signed VC being delivered"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:vc-delivered-to-holder",
+            "name": "Credential Delivery Event",
+            "role": "the fact of delivery to a specific Holder"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "7",
+      "kind": "main",
+      "story": {
+        "identifier": "us:ler-receive-and-review",
+        "actor": "actor:ler-holder",
+        "action": "receives the VC and reviews the claims",
+        "intention": "the Holder validates the credential before storing",
+        "benefit": "so that the Holder keeps only records they recognize as their own",
+        "consumes": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:vc-delivered-to-holder",
+            "name": "Credential Delivery Event",
+            "role": "the delivered credential presented for review"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:holder-review-decision",
+            "name": "Holder Review Decision",
+            "role": "the Holder's accept-or-decline outcome"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "8",
+      "kind": "main",
+      "story": {
+        "identifier": "us:ler-store-in-wallet",
+        "actor": "actor:ler-holder",
+        "action": "stores the VC in the digital wallet for future use",
+        "intention": "the credential is retained and presentable",
+        "consumes": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:holder-review-decision",
+            "name": "Holder Review Decision",
+            "role": "the acceptance that authorizes storage"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:wallet-stored-credential",
+            "name": "Wallet-Stored Credential Record",
+            "role": "the retained, presentable credential"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "7a",
+      "kind": "exception",
+      "branchesFrom": "7",
+      "condition": "the Holder does not recognize the claims as their own",
+      "story": {
+        "identifier": "us:ler-decline-credential",
+        "actor": "actor:ler-holder",
+        "action": "declines the credential and reports the mismatch to the Issuer",
+        "intention": "an incorrect credential is not stored",
+        "consumes": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:holder-review-decision",
+            "name": "Holder Review Decision",
+            "role": "the decline outcome"
+          }
+        ]
+      }
+    }
+  ],
+  "subject": {
+    "name": "Learning and Employment Record (LER)",
+    "identifier": "subj:ler-credential",
+    "comprises": [
+      {
+        "kind": "element",
+        "identifier": "C200079",
+        "standard": "CEDS",
+        "name": "Credential Award",
+        "role": "the awarded credential"
+      },
+      {
+        "kind": "element",
+        "identifier": "C200087",
+        "standard": "CEDS",
+        "name": "Credential Definition",
+        "role": "the credential's definition (issue #2 labeled this row 'Has Criteria Definition'; its own URL C200087 resolves to Credential Definition in the DME)"
+      },
+      {
+        "kind": "element",
+        "identifier": "C200085",
+        "standard": "CEDS",
+        "name": "Credential Definition Criteria Definition",
+        "role": "criteria by which the credential may be issued (the class; the 'Has' form is property P600373)"
+      },
+      {
+        "kind": "element",
+        "identifier": "C200065",
+        "standard": "CEDS",
+        "name": "Competency Definition",
+        "role": "the competency/skill asserted"
+      },
+      {
+        "kind": "element",
+        "identifier": "C200353",
+        "standard": "CEDS",
+        "name": "Rubric",
+        "role": "evaluation rubric"
+      },
+      {
+        "kind": "element",
+        "identifier": "C200354",
+        "standard": "CEDS",
+        "name": "Rubric Criterion",
+        "role": "a rubric criterion"
+      },
+      {
+        "kind": "element",
+        "identifier": "C200355",
+        "standard": "CEDS",
+        "name": "Rubric Criterion Level",
+        "role": "a rubric criterion level"
+      },
+      {
+        "kind": "standard-wholesale",
+        "standard": "OpenBadges",
+        "role": "the VC-wrapped serialization the LER conforms to"
+      }
+    ]
+  },
+  "sourceDataRequired": [
+    {
+      "kind": "element",
+      "identifier": "C200079",
+      "standard": "CEDS",
+      "name": "Credential Award",
+      "role": "cited in issue #2 (resolved: DME CedsClass)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200087",
+      "standard": "CEDS",
+      "name": "Credential Definition",
+      "role": "cited in issue #2 as 'Has Criteria Definition'; URL C200087 = Credential Definition (resolved against the DME)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200085",
+      "standard": "CEDS",
+      "name": "Credential Definition Criteria Definition",
+      "role": "cited in issue #2 (resolved: DME CedsClass C200085)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200065",
+      "standard": "CEDS",
+      "name": "Competency Definition",
+      "role": "cited in issue #2 (resolved: DME CedsClass)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200353",
+      "standard": "CEDS",
+      "name": "Rubric",
+      "role": "cited in issue #2 Data"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200354",
+      "standard": "CEDS",
+      "name": "Rubric Criterion",
+      "role": "cited in issue #2 Data"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200355",
+      "standard": "CEDS",
+      "name": "Rubric Criterion Level",
+      "role": "cited in issue #2 Data"
+    },
+    {
+      "kind": "standard-wholesale",
+      "standard": "OpenBadges",
+      "role": "cited in issue #2 Data"
+    }
+  ],
+  "resources": [
+    {
+      "url": "https://github.com/educoreproject/educore_use_cases/issues/2",
+      "title": "Source issue #2 \u2014 Use Case: LER Issuance (Vetted)"
+    },
+    {
+      "url": "https://www.w3.org/TR/vc-data-model-2.0/",
+      "title": "Verifiable Credentials Data Model v2.0"
+    },
+    {
+      "url": "https://credentialengine.org/2025/06/09/building-trust-in-a-digital-world-scalable-solutions-for-verifiable-credential-ecosystems/",
+      "title": "Identity Registries \u2014 Building Trust in a Digital World"
+    }
+  ],
+  "relatedUseCases": [
+    {
+      "useCase": "uc:workplace-training-recognition",
+      "relationship": "sibling",
+      "notes": "Same family; the Issuer is an employer's Learning Management System recognizing completed workplace training."
+    },
+    {
+      "useCase": "uc:ler-issuance-from-slds",
+      "relationship": "sibling",
+      "notes": "Same family; the Issuer is a State Longitudinal Data System exporting verified course completions."
+    }
+  ],
+  "orderingAsserted": true
+}

@@ -1,0 +1,301 @@
+{
+  "$explanation": "EDUcore Enhanced Cockburn v0.11 case document. Source: educore_use_cases issue #4 (Vetted). SIBLING of uc:ler-issuance: every behavioral unit, actor, condition, and the Subject are reused by ref. This case authors ZERO new behavior \u2014 it differs from its siblings only in issuer context (an employer's LMS), trigger, value drivers, and cited data. That is the point of the rendering.  [Ordering verified by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ: the dependency DAG was checked against the step prose and found complete -- same shared behavioral chain as uc:ler-issuance; the free steps (1, 5) are genuinely independent. orderingAsserted: true.]  [Identity-contract migration applied by Milo (AI), session WILD_ORBIT, 2026-07-29, per workOrder-identityPhase2-072926 (supervisor BRONZE_LOOM): 5 CEDS space-form identifiers normalized to C-form shorthand; the six orphan:ceds-* citations deliberately retained as orphans (the standards-gap record). No role or name text was altered.]",
+  "id": "uc:workplace-training-recognition",
+  "shortName": "Workplace Training Recognition",
+  "longName": "Recognize Completed Workplace Training as a Verifiable Credential in the Employee's Wallet",
+  "level": "user-goal",
+  "scope": "One employer's LMS issuing one training-completion LER to one employee's wallet. PROPOSED \u2014 the issue states no scope.",
+  "keyConcepts": [
+    {
+      "term": "Trust Triangle",
+      "definition": "The three-party structure of verifiable-credential exchange: an Issuer who asserts, a Holder who keeps and presents, and a Verifier who checks \u2014 supported by registries that supply identity, skill definitions, and trust signals."
+    }
+  ],
+  "openIssues": [
+    "No trigger is stated in the source issue; the value below is PROPOSED from the Introduction narrative and needs author confirmation.",
+    "Six cited CEDS rows \u2014 the Credential Condition Profile / Option / Option-Component family \u2014 did not resolve against the DME standards graph and carry no definition or URL in the issue itself. They are carried as OrphanElements, which is exactly what the standard asks for: a data need is never silently dropped, it goes into an editorial queue. A question for the standards team \u2014 either a coverage gap in the DME's loaded CEDS, or newer or renamed terms.",
+    "Brandon (issue comment): this use case can connect with CTDL, OB3, CASE, SCD, and PESC. Only OB3 is cited so far; the other four are natural additions in a second pass, each adding a REQUIRES_STANDARD edge once confirmed.",
+    "The Introduction describes proficiency demonstrated 'in an online simulation exercise' \u2014 an assessment event that precedes and justifies issuance, which no step models. It may well be out of scope (the LMS's own assessment case), or the family may want an assessment predecessor. An open and rather interesting question."
+  ],
+  "primaryActor": "actor:ler-issuer",
+  "actors": [
+    {
+      "actor": "Issuer / Issuing System",
+      "identifier": "actor:ler-issuer",
+      "kind": "system",
+      "role": "An employer's Learning Management System, issuing a training-completion LER into the employee's wallet.",
+      "interest": "Training the employer paid for produces portable, verifiable evidence."
+    },
+    {
+      "actor": "Holder / Holder's Digital Wallet",
+      "identifier": "actor:ler-holder",
+      "kind": "human",
+      "role": "A retail employee receiving, reviewing, and storing the training credential.",
+      "interest": "I hold verifiable evidence of training I completed, to show this and future employers."
+    },
+    {
+      "actor": "Identity Registry",
+      "identifier": "actor:identity-registry",
+      "kind": "service",
+      "role": "Provides identity verification for the know-your-customer step.",
+      "interest": "Identity assertions it supplies are relied upon correctly."
+    },
+    {
+      "actor": "Skills Registry",
+      "identifier": "actor:skills-registry",
+      "kind": "service",
+      "role": "Provides the customer-service skill definitions and their proficiency metadata.",
+      "interest": "Credentials cite registered skill definitions rather than free text."
+    },
+    {
+      "actor": "Verifiable Data Registry",
+      "identifier": "actor:verifiable-data-registry",
+      "kind": "service",
+      "role": "Publishes the Issuer's DID and public key as a trust signal.",
+      "interest": "Verifiers can later confirm the Issuer's signature."
+    }
+  ],
+  "interestedParties": [
+    {
+      "party": "Prospective Employer",
+      "identifier": "actor:prospective-employer",
+      "interest": "Can accept demonstrated customer-service proficiency without re-training the worker.",
+      "kind": "affected"
+    },
+    {
+      "party": "Current Employer",
+      "identifier": "actor:current-employer",
+      "interest": "Training investment is recorded in a form the workforce can carry and the employer can audit.",
+      "kind": "affected"
+    }
+  ],
+  "triggeredBy": {
+    "name": "Employee completes a training unit and demonstrates proficiency in the LMS simulation exercise",
+    "identifier": "event:training-unit-completed-with-proficiency"
+  },
+  "assumes": [
+    {
+      "ref": "cond:holder-has-wallet"
+    },
+    {
+      "ref": "cond:issuer-has-signing-identity"
+    },
+    {
+      "ref": "cond:skill-definition-registered"
+    },
+    {
+      "statement": "The employee has completed the employer-provided training unit and demonstrated proficiency in the online simulation exercise.",
+      "identifier": "cond:training-completed-and-demonstrated"
+    }
+  ],
+  "guarantees": [
+    {
+      "role": "success",
+      "condition": {
+        "ref": "cond:holder-empowered-with-vc"
+      }
+    },
+    {
+      "role": "minimum",
+      "condition": {
+        "ref": "cond:no-unverifiable-credential-delivered"
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "ref": "cond:claims-cite-registered-skill"
+      }
+    }
+  ],
+  "valueDrivers": [
+    {
+      "valueDriver": {
+        "ref": "vd:eliminate-redundant-retraining"
+      }
+    },
+    {
+      "valueDriver": {
+        "ref": "vd:learner-data-portability"
+      }
+    }
+  ],
+  "scenario": [
+    {
+      "codedNotation": "1",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-identify-holder"
+      }
+    },
+    {
+      "codedNotation": "2",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-generate-credential"
+      }
+    },
+    {
+      "codedNotation": "3",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-use-authoritative-skill-reference"
+      }
+    },
+    {
+      "codedNotation": "4",
+      "kind": "main",
+      "dependsOn": [
+        "3"
+      ],
+      "story": {
+        "ref": "us:ler-sign-credential"
+      }
+    },
+    {
+      "codedNotation": "5",
+      "kind": "main",
+      "condition": "if using a record/trust registry",
+      "story": {
+        "ref": "us:ler-publish-public-key"
+      }
+    },
+    {
+      "codedNotation": "6",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-transmit-vc"
+      }
+    },
+    {
+      "codedNotation": "7",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-receive-and-review"
+      }
+    },
+    {
+      "codedNotation": "8",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-store-in-wallet"
+      }
+    },
+    {
+      "codedNotation": "7a",
+      "kind": "exception",
+      "branchesFrom": "7",
+      "condition": "the Holder does not recognize the claims as their own",
+      "story": {
+        "ref": "us:ler-decline-credential"
+      }
+    }
+  ],
+  "subject": {
+    "ref": "subj:ler-credential"
+  },
+  "sourceDataRequired": [
+    {
+      "kind": "element",
+      "identifier": "C200085",
+      "standard": "CEDS",
+      "name": "Credential Definition Criteria Definition",
+      "role": "cited in issue #4 (resolved: DME CedsClass C200085; the issue supplied a truncated URL and no definition)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200065",
+      "standard": "CEDS",
+      "name": "Competency Definition",
+      "role": "cited in issue #4 (resolved: DME CedsClass)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200353",
+      "standard": "CEDS",
+      "name": "Rubric",
+      "role": "cited in issue #4 (resolved)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200354",
+      "standard": "CEDS",
+      "name": "Rubric Criterion",
+      "role": "cited in issue #4 (resolved)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200355",
+      "standard": "CEDS",
+      "name": "Rubric Criterion Level",
+      "role": "cited in issue #4 (resolved)"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-credential-condition-profile",
+      "standard": null,
+      "name": "Credential Condition Profile",
+      "role": "cited in issue #4 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-has-credential-condition-profile",
+      "standard": null,
+      "name": "Has Credential Condition Profile",
+      "role": "cited in issue #4 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-credential-condition-option",
+      "standard": null,
+      "name": "Credential Condition Option",
+      "role": "cited in issue #4 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-has-credential-condition-option",
+      "standard": null,
+      "name": "Has Credential Condition Option",
+      "role": "cited in issue #4 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-credential-condition-option-component",
+      "standard": null,
+      "name": "Credential Condition Option Component",
+      "role": "cited in issue #4 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-has-credential-condition-option-component",
+      "standard": null,
+      "name": "Has Credential Condition Option Component",
+      "role": "cited in issue #4 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    }
+  ],
+  "resources": [
+    {
+      "url": "https://github.com/educoreproject/educore_use_cases/issues/4",
+      "title": "Source issue #4 \u2014 Use Case: Workplace Training Recognition (Vetted)"
+    }
+  ],
+  "relatedUseCases": [
+    {
+      "useCase": "uc:ler-issuance",
+      "relationship": "sibling",
+      "notes": "The canonical family member; this case reuses all eight of its behavioral units, its five actors, its three preconditions, its three guarantees, and its Subject."
+    },
+    {
+      "useCase": "uc:ler-issuance-from-slds",
+      "relationship": "sibling",
+      "notes": "Same family; the Issuer is a State Longitudinal Data System."
+    }
+  ],
+  "orderingAsserted": true
+}

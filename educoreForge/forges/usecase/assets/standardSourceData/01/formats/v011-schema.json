@@ -1,0 +1,970 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://educore.example/standards/use-case/v0.11/case-document.schema.json",
+  "title": "EDUcore Enhanced Cockburn Use Case Standard v0.11 -- Case Document",
+  "description": "The machine-readable form of the v0.11 standard: the JSON Schema for a single authored use-case document. This file is NORMATIVE -- where it and the specification prose disagree, this file governs. The specification transcludes it; it is not a copy of the specification. A scenario item must carry a story, an invokes, or both -- the `anyOf` below states that rule at the document layer. Rules that need the assembled graph rather than one document live in v011-shapes.ttl.",
+  "type": "object",
+  "$defs": {
+    "nodeRef": {
+      "description": "Reference to a shared node by identifier. Deliberately its own definition: every typed inline definition below is disjoint from it by construction, so a value can never satisfy two oneOf branches -- the trap documented in the userStory and subject repairs. Most typed definitions admit no `ref` key at all; subjectCitation admits one but requires `kind` and `role`, which this closed form excludes, so disjointness holds there too (and nodeRef never shares a oneOf with subjectCitation).",
+      "type": "object",
+      "properties": {
+        "ref": {
+          "$ref": "#/$defs/corpusIdentifier"
+        }
+      },
+      "required": [
+        "ref"
+      ],
+      "additionalProperties": false
+    },
+    "elementCitation": {
+      "$comment": "Identifier syntax is governed by resolutionRegistry.json -- the registry is the identifier-syntax authority (an identifier is the target's stableId or a registry-declared shorthand); Layer 4 executes resolution. Two rules are enforced HERE so the contract has teeth before the resolver exists: the CEDS shorthand conditional, and linked-implies-registry-standard. The registry-key enum below MUST exactly equal resolutionRegistry.json's key set; cases/testIdentityContract.py asserts the sync mechanically. The schema is version-free by ruling (ratification Q7): no standardVersion, anywhere.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "element"
+        },
+        "identifier": {
+          "type": "string",
+          "minLength": 1,
+          "not": {
+            "pattern": "^(subj|intermediate|us|cond|actor|event|vd|ip|artifact):"
+          },
+          "description": "EVERY corpus-internal namespace is banned here (Wave 2 closed the worlds leak: a fresh `event:`/`cond:` identifier used to pass as a fake orphan and SATISFY grounding): a Subject is cited with kind `subject`, an intermediate with kind `intermediate` -- never as an element (the identity pun the resolution contract kills). The banned alternation is the namespacePrefix enum minus `orphan:` (cases/testReferenceIntegrity.py asserts the derivation mechanically); `orphan:` identifiers remain legal: a confirmed standards gap is an element-to-be."
+        },
+        "standard": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "linkageStatus": {
+          "type": "string",
+          "enum": [
+            "linked",
+            "orphan",
+            "proposed"
+          ],
+          "default": "linked"
+        }
+      },
+      "required": [
+        "kind",
+        "identifier",
+        "role"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "$comment": "CEDS shorthand rule (ratification: CEDS-only shorthand at first; duplication with the registry accepted for CEDS alone so the contract bites before the Phase-3 resolver exists). P-prefix = property, C-prefix = class; bare six digits and 'CEDS ######' space forms are ILLEGAL.",
+          "if": {
+            "properties": {
+              "standard": {
+                "const": "CEDS"
+              }
+            },
+            "required": [
+              "standard"
+            ]
+          },
+          "then": {
+            "properties": {
+              "identifier": {
+                "anyOf": [
+                  {
+                    "pattern": "^[PC][0-9]{6}$"
+                  },
+                  {
+                    "pattern": "^https://w3id\\.org/CEDStandards/"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "$comment": "Linked implies a NAMED, REGISTERED standard (decision 2.3 + adjudicated decision 1): a citation claiming linkage must name a registry key. Orphan and proposed citations may carry standard null.",
+          "if": {
+            "anyOf": [
+              {
+                "not": {
+                  "required": [
+                    "linkageStatus"
+                  ]
+                }
+              },
+              {
+                "properties": {
+                  "linkageStatus": {
+                    "const": "linked"
+                  }
+                },
+                "required": [
+                  "linkageStatus"
+                ]
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "standard": {
+                "enum": [
+                  "CEDS",
+                  "PESC",
+                  "OpenBadges",
+                  "W3C-VC",
+                  "W3C-DID"
+                ]
+              }
+            },
+            "required": [
+              "standard"
+            ]
+          }
+        }
+      ]
+    },
+    "standardCitation": {
+      "$comment": "The standard field is an enum of registry keys -- it MUST exactly equal resolutionRegistry.json's key set (cases/testIdentityContract.py asserts the sync mechanically). Prose names ('W3C Verifiable Credentials Data Model 2.0', 'IMS OpenBadge v3p0 (...)') are not registry keys and do not conform. The schema is version-free by ruling (ratification Q7).",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "standard-wholesale"
+        },
+        "standard": {
+          "enum": [
+            "CEDS",
+            "PESC",
+            "OpenBadges",
+            "W3C-VC",
+            "W3C-DID"
+          ]
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "kind",
+        "standard",
+        "role"
+      ],
+      "additionalProperties": false
+    },
+    "subjectCitation": {
+      "description": "A corpus-internal citation of some case's Subject (or a declared constituent). A subject citation REFERENCES, never defines -- the definition lives where it always has, in a case's subject slot; `ref` must resolve there (checked at the corpus layer, not in this document schema). Deliberately admits NO linkageStatus and NO standard: subjects are corpus-internal by construction, and those fields would be lies waiting to happen. Subject citations do not satisfy the data-grounding invariant.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "subject"
+        },
+        "ref": {
+          "type": "string",
+          "pattern": "^subj:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "kind",
+        "ref",
+        "role"
+      ],
+      "additionalProperties": false
+    },
+    "intermediateCitation": {
+      "description": "A case's own working data: produced things that are neither standards elements nor any case's Subject. Namespace `intermediate:` -- the full word, deliberately identical to the kind name (ratified 2026-07-29; the spelling `int:` is REJECTED). Defined by first use within the owning case, referenced by identifier thereafter; dedup scope is the corpus. Admits NO linkageStatus and NO standard. Intermediate citations do not satisfy the data-grounding invariant.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "intermediate"
+        },
+        "identifier": {
+          "type": "string",
+          "pattern": "^intermediate:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "kind",
+        "identifier",
+        "role"
+      ],
+      "additionalProperties": false
+    },
+    "namespacePrefix": {
+      "description": "The complete enumeration of legal namespace prefixes for corpus identifiers, recorded from the corpus census of 2026-07-29. `vd:`, `ip:`, and `artifact:` are included because the corpus genuinely uses them; `art:` was removed 2026-07-29 when Phase 2 normalized its two sites to `artifact:` (the full-word precedent).",
+      "$comment": "RATIFIED 2026-07-29 (governance Q5): namespaces are an enumeration in the ratified schema, changed only by or at the behest of the coalition. Changing this enum is a coalition act post-ratification. Identifiers within a namespace are registered first-come at the editing tool under AI guidance: authors own names; the commons owns the naming system.",
+      "enum": [
+        "subj:",
+        "intermediate:",
+        "us:",
+        "cond:",
+        "actor:",
+        "event:",
+        "orphan:",
+        "vd:",
+        "ip:",
+        "artifact:"
+      ]
+    },
+    "corpusIdentifier": {
+      "description": "Any corpus-internal identifier: one of the ratified namespace prefixes followed by the generic identifier body (qualifier suffixes legal in every namespace; today only subj: and artifact: use them -- recorded, not restricted). The alternation in this pattern MUST mechanically equal the namespacePrefix enum -- cases/testReferenceIntegrity.py asserts the sync (GS-namespaceEnumSync).",
+      "type": "string",
+      "pattern": "^(subj|intermediate|us|cond|actor|event|orphan|vd|ip|artifact):[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+    },
+    "artifactCitation": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "artifact"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "origin": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identifier": {
+          "type": "string",
+          "pattern": "^artifact:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "origin",
+        "role"
+      ],
+      "additionalProperties": false
+    },
+    "dataCitation": {
+      "description": "Any citation kind: element, standard-wholesale, or artifact.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/elementCitation"
+        },
+        {
+          "$ref": "#/$defs/standardCitation"
+        },
+        {
+          "$ref": "#/$defs/artifactCitation"
+        }
+      ]
+    },
+    "producibleCitation": {
+      "description": "PRODUCES targets DataElement | Standard | OrphanElement -- never SourceArtifact (v011-spec.md, *The grounding*: CONSUMES admits artifacts, PRODUCES does not; artifacts are read-only inputs).",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/elementCitation"
+        },
+        {
+          "$ref": "#/$defs/standardCitation"
+        }
+      ]
+    },
+    "governableCitation": {
+      "description": "GOVERNS targets DataElement only (v011-spec.md: `UseCase -[GOVERNS]-> DataElement`, `Subject -[GOVERNS]-> DataElement`). An element citation whose linkageStatus is not `orphan` -- an orphan projects as OrphanElement, which GOVERNS may not target.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/elementCitation"
+        },
+        {
+          "not": {
+            "properties": {
+              "linkageStatus": {
+                "const": "orphan"
+              }
+            },
+            "required": [
+              "linkageStatus"
+            ]
+          }
+        }
+      ]
+    },
+    "event": {
+      "description": "An Event, typed inline. Through the first v0.11 build an inline event was matched by an untyped inline branch, so {\"banana\": 12} was a conforming trigger.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identifier": {
+          "type": "string",
+          "pattern": "^event:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "condition": {
+      "description": "A Condition, typed inline: a checkable claim.",
+      "type": "object",
+      "properties": {
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identifier": {
+          "type": "string",
+          "pattern": "^cond:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+        }
+      },
+      "required": [
+        "statement"
+      ],
+      "additionalProperties": false
+    },
+    "valueDriver": {
+      "description": "A ValueDriver, typed inline.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identifier": {
+          "type": "string",
+          "pattern": "^vd:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+        },
+        "motivation": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "scopeObject": {
+      "description": "Scope in its object form: an identifiable, reusable boundary entity.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "identifier": {
+          "$ref": "#/$defs/corpusIdentifier"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "userStory": {
+      "description": "A behavioral unit: what someone does, why, and the data it touches. Typed so that an inline story is VALIDATED rather than merely tolerated.",
+      "type": "object",
+      "properties": {
+        "identifier": {
+          "type": "string",
+          "pattern": "^us:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "intention": {
+          "type": "string",
+          "minLength": 1
+        },
+        "benefit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "consumes": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/dataCitation"
+              },
+              {
+                "$ref": "#/$defs/subjectCitation"
+              },
+              {
+                "$ref": "#/$defs/intermediateCitation"
+              }
+            ]
+          },
+          "description": "External citations (element / standard-wholesale / artifact) plus the corpus-internal kinds `subject` and `intermediate`. Branches are disjoint by `kind` const."
+        },
+        "produces": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/producibleCitation"
+              },
+              {
+                "$ref": "#/$defs/subjectCitation"
+              },
+              {
+                "$ref": "#/$defs/intermediateCitation"
+              }
+            ]
+          },
+          "description": "Producible external citations (element / standard-wholesale -- never artifact) plus the corpus-internal kinds `subject` and `intermediate`. A step that produces a subject citation produces the very node that is some case's Subject."
+        },
+        "serves": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/nodeRef"
+              },
+              {
+                "$ref": "#/$defs/valueDriver"
+              }
+            ]
+          },
+          "description": "ValueDrivers this unit serves (SERVES). Every target must also appear in the case's valueDrivers[]."
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "minLength": 1
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "identifier": {
+                "$ref": "#/$defs/corpusIdentifier"
+              }
+            },
+            "required": [
+              "url",
+              "title"
+            ],
+            "additionalProperties": false
+          },
+          "description": "HAS_RESOURCE from the unit itself."
+        }
+      },
+      "required": [
+        "action",
+        "intention",
+        "actor"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "$explanation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Editorial provenance: what this case was ported from, which source issue it answers, and what changed in the porting. Read by nothing; no invariant depends on it. Named with a leading $ to mark it as ABOUT the document rather than part of the case."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "shortName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "longName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "level": {
+      "type": "string",
+      "enum": [
+        "summary",
+        "user-goal",
+        "sub-function"
+      ]
+    },
+    "scope": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "$ref": "#/$defs/nodeRef"
+        },
+        {
+          "$ref": "#/$defs/scopeObject"
+        }
+      ]
+    },
+    "frequency": {
+      "type": "string",
+      "minLength": 1
+    },
+    "orderingAsserted": {
+      "type": "boolean",
+      "description": "When true, the case's dependency DAG (declared dependsOn UNION derived data-flow) is a deliberate and COMPLETE claim: the absence of an edge asserts independence, and consumers may parallelize accordingly. When absent or false, the ordering is unanalyzed: the absence of an edge asserts nothing, and consumers MUST treat the numbering as a presumed total order. Silence is the weakest claim, not the strongest."
+    },
+    "openIssues": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "keyConcepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string",
+            "minLength": 1
+          },
+          "definition": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "term",
+          "definition"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "primaryActor": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "actors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "type": "string",
+            "minLength": 1
+          },
+          "interest": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "human",
+              "organization",
+              "system",
+              "service"
+            ]
+          },
+          "identifier": {
+            "type": "string",
+            "pattern": "^actor:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+          }
+        },
+        "required": [
+          "actor",
+          "role",
+          "interest"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "interestedParties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "party": {
+            "type": "string",
+            "minLength": 1
+          },
+          "interest": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "expert",
+              "regulatory",
+              "affected",
+              "other"
+            ]
+          },
+          "identifier": {
+            "type": "string",
+            "pattern": "^(actor|ip):[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+          }
+        },
+        "required": [
+          "party",
+          "interest"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "scenario": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "codedNotation": {
+            "type": "string",
+            "pattern": "^[0-9]+(?:[a-z][0-9]*)*$"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "main",
+              "extension",
+              "exception",
+              "variation"
+            ],
+            "default": "main"
+          },
+          "branchesFrom": {
+            "type": "string",
+            "pattern": "^[0-9]+(?:[a-z][0-9]*)*$"
+          },
+          "condition": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dependsOn": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9]+(?:[a-z][0-9]*)*$"
+            },
+            "description": "codedNotations of steps in THIS case that must complete before this step, for control prerequisites not already implied by data-flow. Absent = data-flow-only (prerequisites are just the producers of the data this step consumes); [] is equivalent to absent."
+          },
+          "story": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "ref": {
+                    "type": "string",
+                    "pattern": "^us:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+                  }
+                },
+                "required": [
+                  "ref"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "$ref": "#/$defs/userStory"
+              }
+            ]
+          },
+          "invokes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "id of the UseCase this step invokes -- a bare UseCase id, as in relatedUseCases. A step must have a story, an invokes, or both."
+          }
+        },
+        "required": [
+          "codedNotation"
+        ],
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "story"
+            ]
+          },
+          {
+            "required": [
+              "invokes"
+            ]
+          }
+        ]
+      }
+    },
+    "valueDrivers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "valueDriver": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/nodeRef"
+              },
+              {
+                "$ref": "#/$defs/valueDriver"
+              }
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "minLength": 1,
+            "description": "ALIGNS_WITH edge property: why THIS case serves the driver."
+          }
+        },
+        "required": [
+          "valueDriver"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "triggeredBy": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/nodeRef"
+        },
+        {
+          "$ref": "#/$defs/event"
+        }
+      ]
+    },
+    "assumes": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/nodeRef"
+          },
+          {
+            "$ref": "#/$defs/condition"
+          }
+        ]
+      }
+    },
+    "guarantees": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "success",
+              "minimum",
+              "invariant"
+            ]
+          },
+          "condition": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/nodeRef"
+              },
+              {
+                "$ref": "#/$defs/condition"
+              }
+            ]
+          }
+        },
+        "required": [
+          "role",
+          "condition"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "contains": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "const": "success"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "description": "At least one guarantee, and at least one of role 'success'. A case must state what success IS, not only what starts it."
+    },
+    "subject": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ref": {
+              "type": "string",
+              "pattern": "^subj:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+            }
+          },
+          "required": [
+            "ref"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "identifier": {
+              "type": "string",
+              "pattern": "^subj:[A-Za-z0-9][A-Za-z0-9-]*(:[A-Za-z0-9-]+)*$"
+            },
+            "constituents": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 2
+            },
+            "comprises": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/dataCitation"
+              },
+              "description": "External kinds ONLY, forever (ratified Q3): a Subject comprises material from the shared world. The corpus-internal kinds `subject` and `intermediate` are deliberately refused here."
+            },
+            "governs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/governableCitation"
+              },
+              "description": "External kinds ONLY, forever (ratified Q3): GOVERNS targets shared-world DataElements; the corpus-internal kinds `subject` and `intermediate` are deliberately refused here."
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "governs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/governableCitation"
+      },
+      "description": "Case-level GOVERNS: methodology grounding when no Subject carries it."
+    },
+    "sourceDataRequired": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dataCitation"
+      },
+      "description": "External kinds ONLY, forever (ratified Q3): a case's required source data is what it needs from the shared world -- elements, standards, artifacts. The corpus-internal kinds `subject` and `intermediate` are deliberately refused here; a case does not ground by naming its own laundry."
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "identifier": {
+            "$ref": "#/$defs/corpusIdentifier"
+          }
+        },
+        "required": [
+          "url",
+          "title"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "relatedUseCases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "useCase": {
+            "type": "string",
+            "minLength": 1
+          },
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "child",
+              "parent",
+              "sibling",
+              "duplicate",
+              "extends",
+              "includes",
+              "seededFrom"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "useCase",
+          "relationship"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "id",
+    "shortName",
+    "longName",
+    "level",
+    "primaryActor",
+    "actors",
+    "scenario",
+    "triggeredBy",
+    "subject",
+    "guarantees"
+  ],
+  "additionalProperties": false
+}
