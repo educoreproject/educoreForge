@@ -83,7 +83,36 @@ const DME_ROLES = {
 	LAYER_ROOT: 'DmeLayerRoot',
 	CONCEPT: 'DmeConcept',
 	TEXT_REPAIR: 'DmeTextRepair',
+	// ⟪useCaseForge-102926 Phase V, 2026-10-29 (RADIANT_HAVEN for SHADOW_MEADOW; SPEC-useCaseForge-102926 §3.2, REVISION 1)⟫ the TEN
+	// USE-CASE ROLES: the node types of the EDUcore Enhanced Cockburn use-case standard (format v0.11), forged by forges/usecase. None is a
+	// data role (no hub card, no mapping count, no CEDS RDF compiler row sees one): USE_CASE_ROLE_LIST below is the list a reader excludes
+	// from a data standard's counts. A citation of another standard is a REFERENCE node: DmeExternalReference when it names an element
+	// or a whole standard by the resolution registry (non-embeddable: the cited standard's own node is the searchable thing), and
+	// DmeDataReference for the corpus's own data (an orphan element-to-be, an intermediate, a source artifact), which is embedded.
+	USE_CASE: 'DmeUseCase',
+	USER_STORY: 'DmeUserStory',
+	ACTOR: 'DmeActor',
+	CONDITION: 'DmeCondition',
+	EVENT: 'DmeEvent',
+	VALUE_DRIVER: 'DmeValueDriver',
+	SUBJECT: 'DmeSubject',
+	DATA_REFERENCE: 'DmeDataReference',
+	EXTERNAL_REFERENCE: 'DmeExternalReference',
+	RESOURCE: 'DmeResource',
 };
+// the use-case roles, as ONE list (the LAYER_ROLE_LIST analogue): what the graph contract's useCaseScopeRule hands the DME
+const USE_CASE_ROLE_LIST = Object.freeze([
+	DME_ROLES.USE_CASE,
+	DME_ROLES.USER_STORY,
+	DME_ROLES.ACTOR,
+	DME_ROLES.CONDITION,
+	DME_ROLES.EVENT,
+	DME_ROLES.VALUE_DRIVER,
+	DME_ROLES.SUBJECT,
+	DME_ROLES.DATA_REFERENCE,
+	DME_ROLES.EXTERNAL_REFERENCE,
+	DME_ROLES.RESOURCE,
+]);
 const LAYER_ROLE_LIST = Object.freeze([
 	DME_ROLES.LAYER_ROOT,
 	DME_ROLES.CONCEPT,
@@ -158,6 +187,42 @@ const EDGE_TYPES = {
 	// skos:*Match, owl:sameAs), carried with its predicate VERBATIM in sourcePredicate. NEVER a match edge: no declared predicate is
 	// coerced into EXACT/CLOSE/BROAD/NARROW (TQ question Q-T1). Written by a 'declared' bridge to a BASE node of the target standard.
 	DECLARED_CORRESPONDENCE: 'DECLARED_CORRESPONDENCE',
+	// ⟪useCaseForge-102926 Phase V, 2026-10-29⟫ the USE-CASE EDGES, named VERBATIM from the standard (v011-spec.md "How a case is
+	// wired"), plus the two root-ownership edges every forged node needs to be reachable from its root. Intra-standard structure only:
+	// a citation of another standard is a REFERENCE node inside the use-case standard, linked to the cited standard by a declared
+	// bridge (DECLARED_CORRESPONDENCE), never by one of these.
+	HAS_USE_CASE: 'HAS_USE_CASE',
+	DECLARES_SHARED_NODE: 'DECLARES_SHARED_NODE',
+	HAS_PRIMARY_ACTOR: 'HAS_PRIMARY_ACTOR',
+	HAS_ACTOR: 'HAS_ACTOR',
+	HAS_INTERESTED_PARTY: 'HAS_INTERESTED_PARTY',
+	HAS_STEP: 'HAS_STEP',
+	INVOKES: 'INVOKES',
+	PERFORMED_BY: 'PERFORMED_BY',
+	ACTS_ON: 'ACTS_ON',
+	ALIGNS_WITH: 'ALIGNS_WITH',
+	SERVES: 'SERVES',
+	TRIGGERED_BY: 'TRIGGERED_BY',
+	ASSUMES: 'ASSUMES',
+	GUARANTEES: 'GUARANTEES',
+	HAS_SUBJECT: 'HAS_SUBJECT',
+	HAS_CONSTITUENT: 'HAS_CONSTITUENT',
+	COMPRISES: 'COMPRISES',
+	GOVERNS: 'GOVERNS',
+	CONSUMES: 'CONSUMES',
+	PRODUCES: 'PRODUCES',
+	REQUIRES: 'REQUIRES',
+	REQUIRES_STANDARD: 'REQUIRES_STANDARD',
+	REQUIRES_ORPHAN: 'REQUIRES_ORPHAN',
+	REQUIRES_ARTIFACT: 'REQUIRES_ARTIFACT',
+	HAS_RESOURCE: 'HAS_RESOURCE',
+	CHILD: 'CHILD',
+	PARENT: 'PARENT',
+	SIBLING: 'SIBLING',
+	DUPLICATE: 'DUPLICATE',
+	EXTENDS: 'EXTENDS',
+	INCLUDES: 'INCLUDES',
+	SEEDED_FROM: 'SEEDED_FROM',
 };
 
 // ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE ⟪campaign P3, W-C-1 (V1-C28, G5)⟫ — the table a forge reads a root-parented node's ownership
@@ -174,6 +239,18 @@ const ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE = Object.freeze({
 	[DME_ROLES.PROPERTY]: EDGE_TYPES.HAS_PROPERTY,
 	[DME_ROLES.OPTION_SET]: EDGE_TYPES.HAS_OPTION_SET,
 	[DME_ROLES.SUPPORT]: EDGE_TYPES.HAS_SUPPORT,
+	// ⟪useCaseForge-102926 Phase V⟫ a use case hangs on the root by HAS_USE_CASE; every other use-case node is a SHARED node of the
+	// corpus (v0.11: one identifier, one node, reached from many cases), declared by the root with DECLARES_SHARED_NODE
+	[DME_ROLES.USE_CASE]: EDGE_TYPES.HAS_USE_CASE,
+	[DME_ROLES.USER_STORY]: EDGE_TYPES.DECLARES_SHARED_NODE,
+	[DME_ROLES.ACTOR]: EDGE_TYPES.DECLARES_SHARED_NODE,
+	[DME_ROLES.CONDITION]: EDGE_TYPES.DECLARES_SHARED_NODE,
+	[DME_ROLES.EVENT]: EDGE_TYPES.DECLARES_SHARED_NODE,
+	[DME_ROLES.VALUE_DRIVER]: EDGE_TYPES.DECLARES_SHARED_NODE,
+	[DME_ROLES.SUBJECT]: EDGE_TYPES.DECLARES_SHARED_NODE,
+	[DME_ROLES.DATA_REFERENCE]: EDGE_TYPES.DECLARES_SHARED_NODE,
+	[DME_ROLES.EXTERNAL_REFERENCE]: EDGE_TYPES.DECLARES_SHARED_NODE,
+	[DME_ROLES.RESOURCE]: EDGE_TYPES.DECLARES_SHARED_NODE,
 });
 const rootOwnershipEdgeTypeFor = (role) => {
 	if (!Object.prototype.hasOwnProperty.call(ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE, role)) {
@@ -931,8 +1008,10 @@ const SSSOM_VERSION_FOR_ONE_ONE_SLOTS = '1.1';
 // standard is a dataStandard. ⟪lane R, 2026-10-05; TQ⟫ DECLARED by each standard's forge declaration (standardKind, beside its
 // standardUsageTips), stamped on the standard's root by the framework, and read from the root by the StandardDefinition
 // finisher. The configs/dmeStandardUsageTips.json stopgap is retired.
-const STANDARD_KIND = Object.freeze({ DATA_STANDARD: 'dataStandard', CLASSIFICATION_TAXONOMY: 'classificationTaxonomy' });
-const STANDARD_KIND_LIST = Object.freeze([STANDARD_KIND.DATA_STANDARD, STANDARD_KIND.CLASSIFICATION_TAXONOMY]);
+// ⟪useCaseForge-102926 Phase V⟫ useCaseCorpus: the EDUcore Enhanced Cockburn use cases (forges/usecase), a standard of use cases that CITE
+// data standards; it is neither a data standard nor a taxonomy, and its StandardDefinition card must not say it is.
+const STANDARD_KIND = Object.freeze({ DATA_STANDARD: 'dataStandard', CLASSIFICATION_TAXONOMY: 'classificationTaxonomy', USE_CASE_CORPUS: 'useCaseCorpus' });
+const STANDARD_KIND_LIST = Object.freeze([STANDARD_KIND.DATA_STANDARD, STANDARD_KIND.CLASSIFICATION_TAXONOMY, STANDARD_KIND.USE_CASE_CORPUS]);
 // STANDARD_FAMILY — the family a standard belongs to (campaign P3, W-C-4; CONTRACTS §7; ruling A5: a family name in a DME
 // standard filter expands to its releases). A CLOSED word list, so a family is DECLARED by each forge (forge declaration
 // standardFamily, stamped on the root, read by the StandardDefinition finisher) and never inferred from a _source prefix.
@@ -953,7 +1032,9 @@ const STANDARD_KIND_LIST = Object.freeze([STANDARD_KIND.DATA_STANDARD, STANDARD_
 // forges/oneroster; never forged before, so no July _source exists: 'OneRoster' is the publisher's own spelling) and MEDBIQ (the MedBiquitous
 // portfolio, lane I's forges/medbiq; 'MedBiquitous' is the July _source name, GOLD_EVAL_260718.inventory.json, and the pre-reset
 // parserDescriptor.ini standardName agrees, measured by lane I).
-const STANDARD_FAMILY = Object.freeze({ CEDS: 'CEDS', EDFI: 'EdFi', SIF: 'SIF', PESC: 'PESC', CTDL: 'CTDL', CTDLASN: 'CTDLASN', CTDLQDATA: 'CTDLQData', PESCLD: 'PESCLD', OPENBADGES: 'OpenBadges', JEDX: 'JEDx', LIF: 'LIF', CLR: 'CLR', CASE: 'CASE', EDUAPI: 'EduAPI', SEDM: 'SEDM', ONEROSTER: 'OneRoster', MEDBIQ: 'MedBiquitous', TOY: 'Toy' });
+// ⟪useCaseForge-102926 Phase V, 2026-10-29⟫ USECASE: the EDUcore Enhanced Cockburn use cases (forges/usecase; _source 'UseCase', named by
+// SHADOW_MEADOW 2026-10-29), a one-member family released by an EDUcore committee (REVISION 1, R1).
+const STANDARD_FAMILY = Object.freeze({ CEDS: 'CEDS', EDFI: 'EdFi', SIF: 'SIF', PESC: 'PESC', CTDL: 'CTDL', CTDLASN: 'CTDLASN', CTDLQDATA: 'CTDLQData', PESCLD: 'PESCLD', OPENBADGES: 'OpenBadges', JEDX: 'JEDx', LIF: 'LIF', CLR: 'CLR', CASE: 'CASE', EDUAPI: 'EduAPI', SEDM: 'SEDM', ONEROSTER: 'OneRoster', MEDBIQ: 'MedBiquitous', USECASE: 'UseCase', TOY: 'Toy' });
 const STANDARD_FAMILY_LIST = Object.freeze(Object.keys(STANDARD_FAMILY).map((oneMember) => STANDARD_FAMILY[oneMember]));
 // BUILD_ATTESTATION_VERDICT — the words a :BuildAttestation row's verdict may be (lane R, 2026-10-05; FINDING 5-A of 2026-09-01).
 //   pass                 the gate ran and found nothing wrong
@@ -1352,6 +1433,7 @@ const vocabulary = {
 	NODE_LABELS,
 	DME_ROLES,
 	LAYER_ROLE_LIST,
+	USE_CASE_ROLE_LIST,
 	STANDARD_LAYER_LABEL,
 	EDGE_TYPES,
 	ROOT_OWNERSHIP_EDGE_TYPE_BY_ROLE,

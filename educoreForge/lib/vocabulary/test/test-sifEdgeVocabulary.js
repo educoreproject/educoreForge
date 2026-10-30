@@ -114,7 +114,10 @@ const SCHEMA_VIEW_MEMBER_COUNT_AFTER_V1 = 94;
 // OpenAPI kit's array minimum), projected as one integerValuedProperty member; measured 343 -> 344 by diffing the member lists main vs K0.
 // ⟪mappingLayers ML1-a, 2026-10-24 (STEEL_BRIDGE)⟫ +1 more, unrelated to V1: MAPPING_PROPERTIES.ASSERTION_ID, projected as one
 // matchEdgeProperty member; measured 344 -> 345 (observed red at 344 before this term).
-const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13 + 5 + 5 + 1 + 1 + 1 + 1 + 1 + 1;
+// ⟪useCaseForge-102926 Phase V, 2026-10-29 (RADIANT_HAVEN)⟫ +52 more, unrelated to V1: the ten use-case roles (each projected as one dmeRole
+// member AND one nodeLabel member, the role being a label too) and the 32 use-case edge types (one edgeType member each); measured 345 -> 397 by
+// diffing the finisher's member lists main 920eacba vs the Phase V tree (observed red at 345 before this row).
+const SCHEMA_VIEW_MEMBER_ROWS_ADDED_AFTER_V1 = 1 + 5 + 176 + 29 + 5 + 2 + 2 + 1 + 1 + 1 + 13 + 5 + 5 + 1 + 1 + 1 + 1 + 1 + 1 + 52;
 // ⟪campaign P3, W-C-2⟫ rows RETIRED from V1's own five: the real registry is AFTER_V1 + added − retired, and the pre-V1
 // reading (the remaining V1 rows removed) is BEFORE_V1 + added, unchanged.
 const SCHEMA_VIEW_MEMBER_ROWS_RETIRED_FROM_V1 = RETIRED_V1_EDGE_TYPE_NAME_LIST.length;
