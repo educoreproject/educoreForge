@@ -114,7 +114,7 @@ const ADDED_NEXT_STANDARDS_WAVE3_LANE_I = Object.freeze({
 });
 // ⟪useCaseForge-102926 Phase 2a, 2026-10-29 (RADIANT_HAVEN)⟫ the use-case standard's two DECLARED citation bridges (forges/usecase)
 const ADDED_USE_CASE_FORGE = Object.freeze({
-	usecaseCedsDeclaredCorrespondence: { standardKey: 'usecase', targetHub: 'ceds', declarationDigest: '9a997267e4dc0e7d829300c3488c3cb43f8bfc0917ecc8ae4af3c90a44957638', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'useCaseForge Phase 2a: the case authors\' CEDS element citations, declared (uc:cites), to the CEDS base nodes (forges/usecase)' },
+	usecaseCedsDeclaredCorrespondence: { standardKey: 'usecase', targetHub: 'ceds', declarationDigest: '9a997267e4dc0e7d829300c3488c3cb43f8bfc0917ecc8ae4af3c90a44957638', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'useCaseForge Phase 2a: the case authors\' CEDS element citations, declared (edc:cites), to the CEDS base nodes (forges/usecase)' },
 	usecaseCtdlCitationCtdlDeclaredCorrespondence: { standardKey: 'usecase', targetHub: 'ctdl', declarationDigest: '7f888ad1c615f12776a6bedc986d999388c8584bfd961702ed857bd6d2f4ac79', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'useCaseForge Phase 2a: the case authors\' CTDL citations (none until the registry gains a CTDL key), declared, to the CTDL base nodes (forges/usecase)' },
 });
 const ADDED_SINCE_R3_START = Object.freeze({
