@@ -1,0 +1,24 @@
+{
+  // usecaseDeclared — useCaseForge-102926 Phase 2a: the use cases beside the CEDS hub, and their DECLARED citation bridge. Each case
+  // author's CEDS element citation becomes one DECLARED_CORRESPONDENCE edge (predicate 'edc:cites', verbatim) to the CEDS BASE node it
+  // names (raw target ceds:{local}, resolved by the CEDS hub's own rules); nothing is judged and nothing is embedded by the bridge.
+  // THE CTDL PAIRING IS NOT IN THIS RECIPE, and cannot be yet: its facet (CtdlCitation) is written and registered, but the resolution
+  // registry has no CTDL key, so its walk yields no assertion, and the bridge framework refuses an EMPTY assertion set by name rather than
+  // freezing it green (BR-094, BG-EMPTY; measured 2026-10-30, P2a run2). The day the registry gains a CTDL key, the pairing joins as
+  // { "source": "usecase", "facet": "CtdlCitation", "hubs": ["ctdl"] } with ctdl in standards[] and hubs[].
+  // Built into a DEV_ graph with --rebridge=usecase --judgeCacheOnly=true: a declared basis asks nothing, so the cache-only guard is a seal.
+  "schemaVersion": "1.0.0",
+  "recipeName": "usecaseDeclared",
+  "kind": "dev",
+  "description": "The use cases beside the CEDS hub and their declared citation bridge to it (each author's CEDS citation, edc:cites, to the cited CEDS node).",
+  "standards": [
+    { "token": "ceds", "version": "current" },
+    { "token": "usecase", "version": "current" }
+  ],
+  "hubs": [
+    { "standard": "ceds" }
+  ],
+  "bridges": [
+    { "source": "usecase", "facet": "", "hubs": ["ceds"], "dependencies": ["usecase", "ceds"] }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "$comment": "resolutionRegistry.json -- NORMATIVE artifact of the EDUcore Enhanced Cockburn Use Case Standard v0.11 (identityResolutionContract-design-072826.md, Decision 2.2, as ratified 2026-07-29). One entry per citable standard; the entry KEY is the only legal value of a citation's `standard` field. `anchor` is `graph` (resolves against the DME standards graph via the universal stableId contract) or `document` (recognized standard, not graph-resolvable; Layer 4 verdicts document-anchored as a note, never a violation). A citation's `identifier` MUST be the target node's stableId, or match `shorthandPattern` and expand via `shorthandExpansion`. The registry is data, not code: adding a standard is an entry, not a release. A registry entry is a draft artifact until authorized through the human vetting step (ratification Q9). The registry is versionless by ruling (ratification Q7). Graph-source names verified against the DME golden (DmeStandardRoot) 2026-07-29.",
+  "CEDS": {
+    "graphSource": "CEDS",
+    "anchor": "graph",
+    "shorthandPattern": "^[PC][0-9]{6}$",
+    "shorthandExpansion": "https://w3id.org/CEDStandards/terms/{id}",
+    "notes": "P-prefix = property, C-prefix = class; bare six digits are ILLEGAL (ambiguous). Space forms like 'CEDS 000243' are ILLEGAL -- the standard belongs in the `standard` field, never inside the identifier."
+  },
+  "PESC": {
+    "graphSource": "PESC",
+    "anchor": "graph",
+    "shorthandPattern": null,
+    "shorthandExpansion": null,
+    "notes": "Cite the stableId curie directly (pesc:class/AcademicRecord/AcademicAwardType). No shorthand: PESC has no small native id."
+  },
+  "OpenBadges": {
+    "graphSource": "OpenBadges",
+    "anchor": "graph",
+    "shorthandPattern": null,
+    "shorthandExpansion": null,
+    "notes": "Canonical DME source name for 1EdTech/IMS Open Badges v3.0 (verified 2026-07-29). Cite the stableId curie directly (openbadges:Achievement, openbadges:Achievement.achievementType). Prose forms like 'IMS OpenBadge v3p0 (...)' are not registry keys and do not conform."
+  },
+  "W3C-VC": {
+    "graphSource": null,
+    "anchor": "document",
+    "shorthandPattern": null,
+    "shorthandExpansion": null,
+    "notes": "W3C Verifiable Credentials Data Model 2.0. Recognized standard, not graph-resolvable: no DME source exists. Layer 4 verdicts citations against this entry `document-anchored` (warning-class note, never a violation)."
+  },
+  "W3C-DID": {
+    "graphSource": null,
+    "anchor": "document",
+    "shorthandPattern": null,
+    "shorthandExpansion": null,
+    "notes": "W3C Decentralized Identifiers (DIDs) v1.0. Recognized standard, not graph-resolvable: no DME source exists. Layer 4 verdicts citations against this entry `document-anchored` (warning-class note, never a violation)."
+  }
+}

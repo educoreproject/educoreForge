@@ -1,0 +1,6 @@
+standard: forge-usecase
+publishedVersion: 1.0
+publishedVersionEvidence: REVISION 1, R2 of SPEC-useCaseForge-102926.md (TQ, 2026-10-29): the first release of the EDUcore use-case standard is 1.0; the cases are written to use-case FORMAT v0.11 (v011-schema.json $id), a different number
+upstreamUrl: https://genericwhite.com/26/educore/useCaseV11/
+copiedFrom: /Users/tqwhite/Documents/webdev/educore/system/management/zNotesPlansDocs/educoreEnhancedCockburn-v.11/ (cases/*.json, v011-schema.json, resolutionRegistry.json)
+copiedDate: 2026-10-29

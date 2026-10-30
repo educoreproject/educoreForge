@@ -156,6 +156,33 @@ const medbiqListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
 	});
 };
 
+// ⟪useCaseForge-102926, 2026-10-30⟫ the EDUcore use cases: medbiqListingEmitter's form, over forges/usecase's document-level round-trip pair
+const usecaseListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
+	const bundleDirPath = path.join(treeRootPath, 'forges', 'usecase');
+	const forgeDeclaration = require(path.join(bundleDirPath, 'lib', 'usecaseForgeDeclaration'));
+	const roundTripPair = require(path.join(bundleDirPath, 'lib', 'usecaseRoundTripPair'))({ ruleModulePath: 'forges/usecase/lib/usecaseRoundTripPair.js' });
+	const { openGraphReader } = require(path.join(treeRootPath, 'lib', 'forge-framework', 'roundTripHarness', 'graphReader'));
+	openGraphReader({ boltUrl: boltTriple.boltUrl, user: boltTriple.user, password: boltTriple.password, standardSource: forgeDeclaration.standardSource }, (openError, reader) => {
+		if (openError) {
+			callback(`usecase listing: ${openError}`);
+			return;
+		}
+		roundTripPair.emitFromGraph({ reader }, (emitError, emitted) => {
+			reader.close((closeError) => {
+				if (emitError || (emitted && emitted.fault !== undefined)) {
+					callback(`usecase listing: ${emitError || JSON.stringify(emitted.fault)}`);
+					return;
+				}
+				if (closeError) {
+					callback(`usecase listing: ${closeError}`);
+					return;
+				}
+				callback('', { statementMap: emitted.statements });
+			});
+		});
+	});
+};
+
 const edfiListingEmitter = ({ treeRootPath, boltTriple }, callback) => {
 	const edfiLibDirPath = path.join(treeRootPath, 'forges', 'edfi', 'lib');
 	const roundTripEdfiCompiler = require(path.join(edfiLibDirPath, 'roundTripEdfiCompiler'))();
@@ -285,6 +312,7 @@ const statementListingEmitterByBundleToken = Object.freeze({
 	onerostergradebook: openapiKitListingEmitterFor({ bundleToken: 'onerostergradebook' }),
 	onerosterresources: openapiKitListingEmitterFor({ bundleToken: 'onerosterresources' }),
 	medbiq: medbiqListingEmitter,
+	usecase: usecaseListingEmitter,
 });
 
 module.exports = { installReadOnlyDriverGuard, statementListingEmitterByBundleToken };

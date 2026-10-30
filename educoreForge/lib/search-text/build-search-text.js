@@ -79,6 +79,19 @@ const moduleFunction =
 				owningName,
 				name,
 			],
+
+			// ⟪useCaseForge-102926 Phase V⟫ the embeddable use-case roles (forges/usecase); DmeExternalReference is declared
+			// non-embeddable by its forge and has no builder. A case carries its short name beside its long one, a story its
+			// performer's name beside its action, a data reference its kind (orphan, intermediate, artifact).
+			[DME_ROLES.USE_CASE]: ({ name, shortName, standardName }) => [standardName, shortName, name],
+			[DME_ROLES.USER_STORY]: ({ name, actorName, standardName }) => [standardName, actorName, name],
+			[DME_ROLES.ACTOR]: ({ name, standardName }) => [standardName, name],
+			[DME_ROLES.CONDITION]: ({ name, standardName }) => [standardName, name],
+			[DME_ROLES.EVENT]: ({ name, standardName }) => [standardName, name],
+			[DME_ROLES.VALUE_DRIVER]: ({ name, standardName }) => [standardName, name],
+			[DME_ROLES.SUBJECT]: ({ name, standardName }) => [standardName, name],
+			[DME_ROLES.DATA_REFERENCE]: ({ name, referenceKind, standardName }) => [standardName, referenceKind, name],
+			[DME_ROLES.RESOURCE]: ({ name, standardName }) => [standardName, name],
 		};
 
 		// -----

@@ -73,7 +73,9 @@ const declaredRuleMismatchList = (declaredEntryList, hubRuleList) => declaredEnt
 // frozen: the declared plugins toward each hub (ctdl→ceds and pescld→ceds; ctdlasn→ctdl and pescld→ctdl)
 // ⟪nextStandards-102326 wave 2 lane G, 2026-10-24 (RUBY_PORTAL)⟫ ADDED, in this lane's own table: SEDM's declared identity toward CEDS
 const NEXT_STANDARDS_WAVE2_LANE_G_DECLARED_CEDS_PLUGIN_NAME_LIST = Object.freeze(['sedmCedsDeclaredIdentity']);
-const DECLARED_PLUGIN_COUNT_BY_HUB_TOKEN = Object.freeze({ ceds: 2 + NEXT_STANDARDS_WAVE2_LANE_G_DECLARED_CEDS_PLUGIN_NAME_LIST.length, ctdl: 2 });
+// ⟪useCaseForge-102926 Phase 2a, 2026-10-29 (RADIANT_HAVEN)⟫ ADDED: the use-case standard's declared citation plugins, one toward each hub
+const USE_CASE_FORGE_DECLARED_PLUGIN_NAME_LIST_BY_HUB_TOKEN = Object.freeze({ ceds: Object.freeze(['usecaseCedsDeclaredCorrespondence']), ctdl: Object.freeze(['usecaseCtdlCitationCtdlDeclaredCorrespondence']) });
+const DECLARED_PLUGIN_COUNT_BY_HUB_TOKEN = Object.freeze({ ceds: 2 + NEXT_STANDARDS_WAVE2_LANE_G_DECLARED_CEDS_PLUGIN_NAME_LIST.length + USE_CASE_FORGE_DECLARED_PLUGIN_NAME_LIST_BY_HUB_TOKEN.ceds.length, ctdl: 2 + USE_CASE_FORGE_DECLARED_PLUGIN_NAME_LIST_BY_HUB_TOKEN.ctdl.length });
 
 harness.section('(b) the loader, by declared location');
 const cedsLoaded = loaderLib.loadHubBridging({ forgesDirPath: FORGES_DIR_PATH, hubToken: 'ceds' });

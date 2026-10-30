@@ -1,0 +1,342 @@
+{
+  "$explanation": "EDUcore Enhanced Cockburn v0.11 case document. Source: educore_use_cases issue #6 (Vetted). SIBLING of uc:ler-issuance: every behavioral unit, actor, condition, and the Subject are reused by ref. Authors zero new behavior. Its one genuinely distinctive feature is a modeling tension the rendering surfaces rather than hides \u2014 see openIssues.  [Consistency edits applied by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ: the interested party 'State Education Agency' originally carried the identifier actor:sea-slds-admin, merging the agency-as-regulatory-stakeholder with the 'SEA IT / SLDS Administrator' actor defined in uc:fs002-compilation -- two different kinds of entity under one identifier, the mistaken merge the standard warns against. The incoming text's NAME was kept; the identifier was overridden to actor:state-education-agency, splitting the node. Caught by the dedup-by-identifier invariant the first time it ran over the corpus.]  [Ordering verified by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ: the dependency DAG was checked against the step prose and found complete -- same shared behavioral chain as uc:ler-issuance; the free steps (1, 5) are genuinely independent. orderingAsserted: true.]  [Identity-contract migration applied by Milo (AI), session WILD_ORBIT, 2026-07-29, per workOrder-identityPhase2-072926 (supervisor BRONZE_LOOM): 7 CEDS space-form identifiers normalized to C-form shorthand; 1 prose standard value normalized to registry key OpenBadges; the six orphan:ceds-* citations deliberately retained as orphans (the standards-gap record). No role or name text was altered.]",
+  "id": "uc:ler-issuance-from-slds",
+  "shortName": "LER Issuance from SLDS",
+  "longName": "Export Verified Course Completions from a State Longitudinal Data System into a Learner's Wallet",
+  "level": "user-goal",
+  "scope": "One SLDS issuing course-completion LERs to one learner's wallet. PROPOSED \u2014 the issue states no scope, and see the batch/single-learner tension below.",
+  "keyConcepts": [
+    {
+      "term": "SLDS",
+      "definition": "State Longitudinal Data System \u2014 the state's system of record for verified student course completions and other administrative education records."
+    },
+    {
+      "term": "Trust Triangle",
+      "definition": "The three-party structure of verifiable-credential exchange: an Issuer who asserts, a Holder who keeps and presents, and a Verifier who checks \u2014 supported by registries that supply identity, skill definitions, and trust signals."
+    }
+  ],
+  "openIssues": [
+    "A QUESTION OF ALTITUDE \u2014 the most interesting thing this rendering raises. The Introduction describes a state system that 'exports verified course completions' \u2014 plural learners, plural records, a batch \u2014 which reads as summary level. The eight shared units it inherits describe issuing ONE credential to ONE Holder, which is user-goal level. Either reading is defensible: a user-goal case invoked many times by a batch parent, or a summary case that INCLUDES the user-goal one. It is rendered as user-goal, matching the units it actually reuses, and the batch parent is left unauthored rather than guessed at. This is precisely the situation the still-open sub-case-invocation proposal exists to model, so the case is doing useful work for the standard by raising it.",
+    "No trigger is stated; the value below is PROPOSED from the Introduction narrative and awaits author confirmation.",
+    "The issue's stated benefit \u2014 'without manual transcript requests' \u2014 implies an as-is process being displaced, which no precondition or value driver in the source names. The driver below is PROPOSED as a starting point.",
+    "Ten cited CEDS rows carry 'undefined' in both definition and URL \u2014 a familiar artifact of a template being filled in for the first time. Five resolve by name against the DME; the Credential Condition Profile / Option / Option-Component family (six rows, shared with issue #4) does not, and is carried as OrphanElements pending a look by the standards team.",
+    "An opportunity rather than a defect: nothing in this case yet cites a course, course completion, or academic record element, though course completion is its subject matter. The inherited Subject grounds the credential rather than the completion. CEDS has course and course-section classes this case could usefully cite in a second pass."
+  ],
+  "primaryActor": "actor:ler-issuer",
+  "actors": [
+    {
+      "actor": "Issuer / Issuing System",
+      "identifier": "actor:ler-issuer",
+      "kind": "system",
+      "role": "A State Longitudinal Data System, exporting verified course completions as credentials into learners' wallets.",
+      "interest": "State-held administrative records become portable without staff-mediated transcript requests."
+    },
+    {
+      "actor": "Holder / Holder's Digital Wallet",
+      "identifier": "actor:ler-holder",
+      "kind": "human",
+      "role": "A learner receiving, reviewing, and storing verified course-completion records.",
+      "interest": "I hold my own verified course record and need not request a transcript to prove it."
+    },
+    {
+      "actor": "Identity Registry",
+      "identifier": "actor:identity-registry",
+      "kind": "service",
+      "role": "Provides identity verification binding the state record to the right learner.",
+      "interest": "Identity assertions it supplies are relied upon correctly."
+    },
+    {
+      "actor": "Skills Registry",
+      "identifier": "actor:skills-registry",
+      "kind": "service",
+      "role": "Provides skill definitions and their metadata, addressable by globally unique URI.",
+      "interest": "Credentials cite registered skill definitions rather than free text."
+    },
+    {
+      "actor": "Verifiable Data Registry",
+      "identifier": "actor:verifiable-data-registry",
+      "kind": "service",
+      "role": "Publishes the Issuer's DID and public key as a trust signal.",
+      "interest": "Verifiers can later confirm the state's signature."
+    }
+  ],
+  "interestedParties": [
+    {
+      "party": "Receiving Institution",
+      "identifier": "actor:receiving-institution",
+      "interest": "Can accept a verified course completion directly, without a transcript-request cycle.",
+      "kind": "affected"
+    },
+    {
+      "party": "State Education Agency",
+      "identifier": "actor:state-education-agency",
+      "interest": "Records released from the SLDS are accurate, authorized, and auditable.",
+      "kind": "regulatory"
+    }
+  ],
+  "triggeredBy": {
+    "name": "SLDS verifies a course completion and the learner is eligible for credential export",
+    "identifier": "event:slds-course-completion-verified"
+  },
+  "assumes": [
+    {
+      "ref": "cond:holder-has-wallet"
+    },
+    {
+      "ref": "cond:issuer-has-signing-identity"
+    },
+    {
+      "ref": "cond:skill-definition-registered"
+    },
+    {
+      "statement": "The course completion is verified in the state system of record and the learner is authorized to receive it as a portable credential.",
+      "identifier": "cond:completion-verified-and-release-authorized"
+    }
+  ],
+  "guarantees": [
+    {
+      "role": "success",
+      "condition": {
+        "ref": "cond:holder-empowered-with-vc"
+      }
+    },
+    {
+      "role": "minimum",
+      "condition": {
+        "ref": "cond:no-unverifiable-credential-delivered"
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "ref": "cond:claims-cite-registered-skill"
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "statement": "The exported credential asserts no more than the state system of record already holds as verified.",
+        "identifier": "cond:export-does-not-exceed-system-of-record"
+      }
+    }
+  ],
+  "valueDrivers": [
+    {
+      "valueDriver": {
+        "ref": "vd:learner-data-portability"
+      }
+    },
+    {
+      "valueDriver": {
+        "title": "Eliminate staff-mediated transcript requests",
+        "motivation": "Administrative records move to the learner automatically rather than on request through institutional staff time.",
+        "identifier": "vd:eliminate-manual-transcript-requests"
+      }
+    }
+  ],
+  "scenario": [
+    {
+      "codedNotation": "1",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-identify-holder"
+      }
+    },
+    {
+      "codedNotation": "2",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-generate-credential"
+      }
+    },
+    {
+      "codedNotation": "3",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-use-authoritative-skill-reference"
+      }
+    },
+    {
+      "codedNotation": "4",
+      "kind": "main",
+      "dependsOn": [
+        "3"
+      ],
+      "story": {
+        "ref": "us:ler-sign-credential"
+      }
+    },
+    {
+      "codedNotation": "5",
+      "kind": "main",
+      "condition": "if using a record/trust registry",
+      "story": {
+        "ref": "us:ler-publish-public-key"
+      }
+    },
+    {
+      "codedNotation": "6",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-transmit-vc"
+      }
+    },
+    {
+      "codedNotation": "7",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-receive-and-review"
+      }
+    },
+    {
+      "codedNotation": "8",
+      "kind": "main",
+      "story": {
+        "ref": "us:ler-store-in-wallet"
+      }
+    },
+    {
+      "codedNotation": "7a",
+      "kind": "exception",
+      "branchesFrom": "7",
+      "condition": "the Holder does not recognize the claims as their own",
+      "story": {
+        "ref": "us:ler-decline-credential"
+      }
+    }
+  ],
+  "subject": {
+    "ref": "subj:ler-credential"
+  },
+  "sourceDataRequired": [
+    {
+      "kind": "element",
+      "identifier": "C200079",
+      "standard": "CEDS",
+      "name": "Credential Award",
+      "role": "cited in issue #6 (resolved: DME CedsClass)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200087",
+      "standard": "CEDS",
+      "name": "Credential Definition",
+      "role": "cited in issue #6 as 'Has Criteria Definition'; URL C200087 = Credential Definition (resolved)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200085",
+      "standard": "CEDS",
+      "name": "Credential Definition Criteria Definition",
+      "role": "cited in issue #6 with no definition or URL; resolved by name against the DME"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200065",
+      "standard": "CEDS",
+      "name": "Competency Definition",
+      "role": "cited in issue #6 (resolved: DME CedsClass)"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200353",
+      "standard": "CEDS",
+      "name": "Rubric",
+      "role": "cited in issue #6 with no definition or URL; resolved by name"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200354",
+      "standard": "CEDS",
+      "name": "Rubric Criterion",
+      "role": "cited in issue #6 with no definition or URL; resolved by name"
+    },
+    {
+      "kind": "element",
+      "identifier": "C200355",
+      "standard": "CEDS",
+      "name": "Rubric Criterion Level",
+      "role": "cited in issue #6 with no definition or URL; resolved by name"
+    },
+    {
+      "kind": "standard-wholesale",
+      "standard": "OpenBadges",
+      "role": "cited in issue #6 Data"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-credential-condition-profile",
+      "standard": null,
+      "name": "Credential Condition Profile",
+      "role": "cited in issue #6 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-has-credential-condition-profile",
+      "standard": null,
+      "name": "Has Credential Condition Profile",
+      "role": "cited in issue #6 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-credential-condition-option",
+      "standard": null,
+      "name": "Credential Condition Option",
+      "role": "cited in issue #6 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-has-credential-condition-option",
+      "standard": null,
+      "name": "Has Credential Condition Option",
+      "role": "cited in issue #6 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-credential-condition-option-component",
+      "standard": null,
+      "name": "Credential Condition Option Component",
+      "role": "cited in issue #6 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    },
+    {
+      "kind": "element",
+      "identifier": "orphan:ceds-has-credential-condition-option-component",
+      "standard": null,
+      "name": "Has Credential Condition Option Component",
+      "role": "cited in issue #6 with no definition or URL; did not resolve against the DME",
+      "linkageStatus": "orphan"
+    }
+  ],
+  "resources": [
+    {
+      "url": "https://github.com/educoreproject/educore_use_cases/issues/6",
+      "title": "Source issue #6 \u2014 Use Case: LER Issuance from SLDS (Vetted)"
+    },
+    {
+      "url": "https://www.w3.org/TR/vc-data-model-2.0/",
+      "title": "Verifiable Credentials Data Model v2.0"
+    },
+    {
+      "url": "https://credentialengine.org/2025/06/09/building-trust-in-a-digital-world-scalable-solutions-for-verifiable-credential-ecosystems/",
+      "title": "Identity Registries \u2014 Building Trust in a Digital World"
+    }
+  ],
+  "relatedUseCases": [
+    {
+      "useCase": "uc:ler-issuance",
+      "relationship": "sibling",
+      "notes": "The canonical family member; this case reuses all eight of its behavioral units, its five actors, its three preconditions, its three guarantees, and its Subject."
+    },
+    {
+      "useCase": "uc:workplace-training-recognition",
+      "relationship": "sibling",
+      "notes": "Same family; the Issuer is an employer's Learning Management System."
+    }
+  ],
+  "orderingAsserted": true
+}

@@ -1,0 +1,10 @@
+{
+	"$comment": "usecaseSourceProfile.json — the use-case snapshot's layout as DATA (useCaseForge-102926 Phase 1): where the case documents, the format schemas and the resolution registry sit inside a snapshot directory, how a format schema states its format version, and the registry's expansion placeholder. Read by lib/usecaseSnapshotLoader.js and lib/usecaseWalk.js.",
+	"caseDirectoryName": "cases",
+	"formatDirectoryName": "formats",
+	"registryFileName": "resolutionRegistry.json",
+	"caseFileNameSuffix": ".json",
+	"formatVersionPropertyName": "formatVersion",
+	"formatVersionFromSchemaIdPatternSource": "/use-case/v([0-9]+(?:\\.[0-9]+)*)/",
+	"registryShorthandPlaceholder": "{id}"
+}

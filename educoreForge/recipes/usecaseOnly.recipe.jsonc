@@ -1,0 +1,15 @@
+{
+  // usecaseOnly — the EDUcore Enhanced Cockburn use cases (forges/usecase, release 1.0) alone: no hub, no bridge (useCaseForge-102926 Phase 1).
+  "schemaVersion": "1.0.0",
+  "recipeName": "usecaseOnly",
+  "kind": "dev",
+  "description": "Forge the UseCase standard base alone (the EDUcore Enhanced Cockburn use cases, release 1.0, format v0.11).",
+  "standards": [
+    {
+      "token": "usecase",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

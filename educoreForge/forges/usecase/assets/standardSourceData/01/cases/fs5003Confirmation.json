@@ -1,0 +1,326 @@
+{
+  "$explanation": "EDUcore Enhanced Cockburn v0.11 case document -- the sea/user-goal-level FS5003 methodology confirmation, forward-ported from the v0.8 worked example (fs5003Confirmation-sea-v0.8.md). Ported verbatim except for one change: the scenario key `_invokesChild` became the first-class `invokes`. v0.8 had no construct for a step that delegates to another case, so the authors carried the call out of band under an underscore-prefixed key; v0.11 makes it a real UseCase-[:INVOKES]->UseCase edge. Everything else in v0.8 is carried forward unchanged by the standard, so no other edit was needed.  [Ordering analysis applied by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ, responding to the 2026-07-28 independent evaluation finding that absent dependency edges falsely asserted step independence: dispositions (3) await the questionnaire review (1) and prior-year baseline (2), which are genuinely parallel; authoring (4) and rollover confirmation (5) both follow the dispositions and are parallel with each other; the compilation cross-check (6) and BRSI heuristic (7) follow the responses; sign-off (8) follows both checks; Ready-to-Submit (9) and the audit record (10) follow sign-off and are parallel. All control gates (the intermediates are review states, not data tokens worth minting). orderingAsserted: true.]  [Identity-contract migration applied by Milo (AI), session WILD_ORBIT, 2026-07-29, per workOrder-identityPhase2-072926 (supervisor BRONZE_LOOM): 2 CEDS space-form identifiers normalized to P-form shorthand; 1 subj:-as-element pun site converted to a kind:subject citation of this case's own Subject. No role or name text was altered.]",
+  "id": "uc:fs5003-confirmation",
+  "shortName": "FS5003 Confirmation",
+  "longName": "Confirm the Annual IDEA Environments - School Age Methodology Responses for FS002",
+  "level": "user-goal",
+  "scope": "The SEA's process of confirming/updating its FS5003 methodology responses through to Ready to Submit in EDPass. Out of scope: submission (parent); FS5002; FS002 compilation (sibling).",
+  "frequency": "Annually, per SEA, typically parallel with FS002 Compilation.",
+  "primaryActor": "actor:sea-edfacts-coordinator",
+  "actors": [
+    {
+      "actor": "SEA EDFacts Coordinator",
+      "identifier": "actor:sea-edfacts-coordinator",
+      "kind": "human",
+      "role": "Operates the FS5003 form; runs to Ready to Submit; updates the audit record.",
+      "interest": "Responses ready, signed off, consistent with the in-flight file."
+    },
+    {
+      "actor": "SEA Policy / Special Education Director",
+      "identifier": "actor:sea-policy-sped-director",
+      "kind": "human",
+      "role": "Substantive owner of the methodology; provides authoritative responses; signs off.",
+      "interest": "Responses reflect current policy and survive year over year."
+    },
+    {
+      "actor": "SEA IDEA Part B Data Manager",
+      "identifier": "actor:sea-idea-partb-data-manager",
+      "kind": "human",
+      "role": "Flags inconsistencies between stated methodology and the methodology applied in the in-flight compilation.",
+      "interest": "Stated methodology matches applied practice."
+    },
+    {
+      "actor": "SEA Data Quality Specialist / Validator",
+      "identifier": "actor:sea-dq-specialist",
+      "kind": "human",
+      "role": "Runs heuristic checks for likely cross-file BRSI failures.",
+      "interest": "Cross-file issues caught at the SEA before EDPass."
+    }
+  ],
+  "triggeredBy": {
+    "ref": "event:sea-authorizes-cycle"
+  },
+  "assumes": [
+    {
+      "statement": "The current FS5003 metadata collection is open in EDPass and the Coordinator has active access.",
+      "identifier": "cond:fs5003-collection-open"
+    },
+    {
+      "statement": "ED revisions to the questionnaire since the prior cycle have been identified."
+    },
+    {
+      "statement": "The SEA's current IDEA Educational Environment policy is documented and accessible."
+    }
+  ],
+  "scenario": [
+    {
+      "codedNotation": "1",
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "confirms the FS5003 collection is open in EDPass and reviews ED revisions to the questionnaire since the prior cycle",
+        "intention": "know what must be answered this cycle",
+        "consumes": [
+          {
+            "kind": "artifact",
+            "name": "Current FS5003 questionnaire",
+            "origin": "EDPass, current school year",
+            "role": "the complete set of questions requiring response",
+            "identifier": "artifact:fs5003-questionnaire:SY2025-26"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "2",
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "retrieves the prior-year FS5003 responses as the baseline",
+        "intention": "a starting point for rollover/change detection",
+        "consumes": [
+          {
+            "kind": "artifact",
+            "name": "Prior-year FS5003 responses",
+            "origin": "The SEA's EDPass response history",
+            "role": "baseline for rollover",
+            "identifier": "artifact:fs5003-responses:prior-year"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "3",
+      "dependsOn": [
+        "1",
+        "2"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-policy-sped-director",
+        "action": "reviews prior responses against current SEA policy, assigning each question a disposition (rolls forward / needs update / new)",
+        "intention": "know which questions need work",
+        "consumes": [
+          {
+            "kind": "artifact",
+            "name": "Current SEA Educational Environment policy documents",
+            "origin": "The SEA policy archive",
+            "role": "substantive authority for the rules"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "4",
+      "dependsOn": [
+        "3"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-policy-sped-director",
+        "action": "for each question requiring update/new authoring, provides the substantive response (recorded by the Coordinator)",
+        "intention": "the changed methodology is stated"
+      }
+    },
+    {
+      "codedNotation": "5",
+      "dependsOn": [
+        "3"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "confirms each rolled-over prior response for the new cycle",
+        "intention": "unchanged methodology is deliberately re-affirmed"
+      }
+    },
+    {
+      "codedNotation": "6",
+      "dependsOn": [
+        "4",
+        "5"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "reviews the responses against the in-flight FS002 Compilation, flagging gaps between methodology-as-stated and methodology-as-applied",
+        "intention": "stated equals applied",
+        "consumes": [
+          {
+            "kind": "artifact",
+            "name": "Sample of in-flight FS002 aggregations",
+            "origin": "uc:fs002-compilation (sibling output)",
+            "role": "verification that stated matches applied"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "7",
+      "dependsOn": [
+        "4",
+        "5"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-dq-specialist",
+        "action": "runs a heuristic check for likely cross-file BRSI consistency between the responses and the FS002 environment dimension",
+        "intention": "catch likely BRSI failures before EDPass"
+      }
+    },
+    {
+      "codedNotation": "8",
+      "dependsOn": [
+        "6",
+        "7"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-policy-sped-director",
+        "action": "signs off on the complete set of responses",
+        "intention": "the methodology is owned, not merely transcribed",
+        "benefit": "the stated methodology is owned by policy leadership, not merely transcribed"
+      }
+    },
+    {
+      "codedNotation": "9",
+      "dependsOn": [
+        "8"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "marks the FS5003 collection Ready to Submit in EDPass",
+        "intention": "the parent package can proceed",
+        "produces": [
+          {
+            "kind": "subject",
+            "ref": "subj:fs5003-responses:SY2025-26",
+            "role": "the FS5003 Responses at Ready to Submit"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "10",
+      "dependsOn": [
+        "8"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "updates the SEA's methodology audit record (what changed, who reviewed, when, what prompted changes)",
+        "intention": "the stated methodology is traceable and defensible"
+      }
+    },
+    {
+      "codedNotation": "1a",
+      "kind": "extension",
+      "branchesFrom": "1",
+      "condition": "ED substantially revised the questionnaire, adding questions requiring decisions not yet made",
+      "story": {
+        "actor": "actor:sea-edfacts-coordinator",
+        "action": "escalates to the Policy / SpEd Director; decisions made; new questions answered; resume at step 4",
+        "intention": "the new questions are answered"
+      }
+    },
+    {
+      "codedNotation": "6a",
+      "kind": "exception",
+      "branchesFrom": "6",
+      "condition": "the Data Manager finds a response that does not match the methodology applied in compilation",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "Coordinator, Director, and Data Manager adjust the response, adjust compilation, or record a known limitation and prepare a data note for the parent",
+        "intention": "stated and applied are reconciled"
+      }
+    },
+    {
+      "codedNotation": "8a",
+      "kind": "exception",
+      "branchesFrom": "8",
+      "condition": "the Director declines to sign off due to substantive concerns",
+      "story": {
+        "actor": "actor:sea-policy-sped-director",
+        "action": "resolves through additional review or re-authoring; sign-off obtained or the case is suspended",
+        "intention": "sign-off reflects genuine ownership"
+      }
+    }
+  ],
+  "valueDrivers": [
+    {
+      "valueDriver": {
+        "ref": "vd:longitudinal-comparability"
+      }
+    },
+    {
+      "valueDriver": {
+        "ref": "vd:auditable-provenance"
+      }
+    },
+    {
+      "valueDriver": {
+        "ref": "vd:idea-618-compliance"
+      }
+    }
+  ],
+  "guarantees": [
+    {
+      "role": "success",
+      "condition": {
+        "statement": "All required FS5003 questions have responses, signed off, and the collection is Ready to Submit in EDPass."
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "statement": "The methodology stated in the FS5003 responses is the methodology actually applied to produce the FS002 counts; no divergence between stated and applied practice survives confirmation.",
+        "identifier": "cond:stated-equals-applied-methodology"
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "ref": "cond:audit-trail-complete"
+      }
+    }
+  ],
+  "subject": {
+    "name": "The FS5003 IDEA Environments - School Age Methodology Responses",
+    "identifier": "subj:fs5003-responses:SY2025-26",
+    "governs": [
+      {
+        "kind": "element",
+        "identifier": "P000535",
+        "standard": "CEDS",
+        "role": "IDEA Educational Environment for School Age -- this case defines how it is populated"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000559",
+        "standard": "CEDS",
+        "role": "IDEA Educational Environment for Early Childhood (bridging cohort)"
+      }
+    ]
+  },
+  "sourceDataRequired": [
+    {
+      "kind": "artifact",
+      "name": "State policy change records since the prior cycle",
+      "origin": "The SEA policy archive / general counsel",
+      "role": "identifies whether methodology changes are required"
+    }
+  ],
+  "relatedUseCases": [
+    {
+      "useCase": "uc:fs002-package-submission",
+      "relationship": "parent"
+    },
+    {
+      "useCase": "uc:fs002-compilation",
+      "relationship": "sibling",
+      "notes": "applies the methodology this case states to compute the FS002 environment dimension"
+    }
+  ],
+  "orderingAsserted": true
+}

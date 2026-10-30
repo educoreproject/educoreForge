@@ -1,0 +1,16 @@
+{
+  // usecaseOnlyRoundTrip — the use cases alone with the RT-13 round-trip stage: the useCaseForge-102926 Phase 1 certification recipe.
+  "schemaVersion": "1.0.0",
+  "recipeName": "usecaseOnlyRoundTrip",
+  "kind": "dev",
+  "description": "Forge the UseCase standard base and round-trip-validate the materialized product (RT-13 stage).",
+  "roundTripStage": true,
+  "standards": [
+    {
+      "token": "usecase",
+      "version": "current"
+    }
+  ],
+  "hubs": [],
+  "bridges": []
+}

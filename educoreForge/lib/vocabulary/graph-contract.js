@@ -63,7 +63,8 @@ const LIST_VALUED_PROPERTY_NAME_LIST = Object.freeze([
 // ⟪nextStandards-102326 K0⟫ OpenBadges (lane A's forges/openbadges: OpenBadgesSchema, OpenBadgesProperty, …) and Jedx (lane B's forges/jedx).
 // ⟪nextStandards-102326 wave 2⟫ Clr, Case, Eduapi and Sedm (lanes D, E, F and G: ClrSchema, CaseProperty, EduapiEnum, …).
 // ⟪nextStandards-102326 wave 3⟫ Oneroster and Medbiq (lanes H and I: OnerosterSchema, MedbiqField, …).
-const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif|Sif260928|Pesc[A-Za-z0-9]+|Ctdl|Ctdlasn|Ctdlqdata|OpenBadges|Jedx|Lif|Clr|Case|Eduapi|Sedm|Oneroster|Medbiq)[A-Z]', '^StandardBase$', '^StandardLayer$', '^BridgedRelation_']);
+// ⟪useCaseForge-102926 Phase V⟫ Uc (forges/usecase: UcRoot, UcUseCase, UcUserStory, …; it echoes the corpus's own uc: prefix).
+const PRODUCER_LOCAL_LABEL_PATTERN_SOURCE_LIST = Object.freeze(['^(Ceds|Edfi|Sif|Sif260928|Pesc[A-Za-z0-9]+|Ctdl|Ctdlasn|Ctdlqdata|OpenBadges|Jedx|Lif|Clr|Case|Eduapi|Sedm|Oneroster|Medbiq|Uc)[A-Z]', '^StandardBase$', '^StandardLayer$', '^BridgedRelation_']);
 // names that END in List / Keys but are JSON strings or literals by declaration: the name-rule test exempts exactly these
 const LIST_NAME_RULE_EXEMPTION_BY_NAME = Object.freeze({
 	importList: 'JSON string (pesc-release-forge walk.js)',
@@ -237,7 +238,7 @@ const STANDARD_DEFINITION_FIELD_LIST = Object.freeze([
 	{ name: 'unkindedMappingEdgeCount', type: 'integer', required: false, meaning: 'match edges carrying no mappingKind' },
 	{ name: 'standardKind', type: 'string', required: true, meaning: 'what kind of standard it is, as its forge declares' },
 	{ name: 'standardUsageTips', type: 'string', required: false, meaning: 'how to read the standard in this graph, as its forge declares; absent when the forge declares null (forgeDeclarationContract allows it: sif, pesc260805)' },
-	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC, CTDL, CTDLASN, CTDLQData, PESCLD, OpenBadges, JEDx, LIF, CLR, CASE, EduAPI, SEDM, OneRoster, MedBiquitous), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
+	{ name: 'standardFamily', type: 'string', required: true, meaning: 'the family the standard belongs to (STANDARD_FAMILY: CEDS, EdFi, SIF, PESC, CTDL, CTDLASN, CTDLQData, PESCLD, OpenBadges, JEDx, LIF, CLR, CASE, EduAPI, SEDM, OneRoster, MedBiquitous, UseCase), declared by its forge; a family name in a DME standard filter expands to these (ruling A5)' },
 	{ name: 'releaseLabel', type: 'string', required: true, meaning: 'which member of its family the standard is, version-free (CollegeTranscript, not CollegeTranscript-1.8.0); a one-member family repeats the family name' },
 	{ name: 'descriptionSource', type: 'string', required: true, meaning: 'where in the standard\'s SOURCE its description text is read from (PESC xs:documentation, CEDS dc:description, ...), declared by its forge (lane FIX, Fix 3)' },
 	// ⟪zeroBacklog lane D, D0-4, 2026-10-22⟫ RESERVED for lane A2 (census row 10), which stamps it on every standard and makes it required
@@ -426,6 +427,20 @@ const graphContractDocument = () => {
 		// own: a layer node carries the standard's _source AND the label StandardLayer, in one of the layer roles. A reader that
 		// counts or selects a standard's content excludes StandardLayer unless it says why it includes it.
 		layerScopeRule: layerScopeRule(),
+		// ⟪useCaseForge-102926 Phase V, 2026-10-29⟫ how a reader tells the USE-CASE standard's nodes from a data standard's: they carry
+		// _source UseCase, standardKind useCaseCorpus on their root, and one of the use-case roles. A reader that counts a data standard's
+		// content by role never meets them; a reader that counts every node by role excludes them by this list unless it says why.
+		useCaseScopeRule: useCaseScopeRule(),
+	};
+};
+
+// useCaseScopeRule — read at CALL time, as layerScopeRule is (the cycle TRAP in the header)
+const useCaseScopeRule = () => {
+	const { USE_CASE_ROLE_LIST, STANDARD_KIND } = require('./vocabulary');
+	return {
+		standardKind: STANDARD_KIND.USE_CASE_CORPUS,
+		useCaseRoleList: USE_CASE_ROLE_LIST.slice(),
+		rule: 'a node in a use-case role belongs to a use-case standard (standardKind useCaseCorpus): it is a case, a story, an actor, a condition, an event, a value driver, a subject, a resource or a reference that CITES another standard, never a data element; exclude these roles from a data standard\'s counts and unmapped-field lists, and follow a citation from its reference node by DECLARED_CORRESPONDENCE to the cited standard\'s own node',
 	};
 };
 

@@ -1,0 +1,7 @@
+{
+	"name": "forge-usecase",
+	"version": "1.0.0",
+	"main": "forgeUsecase.js",
+	"description": "Use-case forge bundle — the EDUcore Enhanced Cockburn use cases (release 1.0, format v0.11) from their case documents: cases, shared stories, actors, conditions, events, value drivers, subjects, resources and citation references. It does no bridging.",
+	"private": true
+}

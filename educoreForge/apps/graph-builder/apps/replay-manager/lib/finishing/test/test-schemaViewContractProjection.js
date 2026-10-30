@@ -165,7 +165,8 @@ const preFixResidue = forgeFamilyResidueFor(require(COVERAGE_PATH)({ vocabulary:
 // ⟪nextStandards-102326 lane C⟫ and LIF (Lif*, once lane C's forges/lif declaration lands)
 // ⟪nextStandards-102326 wave 2⟫ and wave 2's four (Clr*, Case*, Eduapi*, Sedm*, as each lane's declaration lands)
 // ⟪nextStandards-102326 wave 3⟫ and wave 3's two (Oneroster*, Medbiq*, as lanes H and I land their declarations)
-harness.ok('(e) observed RED with the pre-fix pattern list (families it never declared: today the CTDL ones and the nextStandards wave)', preFixResidue.length > 0 && preFixResidue.every((oneLabel) => /^(Ctdl|OpenBadges|Jedx|Lif|Clr|Case|Eduapi|Sedm|Oneroster|Medbiq)/.test(oneLabel)), preFixResidue.join(', '));
+// ⟪useCaseForge-102926, 2026-10-30⟫ and the use-case standard's Uc* (forges/usecase, UcRoot)
+harness.ok('(e) observed RED with the pre-fix pattern list (families it never declared: today the CTDL ones and the nextStandards wave)', preFixResidue.length > 0 && preFixResidue.every((oneLabel) => /^(Ctdl|OpenBadges|Jedx|Lif|Clr|Case|Eduapi|Sedm|Oneroster|Medbiq|Uc)/.test(oneLabel)), preFixResidue.join(', '));
 harness.note(`RED-OBSERVED e twin='oldSifFamilyUndeclared' → residue [${preFixResidue.join(', ')}]`);
 
 harness.report();

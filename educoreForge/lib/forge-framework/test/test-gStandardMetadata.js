@@ -20,6 +20,7 @@
 //   ⟪zeroBacklog lane D, D0-3⟫ (o) the family PESCLD (PESC_LD, lane C's forges/pescld) is admitted by the closed list.
 //   ⟪nextStandards-102326 K0⟫ (p) the family OpenBadges (lane A's forges/openbadges) and (q) the family JEDx (lane B's forges/jedx)
 //   are admitted by the closed list (the wave's ONE vocabulary commit).
+//   ⟪useCaseForge-102926 Phase V⟫ (y) the family UseCase and (z) the kind useCaseCorpus (forges/usecase) are admitted by the closed lists.
 // RED TWINS, each observed in memory: (a) the contract row made optional; (b) the closed-value check accepting anything;
 // (c) the tips checker accepting ''; (d) the root dropping standardKind; (e) null stamped as a property; (f) the PESC release
 // declaration builder forgetting the tips.
@@ -171,6 +172,15 @@ const conjunctJudgeByRefId = {
 		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'MedBiquitous' }));
 		return { pass: message === '', detail: message || "standardFamily 'MedBiquitous' admitted" };
 	},
+	// ⟪useCaseForge-102926 Phase V⟫ the use-case standard: its family UseCase and its kind useCaseCorpus (forges/usecase)
+	y_usecaseFamilyAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardFamily: 'UseCase' }));
+		return { pass: message === '', detail: message || "standardFamily 'UseCase' admitted" };
+	},
+	z_useCaseCorpusKindAdmitted: (mutationList) => {
+		const message = validationMessageFor(mutationList, withChange({ standardKind: 'useCaseCorpus' }));
+		return { pass: message === '', detail: message || "standardKind 'useCaseCorpus' admitted" };
+	},
 	i_blankReleaseLabelRefused: (mutationList) => {
 		const message = validationMessageFor(mutationList, withChange({ releaseLabel: ' ' }));
 		return { pass: /forgeDeclaration 'releaseLabel'/.test(message), detail: message || 'accepted a blank releaseLabel' };
@@ -250,6 +260,8 @@ const TWIN_LIST = [
 	{ conjunctRefId: 'v_sedmFamilyAdmitted', twinName: 'familyListWithoutSedm', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'SEDM') })," },
 	{ conjunctRefId: 'w_onerosterFamilyAdmitted', twinName: 'familyListWithoutOneroster', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'OneRoster') })," },
 	{ conjunctRefId: 'x_medbiqFamilyAdmitted', twinName: 'familyListWithoutMedbiq', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'MedBiquitous') })," },
+	{ conjunctRefId: 'y_usecaseFamilyAdmitted', twinName: 'familyListWithoutUsecase', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_FAMILY_LIST }),", replace: "allowedValueList: STANDARD_FAMILY_LIST.filter((oneFamily) => oneFamily !== 'UseCase') })," },
+	{ conjunctRefId: 'z_useCaseCorpusKindAdmitted', twinName: 'kindListWithoutUseCaseCorpus', modulePath: CONTRACT_PATH, find: "allowedValueList: STANDARD_KIND_LIST }),", replace: "allowedValueList: STANDARD_KIND_LIST.filter((oneKind) => oneKind !== 'useCaseCorpus') })," },
 	{ conjunctRefId: 'i_blankReleaseLabelRefused', twinName: 'labelOptional', modulePath: CONTRACT_PATH, find: "releaseLabel: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "releaseLabel: Object.freeze({ required: true, kind: 'nonEmptyString' })," },
 	{ conjunctRefId: 'j_rootCarriesFamilyAndLabel', twinName: 'rootDropsFamily', modulePath: ROOT_PATH, find: '\t\tstandardFamily,\n\t\treleaseLabel,\n', replace: '\t\treleaseLabel,\n' },
 	{ conjunctRefId: 'l_missingOrBlankDescriptionSourceRefused', twinName: 'descriptionSourceOptional', modulePath: CONTRACT_PATH, find: "descriptionSource: Object.freeze({ required: true, kind: 'nonBlankString' }),", replace: "descriptionSource: Object.freeze({ required: false, kind: 'nonEmptyString' })," },

@@ -7,6 +7,7 @@
 		{ "tableName": "vectors", "identityColumnNameList": ["vectorId"], "digestColumnNameList": ["inputText", "vector"] },
 		{ "tableName": "decisionBlocks", "identityColumnNameList": ["pairKey"], "digestColumnNameList": ["frozenText"], "contentAddressColumnName": "decisionBlockHash" },
 		{ "tableName": "judgmentCacheEntries", "identityColumnNameList": ["promptHash", "model", "rendererVersion"], "digestColumnNameList": ["judgmentJson"] },
+		{ "tableName": "judgmentFillingSpend", "identityColumnNameList": ["promptHash", "model", "rendererVersion"], "digestColumnNameList": ["fillingSpendCallListJson"] },
 		{ "tableName": "standardsDatabaseOps", "identityColumnNameList": ["refId"], "digestColumnNameList": [] },
 		{ "tableName": "vectorStoreOps", "identityColumnNameList": ["refId"], "digestColumnNameList": [] },
 		{ "tableName": "decisionStoreOps", "identityColumnNameList": ["refId"], "digestColumnNameList": [] },

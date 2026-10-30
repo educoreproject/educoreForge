@@ -1,0 +1,694 @@
+{
+  "$explanation": "EDUcore Enhanced Cockburn v0.11 case document -- the sea/user-goal-level FS002 compilation, forward-ported from the v0.8 worked example (fs002Compilation-sea-v0.8.md). Ported verbatim except for one change: the scenario key `_invokesChild` became the first-class `invokes`. v0.8 had no construct for a step that delegates to another case, so the authors carried the call out of band under an underscore-prefixed key; v0.11 makes it a real UseCase-[:INVOKES]->UseCase edge. Everything else in v0.8 is carried forward unchanged by the standard, so no other edit was needed.  [Consistency edit applied by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ: the trigger event:sea-authorizes-cycle was referenced here and in uc:fs5003-confirmation but DEFINED NOWHERE in the corpus. An inline definition was authored here (the first case of the annual cycle); the name is AI-drafted from the case's own scope text. Caught by the SHACL projection the first time it ran.]  [Ordering analysis applied by Milo (AI), session PRISM_QUEST, 2026-07-28, authorized by TQ, responding to the 2026-07-28 independent evaluation finding that absent dependency edges falsely asserted step independence: the extract dataset now flows through dedup (5) and categorization (6); aggregation (7) consumes the dimensions and produces orphan:fs002-aggregations, which the file build (8) consumes; validation (9) and Ready-to-Upload (11) consume the file. Control gates via dependsOn where no data token exists: extraction awaits the count date (3<-2) and its own initiation (4<-3), aggregation awaits conditional dedup (7<-5), file format awaits spec confirmation (8<-1), provenance follows validation (10<-9), Ready follows validation and provenance (11<-9,10). Steps 1 and 2 remain free starts on purpose. orderingAsserted: true.]  [Identity-contract migration applied by Milo (AI), session WILD_ORBIT, 2026-07-29, per workOrder-identityPhase2-072926 (supervisor BRONZE_LOOM): 29 CEDS space-form identifiers normalized to registry shorthand (P-form) or, for the two ids with no P/C element form in CEDS v14 (001071 Student Identifier, 000144 Hispanic or Latino Ethnicity), to their DME-verified stableId URLs; the subject.comprises wholesale prose blob split into its 19 element citations; 3 subj:-as-element pun sites converted to kind:subject citations of this case's own Subject; orphan:fs002-categorical-dimensions, orphan:fs002-aggregations, and orphan:per-student-source-dataset reclassified kind:intermediate (bench products of this case's choreography); orphan:state-operated-program-indicator deliberately retained as orphan (a CEDS standards gap; comprises is external-only). No role or name text was altered.]",
+  "id": "uc:fs002-compilation",
+  "shortName": "FS002 Compilation",
+  "longName": "Produce the Annual IDEA Part B Child Count Data File",
+  "level": "user-goal",
+  "scope": "The SEA's process of producing the FS002 data file: extract, LEA aggregation, categorization, file-spec conformance, pre-EDPass validation. Out of scope: EDPass upload (parent); FS5003/FS5002 authoring.",
+  "frequency": "Annually, per SEA, between the count date (Oct-Dec) and ~April 1.",
+  "primaryActor": "actor:sea-idea-partb-data-manager",
+  "actors": [
+    {
+      "actor": "SEA IDEA Part B Data Manager",
+      "identifier": "actor:sea-idea-partb-data-manager",
+      "kind": "human",
+      "role": "Drives compilation end to end.",
+      "interest": "A clean, reproducible, audit-ready file with lead time."
+    },
+    {
+      "actor": "SEA EDFacts Coordinator",
+      "identifier": "actor:sea-edfacts-coordinator",
+      "kind": "human",
+      "role": "Sponsors the cycle; receives the compiled file.",
+      "interest": "A clean validated file with lead time."
+    },
+    {
+      "actor": "SEA IT / SLDS Administrator",
+      "identifier": "actor:sea-slds-admin",
+      "kind": "human",
+      "role": "Operates the extract pipeline.",
+      "interest": "Stable extract pipeline."
+    },
+    {
+      "actor": "SLDS / State IDEA Data System",
+      "identifier": "actor:sea-slds-system",
+      "kind": "system",
+      "role": "Executes the extract; returns the per-student dataset.",
+      "interest": "n/a (system)"
+    },
+    {
+      "actor": "SEA Data Quality Specialist / Validator",
+      "identifier": "actor:sea-dq-specialist",
+      "kind": "human",
+      "role": "Runs pre-EDPass validation.",
+      "interest": "Catch at source what would surface mid-submission."
+    }
+  ],
+  "triggeredBy": {
+    "name": "The SEA authorizes the annual IDEA Part B data collection cycle",
+    "identifier": "event:sea-authorizes-cycle"
+  },
+  "assumes": [
+    {
+      "statement": "The state's designated IDEA Part B child count date falls between October 1 and December 1, and every record in the count reflects the child's placement on that date.",
+      "identifier": "cond:count-date-oct-dec"
+    },
+    {
+      "statement": "The current FS002 file-spec version is published and available to the SEA.",
+      "identifier": "cond:fs002-spec-published"
+    },
+    {
+      "statement": "The SEA has a working SLDS, state IDEA data system, or LEA-aggregation process."
+    },
+    {
+      "statement": "The state's FS5003 collection-methodology responses exist in at least draft form before FS002 compilation begins.",
+      "identifier": "cond:fs5003-methodology-at-least-drafted"
+    }
+  ],
+  "scenario": [
+    {
+      "codedNotation": "1",
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "confirms the current FS002 file-spec version and notes changes from the prior cycle",
+        "intention": "breaking spec changes are surfaced before work"
+      }
+    },
+    {
+      "codedNotation": "2",
+      "kind": "main",
+      "story": {
+        "identifier": "us:confirm-count-date",
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "confirms the SEA's state-selected child-count date (Oct 1 - Dec 1)",
+        "intention": "all aggregations anchor to the right date",
+        "consumes": [
+          {
+            "kind": "element",
+            "identifier": "P000243",
+            "standard": "CEDS",
+            "role": "School Year"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "3",
+      "dependsOn": [
+        "2"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "initiates the SLDS/IDEA-system extract for the eligible population (unduplicated IDEA Part B children, ages 5-in-K through 21, active IEPs on the count date)",
+        "intention": "pull the per-student substrate"
+      }
+    },
+    {
+      "codedNotation": "4",
+      "dependsOn": [
+        "3"
+      ],
+      "kind": "main",
+      "story": {
+        "identifier": "us:return-per-student-source-dataset",
+        "actor": "actor:sea-slds-system",
+        "action": "returns one record per eligible student across the source elements",
+        "intention": "the per-student dataset exists",
+        "consumes": [
+          {
+            "kind": "element",
+            "identifier": "https://w3id.org/CEDStandards/terms/NI002114100002",
+            "standard": "CEDS",
+            "role": "Student Identifier"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000033",
+            "standard": "CEDS",
+            "role": "Birthdate"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000255",
+            "standard": "CEDS",
+            "role": "Sex"
+          },
+          {
+            "kind": "element",
+            "identifier": "P001943",
+            "standard": "CEDS",
+            "role": "Race"
+          },
+          {
+            "kind": "element",
+            "identifier": "https://w3id.org/CEDStandards/terms/NI001943162284",
+            "standard": "CEDS",
+            "role": "Hispanic or Latino Ethnicity"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000097",
+            "standard": "CEDS",
+            "role": "Enrollment Entry Date"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000100",
+            "standard": "CEDS",
+            "role": "Entry Grade Level"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000107",
+            "standard": "CEDS",
+            "role": "Enrollment Exit Date"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000180",
+            "standard": "CEDS",
+            "role": "English Learner Status"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000590",
+            "standard": "CEDS",
+            "role": "Program Participation Start Date"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000591",
+            "standard": "CEDS",
+            "role": "Program Participation Exit Date"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000151",
+            "standard": "CEDS",
+            "role": "IDEA Indicator"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000577",
+            "standard": "CEDS",
+            "role": "Disability Status"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000218",
+            "standard": "CEDS",
+            "role": "Primary Disability Type"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000535",
+            "standard": "CEDS",
+            "role": "IDEA Educational Environment for School Age"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000559",
+            "standard": "CEDS",
+            "role": "IDEA Educational Environment for Early Childhood"
+          },
+          {
+            "kind": "element",
+            "identifier": "P001068",
+            "standard": "CEDS",
+            "role": "LEA Identifier"
+          },
+          {
+            "kind": "element",
+            "identifier": "P001069",
+            "standard": "CEDS",
+            "role": "School Identifier"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:per-student-source-dataset",
+            "role": "per-student source dataset"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "5",
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "where aggregating from LEAs, reconciles cross-LEA student deduplication per the SEA's documented rule",
+        "intention": "each child appears once",
+        "consumes": [
+          {
+            "kind": "element",
+            "identifier": "https://w3id.org/CEDStandards/terms/NI002114100002",
+            "standard": "CEDS",
+            "role": "Student Identifier"
+          },
+          {
+            "kind": "element",
+            "identifier": "P001068",
+            "standard": "CEDS",
+            "role": "LEA Identifier"
+          },
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:per-student-source-dataset",
+            "role": "Extract rows under cross-LEA deduplication"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "6",
+      "kind": "main",
+      "story": {
+        "identifier": "us:apply-fs002-categorization",
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "applies the SEA's categorization rules to compute the FS002 categorical dimensions (Age, Disability Category, Educational Environment, Race/Ethnicity, EL, state-operated-programs flag)",
+        "intention": "every child lands in correct categories",
+        "consumes": [
+          {
+            "kind": "element",
+            "identifier": "P000033",
+            "standard": "CEDS",
+            "role": "Birthdate -> Age"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000218",
+            "standard": "CEDS",
+            "role": "Primary Disability Type"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000535",
+            "standard": "CEDS",
+            "role": "IDEA Educational Environment School Age (governed by FS5003)"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000559",
+            "standard": "CEDS",
+            "role": "IDEA Educational Environment Early Childhood"
+          },
+          {
+            "kind": "element",
+            "identifier": "P001943",
+            "standard": "CEDS",
+            "role": "Race"
+          },
+          {
+            "kind": "element",
+            "identifier": "https://w3id.org/CEDStandards/terms/NI001943162284",
+            "standard": "CEDS",
+            "role": "Hispanic or Latino Ethnicity"
+          },
+          {
+            "kind": "element",
+            "identifier": "P000180",
+            "standard": "CEDS",
+            "role": "English Learner Status"
+          },
+          {
+            "kind": "element",
+            "identifier": "orphan:state-operated-program-indicator",
+            "standard": null,
+            "role": "State-Operated Program Indicator",
+            "linkageStatus": "orphan"
+          },
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:per-student-source-dataset",
+            "role": "Extract rows under categorization"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:fs002-categorical-dimensions",
+            "role": "FS002 categorical dimensions"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "7",
+      "dependsOn": [
+        "5"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "computes SEA-, LEA-, and school-level aggregations (Category Sets A-E, Subtotals 1-7, Total), including zero-count records",
+        "intention": "the federal aggregate structure is complete",
+        "consumes": [
+          {
+            "kind": "element",
+            "identifier": "P000243",
+            "standard": "CEDS",
+            "role": "School Year"
+          },
+          {
+            "kind": "element",
+            "identifier": "P001068",
+            "standard": "CEDS",
+            "role": "LEA Identifier"
+          },
+          {
+            "kind": "element",
+            "identifier": "P001069",
+            "standard": "CEDS",
+            "role": "School Identifier"
+          },
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:fs002-categorical-dimensions",
+            "role": "Computed categorical dimensions feeding aggregation"
+          }
+        ],
+        "produces": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:fs002-aggregations",
+            "role": "Computed FS002 aggregations (Category Sets A-E, subtotals, totals)"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "8",
+      "dependsOn": [
+        "1"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "applies the FS002 file format and produces the file with the required naming convention",
+        "intention": "a spec-conforming artifact exists",
+        "produces": [
+          {
+            "kind": "subject",
+            "ref": "subj:fs002-data-file:SY2025-26",
+            "role": "the FS002 Data File (the Subject)"
+          }
+        ],
+        "consumes": [
+          {
+            "kind": "intermediate",
+            "identifier": "intermediate:fs002-aggregations",
+            "role": "Aggregations formatted into the FS002 file"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "9",
+      "kind": "main",
+      "story": {
+        "identifier": "us:run-pre-edpass-validation",
+        "actor": "actor:sea-dq-specialist",
+        "action": "runs SEA-internal pre-EDPass validation (format, permitted values, missing-data encoding, zero-count completeness, likely-BRSI heuristics)",
+        "intention": "errors are caught at source",
+        "benefit": "BRSI-style errors are caught at the SEA with time to fix, not mid-submission",
+        "consumes": [
+          {
+            "kind": "subject",
+            "ref": "subj:fs002-data-file:SY2025-26",
+            "role": "File under SEA-internal pre-EDPass validation"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "10",
+      "dependsOn": [
+        "9"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "records compilation provenance in the audit trail (extract version/date, methodology config, dedup outcomes, anticipated data notes)",
+        "intention": "every number is reproducible and defensible"
+      }
+    },
+    {
+      "codedNotation": "11",
+      "dependsOn": [
+        "9",
+        "10"
+      ],
+      "kind": "main",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "marks the file Ready-to-Upload and hands it to the EDFacts Coordinator",
+        "intention": "the parent case has a clean input",
+        "consumes": [
+          {
+            "kind": "subject",
+            "ref": "subj:fs002-data-file:SY2025-26",
+            "role": "Validated file marked Ready-to-Upload"
+          }
+        ]
+      }
+    },
+    {
+      "codedNotation": "3a",
+      "kind": "exception",
+      "branchesFrom": "3",
+      "condition": "the extract fails or returns incomplete data",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "works with the SLDS Administrator to diagnose, reschedules/remediates, resumes at step 3",
+        "intention": "a complete extract is obtained"
+      }
+    },
+    {
+      "codedNotation": "4a",
+      "kind": "extension",
+      "branchesFrom": "4",
+      "condition": "per-student source data has missing/ambiguous values",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "flags affected records, resolves via the LEA Data Steward or codes as MISSING per spec, resumes at step 4",
+        "intention": "no record is silently wrong"
+      }
+    },
+    {
+      "codedNotation": "6a",
+      "kind": "extension",
+      "branchesFrom": "6",
+      "condition": "a classification/environment does not fit one permitted value per the FS5003 methodology",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "applies the documented classification rule and records it for later data-note authoring in the parent",
+        "intention": "the deviation is documented"
+      }
+    },
+    {
+      "codedNotation": "9a",
+      "kind": "exception",
+      "branchesFrom": "9",
+      "condition": "pre-EDPass validation surfaces format or business-rule failures",
+      "story": {
+        "actor": "actor:sea-idea-partb-data-manager",
+        "action": "corrects source data and re-aggregates (returns to step 4 or 6), or records a known limitation for a data note in the parent",
+        "intention": "the file is clean or its limitation is documented"
+      }
+    }
+  ],
+  "valueDrivers": [
+    {
+      "valueDriver": {
+        "ref": "vd:accurate-child-representation"
+      }
+    },
+    {
+      "valueDriver": {
+        "ref": "vd:auditable-provenance"
+      }
+    },
+    {
+      "valueDriver": {
+        "ref": "vd:idea-618-compliance"
+      }
+    }
+  ],
+  "guarantees": [
+    {
+      "role": "success",
+      "condition": {
+        "statement": "The FS002 data file exists, conforms to the current file-spec version, and has passed all SEA-internal pre-EDPass validation."
+      }
+    },
+    {
+      "role": "success",
+      "condition": {
+        "statement": "The file is Ready-to-Upload for the parent submission case."
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "statement": "No child is counted more than once in the FS002 file; each counted child appears in exactly one educational environment category as of the count date.",
+        "identifier": "cond:unduplicated-count"
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "ref": "cond:reproducible-from-source-and-methodology"
+      }
+    },
+    {
+      "role": "invariant",
+      "condition": {
+        "statement": "Every reported figure is traceable through a retained audit trail to the source records and the transformations that produced it.",
+        "identifier": "cond:audit-trail-complete"
+      }
+    }
+  ],
+  "subject": {
+    "name": "The FS002 Data File",
+    "identifier": "subj:fs002-data-file:SY2025-26",
+    "comprises": [
+      {
+        "kind": "element",
+        "identifier": "P000243",
+        "standard": "CEDS",
+        "role": "School Year"
+      },
+      {
+        "kind": "element",
+        "identifier": "P001068",
+        "standard": "CEDS",
+        "role": "LEA Identifier"
+      },
+      {
+        "kind": "element",
+        "identifier": "P001069",
+        "standard": "CEDS",
+        "role": "School Identifier"
+      },
+      {
+        "kind": "element",
+        "identifier": "https://w3id.org/CEDStandards/terms/NI002114100002",
+        "standard": "CEDS",
+        "role": "Student Identifier"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000033",
+        "standard": "CEDS",
+        "role": "Birthdate"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000255",
+        "standard": "CEDS",
+        "role": "Sex"
+      },
+      {
+        "kind": "element",
+        "identifier": "P001943",
+        "standard": "CEDS",
+        "role": "Race"
+      },
+      {
+        "kind": "element",
+        "identifier": "https://w3id.org/CEDStandards/terms/NI001943162284",
+        "standard": "CEDS",
+        "role": "Hispanic or Latino Ethnicity"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000097",
+        "standard": "CEDS",
+        "role": "Enrollment Entry Date"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000100",
+        "standard": "CEDS",
+        "role": "Entry Grade Level"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000107",
+        "standard": "CEDS",
+        "role": "Enrollment Exit Date"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000180",
+        "standard": "CEDS",
+        "role": "English Learner Status"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000590",
+        "standard": "CEDS",
+        "role": "Program Participation Start Date"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000591",
+        "standard": "CEDS",
+        "role": "Program Participation Exit Date"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000151",
+        "standard": "CEDS",
+        "role": "IDEA Indicator"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000577",
+        "standard": "CEDS",
+        "role": "Disability Status"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000218",
+        "standard": "CEDS",
+        "role": "Primary Disability Type"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000535",
+        "standard": "CEDS",
+        "role": "IDEA Educational Environment for School Age"
+      },
+      {
+        "kind": "element",
+        "identifier": "P000559",
+        "standard": "CEDS",
+        "role": "IDEA Educational Environment for Early Childhood"
+      },
+      {
+        "kind": "element",
+        "identifier": "orphan:state-operated-program-indicator",
+        "standard": null,
+        "role": "State-Operated Program Indicator",
+        "linkageStatus": "orphan"
+      }
+    ]
+  },
+  "relatedUseCases": [
+    {
+      "useCase": "uc:fs002-package-submission",
+      "relationship": "parent"
+    },
+    {
+      "useCase": "uc:fs5003-confirmation",
+      "relationship": "sibling",
+      "notes": "produces the methodology governing the environment dimension computed in step 6"
+    }
+  ],
+  "orderingAsserted": true
+}

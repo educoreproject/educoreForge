@@ -236,6 +236,11 @@ harness.match('an unexpandable predicate prefix is refused by name', assertionId
 // ⟪ML3-a⟫ the edc predicates now expand (a curated row's record_id hashes them), to the spelling the r1 sets' curie_map already gives
 harness.equal('ML3-a: edc:bestMatch expands to the registered spelling', assertionIdentity.predicateIriFor('edc:bestMatch').iri, 'https://w3id.org/EDUcore/bestMatch');
 harness.equal('ML3-a: edc:alsoAcceptable expands to the registered spelling', assertionIdentity.predicateIriFor('edc:alsoAcceptable').iri, 'https://w3id.org/EDUcore/alsoAcceptable');
+// ⟪useCaseForge-102926 Phase 2a, 2026-10-29; SHADOW_MEADOW ruling (A)⟫ edc:cites, the use-case standard's citation predicate (Q-U5), is a
+// declared vocabulary term: it mints, parses back to its kind, and expands to the registered spelling
+harness.equal('useCaseForge: edc:cites mints as a declared vocabulary term', mint({ kind: 'vocabularyTerm', termName: 'cites' }).uri, 'https://w3id.org/EDUcore/cites');
+harness.equal('useCaseForge: https://w3id.org/EDUcore/cites parses back to the vocabularyTerm kind', parse('https://w3id.org/EDUcore/cites').kind, 'vocabularyTerm');
+harness.equal('useCaseForge: edc:cites expands to the registered spelling', assertionIdentity.predicateIriFor('edc:cites').iri, 'https://w3id.org/EDUcore/cites');
 harness.match('ML3-a: an undeclared vocabulary term is refused at mint', mint({ kind: 'vocabularyTerm', termName: 'worstMatch' }).error, /takes only bestMatch, alsoAcceptable/);
 harness.match('ML3-a: an undeclared vocabulary term matches no kind at parse', parse('https://w3id.org/EDUcore/worstMatch').error, /matches no kind/);
 harness.equal('ML3-a: every closed term has a definition, and every definition a closed term', Object.keys(URI_SCHEME.vocabularyTermDefinitionByName).filter((oneName) => oneName !== 'about').sort().join(','), URI_SCHEME.kindList.find((oneRow) => oneRow.kind === 'vocabularyTerm').closedValueListByPartName.termName.slice().sort().join(','));

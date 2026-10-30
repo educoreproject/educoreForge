@@ -164,6 +164,11 @@ SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_WAVE3_LANE_H_PLUGIN_LIST);
 // ⟪nextStandards-102326 wave 3 lane I2, 2026-10-25 (EBONY_TOWER)⟫ ADDED: MedBiquitous's one judged facet toward both hubs, the same judgeSlot-v1 form
 const NEXT_STANDARDS_WAVE3_LANE_I_PLUGIN_LIST = ['ceds', 'ctdl'].map((hubStem) => ({ bridgeName: `medbiq${hubStem.charAt(0).toUpperCase()}${hubStem.slice(1)}DerivedPlugin`, composedFromBridgingFilePath: 'forges/medbiq/bridges/medbiqBridging.js', judgePromptVariant: 'derivedJudgeSlot', rendererVersion: JUDGE_SLOT_RENDERER_VERSION_LITERAL }));
 SHIPPED_PLUGIN_LIST.push(...NEXT_STANDARDS_WAVE3_LANE_I_PLUGIN_LIST);
+// ⟪useCaseForge-102926 Phase 2a, 2026-10-29 (RADIANT_HAVEN)⟫ ADDED: the use-case standard's two DECLARED citation plugins (facet '' toward CEDS,
+// facet CtdlCitation toward CTDL). A declared basis judges nothing; each resolves to the documentary 'crosswalk' row like the declared CTDL
+// plugins, and nothing is ever rendered under it.
+const USE_CASE_FORGE_PLUGIN_LIST = ['usecaseCedsDeclaredCorrespondence', 'usecaseCtdlCitationCtdlDeclaredCorrespondence'].map((bridgeName) => ({ bridgeName, composedFromBridgingFilePath: 'forges/usecase/bridges/usecaseBridging.js', judgePromptVariant: 'crosswalk', rendererVersion: CROSSWALK_RENDERER_VERSION_LITERAL }));
+SHIPPED_PLUGIN_LIST.push(...USE_CASE_FORGE_PLUGIN_LIST);
 
 // ---------------------------------------------------------------------
 // module loading: the real module, or a double carrying the scenario's mutations

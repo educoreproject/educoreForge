@@ -256,7 +256,14 @@ const BASE_TAG = 'preBridgeFramework-081626';
 // .MEDBIQ): lane H's vocabulary commit 814c3be0, landed ONCE (lane I's cherry-pick ae46a76a is the identical patch). graph-contract.js is
 // outside (ii)'s allowed vocabulary.js+tests, as D0's, C0's, K0's and P5's rows were. Exactly the paths lanes H and I reported. Allowed-path
 // list NOT widened.
-const POST_D1_BASE_TAG = 'postW3VocabularyIi-102526'; // re-anchored by INDIGO_GARDEN (nextStandards wave-3 assembly; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-30 (RADIANT_HAVEN; useCaseForge-102926, the ONE seam re-anchor of the use-case forge at the end of Phase 2a, granted by
+// SHADOW_MEADOW 2026-10-29) ═══ (ii) postW3VocabularyIi-102526 -> postUcVocabularyIi-102926, tag cut ON this commit.
+// Observed RED first on uc/build ae711375 (55/64). CENSUS (lib/vocabulary/, numstat from the W3 tag): vocabulary.js 85/3 (the ten use-case
+// DME_ROLES, USE_CASE_ROLE_LIST, the 32 use-case EDGE_TYPES, their ROOT_OWNERSHIP rows, STANDARD_KIND.USE_CASE_CORPUS, STANDARD_FAMILY.USECASE),
+// vocabulary-definitions.js 44/0 (their dmeRole and edgeType texts), graph-contract.js 17/2 (stem Uc, useCaseScopeRule, the family meaning),
+// test/test-useCaseVocabulary.js 158/0 (NEW), test/test-sifEdgeVocabulary.js 4/1 (schema view 345 -> 397). vocabulary-definitions.js and
+// graph-contract.js are outside (ii)'s allowed vocabulary.js+tests, as D0's, C0's, K0's, ML1's and P5's rows were. Allowed-path list NOT widened.
+const POST_D1_BASE_TAG = 'postUcVocabularyIi-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge Phase 2a; census in the block above); the tag is cut ON this commit
 // ⟪A THIRD BASELINE — RULING P1-R11, BRIEF-SEAM-reanchorBgSeamUntouched.md, applied 2026-08-29 by
 // STERLING_PEAK during hub kit role migration Phase 0.E4⟫
 //
@@ -556,7 +563,11 @@ const POST_D1_BASE_TAG = 'postW3VocabularyIi-102526'; // re-anchored by INDIGO_G
 // postW3ForgeFrameworkIii-102526 -> postEcForgeFrameworkIii-102526, tag cut ON this commit. Observed RED first at 5b99202e (iii changed
 // [lib/forge-framework/test/test-gSeamUntouched.js]). CENSUS (lib/forge-framework/, numstat from the W3 tag): test/test-gSeamUntouched.js
 // 6/1, its own PRE_MIGRATION_REF re-anchor for EC1 and nothing else. No forge-framework source.
-const PHASE0_ANCHOR_TAG = 'postEcForgeFrameworkIii-102526'; // re-anchored by VELVET_RIDGE (EC; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-30 (RADIANT_HAVEN; useCaseForge-102926, the ONE seam re-anchor of the use-case forge at the end of Phase 2a, granted by
+// SHADOW_MEADOW 2026-10-29) ═══ PHASE0_ANCHOR_TAG postEcForgeFrameworkIii-102526 -> postUcForgeFrameworkIii-102926, tag cut ON this
+// commit. Observed RED first on uc/build ae711375. CENSUS (lib/forge-framework/, numstat from the EC tag): test/test-gStandardMetadata.js 12/0
+// (conjuncts y and z: the UseCase family and the useCaseCorpus kind admitted, and their twins). No forge-framework source.
+const PHASE0_ANCHOR_TAG = 'postUcForgeFrameworkIii-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge Phase 2a; census in the block above); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -1172,7 +1183,18 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // apps/graph-builder/apps/replay-manager/replayManager.js 66/4 (EC1 watchdog + labelled scratch volumes + sweep),
 // apps/graph-builder/apps/replay-manager/test/test-scratchVolumeLeak.js 201/0 and test/testSupport/scratchVolumeLeakChild.js 66/0 (EC1's
 // gate, NEW). No build, forger, replay or forge-framework source. Allowed-path list NOT widened.
-const PHASE3_ANCHOR_TAG = 'postEcSeamDiffEmpty-102526'; // re-anchored by VELVET_RIDGE (EC1; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-30 (RADIANT_HAVEN; useCaseForge-102926, the ONE seam re-anchor of the use-case forge at the end of Phase 2a, granted by
+// SHADOW_MEADOW 2026-10-29) ═══ PHASE3_ANCHOR_TAG postEcSeamDiffEmpty-102526 -> postUcSeamDiffEmpty-102926, tag cut ON this
+// commit. Observed RED first on uc/build ae711375. CENSUS over this gate's paths (numstat from the EC tag): one NEW forge's entry, declaration
+// and hooks, forges/usecase/forgeUsecase.js 26/0, lib/usecaseForgeDeclaration.js 60/0, lib/usecaseHooks.js 47/0; and
+// lib/forge-framework/test/test-gStandardMetadata.js 12/0 (y, z). No existing forge, no build, forger, replay or replay-manager source.
+// Allowed-path list NOT widened.
+// ═══ RE-ANCHOR B, 2026-10-30 (RADIANT_HAVEN; useCaseForge-102926, a correction to the one re-anchor above, under SHADOW_MEADOW's standing rule
+// for seam tests) ═══ PHASE3_ANCHOR_TAG postUcSeamDiffEmpty-102926 -> postUcSeamDiffEmptyB-102926, tag cut ON this commit. Observed RED first at
+// dea0f19a. CENSUS (numstat from the postUc tag): apps/graph-builder/apps/replay-manager/lib/finishing/test/test-schemaViewContractProjection.js
+// 2/1 ONLY (its (e) twin admits the Uc* residue, found by the full suite at e4bc58ea, as wave 3's lane admitted Oneroster*, Medbiq*). No build,
+// forger, replay or replay-manager source. Allowed-path list NOT widened.
+const PHASE3_ANCHOR_TAG = 'postUcSeamDiffEmptyB-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge, correction B; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
