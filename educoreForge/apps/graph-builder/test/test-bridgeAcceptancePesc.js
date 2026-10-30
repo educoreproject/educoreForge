@@ -1145,7 +1145,11 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // three roster tables the two use-case declared plugins join, lib/bridge-framework/test/test-bridgeComposer.js 6/0, test-hubBridging.js 3/1,
 // test-bgJudgeSlot.js 5/0; and lib/bridge-framework/test/test-bgNosub.js (this commit's own seam re-anchors). No bridge-framework, bridge-maker,
 // build or interfaces source.
-const P1_BASELINE_COMMIT = 'postUcPescCompose-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge Phase 2a; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR B, 2026-10-30 (RADIANT_HAVEN; useCaseForge-102926, the follow-on of test-bgNosub's re-anchor B) ═══ postUcPescCompose-102926 ->
+// postUcPescComposeB-102926, tag cut ON this commit. Observed RED first at fb983131. CENSUS over this gate's paths (numstat from the postUc tag):
+// lib/bridge-framework/test/test-bgNosub.js 6/1 ONLY (its PHASE3_ANCHOR_TAG correction B). No bridge-framework, bridge-maker, build, interfaces
+// or vocabulary source.
+const P1_BASELINE_COMMIT = 'postUcPescComposeB-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge, correction B; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
