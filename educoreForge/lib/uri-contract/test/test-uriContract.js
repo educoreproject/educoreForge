@@ -417,6 +417,30 @@ sameValue('12 layerListFor: each layer, its version count, its current Standard 
 sameValue('the derived tables verify: every source recomputes to its stored rows, none absent', reader.uriContract.verifyDerivedIndexes(), { verifiedSourceCount: 7, absentSourceCount: 0, differenceList: [] });
 harness.match('the reader factory refuses an absent file', uriContractLib.uriContractReaderFor({ uriContractFilePath: path.join(scratchDirPath, 'absent.sqlite') }).error, /does not exist/);
 reader.uriContract.close();
+
+// =====================================================================
+harness.section('appendManifestStatusChange: a published manifest\'s status is a NEW history row; the effective status is the latest');
+// =====================================================================
+const statusChangeArgs = { manifestRefId, registrationStatus: 'Standard', changedAt: '2026-10-30T00:00:00Z', changedBy: ORGANISATION_IRI, note: 'endorsed after review' };
+const appendStatusOf = (overrideArgs) => (typeof manifestWorld.uriContract.appendManifestStatusChange === 'function' ? manifestWorld.uriContract.appendManifestStatusChange({ ...statusChangeArgs, ...overrideArgs }) : { error: 'appendManifestStatusChange is not a writer of uriContract' });
+const firstStatusRowBefore = rawHandleFor(manifestWorld.uriContractFilePath).prepare('SELECT * FROM manifestStatusChanges ORDER BY rowId LIMIT 1').get();
+harness.match('a manifest that is not published is refused', appendStatusOf({ manifestRefId: 'f'.repeat(64) }).error, /manifest f{64} is not published/);
+harness.match('a status outside registrationStatusList is refused', appendStatusOf({ registrationStatus: 'Gold' }).error, /registrationStatus "Gold" is not an ISO\/IEC 11179-6 lifecycle status/);
+harness.match('a missing changedBy is refused (no default)', appendStatusOf({ changedBy: undefined }).error, /changedBy .* is required/);
+harness.match('a changedBy that is not an agent of uriContract is refused', appendStatusOf({ changedBy: 'https://w3id.org/EDUcore/agent/u-9999' }).error, /is not in uriContract's agents/);
+harness.match('a missing or malformed changedAt is refused (no default)', appendStatusOf({ changedAt: '30 Oct' }).error, /changedAt .* must be an ISO UTC time/);
+harness.match('the status the manifest already has is refused (a history row records a CHANGE)', appendStatusOf({ registrationStatus: 'Candidate' }).error, /'Candidate' is already the effective status/);
+const appendedStatus = appendStatusOf({});
+harness.ok('one append writes one row and answers its rowId', appendedStatus.error === undefined && Number.isInteger(appendedStatus.rowId), appendedStatus.error);
+const promotedManifest = manifestWorld.uriContract.publishedManifestFor({ manifestRefId }).publishedManifest;
+sameValue('the effective status reads the LATEST row; the history is Candidate then Standard, with its note', [promotedManifest.effectiveRegistrationStatus, promotedManifest.statusChangeList.map((oneRow) => [oneRow.registrationStatus, oneRow.changedAt, oneRow.changedByAgentIri, oneRow.note])], ['Standard', [['Candidate', '2026-10-26T00:00:00Z', ORGANISATION_IRI, null], ['Standard', '2026-10-30T00:00:00Z', ORGANISATION_IRI, 'endorsed after review']]]);
+sameValue('…the first row is untouched (appended, never updated)', rawHandleFor(manifestWorld.uriContractFilePath).prepare('SELECT * FROM manifestStatusChanges ORDER BY rowId LIMIT 1').get(), firstStatusRowBefore);
+sameValue('…the registration authority is uriContractRules.json\'s', promotedManifest.statusChangeList[1].registrationAuthority, uriContractLib.URI_CONTRACT_RULES.registrationAuthorityIri);
+const promotedReader = uriContractLib.uriContractReaderFor({ uriContractFilePath: manifestWorld.uriContractFilePath });
+sameValue('the resolver\'s readers show the latest status (publishedManifestFor, the manifest list)', [answerOf(promotedReader.uriContractReader.publishedManifestFor, { manifestRefId }).answer.latestStatus, callOf(promotedReader.uriContractReader.publishedManifestListFor, { pageNumber: 1, pageSize: 10 }).answer.manifestList[0].latestStatus], [{ registrationStatus: 'Standard', changedAt: '2026-10-30T00:00:00Z' }, { registrationStatus: 'Standard', changedAt: '2026-10-30T00:00:00Z' }]);
+sameValue('manifestInventoryFor carries the latest status AND the status history', [callOf(promotedReader.uriContractReader.manifestInventoryFor, { manifestRefId }).answer.latestStatus, callOf(promotedReader.uriContractReader.manifestInventoryFor, { manifestRefId }).answer.statusHistory], [{ registrationStatus: 'Standard', changedAt: '2026-10-30T00:00:00Z' }, [{ registrationStatus: 'Candidate', changedAt: '2026-10-26T00:00:00Z', changedBy: ORGANISATION_IRI, note: null }, { registrationStatus: 'Standard', changedAt: '2026-10-30T00:00:00Z', changedBy: ORGANISATION_IRI, note: 'endorsed after review' }]]);
+sameValue('the derived tables still verify after the append', promotedReader.uriContract.verifyDerivedIndexes().differenceList, []);
+promotedReader.uriContract.close();
 const manifestPath = manifestWorld.uriContractFilePath;
 manifestWorld.uriContract.close();
 plantCorruption(manifestPath, 'UPDATE schemaBlocks SET text = ? WHERE refId = ?', [`${baseText}x`, sha256Hex(baseText)]);

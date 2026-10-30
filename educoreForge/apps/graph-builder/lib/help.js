@@ -53,6 +53,8 @@ SYNOPSIS
      graphBuilder   -publishManifest --manifestRefId=<64 hex> --publicLabel=<TQ's label> --registrationStatus=<ISO 11179 status>
                                    [--note=<text>] [--defaultLayerByHubPath=<json>] [--uriContractFilePath=<path>]
                                    [--standardsDatabaseFilePath=<the support store holding the manifest>]
+     graphBuilder   -appendManifestStatus --manifestRefId=<64 hex> --registrationStatus=<ISO 11179 status> --note=<why>
+                                   [--uriContractFilePath=<path>]
      graphBuilder   -replayOldest [--uriContractFilePath=<path>] [--live=true --exportStoreFilePath=<a NEW scratch store>]
      graphBuilder   -rebuildUriContractIndexes [--verifyOnly=true] [--uriContractFilePath=<path>]
      graphBuilder   -help
@@ -555,6 +557,16 @@ OPTIONS
                   ({ <hubSegment>: { decisionBlockHashList } }), and with no such conflict it is refused. Re-publishing the
                   same manifest under the same label is alreadyPresent; a label is never reassigned. --publicLabel and
                   --registrationStatus are REQUIRED (the label is TQ's to choose). Reads the support store, never writes it.
+
+     -appendManifestStatus
+                  WRITES ONE ROW. Appends a published manifest's later status (an endorsement to Standard, a
+                  supersession) to uriContract as a NEW manifestStatusChanges row; -publishManifest wrote the first and
+                  no row is ever updated. The effective status is the latest row, and every reader (the resolver's
+                  manifest answer, the manifest list) shows it; the manifest answer also carries the whole history.
+                  The changing agent (registrarIri) and the registration authority are lib/uri-contract/
+                  uriContractRules.json's. Refused by name: an unpublished manifest, a status outside the ISO/IEC
+                  11179-6 list, the status the manifest already has, and a missing --registrationStatus or --note
+                  (the reason is recorded with the row). Prints the effective status and the whole history.
 
      -replayOldest
                   READ-ONLY (but --live writes a scratch store and a DEV_ graph). THE REPLAY-THE-OLDEST DISCIPLINE (TQ: "a

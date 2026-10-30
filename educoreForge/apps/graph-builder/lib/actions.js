@@ -2178,6 +2178,7 @@ return {
 	importLayer: importLayerAction,
 	seedUriContractFromRegistryJson: uriContractActionsLib.seedUriContractFromRegistryJsonAction({ resolveStoreFamilyPath }),
 	publishManifest: uriContractActionsLib.publishManifestAction({ resolveStoreFamilyPath }),
+	appendManifestStatus: uriContractActionsLib.appendManifestStatusAction(),
 	replayOldest: uriContractActionsLib.replayOldestAction({ buildLib }),
 	rebuildUriContractIndexes: uriContractActionsLib.rebuildUriContractIndexesAction(),
 	scanAvailableForges,

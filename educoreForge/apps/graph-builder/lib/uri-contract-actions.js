@@ -8,6 +8,8 @@
 //                                     and only then renamed into place (a file that disagrees is never left looking finished)
 //   -publishManifest                  the manifest's identity row, members, schema blocks (the closure), frozen vectors, recorded
 //                                     counts (the hermetic replay) and first status row; --publicLabel and --registrationStatus REQUIRED
+//   -appendManifestStatus             a published manifest's later status (endorsement, supersession) as a NEW history row;
+//                                     --registrationStatus and --note REQUIRED
 //   -replayOldest                     the replay-the-oldest discipline: the hermetic count of the OLDEST published manifest must equal
 //                                     the counts recorded at publish; --live=true also replays it into a DEV_ graph from an export of
 //                                     uriContract ALONE and compares the graph's conservation counts
@@ -255,6 +257,49 @@ const publishManifestAction = ({ resolveStoreFamilyPath }) => (callback) => {
 };
 
 // ---------------------------------------------------------------------
+// -appendManifestStatus --manifestRefId --registrationStatus --note [--uriContractFilePath]
+// ---------------------------------------------------------------------
+// A published manifest's later status (an endorsement, a supersession) as one NEW manifestStatusChanges row: -publishManifest
+// writes only the first. The changing agent and the registration authority are uriContractRules.json's, as at publish.
+const appendManifestStatusAction = () => (callback) => {
+	const { xLog, commandLineParameters, getConfig } = process.global;
+	const actionName = '-appendManifestStatus';
+	const missingParameterList = ['manifestRefId', 'registrationStatus', 'note'].filter((parameterName) => !isNonEmptyString(firstValue(commandLineParameters, parameterName)));
+	if (missingParameterList.length) {
+		callback(`graphBuilder ${actionName}: ${missingParameterList.map((parameterName) => `--${parameterName}`).join(', ')} REQUIRED, with no default — a status is stated, never assumed, and its reason is recorded with it`);
+		return;
+	}
+	const resolved = resolveUriContractFilePath({ commandLineParameters, storesConfig: getConfig('stores'), actionName });
+	if (resolved.error) {
+		callback(resolved.error);
+		return;
+	}
+	const opened = uriContractLib.openUriContractFile({ uriContractFilePath: resolved.filePath, accessMode: 'publish', writerActionName: 'appendManifestStatus' });
+	if (opened.error) {
+		callback(`graphBuilder ${actionName}: ${opened.error}`);
+		return;
+	}
+	const manifestRefId = firstValue(commandLineParameters, 'manifestRefId');
+	const appended = opened.uriContract.appendManifestStatusChange({
+		manifestRefId,
+		registrationStatus: firstValue(commandLineParameters, 'registrationStatus'),
+		changedAt: new Date().toISOString(),
+		changedBy: uriContractLib.URI_CONTRACT_RULES.registrarIri,
+		note: firstValue(commandLineParameters, 'note'),
+	});
+	const readBack = appended.error ? null : opened.uriContract.publishedManifestFor({ manifestRefId });
+	opened.uriContract.close();
+	if (appended.error || readBack.error) {
+		callback(`graphBuilder ${actionName}: ${appended.error || readBack.error}`);
+		return;
+	}
+	const { publishedManifest } = readBack;
+	const report = { manifestRefId, publicLabel: publishedManifest.publicLabel, rowId: appended.rowId, effectiveRegistrationStatus: publishedManifest.effectiveRegistrationStatus, statusHistory: publishedManifest.statusChangeList.map((oneRow) => ({ registrationStatus: oneRow.registrationStatus, changedAt: oneRow.changedAt, changedBy: oneRow.changedByAgentIri, note: oneRow.note })), uriContractFilePath: resolved.filePath };
+	xLog.status(`graphBuilder: [appendManifestStatus] ${report.publicLabel} (${manifestRefId}) is now ${report.effectiveRegistrationStatus} (row ${report.rowId})`);
+	callback('', { exitCode: 0, resultText: JSON.stringify(report, null, 2) });
+};
+
+// ---------------------------------------------------------------------
 // -replayOldest [--live=true --exportStoreFilePath=<new scratch store>]
 // ---------------------------------------------------------------------
 // exportManifestStore — the manifest's blocks, membership and frozen vectors written from uriContract ALONE into a FRESH support store
@@ -450,4 +495,4 @@ const rebuildUriContractIndexesAction = () => (callback) => {
 	callback('', { exitCode: 0, resultText: JSON.stringify({ uriContractFilePath: resolved.filePath, ...outcome }, null, 2) });
 };
 
-module.exports = { resolveUriContractFilePath, readJsonParameterFile, uriContractForPublishAction, appendPublishedVersion, seedUriContractFromRegistryJsonAction, publishManifestAction, replayOldestAction, rebuildUriContractIndexesAction, exportManifestStore };
+module.exports = { resolveUriContractFilePath, readJsonParameterFile, uriContractForPublishAction, appendPublishedVersion, seedUriContractFromRegistryJsonAction, publishManifestAction, appendManifestStatusAction, replayOldestAction, rebuildUriContractIndexesAction, exportManifestStore };

@@ -31,7 +31,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //           publishedAt, statusHistory: [{ registrationStatus, changedAt, changedBy }], scores | null }] } | null))
 //       layerVersionRecordFor({ layerKey, versionTag }, cb(err, { authorAgentIri, publishedAt, latestStatus, countByStandard,
 //           countByHub, abstentionRate, agreementScores | null } | null))
-//       manifestInventoryFor({ publicLabel } | { manifestRefId }, cb(err, { manifestRefId, publicLabel, publishedAt, latestStatus,
+//       manifestInventoryFor({ publicLabel } | { manifestRefId }, cb(err, { manifestRefId, publicLabel, publishedAt, latestStatus, statusHistory,
 //           standardList: [{ standardName, standardVersion }], hubList, layerVersionList, nodeCount, edgeCount } | null))
 //     ⟪ML3.1, TQ Q5: discovery⟫ listings are paged as uriScheme.json listingPaging says (?page=N, fixed pageSize)
 //       rootCountsFor(cb(err, { manifestCount, layerCount, layerVersionCount, agentCount }))
