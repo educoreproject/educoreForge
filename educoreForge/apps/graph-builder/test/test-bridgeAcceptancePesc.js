@@ -1138,7 +1138,14 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // CENSUS over this gate's paths (numstat from the EC tag): lib/bridge-framework/sssomExporter.js 123/117 ONLY (ML3-a: blockRowsFor, a PURE
 // extraction of the per-block export's row builder so the layer-version renderer shares it; the per-block export is byte-identical, and
 // test-bgP7 44/44, test-bgFanoutConsumers 40/40 with their oracles unchanged). No materialiser, bridge-maker, build, interfaces or vocabulary source.
-const P1_BASELINE_COMMIT = 'postMl3PescCompose-102526'; // re-anchored by MYSTIC_DREAM (ML3; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-10-30 (RADIANT_HAVEN; useCaseForge-102926, the ONE seam re-anchor of the use-case forge at the end of Phase 2a, granted by
+// SHADOW_MEADOW 2026-10-29) ═══ postMl3PescCompose-102526 -> postUcPescCompose-102926, tag cut ON this commit. Observed RED first on uc/build
+// ae711375. CENSUS over this gate's paths (numstat from the ML3 tag): the use-case vocabulary, lib/vocabulary/vocabulary.js 85/3,
+// vocabulary-definitions.js 44/0, graph-contract.js 17/2, test/test-useCaseVocabulary.js 158/0 (NEW), test/test-sifEdgeVocabulary.js 4/1; the
+// three roster tables the two use-case declared plugins join, lib/bridge-framework/test/test-bridgeComposer.js 6/0, test-hubBridging.js 3/1,
+// test-bgJudgeSlot.js 5/0; and lib/bridge-framework/test/test-bgNosub.js (this commit's own seam re-anchors). No bridge-framework, bridge-maker,
+// build or interfaces source.
+const P1_BASELINE_COMMIT = 'postUcPescCompose-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge Phase 2a; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 
