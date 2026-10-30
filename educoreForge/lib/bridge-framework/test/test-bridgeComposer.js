@@ -112,6 +112,11 @@ const ADDED_NEXT_STANDARDS_WAVE3_LANE_I = Object.freeze({
 	medbiqCedsDerivedPlugin: { standardKey: 'medbiq', targetHub: 'ceds', declarationDigest: 'ebf0fcf6c7cc951e1e3e5171eb65ada8bbc1ac8090d2ace415fce53ed4a37140', hookNameList: [], reason: 'nextStandards wave 3 I2: the current-version MedBiquitous fields judged toward the CEDS hub (forges/medbiq)' },
 	medbiqCtdlDerivedPlugin: { standardKey: 'medbiq', targetHub: 'ctdl', declarationDigest: '999b5c318191559d45c92e5ba312fde22d39677f523e794d95c18f4f1ddbc57d', hookNameList: [], reason: 'nextStandards wave 3 I2: the current-version MedBiquitous fields judged toward the CTDL hub (forges/medbiq)' },
 });
+// ⟪useCaseForge-102926 Phase 2a, 2026-10-29 (RADIANT_HAVEN)⟫ the use-case standard's two DECLARED citation bridges (forges/usecase)
+const ADDED_USE_CASE_FORGE = Object.freeze({
+	usecaseCedsDeclaredCorrespondence: { standardKey: 'usecase', targetHub: 'ceds', declarationDigest: '9a997267e4dc0e7d829300c3488c3cb43f8bfc0917ecc8ae4af3c90a44957638', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'useCaseForge Phase 2a: the case authors\' CEDS element citations, declared (uc:cites), to the CEDS base nodes (forges/usecase)' },
+	usecaseCtdlCitationCtdlDeclaredCorrespondence: { standardKey: 'usecase', targetHub: 'ctdl', declarationDigest: '7f888ad1c615f12776a6bedc986d999388c8584bfd961702ed857bd6d2f4ac79', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'useCaseForge Phase 2a: the case authors\' CTDL citations (none until the registry gains a CTDL key), declared, to the CTDL base nodes (forges/usecase)' },
+});
 const ADDED_SINCE_R3_START = Object.freeze({
 	pescldCtdlDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ctdl', declarationDigest: '61c6c9cda1b1f7cbca25ecf77f50bdf316c8f685d4447bcc9df5a418c7672ff7', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C2: PESC_LD declared identity to the CTDL hub (forges/pescld)' },
 	pescldCedsDeclaredIdentity: { standardKey: 'pescld', targetHub: 'ceds', declarationDigest: 'a5245e6b402c54d1c7572da75ecd7dde6589edb5353e65c04273dff483772595', hookNameList: ['subjectStableIdFor', 'walkSourceAssertions'], reason: 'lane C3: PESC_LD declared identity to the CEDS hub, its stableIdTemplate rules only (forges/pescld)' },
@@ -129,6 +134,7 @@ const ADDED_SINCE_R3_START = Object.freeze({
 	...ADDED_NEXT_STANDARDS_WAVE2_LANE_D,
 	...ADDED_NEXT_STANDARDS_WAVE3_LANE_H,
 	...ADDED_NEXT_STANDARDS_WAVE3_LANE_I,
+	...ADDED_USE_CASE_FORGE,
 });
 // a bridge whose declaration moved since the start: both digests, so the entry is anchored to the roster it departs from
 const RE_KEYED_SINCE_R3_START = Object.freeze({

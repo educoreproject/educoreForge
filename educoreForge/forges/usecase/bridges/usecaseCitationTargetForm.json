@@ -1,0 +1,11 @@
+{
+	"$comment": "usecaseCitationTargetForm.json — DATA for bridges/usecaseBridging.js (useCaseForge-102926 Phase 2a). Which hub a citation's registry key belongs to, and the raw-target form that hub's OWN declaredTargetRuleList accepts, so no hub file is touched (SPEC §3.3, Phase 2a; C4: a rule added to forges/ceds/lib/cedsHubBridging.js would re-key every pair that takes its rules). '{local}' is the reference node's registry-relative local part (C200079, NI001943162284: DESIGN-0 §3), '{identifier}' the author's identifier verbatim. CTDL is listed although the resolution registry has no CTDL key yet (TQ, Q15, 2026-10-29: the coalition is to be asked to add one): until it does, the CTDL facet carries zero assertions, and when it does the next release's snapshot carries the new registry and the facet picks the citations up with no code change.",
+	"hubTokenByCitedStandard": {
+		"CEDS": "ceds",
+		"CTDL": "ctdl"
+	},
+	"rawTargetTemplateByHubToken": {
+		"ceds": "ceds:{local}",
+		"ctdl": "{identifier}"
+	}
+}

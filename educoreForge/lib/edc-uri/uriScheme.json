@@ -68,11 +68,12 @@
 		{ "kind": "agentOrganisation", "template": "agent/org/{organisationSlug}", "verbatimPartList": [], "about": "an organisation" },
 		{ "kind": "agentList", "template": "agents", "verbatimPartList": [], "about": "(ML3.1 Q5) every agent, profile fields only (persons pseudonymous); a paged listing" },
 		{ "kind": "siteLayerRegistry", "template": "registry/layers", "verbatimPartList": [], "about": "(ML3-b) the whole site's SSSOM mapping registry: it imports every layer's registry (each layer's registry id is its floating layer URI, layer/{layerKey})" },
-		{ "kind": "vocabularyTerm", "template": "{termName}", "verbatimPartList": [], "closedValueListByPartName": { "termName": ["bestMatch", "alsoAcceptable"] }, "about": "(ML3-a) a mapping predicate EDUcore declares, spelled as the r1 rater sets already expand it (edc:bestMatch = https://w3id.org/EDUcore/bestMatch; registered, so never respelled). CLOSED: only a term listed here and defined in vocabularyTermDefinitionByName is minted or parsed. D-RATERPRED." }
+		{ "kind": "vocabularyTerm", "template": "{termName}", "verbatimPartList": [], "closedValueListByPartName": { "termName": ["bestMatch", "alsoAcceptable", "cites"] }, "about": "(ML3-a) a mapping predicate EDUcore declares, spelled as the r1 rater sets already expand it (edc:bestMatch = https://w3id.org/EDUcore/bestMatch; registered, so never respelled). CLOSED: only a term listed here and defined in vocabularyTermDefinitionByName is minted or parsed. D-RATERPRED." }
 	],
 	"vocabularyTermDefinitionByName": {
 		"about": "(ML3-a) what each vocabularyTerm means; the stub resolver returns this text. Raters were never asked a SKOS relation, so neither term claims one; agreement is measured on the object (D-RATERPRED).",
 		"bestMatch": "The author chose this meaning (HubReference card) as the best answer for the subject element among the cards offered. No SKOS relation (exact, close, broad, narrow) is asserted.",
-		"alsoAcceptable": "The author marked this meaning as also acceptable (the rater tool's Same) for the subject element, beside a best answer. No SKOS relation is asserted."
+		"alsoAcceptable": "The author marked this meaning as also acceptable (the rater tool's Same) for the subject element, beside a best answer. No SKOS relation is asserted.",
+		"cites": "(useCaseForge-102926, ruled by SHADOW_MEADOW 2026-10-29) A use case cites an element of another standard, as its author wrote it: the subject is the use case's reference node, the object the cited standard's own node. Asserted by the EDUcore use-case standard; no match (exact, close, broad, narrow) is asserted."
 	}
 }
