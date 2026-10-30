@@ -27,6 +27,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     appendAgent(agent)                                         → { alreadyPresent } | { error }
 //     appendLayerVersion({ layer, version, decisionSchemaBlockList }) → { alreadyPresent } | { error }
 //     appendLayerStatusChange({ layerKey, statusChange })         → { rowId } | { error }
+//     appendManifestStatusChange({ manifestRefId, registrationStatus, changedAt, changedBy, note }) → { rowId } | { error }   a NEW
+//                                                                    history row for a published manifest (never an UPDATE)
 //     publishManifest({ ... , frozenVectorList, decisionSchemaBlockList }) → { alreadyPresent } | { error }   with exactly the
 //                                                                    frozen vectors its members reference by embeddingRef, and the
 //                                                                    decision schema blocks their edges cite that uriContract lacks
@@ -651,6 +653,40 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		});
 	};
 
+	// appendManifestStatusChange — a published manifest's later status (an endorsement, a supersession) as ONE new history row; the
+	// row publishManifest wrote is never touched, and the effective status is the latest row. The registration authority is
+	// uriContractRules.json's, as at publish. Restating the effective status is refused: a history row records a change.
+	const appendManifestStatusChange = ({ manifestRefId, registrationStatus, changedAt, changedBy, note } = {}) => {
+		if (LAYER_REGISTRY_SCHEMA.registrationStatusList.indexOf(registrationStatus) === -1) {
+			return { error: refusalText(`registrationStatus ${JSON.stringify(registrationStatus)} is not an ISO/IEC 11179-6 lifecycle status (${LAYER_REGISTRY_SCHEMA.registrationStatusList.join(', ')})`, 'appendManifestStatusChange names the status; there is no default') };
+		}
+		if (!isNonEmptyString(changedBy)) {
+			return { error: refusalText(`changedBy ${JSON.stringify(changedBy)}: the agent who changes the status is required`, 'appendManifestStatusChange({ manifestRefId, registrationStatus, changedAt, changedBy, note }); nothing here is defaulted') };
+		}
+		if (!new RegExp(LAYER_REGISTRY_SCHEMA.publishedAtPattern).test(String(changedAt))) {
+			return { error: refusalText(`changedAt ${JSON.stringify(changedAt)} must be an ISO UTC time`, 'appendManifestStatusChange; the time of the change is stated, never assumed') };
+		}
+		if (!(note === undefined || isNonEmptyString(note))) {
+			return { error: refusalText(`note ${JSON.stringify(note)} must be absent or a non-empty text`, 'appendManifestStatusChange') };
+		}
+		const agentIriSet = new Set(registryShape().agentRegistry.agentList.map((oneAgent) => oneAgent.agentIri));
+		if (!agentIriSet.has(changedBy)) {
+			return { error: refusalText(`agent ${JSON.stringify(changedBy)} is not in uriContract's agents`, 'an agent is appended before it changes a status') };
+		}
+		const manifestRow = isNonEmptyString(manifestRefId) ? database.prepare('SELECT manifestRefId FROM publishedManifests WHERE manifestRefId = ?').get(manifestRefId) : undefined;
+		if (manifestRow === undefined) {
+			return { error: refusalText(`manifest ${manifestRefId} is not published`, 'a status is appended only to a manifest -publishManifest wrote') };
+		}
+		const latestStatusRow = database.prepare('SELECT registrationStatus FROM manifestStatusChanges WHERE manifestRefId = ? ORDER BY rowId DESC LIMIT 1').get(manifestRefId);
+		if (latestStatusRow.registrationStatus === registrationStatus) {
+			return { error: refusalText(`'${registrationStatus}' is already the effective status of manifest ${manifestRefId}`, 'a history row records a CHANGE of status') };
+		}
+		return runWriteTransaction(() => {
+			const statusRow = { manifestRefId, registrationStatus, registrationAuthority: URI_CONTRACT_RULES.registrationAuthorityIri, changedAt, changedByAgentIri: changedBy, note: note === undefined ? null : note };
+			return { rowId: Number(database.prepare(insertSqlFor('manifestStatusChanges', statusRow)).run(statusRow).lastInsertRowid) };
+		});
+	};
+
 	// publishManifest — the identity row, its members in order, every member schema block (the closure: a member's requires
 	// must be members too), and the first status row, in ONE transaction. Re-publishing the same manifest under the same label
 	// answers alreadyPresent and writes nothing; a second label for one manifest, or one label for two, is refused.
@@ -787,7 +823,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		return filled.error ? filled : { verifiedSourceCount: compared.verifiedSourceCount, filledSourceCount: filled.filledSourceCount, differenceList: [] };
 	};
 
-	return { uriContract: { ...readerApi, writerActionName, appendAgent, appendLayerVersion, appendLayerStatusChange, publishManifest, fillAbsentDerivedIndexes } };
+	return { uriContract: { ...readerApi, writerActionName, appendAgent, appendLayerVersion, appendLayerStatusChange, appendManifestStatusChange, publishManifest, fillAbsentDerivedIndexes } };
 };
 
 // openUriContractFile — the ONE place a uriContract file is opened. The path is REQUIRED (no default); 'read' and 'publish'

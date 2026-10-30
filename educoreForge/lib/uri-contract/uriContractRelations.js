@@ -15,8 +15,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //        statusHistory: [{ registrationStatus, changedAt, changedBy }], scores | null }] }
 //   5  layerVersionRecordFor({ layerKey, versionTag }) → { authorAgentIri, publishedAt, latestStatus, countByStandard, countByHub,
 //        abstentionRate, agreementScores | null }
-//   6  manifestInventoryFor({ publicLabel } | { manifestRefId }) → { manifestRefId, publicLabel, publishedAt, latestStatus, standardList,
-//        hubList, layerVersionList, nodeCount, edgeCount }
+//   6  manifestInventoryFor({ publicLabel } | { manifestRefId }) → { manifestRefId, publicLabel, publishedAt, latestStatus, statusHistory:
+//        [{ registrationStatus, changedAt, changedBy, note }], standardList, hubList, layerVersionList, nodeCount, edgeCount }
 //   7  rootCountsFor() → { manifestCount, layerCount, layerVersionCount, agentCount }
 //   8  publishedManifestListFor({ pageNumber, pageSize }) → { totalCount, manifestList: [{ manifestRefId, publicLabel, publishedAt, latestStatus }] }
 //   9  manifestStandardListFor(manifestSelector) → { manifestRefId, publicLabel, standardList: [{ standardName, standardVersion, standardKey,
@@ -48,6 +48,8 @@ const PAGE_SIZE_LIMIT = 1000;
 const pageRefusal = ({ pageNumber, pageSize } = {}) => (Number.isInteger(pageNumber) && pageNumber >= 1 && Number.isInteger(pageSize) && pageSize >= 1 && pageSize <= PAGE_SIZE_LIMIT ? '' : refusalText(`pageNumber ${JSON.stringify(pageNumber)} and pageSize ${JSON.stringify(pageSize)}: pages are numbered from 1 and hold 1 to ${PAGE_SIZE_LIMIT}`, 'a paged listing names its page; nothing is defaulted'));
 
 const uriContractRelationsFor = ({ database, uriContract }) => {
+	// manifestStatusHistoryOf — every status row of one manifest, oldest first (the history; the last is the effective status)
+	const manifestStatusHistoryOf = (manifestRefId) => database.prepare('SELECT registrationStatus, changedAt, changedByAgentIri AS changedBy, note FROM manifestStatusChanges WHERE manifestRefId = ? ORDER BY rowId').all(manifestRefId);
 	const latestManifestStatusOf = (manifestRefId) => database.prepare('SELECT registrationStatus, changedAt FROM manifestStatusChanges WHERE manifestRefId = ? ORDER BY rowId DESC LIMIT 1').get(manifestRefId);
 	const manifestRowFor = (manifestSelector) => {
 		if (!isPlainObject(manifestSelector) || (!isNonEmptyString(manifestSelector.publicLabel) && !isNonEmptyString(manifestSelector.manifestRefId))) {
@@ -179,7 +181,7 @@ const uriContractRelationsFor = ({ database, uriContract }) => {
 			.forEach((oneLayer) => oneLayer.versionList.filter((oneVersion) => oneVersion.memberBlockList.every((oneMember) => citedHashSet.has(oneMember.decisionBlockHash))).forEach((oneVersion) => layerVersionList.push({ layerKey: oneLayer.layerKey, versionTag: oneVersion.administrationRecord.versionTag })));
 		const hubList = database.prepare('SELECT DISTINCT edges.hubName AS hubName, edges.hubVersion AS hubVersion FROM derivedAnswerEdges AS edges JOIN publishedManifestMembers AS members ON members.schemaBlockRefId = edges.schemaBlockRefId WHERE members.manifestRefId = ? ORDER BY edges.hubName, edges.hubVersion').all(manifestRow.manifestRefId);
 		const latestRow = latestManifestStatusOf(manifestRow.manifestRefId);
-		return { answer: { manifestRefId: manifestRow.manifestRefId, publicLabel: manifestRow.publicLabel, publishedAt: manifestRow.publishedAt, latestStatus: { registrationStatus: latestRow.registrationStatus, changedAt: latestRow.changedAt }, standardList: baseMemberListFor(manifestRow.manifestRefId).reduce((soFar, oneStandard) => (soFar.some((oneSeen) => oneSeen.standardName === oneStandard.standardName && oneSeen.standardVersion === oneStandard.standardVersion) ? soFar : soFar.concat([{ standardName: oneStandard.standardName, standardVersion: oneStandard.standardVersion }])), []), hubList, layerVersionList, nodeCount: manifestRow.recordedNodeCount, edgeCount: manifestRow.recordedEdgeCount } };
+		return { answer: { manifestRefId: manifestRow.manifestRefId, publicLabel: manifestRow.publicLabel, publishedAt: manifestRow.publishedAt, latestStatus: { registrationStatus: latestRow.registrationStatus, changedAt: latestRow.changedAt }, statusHistory: manifestStatusHistoryOf(manifestRow.manifestRefId), standardList: baseMemberListFor(manifestRow.manifestRefId).reduce((soFar, oneStandard) => (soFar.some((oneSeen) => oneSeen.standardName === oneStandard.standardName && oneSeen.standardVersion === oneStandard.standardVersion) ? soFar : soFar.concat([{ standardName: oneStandard.standardName, standardVersion: oneStandard.standardVersion }])), []), hubList, layerVersionList, nodeCount: manifestRow.recordedNodeCount, edgeCount: manifestRow.recordedEdgeCount } };
 	};
 
 	// 7

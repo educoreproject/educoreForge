@@ -178,6 +178,17 @@ const runGates = (setupError, setup) => {
 	harness.equal('re-publishing is alreadyPresent', jsonOf(runGraphBuilder(['-publishManifest', contractFlag, storeFlag, `--manifestRefId=${manifestRefId}`, '--publicLabel=toy-2026-10', '--registrationStatus=Candidate']).outputText).alreadyPresent, true);
 
 	// =====================================================================
+	harness.section('-appendManifestStatus');
+	// =====================================================================
+	harness.match('without --registrationStatus and --note it is refused (no default)', runGraphBuilder(['-appendManifestStatus', contractFlag, `--manifestRefId=${manifestRefId}`]).outputText, /--registrationStatus, --note REQUIRED/);
+	harness.match('an unpublished manifest is refused', runGraphBuilder(['-appendManifestStatus', contractFlag, `--manifestRefId=${'f'.repeat(64)}`, '--registrationStatus=Standard', '--note=endorsed']).outputText, /is not published/);
+	harness.match('a status outside the ISO list is refused', runGraphBuilder(['-appendManifestStatus', contractFlag, `--manifestRefId=${manifestRefId}`, '--registrationStatus=Gold', '--note=endorsed']).outputText, /is not an ISO\/IEC 11179-6 lifecycle status/);
+	const statusAppended = runGraphBuilder(['-appendManifestStatus', contractFlag, `--manifestRefId=${manifestRefId}`, '--registrationStatus=Standard', '--note=endorsed after review']);
+	const statusReport = jsonOf(statusAppended.outputText);
+	sameValue('it appends: exit 0, effective Standard, history Candidate then Standard', [statusAppended.exitCode, statusReport.effectiveRegistrationStatus, (statusReport.statusHistory || []).map((oneRow) => oneRow.registrationStatus)], [0, 'Standard', ['Candidate', 'Standard']]);
+	harness.match('appending the same status again is refused (a history row records a change)', runGraphBuilder(['-appendManifestStatus', contractFlag, `--manifestRefId=${manifestRefId}`, '--registrationStatus=Standard', '--note=again']).outputText, /'Standard' is already the effective status/);
+
+	// =====================================================================
 	harness.section('-replayOldest and -rebuildUriContractIndexes');
 	// =====================================================================
 	const replayed = runGraphBuilder(['-replayOldest', contractFlag]);
@@ -274,6 +285,7 @@ const continueAfterExport = () => {
 		['interpretation, pinned', 'Toy/1/toy:a@toyJudge/base', 200, (body) => body.assertionList.length === 1 && body.assertionList[0].object === TOY_MEANING_IRI],
 		['interpretation, floating', 'Toy/1/toy:b@toyJudge', 200, (body) => body.answer === 'sssom:NoTermFound'],
 		['the curated layer version just published', 'layer/rater-42/r1', 200, (body) => body.latestStatus.registrationStatus === 'Candidate'],
+		['the manifest shows its LATEST status and its history', 'manifest/toy-2026-10', 200, (body) => body.latestStatus.registrationStatus === 'Standard' && body.statusHistory.map((oneRow) => oneRow.registrationStatus).join(',') === 'Candidate,Standard'],
 	];
 	const fetchPath = (requestPath, done) => {
 		http.get({ host: '127.0.0.1', port, path: `/EDUcore/${requestPath}` }, (response) => {

@@ -92,6 +92,8 @@ const run = () => {
 			? actions.seedUriContractFromRegistryJson
 			: switches.publishManifest
 			? actions.publishManifest
+			: switches.appendManifestStatus
+			? actions.appendManifestStatus
 			: switches.replayOldest
 			? actions.replayOldest
 			: switches.rebuildUriContractIndexes
