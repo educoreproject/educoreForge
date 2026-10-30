@@ -1189,7 +1189,12 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // and hooks, forges/usecase/forgeUsecase.js 26/0, lib/usecaseForgeDeclaration.js 60/0, lib/usecaseHooks.js 47/0; and
 // lib/forge-framework/test/test-gStandardMetadata.js 12/0 (y, z). No existing forge, no build, forger, replay or replay-manager source.
 // Allowed-path list NOT widened.
-const PHASE3_ANCHOR_TAG = 'postUcSeamDiffEmpty-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge Phase 2a; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR B, 2026-10-30 (RADIANT_HAVEN; useCaseForge-102926, a correction to the one re-anchor above, under SHADOW_MEADOW's standing rule
+// for seam tests) ═══ PHASE3_ANCHOR_TAG postUcSeamDiffEmpty-102926 -> postUcSeamDiffEmptyB-102926, tag cut ON this commit. Observed RED first at
+// dea0f19a. CENSUS (numstat from the postUc tag): apps/graph-builder/apps/replay-manager/lib/finishing/test/test-schemaViewContractProjection.js
+// 2/1 ONLY (its (e) twin admits the Uc* residue, found by the full suite at e4bc58ea, as wave 3's lane admitted Oneroster*, Medbiq*). No build,
+// forger, replay or replay-manager source. Allowed-path list NOT widened.
+const PHASE3_ANCHOR_TAG = 'postUcSeamDiffEmptyB-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge, correction B; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
