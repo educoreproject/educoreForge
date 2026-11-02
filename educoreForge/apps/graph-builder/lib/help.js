@@ -579,8 +579,10 @@ OPTIONS
 
      -rebuildUriContractIndexes
                   WRITES (fills only). Recomputes every derived row of uriContract (the element index, the answer edges,
-                  the layer-version counts) from its write-once source and REFUSES on any difference; writes the derived
-                  rows of a source never indexed. It changes and removes nothing. --verifyOnly=true writes nothing.
+                  the layer-version counts, the assertion index) from its write-once source and REFUSES on any difference;
+                  writes the derived rows of a source never indexed. A file older than a derived table gains the table,
+                  empty, first (a reader and every other action refuse such a file until this has run). It changes and
+                  removes nothing. --verifyOnly=true writes nothing, and adds no table.
 
      -spendLedger
                   WHAT THE BUILDS SPENT (spend ledger lane R1, 2026-10-21). READ-ONLY and FREE.

@@ -19,6 +19,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     loadRegistry()                         → lib/layer-registry registryFor(...) over registryShape()
 //     decisionSchemaBlockTextFor(hash)       → { frozenText } | { error }        frozenText null when absent; VERIFIED
 //     decisionSchemaBlockFor(hash)           → { decisionSchemaBlock } | { error }  the row { hash, pairKey, producerKind, frozenText }
+//     ⟪assertionIndex-110226⟫ the single-row reads the resolver answers an assertion or an interpretation from (never the block's text):
+//     decisionBlockFormFor(hash)             → { blockForm } | { error }         null when no such block; a held block never indexed is an error
+//     assertionRowFor({ decisionBlockHash, assertionIri })  → { assertionRow } | { error }   the first addressable row with that id, or null
+//     curatedAssertionRowFor({ decisionBlockHash, assertionIri, layerKey, versionTag }) → { assertionRow } | { error }   by that version's R-c' id
+//     elementAssertionRowListFor({ decisionBlockHash, subjectStableIdList }) → { assertionRowList } | { error }   in the block's own order
 //     schemaBlockFor(refId)                  → { schemaBlock } | { error }       schemaBlock null when absent; VERIFIED
 //     frozenVectorFor(vectorId)              → { frozenVector } | { error }      the vector-store getVector record shape; VERIFIED
 //     publishedManifestFor({ publicLabel } | { manifestRefId }) → { publishedManifest } | { error }   null when absent
@@ -34,7 +39,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                                                                    decision schema blocks their edges cite that uriContract lacks
 //
 // THE RULES THIS MODULE KEEPS, each a refusal by name:
-//   * NO UPDATE, NO DELETE. The module issues neither; the schema adds BEFORE UPDATE / BEFORE DELETE triggers on all nine tables, so
+//   * NO UPDATE, NO DELETE. The module issues neither; the schema adds BEFORE UPDATE / BEFORE DELETE triggers on every table, so
 //     raw SQL cannot edit the file either. A status change is a new history row.
 //   * IDENTITY ROWS ARE INSERTED ONCE. Re-writing an identical identity row answers alreadyPresent; a different row under
 //     the same identity is refused (a published thing never changes).
@@ -104,16 +109,41 @@ const schemaSqlList = () =>
 		.concat(URI_CONTRACT_SCHEMA.indexList)
 		.concat(URI_CONTRACT_SCHEMA.tableList.reduce((soFar, oneTable) => soFar.concat(triggerSqlListFor(oneTable)), []));
 
-// schemaRefusal(database) → '' | reason: every table with exactly its columns, every write-once trigger present
-const schemaRefusal = (database) => {
+// addAbsentDerivedTables(database) — a file published before a derived table existed gains it, empty, with its write-once triggers and its
+// indexes. ADDITIVE ONLY: this creates tables and touches no row and no existing table. A file that lacks an IDENTITY table is left for
+// schemaRefusal. Only the actions uriContractRules.json derivedTableAdditionActionNameList names reach this.
+const addAbsentDerivedTables = (database) => {
+	const heldTableNameSet = new Set(database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((oneRow) => oneRow.name));
+	const absentTableList = URI_CONTRACT_SCHEMA.tableList.filter((oneTable) => !heldTableNameSet.has(oneTable.tableName));
+	if (absentTableList.length === 0 || absentTableList.some((oneTable) => oneTable.rowRole !== 'derived')) {
+		return {};
+	}
+	const absentTableNameList = absentTableList.map((oneTable) => oneTable.tableName);
+	const statementList = absentTableList.map(createTableSqlFor).concat(URI_CONTRACT_SCHEMA.indexList.filter((oneIndexSql) => absentTableNameList.some((tableName) => oneIndexSql.indexOf(` ON ${tableName}(`) !== -1))).concat(absentTableList.reduce((soFar, oneTable) => soFar.concat(triggerSqlListFor(oneTable)), []));
+	return attemptSql(() => database.transaction(() => statementList.forEach((oneStatement) => database.exec(oneStatement)))());
+};
+
+// absentDerivedTableNameListOf(database) → the derived tables a file predates (a file published before they existed)
+const absentDerivedTableNameListOf = (database) => {
+	const heldTableNameSet = new Set(database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((oneRow) => oneRow.name));
+	return URI_CONTRACT_SCHEMA.tableList.filter((oneTable) => oneTable.rowRole === 'derived' && !heldTableNameSet.has(oneTable.tableName)).map((oneTable) => oneTable.tableName);
+};
+
+// schemaRefusal(database, { allowAbsentDerivedTables }) → '' | reason: every table with exactly its columns, every write-once trigger present.
+// A READER may open a file older than a derived table, whose identity rows are all it ever promised: whatever needs the absent table refuses
+// by name when it is asked. A writer may not (publishing into that file would leave a source unindexed)
+const schemaRefusal = (database, { allowAbsentDerivedTables } = {}) => {
+	const tableExemptionSet = new Set(allowAbsentDerivedTables ? absentDerivedTableNameListOf(database) : []);
 	const tableNameList = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all().map((oneRow) => oneRow.name);
 	const expectedTableNameList = URI_CONTRACT_SCHEMA.tableList.map((oneTable) => oneTable.tableName);
 	const strangerTableList = tableNameList.filter((tableName) => expectedTableNameList.indexOf(tableName) === -1);
-	const absentTableList = expectedTableNameList.filter((tableName) => tableNameList.indexOf(tableName) === -1);
+	const absentTableList = expectedTableNameList.filter((tableName) => tableNameList.indexOf(tableName) === -1 && !tableExemptionSet.has(tableName));
 	if (strangerTableList.length || absentTableList.length) {
-		return `the file's tables are not uriContract's (absent: ${absentTableList.join(', ') || 'none'}; not uriContract's: ${strangerTableList.join(', ') || 'none'})`;
+		const absentAreDerived = strangerTableList.length === 0 && absentTableList.every((tableName) => TABLE_BY_NAME[tableName].rowRole === 'derived');
+		return `the file's tables are not uriContract's (absent: ${absentTableList.join(', ') || 'none'}; not uriContract's: ${strangerTableList.join(', ') || 'none'})${absentAreDerived ? '; only derived tables are absent: graphBuilder -rebuildUriContractIndexes adds and fills them' : ''}`;
 	}
-	const columnFault = URI_CONTRACT_SCHEMA.tableList
+	const heldSchemaTableList = URI_CONTRACT_SCHEMA.tableList.filter((oneTable) => !tableExemptionSet.has(oneTable.tableName));
+	const columnFault = heldSchemaTableList
 		.map((oneTable) => {
 			const actual = database.prepare(`PRAGMA table_info(${oneTable.tableName})`).all().map((oneColumn) => oneColumn.name).join(',');
 			const expected = oneTable.columnList.map((oneColumn) => oneColumn.columnName).join(',');
@@ -124,7 +154,7 @@ const schemaRefusal = (database) => {
 		return columnFault;
 	}
 	const triggerNameSet = new Set(database.prepare("SELECT name FROM sqlite_master WHERE type = 'trigger'").all().map((oneRow) => oneRow.name));
-	const absentTriggerList = URI_CONTRACT_SCHEMA.tableList.reduce((soFar, oneTable) => soFar.concat(triggerNameListFor(oneTable)), []).filter((triggerName) => !triggerNameSet.has(triggerName));
+	const absentTriggerList = heldSchemaTableList.reduce((soFar, oneTable) => soFar.concat(triggerNameListFor(oneTable)), []).filter((triggerName) => !triggerNameSet.has(triggerName));
 	return absentTriggerList.length ? `the write-once triggers ${absentTriggerList.join(', ')} are absent (a uriContract without them can be edited)` : '';
 };
 
@@ -267,6 +297,14 @@ const identityRowsEqual = (leftRow, rightRow) => Object.keys(rightRow).every((co
 // THE STORE, over an injected handle
 // ---------------------------------------------------------------------
 
+// ASSERTION_INDEX_SQL_BY_NAME — the single-row reads of the assertion index. INDEXED BY is deliberate: unprompted, SQLite's planner satisfies
+// ORDER BY rowOrdinal by walking the primary sequence of the whole block, which is the scan this index exists to end (measured, and gated)
+const ASSERTION_INDEX_SQL_BY_NAME = Object.freeze({
+	assertionRow: 'SELECT * FROM derivedAssertions INDEXED BY derivedAssertionsByAssertion WHERE decisionBlockHash = ? AND assertionId = ? AND assertionRecordJson IS NOT NULL ORDER BY rowOrdinal LIMIT 1',
+	curatedAssertionRow: 'SELECT stored.* FROM derivedCuratedAssertionIds AS curated INDEXED BY derivedCuratedAssertionIdsByAssertion JOIN derivedAssertions AS stored ON stored.decisionBlockHash = curated.decisionBlockHash AND stored.rowOrdinal = curated.rowOrdinal WHERE curated.decisionBlockHash = ? AND curated.assertionId = ? AND curated.layerKey = ? AND curated.versionTag = ? ORDER BY curated.rowOrdinal LIMIT 1',
+	elementAssertionRowList: (subjectCount) => `SELECT * FROM derivedAssertions INDEXED BY derivedAssertionsBySubject WHERE decisionBlockHash = ? AND subjectStableId IN (${Array.from({ length: subjectCount }, () => '?').join(', ')}) ORDER BY rowOrdinal`,
+});
+
 const insertSqlFor = (tableName, row) => `INSERT INTO ${tableName} (${Object.keys(row).join(', ')}) VALUES (${Object.keys(row).map((columnName) => `@${columnName}`).join(', ')})`;
 
 const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
@@ -290,10 +328,20 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 	if (foreignKeys.error || database.pragma('foreign_keys', { simple: true }) !== 1) {
 		return { error: refusalText('the connection does not enforce FOREIGN KEYs', 'PRAGMA foreign_keys = ON is required on every uriContract connection') };
 	}
-	const schemaFault = schemaRefusal(database);
+	if (accessMode === 'publish' && URI_CONTRACT_RULES.derivedTableAdditionActionNameList.indexOf(writerActionName) !== -1) {
+		const added = addAbsentDerivedTables(database);
+		if (added.error) {
+			return { error: refusalText(`adding the absent derived tables: ${added.error}`, 'uriContractSchema.json') };
+		}
+	}
+	const schemaFault = schemaRefusal(database, { allowAbsentDerivedTables: accessMode === 'read' });
 	if (schemaFault) {
 		return { error: refusalText(schemaFault, 'a uriContract is created only by -seedUriContractFromRegistryJson, from uriContractSchema.json; nothing here converts or repairs a file') };
 	}
+
+	// a read-only open of a file older than a derived table: what needs the table says so, naming the action that adds it
+	const absentDerivedTableNameList = absentDerivedTableNameListOf(database);
+	const absentDerivedTablesFault = () => (absentDerivedTableNameList.length === 0 ? '' : refusalText(`this uriContract predates the derived tables ${absentDerivedTableNameList.join(', ')}`, 'graphBuilder -rebuildUriContractIndexes adds and fills them'));
 
 	// ----- READERS
 	const registryShape = () => {
@@ -343,6 +391,41 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		}
 		const read = decisionSchemaBlockTextFor(decisionSchemaBlockHash);
 		return read.error ? read : { decisionSchemaBlock: { ...row, frozenText: read.frozenText } };
+	};
+	// ⟪assertionIndex-110226⟫ the assertion index: one row, by primary or secondary index, with no block text read
+	const assertionRowFrom = (storedRow) => ({ rowOrdinal: storedRow.rowOrdinal, subjectStableId: storedRow.subjectStableId, assertionId: storedRow.assertionId, assertionRecord: storedRow.assertionRecordJson === null ? null : JSON.parse(storedRow.assertionRecordJson), interpretationEntry: storedRow.interpretationEntryJson === null ? null : JSON.parse(storedRow.interpretationEntryJson) });
+	// indexReadOf — the one boundary where a stored index row that no longer parses (a corrupted file) becomes an error string
+	const indexReadOf = (decisionBlockHash, readWork) => {
+		const read = attemptSql(readWork);
+		return read.error ? { error: refusalText(`assertion index row of decision block ${decisionBlockHash} does not read (${read.error})`, 'a corrupted row is a defect to report; -rebuildUriContractIndexes names it; this file is never repaired') } : read.result;
+	};
+	const decisionBlockFormFor = (decisionBlockHash) => {
+		if (absentDerivedTablesFault()) {
+			return { error: absentDerivedTablesFault() };
+		}
+		const row = database.prepare('SELECT blockForm, subjectStandardName, subjectStandardVersion, edgeShapeFault, objectSourceVersionJson FROM derivedAssertionBlocks WHERE decisionBlockHash = ?').get(decisionBlockHash);
+		if (row !== undefined) {
+			return indexReadOf(decisionBlockHash, () => {
+				if (row.objectSourceVersionJson !== null) {
+					JSON.parse(row.objectSourceVersionJson);
+				}
+				return { blockForm: row };
+			});
+		}
+		const isHeld = database.prepare('SELECT 1 FROM decisionSchemaBlocks WHERE decisionSchemaBlockHash = ?').get(decisionBlockHash) !== undefined;
+		return isHeld ? { error: refusalText(`decision schema block ${decisionBlockHash} is held but was never indexed`, 'graphBuilder -rebuildUriContractIndexes fills a source never indexed') } : { blockForm: null };
+	};
+	const assertionRowFor = ({ decisionBlockHash, assertionIri }) => {
+		const row = database.prepare(ASSERTION_INDEX_SQL_BY_NAME.assertionRow).get(decisionBlockHash, assertionIri);
+		return indexReadOf(decisionBlockHash, () => ({ assertionRow: row === undefined ? null : assertionRowFrom(row) }));
+	};
+	const curatedAssertionRowFor = ({ decisionBlockHash, assertionIri, layerKey, versionTag }) => {
+		const row = database.prepare(ASSERTION_INDEX_SQL_BY_NAME.curatedAssertionRow).get(decisionBlockHash, assertionIri, layerKey, versionTag);
+		return indexReadOf(decisionBlockHash, () => ({ assertionRow: row === undefined ? null : assertionRowFrom(row) }));
+	};
+	const elementAssertionRowListFor = ({ decisionBlockHash, subjectStableIdList }) => {
+		const rowList = database.prepare(ASSERTION_INDEX_SQL_BY_NAME.elementAssertionRowList(subjectStableIdList.length)).all(decisionBlockHash, ...subjectStableIdList);
+		return indexReadOf(decisionBlockHash, () => ({ assertionRowList: rowList.map(assertionRowFrom) }));
 	};
 	const schemaBlockFor = (refId) => {
 		const row = database.prepare('SELECT * FROM schemaBlocks WHERE refId = ?').get(refId);
@@ -425,28 +508,72 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 	// row set that is not what its source yields (a defect: nothing here changes or removes a row)
 	const DERIVED_COLUMN_LIST_BY_TABLE = URI_CONTRACT_SCHEMA.tableList.filter((oneTable) => oneTable.rowRole === 'derived').reduce((soFar, oneTable) => ({ ...soFar, [oneTable.tableName]: oneTable.columnList.map((oneColumn) => oneColumn.columnName) }), {});
 	const canonicalRowListText = (tableName, rowList) => rowList.map((oneRow) => JSON.stringify(DERIVED_COLUMN_LIST_BY_TABLE[tableName].map((columnName) => (oneRow[columnName] === undefined ? null : oneRow[columnName])))).sort().join('\n');
+	const isCuratedVersion = (oneVersion) => oneVersion.contentIdBasis === 'frozenSetBytes' && oneVersion.wholeSetBlock !== undefined;
 	const derivedSourceList = () => {
 		const loaded = loadRegistry();
-		const versionSourceList = loaded.error ? [] : loaded.registry.layerRegistry.layerList.reduce((soFar, oneLayer) => soFar.concat(oneLayer.versionList.map((oneVersion) => ({ sourceKind: 'layerVersion', sourceIdentity: `${oneLayer.layerKey}\u0000${oneVersion.administrationRecord.versionTag}`, layer: oneLayer, version: oneVersion }))), []);
-		return { error: loaded.error, sourceList: database.prepare('SELECT refId FROM schemaBlocks ORDER BY rowid').all().map((oneRow) => ({ sourceKind: 'schemaBlock', sourceIdentity: oneRow.refId })).concat(versionSourceList) };
+		const layerVersionPairList = loaded.error ? [] : loaded.registry.layerRegistry.layerList.reduce((soFar, oneLayer) => soFar.concat(oneLayer.versionList.map((oneVersion) => ({ layer: oneLayer, version: oneVersion }))), []);
+		const versionSourceList = layerVersionPairList.map(({ layer, version }) => ({ sourceKind: 'layerVersion', sourceIdentity: `${layer.layerKey}\u0000${version.administrationRecord.versionTag}`, layer, version }));
+		const decisionBlockSourceList = database.prepare('SELECT decisionSchemaBlockHash FROM decisionSchemaBlocks ORDER BY rowid').all().map((oneRow) => ({ sourceKind: 'decisionBlock', sourceIdentity: oneRow.decisionSchemaBlockHash }));
+		const curatedVersionSourceList = versionSourceList.filter(({ version }) => isCuratedVersion(version)).map((oneSource) => ({ ...oneSource, sourceKind: 'curatedVersion' }));
+		return { error: loaded.error, sourceList: database.prepare('SELECT refId FROM schemaBlocks ORDER BY rowid').all().map((oneRow) => ({ sourceKind: 'schemaBlock', sourceIdentity: oneRow.refId })).concat(versionSourceList, decisionBlockSourceList, curatedVersionSourceList) };
 	};
-	const computedDerivedRowsFor = (oneSource) => {
-		if (oneSource.sourceKind === 'schemaBlock') {
-			const read = schemaBlockFor(oneSource.sourceIdentity);
-			if (read.error) {
-				return read;
-			}
-			const derived = derivedIndexesLib.derivedRowsForSchemaBlock(read.schemaBlock);
-			return derived.error ? derived : { rowListByTable: { derivedElementIndex: derived.elementRowList, derivedHubCards: derived.hubCardRowList, derivedAnswerEdges: derived.answerEdgeRowList } };
+	// a curated version's ids read ITS OWN row's standardList and hubList, so a later version of the layer can never disturb them
+	const curatedVersionRowsFor = ({ layerKey, versionTag, wholeSetBlock, standardList, hubList }) => {
+		const read = decisionSchemaBlockTextFor(wholeSetBlock.decisionBlockHash);
+		if (read.error || read.frozenText === null) {
+			return { error: read.error || refusalText(`layer '${layerKey}' version '${versionTag}' names decision schema block ${wholeSetBlock.decisionBlockHash}, which is not held`, "a layer version's blocks are copied with it") };
 		}
-		const derived = derivedIndexesLib.derivedRowsForLayerVersion({ layer: oneSource.layer, version: oneSource.version, blockTextFor: decisionSchemaBlockTextFor });
-		return derived.error ? derived : { rowListByTable: { derivedLayerVersionCounts: derived.countRowList } };
+		return derivedIndexesLib.derivedRowsForCuratedVersion({ decisionBlockHash: wholeSetBlock.decisionBlockHash, frozenText: read.frozenText, layerKey, versionTag, standardList, hubList });
 	};
-	const storedDerivedRowsFor = (oneSource, tableName) =>
-		oneSource.sourceKind === 'schemaBlock'
-			? database.prepare(`SELECT * FROM ${tableName} WHERE schemaBlockRefId = ?`).all(oneSource.sourceIdentity)
-			: database.prepare(`SELECT * FROM ${tableName} WHERE layerKey = ? AND versionTag = ?`).all(oneSource.layer.layerKey, oneSource.version.administrationRecord.versionTag);
+	// DERIVED_SOURCE_BY_KIND — one row per kind of source: where its completeness row lives, how its rows recompute, how its stored rows read
+	const DERIVED_SOURCE_BY_KIND = {
+		schemaBlock: {
+			completenessTableName: 'derivedIndexedSources',
+			computedRowsFor: (oneSource) => {
+				const read = schemaBlockFor(oneSource.sourceIdentity);
+				if (read.error) {
+					return read;
+				}
+				const derived = derivedIndexesLib.derivedRowsForSchemaBlock(read.schemaBlock);
+				return derived.error ? derived : { rowListByTable: { derivedElementIndex: derived.elementRowList, derivedHubCards: derived.hubCardRowList, derivedAnswerEdges: derived.answerEdgeRowList } };
+			},
+			storedRowsFor: (oneSource, tableName) => database.prepare(`SELECT * FROM ${tableName} WHERE schemaBlockRefId = ?`).all(oneSource.sourceIdentity),
+		},
+		layerVersion: {
+			completenessTableName: 'derivedIndexedSources',
+			computedRowsFor: (oneSource) => {
+				const derived = derivedIndexesLib.derivedRowsForLayerVersion({ layer: oneSource.layer, version: oneSource.version, blockTextFor: decisionSchemaBlockTextFor });
+				return derived.error ? derived : { rowListByTable: { derivedLayerVersionCounts: derived.countRowList } };
+			},
+			storedRowsFor: (oneSource, tableName) => database.prepare(`SELECT * FROM ${tableName} WHERE layerKey = ? AND versionTag = ?`).all(oneSource.layer.layerKey, oneSource.version.administrationRecord.versionTag),
+		},
+		decisionBlock: {
+			completenessTableName: 'derivedAssertionSources',
+			computedRowsFor: (oneSource) => {
+				const read = decisionSchemaBlockTextFor(oneSource.sourceIdentity);
+				if (read.error) {
+					return read;
+				}
+				const derived = derivedIndexesLib.derivedRowsForDecisionBlock({ decisionBlockHash: oneSource.sourceIdentity, frozenText: read.frozenText });
+				return derived.error ? derived : { rowListByTable: { derivedAssertionBlocks: [derived.blockFormRow], derivedAssertions: derived.assertionRowList } };
+			},
+			storedRowsFor: (oneSource, tableName) => database.prepare(`SELECT * FROM ${tableName} WHERE decisionBlockHash = ?`).all(oneSource.sourceIdentity),
+		},
+		curatedVersion: {
+			completenessTableName: 'derivedAssertionSources',
+			computedRowsFor: (oneSource) => {
+				const versionTag = oneSource.version.administrationRecord.versionTag;
+				const versionRow = database.prepare('SELECT standardListJson, hubListJson FROM layerVersions WHERE layerKey = ? AND versionTag = ?').get(oneSource.layer.layerKey, versionTag);
+				const derived = curatedVersionRowsFor({ layerKey: oneSource.layer.layerKey, versionTag, wholeSetBlock: oneSource.version.wholeSetBlock, standardList: JSON.parse(versionRow.standardListJson), hubList: JSON.parse(versionRow.hubListJson) });
+				return derived.error ? derived : { rowListByTable: { derivedCuratedAssertionIds: derived.curatedAssertionIdRowList } };
+			},
+			storedRowsFor: (oneSource, tableName) => database.prepare(`SELECT * FROM ${tableName} WHERE layerKey = ? AND versionTag = ?`).all(oneSource.layer.layerKey, oneSource.version.administrationRecord.versionTag),
+		},
+	};
 	const derivedComparisonFor = () => {
+		if (absentDerivedTablesFault()) {
+			return { error: absentDerivedTablesFault() };
+		}
 		const listed = derivedSourceList();
 		if (listed.error) {
 			return { error: listed.error };
@@ -456,17 +583,18 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		let verifiedSourceCount = 0;
 		for (let sourceIndex = 0; sourceIndex < listed.sourceList.length; sourceIndex++) {
 			const oneSource = listed.sourceList[sourceIndex];
-			const computed = computedDerivedRowsFor(oneSource);
+			const sourceRule = DERIVED_SOURCE_BY_KIND[oneSource.sourceKind];
+			const computed = sourceRule.computedRowsFor(oneSource);
 			if (computed.error) {
 				return { error: computed.error };
 			}
-			const indexedRow = database.prepare('SELECT derivedRowCount FROM derivedIndexedSources WHERE sourceKind = ? AND sourceIdentity = ?').get(oneSource.sourceKind, oneSource.sourceIdentity);
+			const indexedRow = database.prepare(`SELECT derivedRowCount FROM ${sourceRule.completenessTableName} WHERE sourceKind = ? AND sourceIdentity = ?`).get(oneSource.sourceKind, oneSource.sourceIdentity);
 			const computedRowCount = Object.keys(computed.rowListByTable).reduce((soFar, tableName) => soFar + computed.rowListByTable[tableName].length, 0);
 			if (indexedRow === undefined) {
 				absentSourceList.push({ ...oneSource, rowListByTable: computed.rowListByTable, computedRowCount });
 				continue;
 			}
-			const differingTable = Object.keys(computed.rowListByTable).find((tableName) => canonicalRowListText(tableName, storedDerivedRowsFor(oneSource, tableName)) !== canonicalRowListText(tableName, computed.rowListByTable[tableName]));
+			const differingTable = Object.keys(computed.rowListByTable).find((tableName) => canonicalRowListText(tableName, sourceRule.storedRowsFor(oneSource, tableName)) !== canonicalRowListText(tableName, computed.rowListByTable[tableName]));
 			if (differingTable !== undefined || indexedRow.derivedRowCount !== computedRowCount) {
 				differenceList.push(`${oneSource.sourceKind} ${oneSource.sourceIdentity.replace('\u0000', '/')}: ${differingTable !== undefined ? `${differingTable} rows differ from a recomputation` : `derivedRowCount ${indexedRow.derivedRowCount}, recomputed ${computedRowCount}`}`);
 			}
@@ -479,7 +607,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		return compared.error ? compared : { verifiedSourceCount: compared.verifiedSourceCount, absentSourceCount: compared.absentSourceList.length, differenceList: compared.differenceList };
 	};
 
-	const coreReaderApi = { accessMode, registryShape, loadRegistry, verifyDerivedIndexes, decisionSchemaBlockTextFor, decisionSchemaBlockFor, schemaBlockFor, frozenVectorFor, agentRecordFor, publishedManifestFor, publishedManifestList, close: () => database.close() };
+	const coreReaderApi = { accessMode, registryShape, loadRegistry, verifyDerivedIndexes, decisionSchemaBlockTextFor, decisionSchemaBlockFor, decisionBlockFormFor, assertionRowFor, curatedAssertionRowFor, elementAssertionRowListFor, schemaBlockFor, frozenVectorFor, agentRecordFor, publishedManifestFor, publishedManifestList, close: () => database.close() };
 	const readerApi = { ...coreReaderApi, relations: uriContractRelationsFor({ database, uriContract: coreReaderApi }) };
 	if (accessMode === 'read') {
 		return { uriContract: readerApi };
@@ -548,6 +676,32 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		return { alreadyPresent: false };
 	};
 
+	const isIndexedAssertionSource = (sourceKind, sourceIdentity) => database.prepare('SELECT derivedRowCount FROM derivedAssertionSources WHERE sourceKind = ? AND sourceIdentity = ?').get(sourceKind, sourceIdentity) !== undefined;
+	const writeDerivedRowsForDecisionBlock = ({ decisionBlockHash, frozenText }) => {
+		const derived = derivedIndexesLib.derivedRowsForDecisionBlock({ decisionBlockHash, frozenText });
+		if (derived.error) {
+			return derived;
+		}
+		insertDerivedRows('derivedAssertionBlocks', [derived.blockFormRow]);
+		insertDerivedRows('derivedAssertions', derived.assertionRowList);
+		insertDerivedRows('derivedAssertionSources', [{ sourceKind: 'decisionBlock', sourceIdentity: decisionBlockHash, derivedRowCount: 1 + derived.assertionRowList.length }]);
+		return { alreadyPresent: false };
+	};
+	const writeDerivedRowsForCuratedVersion = ({ layer, version }) => {
+		const versionTag = version.administrationRecord.versionTag;
+		const sourceIdentity = `${layer.layerKey}\u0000${versionTag}`;
+		if (!isCuratedVersion(version) || isIndexedAssertionSource('curatedVersion', sourceIdentity)) {
+			return { alreadyPresent: true };
+		}
+		const derived = curatedVersionRowsFor({ layerKey: layer.layerKey, versionTag, wholeSetBlock: version.wholeSetBlock, standardList: layer.standardList, hubList: layer.hubList });
+		if (derived.error) {
+			return derived;
+		}
+		insertDerivedRows('derivedCuratedAssertionIds', derived.curatedAssertionIdRowList);
+		insertDerivedRows('derivedAssertionSources', [{ sourceKind: 'curatedVersion', sourceIdentity, derivedRowCount: derived.curatedAssertionIdRowList.length }]);
+		return { alreadyPresent: false };
+	};
+
 	const agentRefusalFor = (agent) => {
 		const label = `agent ${JSON.stringify(agent && agent.agentIri)}`;
 		const kindFieldList = isPlainObject(agent) ? URI_CONTRACT_RULES.agentFieldListByKind[agent.agentKind] : undefined;
@@ -590,7 +744,8 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 			return { alreadyPresent: true };
 		}
 		database.prepare(insertSqlFor('decisionSchemaBlocks', { decisionSchemaBlockHash, pairKey, producerKind, frozenText })).run({ decisionSchemaBlockHash, pairKey, producerKind, frozenText });
-		return { alreadyPresent: false };
+		// its assertion rows go in with it, in this same transaction: every caller's refusal rolls both back
+		return writeDerivedRowsForDecisionBlock({ decisionBlockHash: decisionSchemaBlockHash, frozenText });
 	};
 
 	// appendLayerVersion — the version, its decision schema blocks and its publication-status row, in ONE transaction. The layer
@@ -630,7 +785,11 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 			}
 			database.prepare(insertSqlFor('layerStatusChanges', publicationStatusRowFor({ layer, version }))).run(publicationStatusRowFor({ layer, version }));
 			const derivedOutcome = writeDerivedRowsForLayerVersion({ layer, version });
-			return derivedOutcome.error ? derivedOutcome : { alreadyPresent: false };
+			if (derivedOutcome.error) {
+				return derivedOutcome;
+			}
+			const curatedOutcome = writeDerivedRowsForCuratedVersion({ layer, version });
+			return curatedOutcome.error ? curatedOutcome : { alreadyPresent: false };
 		});
 	};
 
@@ -816,7 +975,7 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		const filled = runWriteTransaction(() => {
 			compared.absentSourceList.forEach((oneSource) => {
 				Object.keys(oneSource.rowListByTable).forEach((tableName) => insertDerivedRows(tableName, oneSource.rowListByTable[tableName]));
-				insertDerivedRows('derivedIndexedSources', [{ sourceKind: oneSource.sourceKind, sourceIdentity: oneSource.sourceIdentity, derivedRowCount: oneSource.computedRowCount }]);
+				insertDerivedRows(DERIVED_SOURCE_BY_KIND[oneSource.sourceKind].completenessTableName, [{ sourceKind: oneSource.sourceKind, sourceIdentity: oneSource.sourceIdentity, derivedRowCount: oneSource.computedRowCount }]);
 			});
 			return { filledSourceCount: compared.absentSourceList.length };
 		});
@@ -869,6 +1028,10 @@ const uriContractReaderFor = ({ uriContractFilePath } = {}) => {
 	const answerWith = (read, shapeFor, callback) => (read.error ? callback(read.error) : callback('', shapeFor(read)));
 	const uriContractReader = {
 		schemaBlockFor: (schemaBlockRefId, callback) => answerWith(uriContract.schemaBlockFor(schemaBlockRefId), ({ schemaBlock }) => (schemaBlock === null ? null : { schemaBlockRefId: schemaBlock.refId, blockKind: schemaBlock.kind, subject: schemaBlock.subject, version: schemaBlock.version, text: schemaBlock.text }), callback),
+		decisionBlockFormFor: (decisionBlockHash, callback) => answerWith(uriContract.decisionBlockFormFor(decisionBlockHash), ({ blockForm }) => blockForm, callback),
+		assertionRowFor: (assertionSelector, callback) => answerWith(uriContract.assertionRowFor(assertionSelector), ({ assertionRow }) => assertionRow, callback),
+		curatedAssertionRowFor: (assertionSelector, callback) => answerWith(uriContract.curatedAssertionRowFor(assertionSelector), ({ assertionRow }) => assertionRow, callback),
+		elementAssertionRowListFor: (elementSelector, callback) => answerWith(uriContract.elementAssertionRowListFor(elementSelector), ({ assertionRowList }) => assertionRowList, callback),
 		decisionSchemaBlockFor: (decisionBlockHash, callback) => answerWith(uriContract.decisionSchemaBlockFor(decisionBlockHash), ({ decisionSchemaBlock }) => (decisionSchemaBlock === null ? null : { decisionBlockHash: decisionSchemaBlock.decisionSchemaBlockHash, pairKey: decisionSchemaBlock.pairKey, frozenText: decisionSchemaBlock.frozenText }), callback),
 		publishedManifestFor: (manifestSelector, callback) =>
 			answerWith(
@@ -903,4 +1066,4 @@ const uriContractReaderFor = ({ uriContractFilePath } = {}) => {
 	return { uriContractReader, uriContract };
 };
 
-module.exports = { openUriContractFile, uriContractFor, uriContractReaderFor, schemaSqlList, embeddingRefListOf, decisionBlockHashListOf, URI_CONTRACT_SCHEMA, URI_CONTRACT_RULES, moduleName };
+module.exports = { openUriContractFile, uriContractFor, uriContractReaderFor, schemaSqlList, ASSERTION_INDEX_SQL_BY_NAME, embeddingRefListOf, decisionBlockHashListOf, URI_CONTRACT_SCHEMA, URI_CONTRACT_RULES, moduleName };
