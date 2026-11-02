@@ -17,6 +17,12 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //                          target is a meaning card): what mappingsToMeaningFor and a question URI read
 //   derivedRowsForLayerVersion({ layer, version, blockTextFor }) → { countRowList } | { error }
 //       per standard and per hub: rows, mapped, abstained, read from the version's own member decision blocks
+//   derivedRowsForDecisionBlock({ decisionBlockHash, frozenText }) → { blockFormRow, assertionRowList } | { error }
+//       blockFormRow       what the resolver needs of the block as a whole: its form, its subject standard, its edge-shape fault
+//       assertionRowList   one row per record the resolver can return from this block, abstentions included; depends on the block ALONE
+//   derivedRowsForCuratedVersion({ decisionBlockHash, frozenText, layerKey, versionTag, standardList, hubList }) → { curatedAssertionIdRowList } | { error }
+//       the R-c' id of each row of a stored curated set: these ids DEPEND ON THE LAYER VERSION, whose own standardList and hubList name
+//       the standards, so they are keyed by it (zero rows for a set that carries record_id: its ids are its own)
 //
 // DEFINITION TEXT is the node's own property, verbatim, the first present of DEFINITION_PROPERTY_NAME_LIST (null if none).
 
@@ -24,12 +30,18 @@ const path = require('path');
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
 const vocabularyLib = require(path.join(__dirname, '..', 'vocabulary', 'vocabulary'));
 const edcUri = require(path.join(__dirname, '..', 'edc-uri', 'edcUri'));
+const assertionIdentity = require(path.join(__dirname, '..', 'edc-uri', 'assertionIdentity'));
+const materialiserLib = require(path.join(__dirname, '..', 'bridge-framework', 'materialiser'));
 
 const refusalText = (what, where) => refuse.byName({ moduleName, what, where }).message;
 const isNonEmptyString = (candidate) => typeof candidate === 'string' && candidate.length > 0;
+const isPlainRecord = (candidate) => candidate !== null && typeof candidate === 'object' && !Array.isArray(candidate);
 const DEFINITION_PROPERTY_NAME_LIST = Object.freeze(['definition', 'description']);
 const ANSWER_EDGE_TYPE_SET = new Set(Object.values(vocabularyLib.SKOS_EDGE_TYPES).concat([vocabularyLib.EDGE_TYPES.DECLARED_CORRESPONDENCE]));
 const NO_TERM_FOUND_OBJECT_LIST = Object.freeze(['sssom:NoTermFound', 'https://w3id.org/sssom/NoTermFound']);
+const NO_TERM_FOUND_OBJECT_ID = 'sssom:NoTermFound';
+const NO_TERM_FOUND_PREDICATE_ID = 'skos:mappingRelation';
+const OBJECT_SOURCE_VERSION_LINE_PREFIX = '#object_source_version: ';
 const URI_CONTRACT_RULES = require(path.join(__dirname, 'uriContractRules.json'));
 const NODE_JSON_DROPPED_FIELD_LIST = Object.freeze(['embedding', 'embeddingRef', 'embeddingModelVersion']);
 
@@ -158,4 +170,113 @@ const derivedRowsForLayerVersion = ({ layer, version, blockTextFor } = {}) => {
 	return { countRowList: Object.keys(countByScope).sort().map((scopeSlotText) => countByScope[scopeSlotText]) };
 };
 
-module.exports = { derivedRowsForSchemaBlock, derivedRowsForLayerVersion, countsOfDecisionText, DEFINITION_PROPERTY_NAME_LIST, ANSWER_EDGE_TYPE_SET, NO_TERM_FOUND_OBJECT_LIST, moduleName };
+// ---------------------------------------------------------------------
+// THE ASSERTION INDEX (assertionIndex-110226): what the resolver reads instead of a whole decision block
+// ---------------------------------------------------------------------
+
+const hasMappedObject = (oneRecord) => typeof oneRecord.objectStableId === 'string' && oneRecord.objectStableId.length > 0;
+
+const machineRowsFor = ({ decisionBlockHash, frozenText }) => {
+	const blockParse = attemptParse(frozenText);
+	if (blockParse.error) {
+		return { error: refusalText(`decision schema block ${decisionBlockHash} is not JSON (${blockParse.error})`, 'derivedRowsForDecisionBlock') };
+	}
+	const block = blockParse.parsed;
+	if (!isPlainRecord(block.header) || !Array.isArray(block.decisionRecordList)) {
+		return { error: refusalText(`decision schema block ${decisionBlockHash} has no header and decisionRecordList`, 'a machine block is { header, decisionRecordList }') };
+	}
+	const { header } = block;
+	const subjectStandardVersion = String(header.sourceVersion);
+	const hubVersion = String(header.hubVersion);
+	const blockFormRow = { decisionBlockHash, blockForm: 'machine', subjectStandardName: isNonEmptyString(header.sourceStandardName) ? header.sourceStandardName : null, subjectStandardVersion, edgeShapeFault: null, objectSourceVersionJson: null };
+	const shapeLookup = materialiserLib.edgeShapeRowFor(block);
+	if (shapeLookup.error) {
+		return { blockFormRow: { ...blockFormRow, edgeShapeFault: shapeLookup.error }, assertionRowList: [] };
+	}
+	const assertionRowList = [];
+	for (let recordIndex = 0; recordIndex < block.decisionRecordList.length; recordIndex++) {
+		const oneRecord = block.decisionRecordList[recordIndex];
+		const isMapped = hasMappedObject(oneRecord);
+		const predicateCurie = isMapped ? shapeLookup.edgeShapeRow.sssomPredicateIdFor(oneRecord.predicate) : NO_TERM_FOUND_PREDICATE_ID;
+		const objectStableId = isMapped ? oneRecord.objectStableId : NO_TERM_FOUND_OBJECT_ID;
+		const subjectStableIdList = Array.from(new Set(oneRecord.instanceStableIdList === undefined ? [oneRecord.subjectStableId] : oneRecord.instanceStableIdList));
+		for (let subjectIndex = 0; subjectIndex < subjectStableIdList.length; subjectIndex++) {
+			const subjectStableId = subjectStableIdList[subjectIndex];
+			const identity = assertionIdentity.assertionIdFor({ decisionBlockHash, subjectStableId, subjectStandardName: header.sourceStandardName, subjectStandardVersion, predicateCurie, objectStableId, objectStandardName: header.hubName, objectStandardVersion: hubVersion });
+			if (identity.error) {
+				return { error: refusalText(`decision schema block ${decisionBlockHash} record ${recordIndex}: no assertion id for subject ${JSON.stringify(subjectStableId)} (${identity.error})`, 'every subject a machine block holds can name its assertion') };
+			}
+			assertionRowList.push({
+				decisionBlockHash,
+				rowOrdinal: assertionRowList.length + 1,
+				subjectStableId,
+				assertionId: identity.assertionId,
+				assertionRecordJson: isMapped ? JSON.stringify({ subjectStableId, judgedSubjectStableId: oneRecord.subjectStableId, predicate: oneRecord.predicate, objectStableId: oneRecord.objectStableId, resolution: oneRecord.resolution, confidence: oneRecord.confidence, mappingMethod: oneRecord.mappingMethod, judgeIdentity: oneRecord.judge && oneRecord.judge.judgeModel, subjectSource: header.sourceStandardName, subjectVersion: header.sourceVersion, objectSource: header.hubName, objectVersion: header.hubVersion }) : null,
+				interpretationEntryJson: JSON.stringify({ assertionId: identity.assertionId, predicate: predicateCurie, object: objectStableId, hubName: header.hubName, hubVersion, resolution: oneRecord.resolution === undefined ? null : oneRecord.resolution, confidence: oneRecord.confidence === undefined ? null : oneRecord.confidence, judgedSubjectStableId: oneRecord.subjectStableId }),
+			});
+		}
+	}
+	return { blockFormRow, assertionRowList };
+};
+
+// setPartsOf(frozenText) → { columnList, lineList, objectSourceVersionText } | { error }: a stored set's table, its comment lines set aside
+const setPartsOf = ({ decisionBlockHash, frozenText }) => {
+	const allLineList = frozenText.split('\n');
+	const objectVersionLine = allLineList.find((oneLine) => oneLine.startsWith(OBJECT_SOURCE_VERSION_LINE_PREFIX));
+	const objectSourceVersionText = objectVersionLine === undefined ? null : objectVersionLine.slice(OBJECT_SOURCE_VERSION_LINE_PREFIX.length);
+	const versionParse = objectSourceVersionText === null ? {} : attemptParse(objectSourceVersionText);
+	if (versionParse.error) {
+		return { error: refusalText(`decision schema block ${decisionBlockHash}: its object_source_version line is not JSON (${versionParse.error})`, 'derivedRowsForDecisionBlock') };
+	}
+	const tableLineList = allLineList.filter((oneLine) => !oneLine.startsWith('#') && oneLine.length > 0);
+	return { columnList: tableLineList.length ? tableLineList[0].split('\t') : [], lineList: tableLineList.slice(1), objectSourceVersionText };
+};
+// setRowOf — one row as the resolver serves it. Reduced over the COLUMNS when the set carries record_id and over the CELLS when it does
+// not, as the two whole-block reads did: they differ only for a row with more cells than columns
+const setRowOf = ({ columnList, oneLine, hasRecordId }) => {
+	const cellList = oneLine.split('\t');
+	return hasRecordId ? columnList.reduce((soFar, oneColumn, columnIndex) => ({ ...soFar, [oneColumn]: cellList[columnIndex] }), {}) : cellList.reduce((soFar, oneCell, cellIndex) => ({ ...soFar, [columnList[cellIndex]]: oneCell }), {});
+};
+
+const setRowsFor = ({ decisionBlockHash, frozenText }) => {
+	const parts = setPartsOf({ decisionBlockHash, frozenText });
+	if (parts.error) {
+		return parts;
+	}
+	const hasRecordId = parts.columnList.indexOf('record_id') !== -1;
+	const assertionRowList = [];
+	for (let lineIndex = 0; lineIndex < parts.lineList.length; lineIndex++) {
+		const oneRow = setRowOf({ columnList: parts.columnList, oneLine: parts.lineList[lineIndex], hasRecordId });
+		if (!isNonEmptyString(oneRow.subject_id)) {
+			return { error: refusalText(`decision schema block ${decisionBlockHash} row ${lineIndex + 1} has no subject_id`, 'every row of a stored set names its subject') };
+		}
+		assertionRowList.push({ decisionBlockHash, rowOrdinal: lineIndex + 1, subjectStableId: oneRow.subject_id, assertionId: isNonEmptyString(oneRow.record_id) ? oneRow.record_id : null, assertionRecordJson: JSON.stringify(oneRow), interpretationEntryJson: null });
+	}
+	return { blockFormRow: { decisionBlockHash, blockForm: hasRecordId ? 'setWithRecordId' : 'setWithoutRecordId', subjectStandardName: null, subjectStandardVersion: null, edgeShapeFault: null, objectSourceVersionJson: parts.objectSourceVersionText }, assertionRowList };
+};
+
+const derivedRowsForDecisionBlock = ({ decisionBlockHash, frozenText } = {}) => (frozenText.charAt(0) === '{' ? machineRowsFor({ decisionBlockHash, frozenText }) : setRowsFor({ decisionBlockHash, frozenText }));
+
+const derivedRowsForCuratedVersion = ({ decisionBlockHash, frozenText, layerKey, versionTag, standardList, hubList } = {}) => {
+	const parts = frozenText.charAt(0) === '{' ? { columnList: ['record_id'] } : setPartsOf({ decisionBlockHash, frozenText });
+	if (parts.error) {
+		return parts;
+	}
+	if (parts.columnList.indexOf('record_id') !== -1) {
+		return { curatedAssertionIdRowList: [] };
+	}
+	const objectStandardVersion = parts.objectSourceVersionText === null ? undefined : JSON.parse(parts.objectSourceVersionText);
+	const standardByStandardKey = standardList.reduce((soFar, oneStandard) => ({ ...soFar, [oneStandard.standardKey]: oneStandard }), {});
+	const curatedAssertionIdRowList = [];
+	for (let lineIndex = 0; lineIndex < parts.lineList.length; lineIndex++) {
+		const oneRow = setRowOf({ columnList: parts.columnList, oneLine: parts.lineList[lineIndex], hasRecordId: false });
+		const standard = isNonEmptyString(oneRow.subject_id) ? standardByStandardKey[oneRow.subject_id.slice(0, oneRow.subject_id.indexOf(':'))] : undefined;
+		const identity = standard === undefined ? { error: 'a subject of no listed standard' } : assertionIdentity.curatedAssertionIdFor({ decisionBlockHash, subjectStableId: oneRow.subject_id, subjectStandardName: standard.standardName, subjectStandardVersion: oneRow.subject_source_version, predicateCurie: oneRow.predicate_id, objectStableId: oneRow.object_id, objectStandardName: hubList[0].hubName, objectStandardVersion, authorIdList: (oneRow.author_id || '').split('|').filter((oneAuthor) => oneAuthor.length) });
+		if (!identity.error) {
+			curatedAssertionIdRowList.push({ layerKey, versionTag, decisionBlockHash, rowOrdinal: lineIndex + 1, assertionId: identity.assertionId });
+		}
+	}
+	return { curatedAssertionIdRowList };
+};
+
+module.exports = { derivedRowsForSchemaBlock, derivedRowsForLayerVersion, derivedRowsForDecisionBlock, derivedRowsForCuratedVersion, countsOfDecisionText, DEFINITION_PROPERTY_NAME_LIST, ANSWER_EDGE_TYPE_SET, NO_TERM_FOUND_OBJECT_LIST, NO_TERM_FOUND_OBJECT_ID, NO_TERM_FOUND_PREDICATE_ID, moduleName };

@@ -40,6 +40,7 @@ const os = require('os');
 const path = require('path');
 const harness = require('../../../test/testLib/harness')(moduleName);
 const uriContractLib = require('../uriContract');
+const derivedIndexesLib = require('../derivedIndexes');
 const registrySeedLib = require('../registrySeed');
 const replayCountLib = require('../replayCount');
 const { contentIdForMemberBlockList } = require('../../layer-registry/layerRegistry');
@@ -77,7 +78,7 @@ const frozen = (text) => {
 	blockTextByHash[sha256Hex(text)] = text;
 	return sha256Hex(text);
 };
-const curatedSetText = '#curie_map:\n#  toy: urn:toy:\nsubject_id\tpredicate_id\tobject_id\ntoy:a\tskos:exactMatch\thub:x\n';
+const curatedSetText = `#curie_map:\n#  toy: urn:toy:\n#object_source_version: "1"\nsubject_id\tpredicate_id\tobject_id\tsubject_source_version\tauthor_id\ntoy:a\tskos:exactMatch\thub:x\t1\t${PERSON_IRI}\n`;
 const curatedPairText = `${curatedSetText}#pair\n`;
 const judgedMemberTextList = ['{"header":{"toy":1},"decisionRecordList":[]}', '{"header":{"toy":2},"decisionRecordList":[]}'];
 const judgedMemberBlockList = judgedMemberTextList.map((frozenText, memberIndex) => ({ pairKey: `toyhub@1::toy${memberIndex}@1::toyBridge::inferred`, decisionBlockHash: frozen(frozenText) }));
@@ -339,6 +340,7 @@ const bareWorld = createContract();
 bareWorld.uriContract.appendAgent(agentRegistry.agentList[0]);
 harness.match('an edge citing a decision schema block that is neither held nor offered is refused (assertion URIs must resolve)', bareWorld.uriContract.publishManifest({ ...publishArgs, decisionSchemaBlockList: [] }).error, /cites decision schema block .* which is neither held nor offered/);
 sameValue('…and offering it publishes', bareWorld.uriContract.publishManifest({ ...publishArgs, decisionSchemaBlockList: [{ pairKey: judgedMemberBlockList[0].pairKey, producerKind: 'inferred', frozenText: judgedMemberTextList[0] }] }).alreadyPresent, false);
+harness.equal('…and a block a manifest brings is indexed in that same publish', bareWorld.uriContract.decisionBlockFormFor(judgedMemberBlockList[0].decisionBlockHash).blockForm.blockForm, 'machine');
 bareWorld.uriContract.close();
 harness.match('a decision schema block no member edge cites is refused', manifestWorld.uriContract.publishManifest({ ...publishArgs, decisionSchemaBlockList: [{ pairKey: 'x::y::z::authored', producerKind: 'authored', frozenText: 'an uncited block' }] }).error, /which no member edge cites/);
 const nullRequiresWorld = createContract();
@@ -369,7 +371,7 @@ const answerOf = (readerFunction, argument) => {
 	});
 	return captured;
 };
-sameValue('the uriContractReader lane A is injected with exposes exactly its nineteen functions', Object.keys(reader.uriContractReader).sort(), ['agentListFor', 'agentRecordFor', 'decisionSchemaBlockFor', 'elementRecordFor', 'hubDomainCardListFor', 'hubDomainListFor', 'layerHistoryFor', 'layerListFor', 'layerVersionRecordFor', 'manifestElementListFor', 'manifestHubListFor', 'manifestInventoryFor', 'manifestStandardListFor', 'mappingsToMeaningFor', 'publishedLayerVersionListForStandard', 'publishedManifestFor', 'publishedManifestListFor', 'rootCountsFor', 'schemaBlockFor']);
+sameValue('the uriContractReader lane A is injected with exposes exactly its twenty-three functions', Object.keys(reader.uriContractReader).sort(), ['agentListFor', 'agentRecordFor', 'assertionRowFor', 'curatedAssertionRowFor', 'decisionBlockFormFor', 'decisionSchemaBlockFor', 'elementAssertionRowListFor', 'elementRecordFor', 'hubDomainCardListFor', 'hubDomainListFor', 'layerHistoryFor', 'layerListFor', 'layerVersionRecordFor', 'manifestElementListFor', 'manifestHubListFor', 'manifestInventoryFor', 'manifestStandardListFor', 'mappingsToMeaningFor', 'publishedLayerVersionListForStandard', 'publishedManifestFor', 'publishedManifestListFor', 'rootCountsFor', 'schemaBlockFor']);
 sameValue('decisionSchemaBlockFor answers { decisionBlockHash, pairKey, frozenText }', Object.keys(answerOf(reader.uriContractReader.decisionSchemaBlockFor, judgedMemberBlockList[0].decisionBlockHash).answer).sort(), ['decisionBlockHash', 'frozenText', 'pairKey']);
 sameValue('schemaBlockFor answers { schemaBlockRefId, blockKind, subject, version, text }', Object.keys(answerOf(reader.uriContractReader.schemaBlockFor, sha256Hex(baseText)).answer).sort(), ['blockKind', 'schemaBlockRefId', 'subject', 'text', 'version']);
 sameValue('an absent hash answers null, not an error', answerOf(reader.uriContractReader.schemaBlockFor, '0'.repeat(64)), { errorText: '', answer: null });
@@ -414,7 +416,7 @@ sameValue('13 manifestHubListFor: the hub, its card and domain counts (the HubDe
 sameValue('14 hubDomainListFor: the domains in domainId order, paged', callOf(relationReader.hubDomainListFor, { manifestRefId }, { hubSegment: 'ToyHub', hubReleaseSegment: '1.0', pageNumber: 1, pageSize: 10 }).answer, { totalCount: 1, domainList: [{ domainId: 'C000001', domainName: 'Toys', domainUri: 'https://example.org/C000001', domainDefinition: 'all toys', cardCount: 1 }] });
 sameValue('15 hubDomainCardListFor: the cards with their definition (a property card: its propertyDefinition)', callOf(relationReader.hubDomainCardListFor, { manifestRefId }, { hubSegment: 'ToyHub', hubReleaseSegment: '1.0', domainId: 'C000001', pageNumber: 1, pageSize: 10 }).answer, { totalCount: 1, cardList: [{ meaningIri: TOY_MEANING_IRI, label: 'a toy meaning', definition: 'the toy property', propertyName: 'Has Toy', propertyKey: 'P000001', referenceTier: 'property' }] });
 sameValue('12 layerListFor: each layer, its version count, its current Standard version', callOf(relationReader.layerListFor).answer, [{ layerKey: 'toyCurated', displayName: 'a toy curator', layerKind: 'curated', versionCount: 1, currentStandardVersionTag: null }, { layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', versionCount: 2, currentStandardVersionTag: 'wave1' }]);
-sameValue('the derived tables verify: every source recomputes to its stored rows, none absent', reader.uriContract.verifyDerivedIndexes(), { verifiedSourceCount: 7, absentSourceCount: 0, differenceList: [] });
+sameValue('the derived tables verify: every source recomputes to its stored rows, none absent', reader.uriContract.verifyDerivedIndexes(), { verifiedSourceCount: 12, absentSourceCount: 0, differenceList: [] });
 harness.match('the reader factory refuses an absent file', uriContractLib.uriContractReaderFor({ uriContractFilePath: path.join(scratchDirPath, 'absent.sqlite') }).error, /does not exist/);
 reader.uriContract.close();
 
@@ -459,6 +461,72 @@ const derivedReopened = uriContractLib.openUriContractFile({ uriContractFilePath
 sameValue('TWIN: a tampered derived row is reported by the verification, naming its source and table', derivedReopened.verifyDerivedIndexes().differenceList, [`schemaBlock ${sha256Hex(baseText)}: derivedElementIndex rows differ from a recomputation`]);
 harness.match('…and -rebuildUriContractIndexes refuses rather than repairs it', derivedReopened.fillAbsentDerivedIndexes().error, /1 derived row set\(s\) differ from a recomputation/);
 derivedReopened.close();
+
+// ⟪assertionIndex-110226⟫ THE ASSERTION INDEX: written with its source, one transaction; a file older than the tables gains them additively
+harness.section('THE ASSERTION INDEX (derived rows of decision schema blocks and curated versions)');
+const indexWorld = seededContract();
+harness.equal('a world seeds', indexWorld.seeded.error, undefined);
+const indexRead = indexWorld.uriContract;
+const curatedHash = sha256Hex(curatedSetText);
+sameValue('a stored set is indexed with its block: its form, without opening its text', indexRead.decisionBlockFormFor(curatedHash).blockForm, { blockForm: 'setWithoutRecordId', subjectStandardName: null, subjectStandardVersion: null, edgeShapeFault: null, objectSourceVersionJson: '"1"' });
+harness.equal('a block never published answers null, never an error', indexRead.decisionBlockFormFor('f'.repeat(64)).blockForm, null);
+sameValue('a machine block whose matchBasis names no edge shape records that fault, with no rows', [indexRead.decisionBlockFormFor(judgedMemberBlockList[0].decisionBlockHash).blockForm.blockForm, /names no edge shape/.test(indexRead.decisionBlockFormFor(judgedMemberBlockList[0].decisionBlockHash).blockForm.edgeShapeFault)], ['machine', true]);
+const elementRows = indexRead.elementAssertionRowListFor({ decisionBlockHash: curatedHash, subjectStableIdList: ['toy:a'] }).assertionRowList;
+harness.equal('an element of the set answers its one row', elementRows.length, 1);
+const curatedIdRow = rawHandleFor(indexWorld.uriContractFilePath).prepare('SELECT assertionId FROM derivedCuratedAssertionIds WHERE decisionBlockHash = ?').get(curatedHash);
+harness.match('the curated version wrote the R-c\' id of its row', curatedIdRow.assertionId, new RegExp(`/assertion/${curatedHash}/`));
+sameValue('…and the id answers that row, keyed by the version', indexRead.curatedAssertionRowFor({ decisionBlockHash: curatedHash, assertionIri: curatedIdRow.assertionId, layerKey: 'toyCurated', versionTag: 'r1' }).assertionRow.subjectStableId, 'toy:a');
+harness.equal('…under another version it answers nothing', indexRead.curatedAssertionRowFor({ decisionBlockHash: curatedHash, assertionIri: curatedIdRow.assertionId, layerKey: 'toyCurated', versionTag: 'r9' }).assertionRow, null);
+const machineBlockText = JSON.stringify({ header: { matchBasis: 'derived', sourceStandardName: 'Toy', sourceVersion: '1', hubName: 'ToyHub', hubVersion: '1' }, decisionRecordList: [{ subjectStableId: 'toy:b', predicate: 'exactMatch', objectStableId: 'https://w3id.org/EDUcore/ToyHub/hub/1/aaaa', resolution: 'judged', confidence: 0.9 }, { subjectStableId: 'toy:c', predicate: null, objectStableId: null, instanceStableIdList: ['toy:d', 'toy:d', 'toy:e'] }] });
+const machineDerived = derivedIndexesLib.derivedRowsForDecisionBlock({ decisionBlockHash: sha256Hex(machineBlockText), frozenText: machineBlockText });
+sameValue('a machine block yields a row per subject, abstentions included, a repeated instance once', machineDerived.assertionRowList.map((oneRow) => [oneRow.rowOrdinal, oneRow.subjectStableId, oneRow.assertionRecordJson !== null]), [[1, 'toy:b', true], [2, 'toy:d', false], [3, 'toy:e', false]]);
+harness.match('a set row with no subject is refused by name', derivedIndexesLib.derivedRowsForDecisionBlock({ decisionBlockHash: 'a'.repeat(64), frozenText: 'object_id\nhub:x\n' }).error, /has no subject_id/);
+harness.match('an unparseable machine block is refused by name', derivedIndexesLib.derivedRowsForDecisionBlock({ decisionBlockHash: 'a'.repeat(64), frozenText: '{not json' }).error, /is not JSON/);
+const brokenBlockText = JSON.stringify({ header: { matchBasis: 'derived', sourceStandardName: 'Toy', sourceVersion: '1', hubName: 'ToyHub', hubVersion: '1' }, decisionRecordList: [{ predicate: 'exactMatch', objectStableId: 'https://w3id.org/EDUcore/ToyHub/hub/1/aaaa' }] });
+harness.match('a machine record with no nameable subject is refused by name', derivedIndexesLib.derivedRowsForDecisionBlock({ decisionBlockHash: sha256Hex(brokenBlockText), frozenText: brokenBlockText }).error, /no assertion id for subject/);
+const refusedBlockHash = sha256Hex(brokenBlockText);
+const refusedAppend = indexRead.appendLayerVersion({ layer: judgeLayer, version: { ...waveTwo, administrationRecord: { ...waveTwo.administrationRecord, versionTag: 'refusedByIndex' }, memberBlockList: [{ pairKey: 'toyhub@1::toy9@1::toyBridge::inferred', decisionBlockHash: refusedBlockHash }], }, decisionSchemaBlockList: [{ pairKey: 'toyhub@1::toy9@1::toyBridge::inferred', producerKind: 'inferred', frozenText: brokenBlockText }] });
+harness.ok('a block the index refuses refuses the whole publish', refusedAppend.error !== undefined, JSON.stringify(refusedAppend));
+harness.equal('…and the block itself was rolled back with it (one transaction)', indexRead.decisionSchemaBlockTextFor(refusedBlockHash).frozenText, null);
+indexRead.close();
+
+const assertionTableNameList = ['derivedAssertionSources', 'derivedAssertionBlocks', 'derivedAssertions', 'derivedCuratedAssertionIds'];
+const olderWorld = seededContract();
+olderWorld.uriContract.close();
+const olderHandle = rawHandleFor(olderWorld.uriContractFilePath);
+assertionTableNameList.slice().reverse().forEach((tableName) => olderHandle.exec(`DROP TABLE ${tableName}`));
+olderHandle.close();
+const olderIdentityRowCount = () => { const handle = rawHandleFor(olderWorld.uriContractFilePath); const counted = handle.prepare('SELECT (SELECT COUNT(*) FROM decisionSchemaBlocks) + (SELECT COUNT(*) FROM layerVersions) + (SELECT COUNT(*) FROM derivedLayerVersionCounts) + (SELECT COUNT(*) FROM derivedIndexedSources) AS rowCount').get().rowCount; handle.close(); return counted; };
+const countBeforeAddition = olderIdentityRowCount();
+harness.match('a file older than the tables is refused to a reader, naming the action that adds them', uriContractLib.openUriContractFile({ uriContractFilePath: olderWorld.uriContractFilePath, accessMode: 'read' }).error, /only derived tables are absent: graphBuilder -rebuildUriContractIndexes adds and fills them/);
+harness.match('…and to a publish action', uriContractLib.openUriContractFile({ uriContractFilePath: olderWorld.uriContractFilePath, accessMode: 'publish', writerActionName: 'publishManifest' }).error, /only derived tables are absent/);
+const addedOpen = uriContractLib.openUriContractFile({ uriContractFilePath: olderWorld.uriContractFilePath, accessMode: 'publish', writerActionName: 'rebuildUriContractIndexes' });
+harness.equal('the rebuild action adds the absent tables', addedOpen.error, undefined);
+const firstFill = addedOpen.uriContract.fillAbsentDerivedIndexes();
+harness.equal('…fills the blocks and the curated version never indexed', firstFill.filledSourceCount, 5);
+sameValue('…and a second run verifies them, filling nothing', addedOpen.uriContract.fillAbsentDerivedIndexes().filledSourceCount, 0);
+harness.equal('…with no difference to report', addedOpen.uriContract.verifyDerivedIndexes().differenceList.length, 0);
+addedOpen.uriContract.close();
+harness.equal('…and no existing row was touched', olderIdentityRowCount(), countBeforeAddition);
+assertionTableNameList.forEach((tableName) => {
+	const handle = rawHandleFor(olderWorld.uriContractFilePath);
+	const triggerNameList = handle.prepare("SELECT name FROM sqlite_master WHERE type = 'trigger' AND tbl_name = ? ORDER BY name").all(tableName).map((oneRow) => oneRow.name);
+	handle.close();
+	sameValue(`…and the added table ${tableName} carries its write-once triggers`, triggerNameList, [`${tableName}NoDelete`, `${tableName}NoUpdate`]);
+});
+const tamperedWorld = seededContract();
+tamperedWorld.uriContract.close();
+plantCorruption(tamperedWorld.uriContractFilePath, 'UPDATE derivedAssertions SET assertionRecordJson = ? WHERE decisionBlockHash = ?', ['{"tampered":true}', curatedHash]);
+const tamperedOpen = uriContractLib.openUriContractFile({ uriContractFilePath: tamperedWorld.uriContractFilePath, accessMode: 'publish', writerActionName: 'rebuildUriContractIndexes' }).uriContract;
+harness.match('TWIN: a tampered assertion row is reported, naming its source and table', tamperedOpen.verifyDerivedIndexes().differenceList.join('; '), new RegExp(`decisionBlock ${curatedHash}: derivedAssertions rows differ from a recomputation`));
+harness.match('…and -rebuildUriContractIndexes refuses rather than repairs it', tamperedOpen.fillAbsentDerivedIndexes().error, /derived row set\(s\) differ from a recomputation/);
+tamperedOpen.close();
+const curatedTamperedWorld = seededContract();
+curatedTamperedWorld.uriContract.close();
+plantCorruption(curatedTamperedWorld.uriContractFilePath, 'UPDATE derivedCuratedAssertionIds SET assertionId = ? WHERE decisionBlockHash = ?', ['tampered', curatedHash]);
+const curatedTamperedOpen = uriContractLib.openUriContractFile({ uriContractFilePath: curatedTamperedWorld.uriContractFilePath, accessMode: 'read' }).uriContract;
+harness.match('TWIN: a tampered version-keyed id is reported, naming the version', curatedTamperedOpen.verifyDerivedIndexes().differenceList.join('; '), /curatedVersion toyCurated\/r1: derivedCuratedAssertionIds rows differ/);
+curatedTamperedOpen.close();
 
 // =====================================================================
 harness.section('THE HERMETIC REPLAY COUNT (replay()\'s own deserialize and guards, then MERGE semantics)');

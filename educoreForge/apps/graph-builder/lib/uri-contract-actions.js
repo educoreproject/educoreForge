@@ -14,7 +14,8 @@
 //                                     the counts recorded at publish; --live=true also replays it into a DEV_ graph from an export of
 //                                     uriContract ALONE and compares the graph's conservation counts
 //   -rebuildUriContractIndexes        verifies every derived row against a recomputation of its write-once source; refuses on any
-//                                     difference; fills sources never indexed (--verifyOnly=true writes nothing)
+//                                     difference; adds a derived table the file predates and fills sources never indexed
+//                                     (--verifyOnly=true writes nothing and adds nothing)
 // and the shared door the publish actions open uriContract through (uriContractForPublishAction).
 //
 // WHERE THE FILE IS (AMBER_JOURNEY ruling Q3): an explicit --uriContractFilePath wins, else [stores] uriContractFilePath in

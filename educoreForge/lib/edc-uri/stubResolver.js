@@ -10,9 +10,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   resolveEdcUri({ uriOrPath, registry, blockTextForHash, uriContractReader }, cb) → cb('', { httpStatus, body })
 //     uriOrPath         an edc IRI, an edc: CURIE, or the path a request carries ('/EDUcore/<path>' or '/<path>')
 //     registry          lib/layer-registry registryFor(...).registry
-//     blockTextForHash  (decisionBlockHash, cb(err, frozenText | null))
-//     uriContractReader ⟪ML3.1, O-4⟫ OPTIONAL; the kinds that need it (questions, schemaBlock, decisionSchemaBlock) answer 501 by name
+//     blockTextForHash  ⟪assertionIndex-110226⟫ TESTS ONLY: given, assertion and interpretation kinds answer from the WHOLE frozen block
+//                       through wholeBlockOracle.js, (decisionBlockHash, cb(err, frozenText | null)); no production caller passes it
+//     uriContractReader ⟪ML3.1, O-4⟫ what production passes: assertion and interpretation kinds answer from its derived rows (one of the two
+//                       is required); the kinds that need it (questions, schemaBlock, decisionSchemaBlock) answer 501 by name
 //                       without it. lib/uri-contract implements it (lane B); a test passes a double. @interface UriContractReader:
+//       ⟪assertionIndex-110226⟫ the assertion index, one row at a time, never a block's text:
+//       decisionBlockFormFor(decisionBlockHash, cb(err, { blockForm, subjectStandardName, subjectStandardVersion, edgeShapeFault, objectSourceVersionJson } | null))
+//       assertionRowFor({ decisionBlockHash, assertionIri }, cb(err, assertionRow | null))
+//       curatedAssertionRowFor({ decisionBlockHash, assertionIri, layerKey, versionTag }, cb(err, assertionRow | null))
+//       elementAssertionRowListFor({ decisionBlockHash, subjectStableIdList }, cb(err, [assertionRow]))    in the block's own order
+//           assertionRow: { rowOrdinal, subjectStableId, assertionId | null, assertionRecord | null, interpretationEntry | null }
 //       schemaBlockFor(schemaBlockRefId, cb(err, { schemaBlockRefId, blockKind, subject, version, text } | null))
 //       decisionSchemaBlockFor(decisionBlockHash, cb(err, { decisionBlockHash, pairKey, frozenText } | null))
 //       publishedManifestFor({ publicLabel } | { manifestRefId }, cb(err, { manifestRefId, publicLabel, publishedAt,
@@ -64,7 +72,8 @@ const path = require('path');
 const edcUri = require(path.join(__dirname, 'edcUri'));
 const assertionIdentity = require(path.join(__dirname, 'assertionIdentity'));
 const refuse = require(path.join(__dirname, '..', 'forge-framework', 'refuse'));
-const materialiserLib = require(path.join(__dirname, '..', 'bridge-framework', 'materialiser'));
+const derivedIndexesLib = require(path.join(__dirname, '..', 'uri-contract', 'derivedIndexes'));
+const wholeBlockOracle = require(path.join(__dirname, 'wholeBlockOracle'));
 
 const { URI_SCHEME } = edcUri;
 // ⟪ML3.1, Q51⟫ which standards' texts are withheld, read as DATA from the same list the downloads obey (JEDx leaves it in Part C)
@@ -73,6 +82,7 @@ if (!Array.isArray(DOWNLOAD_ARTIFACTS_RULES.licenceHoldList)) {
 	throw refuse.byName({ moduleName, what: 'downloadArtifactsRules.json has no licenceHoldList', where: 'apps/graph-builder/lib/downloadArtifactsRules.json (state [] for none)' });
 }
 const LICENCE_HOLD_BY_STANDARD_KEY = Object.freeze(DOWNLOAD_ARTIFACTS_RULES.licenceHoldList.reduce((soFar, oneHold) => ({ ...soFar, [oneHold.bundleToken]: oneHold }), {}));
+const { NO_TERM_FOUND_OBJECT_ID } = derivedIndexesLib;
 const W3ID_PATH_PREFIX = `/${URI_SCHEME.baseIri.replace(/^https?:\/\/[^/]+\//, '')}`; // '/EDUcore/'
 const STUB_NOTE = 'answered by the LOCAL STUB resolver (lib/edc-uri/stubResolver.js); edc: URIs are not publicly registered (TQ, 2026-10-24)';
 
@@ -90,132 +100,84 @@ const edcIriFor = (uriOrPath) => {
 	return `${URI_SCHEME.baseIri}${pathText.indexOf(W3ID_PATH_PREFIX) === 0 ? pathText.slice(W3ID_PATH_PREFIX.length) : pathText.replace(/^\//, '')}`;
 };
 
-// assertionRecordFor({ frozenText, assertionIri }) → { record } | { error }: a machine block is JSON; its records are matched by
-// recomputing each planned edge's assertion id from the block header's standards and versions
-const assertionRecordFor = ({ frozenText, assertionIri, decisionBlockHash, registry }) => {
-	if (frozenText.charAt(0) !== '{') {
-		// a layer set (SSSOM/TSV): the row whose record_id is this IRI
-		const lineList = frozenText.split('\n').filter((oneLine) => !oneLine.startsWith('#') && oneLine.length > 0);
-		const columnList = lineList.length ? lineList[0].split('\t') : [];
-		const recordIdIndex = columnList.indexOf('record_id');
-		if (recordIdIndex === -1) {
-			// ⟪ML3.1c⟫ a STORED curated set carries no record_id: its ids are computed by the R-c' recipe (s p o author, scoped by the
-			// stored set's hash), as its published rendering wrote them; so each row's id is recomputed here and matched
-			return curatedRecordFor({ frozenText, assertionIri, decisionBlockHash, registry });
-		}
-		const rowLine = lineList.slice(1).find((oneLine) => oneLine.split('\t')[recordIdIndex] === assertionIri);
-		return rowLine === undefined ? { error: 'no row of this set carries that record_id' } : { record: columnList.reduce((soFar, oneColumn, columnIndex) => ({ ...soFar, [oneColumn]: rowLine.split('\t')[columnIndex] }), {}) };
-	}
-	const block = JSON.parse(frozenText);
-	const header = block.header;
-	// the block's own edge shape names its predicate_id, exactly as the materialiser and the exporter read it
-	const shapeLookup = materialiserLib.edgeShapeRowFor(block);
-	if (shapeLookup.error) {
-		return { error: shapeLookup.error };
-	}
-	const predicateCurieFor = (oneRecord) => shapeLookup.edgeShapeRow.sssomPredicateIdFor(oneRecord.predicate);
-	const plannedList = block.decisionRecordList
-		.filter((oneRecord) => typeof oneRecord.objectStableId === 'string' && oneRecord.objectStableId.length > 0)
-		.reduce((soFar, oneRecord) => soFar.concat((oneRecord.instanceStableIdList === undefined ? [oneRecord.subjectStableId] : oneRecord.instanceStableIdList).map((fromStableId) => ({ oneRecord, fromStableId }))), []);
-	const found = plannedList.find(({ oneRecord, fromStableId }) => {
-		const computed = assertionIdentity.assertionIdFor({ decisionBlockHash, subjectStableId: fromStableId, subjectStandardName: header.sourceStandardName, subjectStandardVersion: String(header.sourceVersion), predicateCurie: predicateCurieFor(oneRecord), objectStableId: oneRecord.objectStableId, objectStandardName: header.hubName, objectStandardVersion: String(header.hubVersion) });
-		return computed.assertionId === assertionIri;
-	});
-	return found === undefined ? { error: 'no edge this block writes has that assertion id' } : { record: { subjectStableId: found.fromStableId, judgedSubjectStableId: found.oneRecord.subjectStableId, predicate: found.oneRecord.predicate, objectStableId: found.oneRecord.objectStableId, resolution: found.oneRecord.resolution, confidence: found.oneRecord.confidence, mappingMethod: found.oneRecord.mappingMethod, judgeIdentity: found.oneRecord.judge && found.oneRecord.judge.judgeModel, subjectSource: header.sourceStandardName, subjectVersion: header.sourceVersion, objectSource: header.hubName, objectVersion: header.hubVersion } };
-};
-
-// ⟪ML3.1c⟫ curatedRecordFor — the curated layer version whose stored set IS this block (wholeSetBlock), each row's R-c' id recomputed
-// (the same recipe layerPublication.curatedVersionSetText writes), the row whose id is this IRI answered
-const curatedRecordFor = ({ frozenText, assertionIri, decisionBlockHash, registry }) => {
-	const owner = registry.layerRegistry.layerList.reduce((soFar, oneLayer) => soFar || oneLayer.versionList.filter((oneVersion) => oneVersion.contentIdBasis === 'frozenSetBytes' && oneVersion.wholeSetBlock && oneVersion.wholeSetBlock.decisionBlockHash === decisionBlockHash).map((oneVersion) => ({ layer: oneLayer, version: oneVersion }))[0], undefined);
-	if (owner === undefined) {
-		return { error: 'no row of this set carries that record_id (the set has no record_id column and no curated layer version holds it)' };
-	}
-	const objectVersionLine = frozenText.split('\n').find((oneLine) => oneLine.startsWith('#object_source_version: '));
-	const objectSourceVersion = objectVersionLine === undefined ? undefined : JSON.parse(objectVersionLine.slice('#object_source_version: '.length));
-	const standardByStandardKey = owner.layer.standardList.reduce((soFar, oneStandard) => ({ ...soFar, [oneStandard.standardKey]: oneStandard }), {});
-	const rowList = setRowListOf(frozenText);
-	for (let rowIndex = 0; rowIndex < rowList.length; rowIndex++) {
-		const oneRow = rowList[rowIndex];
-		const standard = standardByStandardKey[oneRow.subject_id.slice(0, oneRow.subject_id.indexOf(':'))];
-		if (standard === undefined) {
-			continue;
-		}
-		const identity = assertionIdentity.curatedAssertionIdFor({ decisionBlockHash, subjectStableId: oneRow.subject_id, subjectStandardName: standard.standardName, subjectStandardVersion: oneRow.subject_source_version, predicateCurie: oneRow.predicate_id, objectStableId: oneRow.object_id, objectStandardName: owner.layer.hubList[0].hubName, objectStandardVersion: objectSourceVersion, authorIdList: (oneRow.author_id || '').split('|').filter((oneAuthor) => oneAuthor.length) });
-		if (!identity.error && identity.assertionId === assertionIri) {
-			return { record: { ...oneRow, layerKey: owner.layer.layerKey, versionTag: owner.version.administrationRecord.versionTag, sourceRowNumber: rowIndex + 1 } };
-		}
-	}
-	return { error: 'no row of this set carries that record_id' };
-};
-
 // ⟪ML3, the FADED_ORBIT gap⟫ interpretationOf — SPEC §5.3: a PINNED interpretation is the set of that layer version's assertions whose
 // subject is the element; zero rows is an explicit NoTermFound answer, never another layer's answer. Machine versions read only the member
 // blocks of the element's standard (pairKey) and match on the from-node (the instance under fan-out); curated and imported versions read
 // their stored set: a curated row's id is the R-c' recipe (s p o author, scoped by the stored set), an imported row's subject resolves
 // through the prefix map its import recorded. What the stub cannot give without a graph (the meaning's definition text) is named.
-const NO_TERM_FOUND_OBJECT_ID = 'sssom:NoTermFound';
-const NO_TERM_FOUND_PREDICATE_ID = 'skos:mappingRelation';
-const setRowListOf = (frozenText) => {
-	const lineList = frozenText.split('\n').filter((oneLine) => !oneLine.startsWith('#') && oneLine.length > 0);
-	const columnList = lineList.length ? lineList[0].split('\t') : [];
-	return lineList.slice(1).map((oneLine) => oneLine.split('\t').reduce((soFar, oneCell, cellIndex) => ({ ...soFar, [columnList[cellIndex]]: oneCell }), {}));
-};
-const machineAssertionListFor = ({ frozenText, decisionBlockHash, elementStableId, standardName, standardVersion }) => {
-	const block = JSON.parse(frozenText);
-	const { header } = block;
-	if (header.sourceStandardName !== standardName || String(header.sourceVersion) !== standardVersion) {
-		return { assertionList: [] };
-	}
-	const shapeLookup = materialiserLib.edgeShapeRowFor(block);
-	if (shapeLookup.error) {
-		return { error: shapeLookup.error };
-	}
-	const assertionList = [];
-	for (let recordIndex = 0; recordIndex < block.decisionRecordList.length; recordIndex++) {
-		const oneRecord = block.decisionRecordList[recordIndex];
-		const fromStableIdList = oneRecord.instanceStableIdList === undefined ? [oneRecord.subjectStableId] : oneRecord.instanceStableIdList;
-		if (fromStableIdList.indexOf(elementStableId) === -1) {
-			continue;
+// a member's assertions for the element, each way: reader(oneBlock, whenRead(faultAnswer | null, assertionList))
+const wholeBlockAssertionListReader = ({ blockTextForHash, isMachine, elementStableId, elementIri, standardName, standardVersion, layer, version }) => (oneBlock, whenRead) =>
+	blockTextForHash(oneBlock.decisionBlockHash, (readError, frozenText) => {
+		if (readError || frozenText === null) {
+			whenRead(answer(404, { error: readError || `no decision block ${oneBlock.decisionBlockHash} in the store` }));
+			return;
 		}
-		const isAbstention = !(typeof oneRecord.objectStableId === 'string' && oneRecord.objectStableId.length > 0);
-		const predicateCurie = isAbstention ? NO_TERM_FOUND_PREDICATE_ID : shapeLookup.edgeShapeRow.sssomPredicateIdFor(oneRecord.predicate);
-		const identity = assertionIdentity.assertionIdFor({ decisionBlockHash, subjectStableId: elementStableId, subjectStandardName: standardName, subjectStandardVersion: standardVersion, predicateCurie, objectStableId: isAbstention ? NO_TERM_FOUND_OBJECT_ID : oneRecord.objectStableId, objectStandardName: header.hubName, objectStandardVersion: String(header.hubVersion) });
+		const read = isMachine
+			? wholeBlockOracle.machineAssertionListFor({ frozenText, decisionBlockHash: oneBlock.decisionBlockHash, elementStableId, standardName, standardVersion })
+			: wholeBlockOracle.setAssertionListFor({ frozenText, decisionBlockHash: oneBlock.decisionBlockHash, elementStableId, elementIri, standardName, standardVersion, layer, version });
+		whenRead(read.error ? answer(500, { error: read.error }) : null, read.assertionList);
+	});
+// ⟪assertionIndex-110226⟫ an imported set's rows name their subject through the prefix map its import recorded, so the element's IRI is run
+// BACKWARDS through that map to the subject_id spellings it could have, and each row found is checked forwards as the import reads it
+const importedSubjectIriOf = (subjectId, prefixExpansion) => {
+	const prefix = subjectId.slice(0, Math.max(subjectId.indexOf(':'), 0));
+	return /^https?:\/\//.test(subjectId) ? subjectId : prefixExpansion[prefix] === undefined ? '' : `${prefixExpansion[prefix]}${subjectId.slice(prefix.length + 1)}`;
+};
+const importedSubjectIdCandidateListFor = (elementIri, prefixExpansion) => [elementIri].concat(Object.keys(prefixExpansion).filter((onePrefix) => elementIri.indexOf(prefixExpansion[onePrefix]) === 0).map((onePrefix) => `${onePrefix}:${elementIri.slice(prefixExpansion[onePrefix].length)}`));
+const importedAssertionListFrom = ({ assertionRowList, elementIri, prefixExpansion }) => ({
+	assertionList: assertionRowList
+		.filter((oneRow) => importedSubjectIriOf(oneRow.subjectStableId, prefixExpansion) === elementIri)
+		.map((oneRow) => ({ assertionId: oneRow.assertionRecord.record_id || null, predicate: oneRow.assertionRecord.predicate_id, object: oneRow.assertionRecord.object_id, authorId: oneRow.assertionRecord.author_id || null, sourceRowNumber: oneRow.rowOrdinal })),
+});
+// a curated row's id names the REQUESTED element's standard and the layer's hub, so it is computed here from the row, the URI and the layer
+const curatedAssertionListFrom = ({ assertionRowList, decisionBlockHash, blockForm, elementStableId, standardName, standardVersion, layer }) => {
+	const assertionList = [];
+	for (let rowIndex = 0; rowIndex < assertionRowList.length; rowIndex++) {
+		const { predicate_id: predicateCurie, object_id: objectStableId, author_id: authorId } = assertionRowList[rowIndex].assertionRecord;
+		const identity = assertionIdentity.curatedAssertionIdFor({ decisionBlockHash, subjectStableId: elementStableId, subjectStandardName: standardName, subjectStandardVersion: standardVersion, predicateCurie, objectStableId, objectStandardName: layer.hubList[0].hubName, objectStandardVersion: blockForm.objectSourceVersionJson === null ? undefined : JSON.parse(blockForm.objectSourceVersionJson), authorIdList: (authorId || '').split('|').filter((oneAuthor) => oneAuthor.length) });
 		if (identity.error) {
 			return { error: identity.error };
 		}
-		assertionList.push({ assertionId: identity.assertionId, predicate: predicateCurie, object: isAbstention ? NO_TERM_FOUND_OBJECT_ID : oneRecord.objectStableId, hubName: header.hubName, hubVersion: String(header.hubVersion), resolution: oneRecord.resolution === undefined ? null : oneRecord.resolution, confidence: oneRecord.confidence === undefined ? null : oneRecord.confidence, judgedSubjectStableId: oneRecord.subjectStableId });
+		assertionList.push({ assertionId: identity.assertionId, predicate: predicateCurie, object: objectStableId, authorId });
 	}
 	return { assertionList };
 };
-const setAssertionListFor = ({ frozenText, decisionBlockHash, elementStableId, elementIri, standardName, standardVersion, layer, version }) => {
-	const prefixExpansion = version.importRecord !== undefined ? version.importRecord.prefixExpansion : undefined;
-	const objectVersionLine = frozenText.split('\n').find((oneLine) => oneLine.startsWith('#object_source_version: '));
-	const objectSourceVersion = objectVersionLine === undefined ? undefined : JSON.parse(objectVersionLine.slice('#object_source_version: '.length));
-	const assertionList = [];
-	const rowList = setRowListOf(frozenText);
-	for (let rowIndex = 0; rowIndex < rowList.length; rowIndex++) {
-		const oneRow = rowList[rowIndex];
-		if (prefixExpansion !== undefined) {
-			const prefix = oneRow.subject_id.slice(0, Math.max(oneRow.subject_id.indexOf(':'), 0));
-			const subjectIri = /^https?:\/\//.test(oneRow.subject_id) ? oneRow.subject_id : prefixExpansion[prefix] === undefined ? '' : `${prefixExpansion[prefix]}${oneRow.subject_id.slice(prefix.length + 1)}`;
-			if (subjectIri === elementIri) {
-				assertionList.push({ assertionId: oneRow.record_id || null, predicate: oneRow.predicate_id, object: oneRow.object_id, authorId: oneRow.author_id || null, sourceRowNumber: rowIndex + 1 });
+const indexedAssertionListReader = ({ uriContractReader, isMachine, elementStableId, elementIri, standardName, standardVersion, layer, version }) => (oneBlock, whenRead) => {
+	const { decisionBlockHash } = oneBlock;
+	uriContractReader.decisionBlockFormFor(decisionBlockHash, (formError, blockForm) => {
+		if (formError || blockForm === null) {
+			whenRead(answer(404, { error: formError || `no decision block ${decisionBlockHash} in the store` }));
+			return;
+		}
+		if ((blockForm.blockForm === 'machine') !== isMachine) {
+			whenRead(answer(500, { error: refuse.byName({ moduleName, what: `layer version '${version.administrationRecord.versionTag}' reads decision block ${decisionBlockHash} as ${isMachine ? 'machine members' : 'a stored set'}, and it is a ${blockForm.blockForm}`, where: 'a machine version\'s members are JSON blocks; a set version\'s whole set is a TSV' }).message }));
+			return;
+		}
+		if (isMachine && (blockForm.subjectStandardName !== standardName || blockForm.subjectStandardVersion !== standardVersion)) {
+			whenRead(null, []);
+			return;
+		}
+		if (blockForm.edgeShapeFault !== null) {
+			whenRead(answer(500, { error: blockForm.edgeShapeFault }));
+			return;
+		}
+		const prefixExpansion = version.importRecord === undefined ? undefined : version.importRecord.prefixExpansion;
+		const subjectStableIdList = prefixExpansion === undefined ? [elementStableId] : importedSubjectIdCandidateListFor(elementIri, prefixExpansion);
+		uriContractReader.elementAssertionRowListFor({ decisionBlockHash, subjectStableIdList }, (rowError, assertionRowList) => {
+			if (rowError) {
+				whenRead(answer(500, { error: rowError }));
+				return;
 			}
-			continue;
-		}
-		if (oneRow.subject_id !== elementStableId) {
-			continue;
-		}
-		const identity = assertionIdentity.curatedAssertionIdFor({ decisionBlockHash, subjectStableId: elementStableId, subjectStandardName: standardName, subjectStandardVersion: standardVersion, predicateCurie: oneRow.predicate_id, objectStableId: oneRow.object_id, objectStandardName: layer.hubList[0].hubName, objectStandardVersion: objectSourceVersion, authorIdList: (oneRow.author_id || '').split('|').filter((oneAuthor) => oneAuthor.length) });
-		if (identity.error) {
-			return { error: identity.error };
-		}
-		assertionList.push({ assertionId: identity.assertionId, predicate: oneRow.predicate_id, object: oneRow.object_id, authorId: oneRow.author_id });
-	}
-	return { assertionList };
+			if (isMachine) {
+				whenRead(null, assertionRowList.map((oneRow) => oneRow.interpretationEntry));
+				return;
+			}
+			const read = prefixExpansion === undefined ? curatedAssertionListFrom({ assertionRowList, decisionBlockHash, blockForm, elementStableId, standardName, standardVersion, layer }) : importedAssertionListFrom({ assertionRowList, elementIri, prefixExpansion });
+			whenRead(read.error ? answer(500, { error: read.error }) : null, read.assertionList);
+		});
+	});
 };
-const interpretationOf = ({ kind, partByName, layerKey, version, registry, blockTextForHash }, done) => {
+const interpretationOf = ({ kind, partByName, layerKey, version, registry, blockTextForHash, uriContractReader }, done) => {
 	const found = registry.layerFor(layerKey);
 	if (found.error) {
 		done(answer(404, { error: found.error }));
@@ -227,6 +189,8 @@ const interpretationOf = ({ kind, partByName, layerKey, version, registry, block
 	const standardKey = elementStableId.slice(0, elementStableId.indexOf(':'));
 	const isMachine = version.contentIdBasis === 'sortedMemberBlockHashList';
 	const blockList = isMachine ? version.memberBlockList.filter((oneMember) => oneMember.pairKey.split('::')[1].split('@')[0] === standardKey) : [version.wholeSetBlock];
+	const readingContext = { blockTextForHash, uriContractReader, isMachine, elementStableId, elementIri: elementMint.uri, standardName, standardVersion, layer: found.layer, version };
+	const readAssertionList = blockTextForHash === undefined ? indexedAssertionListReader(readingContext) : wholeBlockAssertionListReader(readingContext);
 	const collected = [];
 	const readNext = (blockIndex) => {
 		if (blockIndex >= blockList.length) {
@@ -243,19 +207,12 @@ const interpretationOf = ({ kind, partByName, layerKey, version, registry, block
 			}));
 			return;
 		}
-		blockTextForHash(blockList[blockIndex].decisionBlockHash, (readError, frozenText) => {
-			if (readError || frozenText === null) {
-				done(answer(404, { error: readError || `no decision block ${blockList[blockIndex].decisionBlockHash} in the store` }));
+		readAssertionList(blockList[blockIndex], (faultAnswer, assertionList) => {
+			if (faultAnswer) {
+				done(faultAnswer);
 				return;
 			}
-			const read = isMachine
-				? machineAssertionListFor({ frozenText, decisionBlockHash: blockList[blockIndex].decisionBlockHash, elementStableId, standardName, standardVersion })
-				: setAssertionListFor({ frozenText, decisionBlockHash: blockList[blockIndex].decisionBlockHash, elementStableId, elementIri: elementMint.uri, standardName, standardVersion, layer: found.layer, version });
-			if (read.error) {
-				done(answer(500, { error: read.error }));
-				return;
-			}
-			collected.push(...read.assertionList);
+			collected.push(...assertionList);
 			readNext(blockIndex + 1);
 		});
 	};
@@ -274,7 +231,7 @@ const subjectPrefixOf = (stableId) => (typeof stableId === 'string' && stableId.
 const decisionBlockStandardKeyListFor = ({ frozenText }) => {
 	const subjectIdList = frozenText.charAt(0) === '{'
 		? JSON.parse(frozenText).decisionRecordList.reduce((soFar, oneRecord) => soFar.concat([oneRecord.subjectStableId], oneRecord.instanceStableIdList === undefined ? [] : oneRecord.instanceStableIdList), [])
-		: setRowListOf(frozenText).map((oneRow) => oneRow.subject_id);
+		: wholeBlockOracle.setRowListOf(frozenText).map((oneRow) => oneRow.subject_id);
 	return Array.from(new Set(subjectIdList.map(subjectPrefixOf).filter((onePrefix) => onePrefix.length > 0))).sort();
 };
 const withheldAnswerFor = ({ standardKeyList, metadata }) => {
@@ -488,6 +445,48 @@ const hubDomainCardListAnswerFor = ({ kind, partByName, iri, pageNumber, uriCont
 };
 const profileOf = (profile) => AGENT_PROFILE_FIELD_LIST.reduce((soFar, oneFieldName) => (profile === null || typeof profile !== 'object' || profile[oneFieldName] === undefined ? soFar : { ...soFar, [oneFieldName]: profile[oneFieldName] }), {});
 
+// ⟪assertionIndex-110226⟫ how one assertion URI is answered from the derived rows, per form of its block (DATA): what is read, and the
+// words a miss answers in. A stored curated set's ids belong to the layer version holding it, found in the registry as the whole-block read did.
+const curatedOwnerFor = ({ decisionBlockHash, registry }) => registry.layerRegistry.layerList.reduce((soFar, oneLayer) => soFar || oneLayer.versionList.filter((oneVersion) => oneVersion.contentIdBasis === 'frozenSetBytes' && oneVersion.wholeSetBlock && oneVersion.wholeSetBlock.decisionBlockHash === decisionBlockHash).map((oneVersion) => ({ layer: oneLayer, version: oneVersion }))[0], undefined);
+const NO_RECORD_ID_ROW_TEXT = 'no row of this set carries that record_id';
+const ASSERTION_LOOKUP_BY_BLOCK_FORM = Object.freeze({
+	machine: { missText: 'no edge this block writes has that assertion id', rowFor: ({ decisionBlockHash, iri, uriContractReader }, found) => uriContractReader.assertionRowFor({ decisionBlockHash, assertionIri: iri }, (readError, assertionRow) => found(readError, assertionRow, assertionRow && assertionRow.assertionRecord)) },
+	setWithRecordId: { missText: NO_RECORD_ID_ROW_TEXT, rowFor: ({ decisionBlockHash, iri, uriContractReader }, found) => uriContractReader.assertionRowFor({ decisionBlockHash, assertionIri: iri }, (readError, assertionRow) => found(readError, assertionRow, assertionRow && assertionRow.assertionRecord)) },
+	setWithoutRecordId: {
+		missText: NO_RECORD_ID_ROW_TEXT,
+		rowFor: ({ decisionBlockHash, iri, registry, uriContractReader }, found) => {
+			const owner = curatedOwnerFor({ decisionBlockHash, registry });
+			if (owner === undefined) {
+				found('no row of this set carries that record_id (the set has no record_id column and no curated layer version holds it)');
+				return;
+			}
+			const versionTag = owner.version.administrationRecord.versionTag;
+			uriContractReader.curatedAssertionRowFor({ decisionBlockHash, assertionIri: iri, layerKey: owner.layer.layerKey, versionTag }, (readError, assertionRow) => found(readError, assertionRow, assertionRow && { ...assertionRow.assertionRecord, layerKey: owner.layer.layerKey, versionTag, sourceRowNumber: assertionRow.rowOrdinal }));
+		},
+	},
+});
+const indexedAssertionAnswerFor = ({ partByName, iri, registry, uriContractReader }, done) => {
+	const { decisionBlockHash } = partByName;
+	uriContractReader.decisionBlockFormFor(decisionBlockHash, (formError, blockForm) => {
+		if (formError || blockForm === null) {
+			done(answer(404, { error: formError || `no decision block ${decisionBlockHash} in the store` }));
+			return;
+		}
+		if (blockForm.edgeShapeFault !== null) {
+			done(answer(404, { error: blockForm.edgeShapeFault }));
+			return;
+		}
+		const lookup = ASSERTION_LOOKUP_BY_BLOCK_FORM[blockForm.blockForm];
+		lookup.rowFor({ decisionBlockHash, iri, registry, uriContractReader }, (readError, assertionRow, assertionRecord) => {
+			if (readError || assertionRow === null) {
+				done(answer(404, { error: readError || lookup.missText }));
+				return;
+			}
+			done(answer(200, { kind: 'assertion', assertionId: iri, decisionBlockHash, assertion: assertionRecord }));
+		});
+	});
+};
+
 // RESOLUTION_BY_KIND — one row per kind the stub answers (DATA, no branch); a kind with no row is answered 501 by name
 const RESOLUTION_BY_KIND = Object.freeze({
 	layer: ({ partByName, registry, uriContractReader }, done) => {
@@ -529,35 +528,39 @@ const RESOLUTION_BY_KIND = Object.freeze({
 		const version = found.error ? undefined : found.layer.versionList.find((oneVersion) => oneVersion.administrationRecord.contentId === partByName.contentId);
 		done(version === undefined ? answer(404, { error: found.error || `layer '${partByName.layerKey}' has no version with content ${partByName.contentId}` }) : answer(200, { kind: 'layerVersionByContent', layerKey: partByName.layerKey, effectiveRegistrationStatus: registry.effectiveStatusFor({ layerKey: partByName.layerKey, versionTag: version.administrationRecord.versionTag }).registrationStatus, version }));
 	},
-	assertion: ({ partByName, iri, blockTextForHash, registry }, done) => {
+	assertion: ({ partByName, iri, blockTextForHash, registry, uriContractReader }, done) => {
+		if (blockTextForHash === undefined) {
+			indexedAssertionAnswerFor({ partByName, iri, registry, uriContractReader }, done);
+			return;
+		}
 		blockTextForHash(partByName.decisionBlockHash, (readError, frozenText) => {
 			if (readError || frozenText === null) {
 				done(answer(404, { error: readError || `no decision block ${partByName.decisionBlockHash} in the store` }));
 				return;
 			}
-			const found = assertionRecordFor({ frozenText, assertionIri: iri, decisionBlockHash: partByName.decisionBlockHash, registry });
+			const found = wholeBlockOracle.assertionRecordFor({ frozenText, assertionIri: iri, decisionBlockHash: partByName.decisionBlockHash, registry });
 			done(found.error ? answer(404, { error: found.error }) : answer(200, { kind: 'assertion', assertionId: iri, decisionBlockHash: partByName.decisionBlockHash, assertion: found.record }));
 		});
 	},
 	agentPerson: agentResolutionFor('agentPerson'),
 	agentJudge: agentResolutionFor('agentJudge'),
 	agentOrganisation: agentResolutionFor('agentOrganisation'),
-	interpretationPinned: ({ partByName, registry, blockTextForHash }, done) => {
+	interpretationPinned: ({ partByName, registry, blockTextForHash, uriContractReader }, done) => {
 		const found = registry.versionFor({ layerKey: partByName.layerKey, versionTag: partByName.versionTag });
 		if (found.error) {
 			done(answer(404, { error: found.error }));
 			return;
 		}
-		interpretationOf({ kind: 'interpretationPinned', partByName, layerKey: partByName.layerKey, version: found.version, registry, blockTextForHash }, done);
+		interpretationOf({ kind: 'interpretationPinned', partByName, layerKey: partByName.layerKey, version: found.version, registry, blockTextForHash, uriContractReader }, done);
 	},
 	// a FLOATING interpretation follows the layer's current STANDARD version, never merely its newest (SPEC §5.3); a layer with none says so
-	interpretationFloating: ({ partByName, registry, blockTextForHash }, done) => {
+	interpretationFloating: ({ partByName, registry, blockTextForHash, uriContractReader }, done) => {
 		const current = registry.currentStandardVersionFor(partByName.layerKey);
 		if (current.error) {
 			done(answer(404, { error: current.error }));
 			return;
 		}
-		interpretationOf({ kind: 'interpretationFloating', partByName, layerKey: partByName.layerKey, version: current.version, registry, blockTextForHash }, (resolved) => done({ ...resolved, body: { ...resolved.body, followedVersionTag: current.version.administrationRecord.versionTag } }));
+		interpretationOf({ kind: 'interpretationFloating', partByName, layerKey: partByName.layerKey, version: current.version, registry, blockTextForHash, uriContractReader }, (resolved) => done({ ...resolved, body: { ...resolved.body, followedVersionTag: current.version.administrationRecord.versionTag } }));
 	},
 	// ⟪ML3-a⟫ a declared mapping predicate answers its definition (uriScheme.json vocabularyTermDefinitionByName)
 	vocabularyTerm: ({ partByName, iri }, done) => done(answer(200, { kind: 'vocabularyTerm', term: iri, termName: partByName.termName, definition: URI_SCHEME.vocabularyTermDefinitionByName[partByName.termName] })),
@@ -641,8 +644,8 @@ const agentAnswerFor = ({ iri, registry }) => {
 };
 
 const resolveEdcUri = ({ uriOrPath, registry, blockTextForHash, uriContractReader } = {}, callback) => {
-	if (!registry || typeof blockTextForHash !== 'function') {
-		callback(refuse.byName({ moduleName, what: 'registry and blockTextForHash are required', where: 'resolveEdcUri({ uriOrPath, registry, blockTextForHash })' }).message);
+	if (!registry || (uriContractReader === undefined && typeof blockTextForHash !== 'function')) {
+		callback(refuse.byName({ moduleName, what: 'registry and a uriContractReader are required (or, in a test, blockTextForHash)', where: 'resolveEdcUri({ uriOrPath, registry, uriContractReader })' }).message);
 		return;
 	}
 	const iri = edcIriFor(uriOrPath);

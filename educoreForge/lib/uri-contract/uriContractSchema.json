@@ -1,5 +1,5 @@
 {
-	"about": "The nine IDENTITY and HISTORY tables of uriContract.sqlite, and its five DERIVED tables (rowRole derived: pure functions of the write-once rows, written in the same transaction, verified by -rebuildUriContractIndexes; AMBER_JOURNEY 2026-10-26) — (ML3.1 Part B; PROPOSAL-dataStoreLayout-102626 section 3 and Appendix B, with the additive columns AMBER_JOURNEY accepted 2026-10-26, and the ninth table frozenVectors ruled the same day: a vector a published schema block references by embeddingRef is part of what RECREATES the graph, not a calculation input). DATA: uriContract.js builds every CREATE TABLE, every write-once trigger and every INSERT from these rows, and refuses by name a row field no table lists. rowRole 'identity' = written once at publish; 'history' = append-only. NO TABLE IS EVER UPDATED OR DELETED FROM: each carries BEFORE UPDATE and BEFORE DELETE triggers that abort, so even raw SQL cannot edit the forever-promise. registrationStatus CHECKs are built from lib/layer-registry/layerRegistrySchema.json registrationStatusList, never restated here.",
+	"about": "The nine IDENTITY and HISTORY tables of uriContract.sqlite, and its nine DERIVED tables (rowRole derived: pure functions of the write-once rows, written in the same transaction, verified by -rebuildUriContractIndexes; AMBER_JOURNEY 2026-10-26) — (ML3.1 Part B; PROPOSAL-dataStoreLayout-102626 section 3 and Appendix B, with the additive columns AMBER_JOURNEY accepted 2026-10-26, and the ninth table frozenVectors ruled the same day: a vector a published schema block references by embeddingRef is part of what RECREATES the graph, not a calculation input). DATA: uriContract.js builds every CREATE TABLE, every write-once trigger and every INSERT from these rows, and refuses by name a row field no table lists. rowRole 'identity' = written once at publish; 'history' = append-only. NO TABLE IS EVER UPDATED OR DELETED FROM: each carries BEFORE UPDATE and BEFORE DELETE triggers that abort, so even raw SQL cannot edit the forever-promise. registrationStatus CHECKs are built from lib/layer-registry/layerRegistrySchema.json registrationStatusList, never restated here.",
 	"writeOnceTriggerMessage": "uriContract is write-once: rows are never updated or deleted (a status change is a new history row)",
 	"tableList": [
 		{
@@ -237,6 +237,58 @@
 				{ "columnName": "abstainedCount", "sqlType": "INTEGER", "constraintText": "NOT NULL" }
 			],
 			"tableConstraintList": ["PRIMARY KEY (layerKey, versionTag, countScope, scopeName)", "FOREIGN KEY (layerKey, versionTag) REFERENCES layerVersions(layerKey, versionTag)"]
+		},
+		{
+			"tableName": "derivedAssertionSources",
+			"rowRole": "derived",
+			"about": "DERIVED. The completeness record of the assertion index, the sibling of derivedIndexedSources: one row per decision schema block (sourceKind decisionBlock, identity = its hash) and per frozenSetBytes layer version (sourceKind curatedVersion, identity = layerKey NUL versionTag) whose assertion rows were written. A separate table because derivedIndexedSources carries a CHECK on sourceKind that SQLite cannot alter in a published file (assertionIndex-110226)",
+			"columnList": [
+				{ "columnName": "sourceKind", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (sourceKind IN ('decisionBlock', 'curatedVersion'))" },
+				{ "columnName": "sourceIdentity", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "derivedRowCount", "sqlType": "INTEGER", "constraintText": "NOT NULL CHECK (derivedRowCount >= 0)" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (sourceKind, sourceIdentity)"]
+		},
+		{
+			"tableName": "derivedAssertionBlocks",
+			"rowRole": "derived",
+			"about": "DERIVED from one decision schema block: what the resolver needs to know of the block as a whole without reading it. blockForm: machine (JSON, its assertions recomputed from planned edges), setWithRecordId (TSV carrying record_id) or setWithoutRecordId (a stored curated set). edgeShapeFault: a machine block whose matchBasis names no edge shape answers this text, as the whole-block read did",
+			"columnList": [
+				{ "columnName": "decisionBlockHash", "sqlType": "TEXT", "constraintText": "PRIMARY KEY" },
+				{ "columnName": "blockForm", "sqlType": "TEXT", "constraintText": "NOT NULL CHECK (blockForm IN ('machine', 'setWithRecordId', 'setWithoutRecordId'))" },
+				{ "columnName": "subjectStandardName", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "subjectStandardVersion", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "edgeShapeFault", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "objectSourceVersionJson", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": ["FOREIGN KEY (decisionBlockHash) REFERENCES decisionSchemaBlocks(decisionSchemaBlockHash)"]
+		},
+		{
+			"tableName": "derivedAssertions",
+			"rowRole": "derived",
+			"about": "DERIVED from one decision schema block ALONE: one row per subject of a machine record (abstentions included; assertionRecordJson NULL, because an abstention is listed by an interpretation and is not an addressable edge) or per row of a set. rowOrdinal is the block's own order and, for a set, the 1-based source row number; two rows may share an assertionId and the lowest rowOrdinal answers, as a scan would. assertionId is NULL on a set without record_id: those ids depend on the layer version, see derivedCuratedAssertionIds. interpretationEntryJson is a machine row's interpretation entry; a set's is computed from assertionRecordJson at resolution, because it depends on the requested URI and the layer",
+			"columnList": [
+				{ "columnName": "decisionBlockHash", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "rowOrdinal", "sqlType": "INTEGER", "constraintText": "NOT NULL" },
+				{ "columnName": "subjectStableId", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "assertionId", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "assertionRecordJson", "sqlType": "TEXT", "constraintText": "" },
+				{ "columnName": "interpretationEntryJson", "sqlType": "TEXT", "constraintText": "" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (decisionBlockHash, rowOrdinal)", "FOREIGN KEY (decisionBlockHash) REFERENCES decisionSchemaBlocks(decisionSchemaBlockHash)"]
+		},
+		{
+			"tableName": "derivedCuratedAssertionIds",
+			"rowRole": "derived",
+			"about": "DERIVED from one frozenSetBytes layer version and its whole-set block: the R-c' id of each set row, which DEPENDS ON THE VERSION (its own standardList and hubList name the subject and object standards; ruling R-c', lib/edc-uri/assertionIdentity). Points at the row in derivedAssertions by rowOrdinal. A row the recipe cannot name (a subject of no listed standard; not exactly one author) has no id here, so no assertion URI reaches it",
+			"columnList": [
+				{ "columnName": "layerKey", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "versionTag", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "decisionBlockHash", "sqlType": "TEXT", "constraintText": "NOT NULL" },
+				{ "columnName": "rowOrdinal", "sqlType": "INTEGER", "constraintText": "NOT NULL" },
+				{ "columnName": "assertionId", "sqlType": "TEXT", "constraintText": "NOT NULL" }
+			],
+			"tableConstraintList": ["PRIMARY KEY (layerKey, versionTag, rowOrdinal)", "FOREIGN KEY (layerKey, versionTag) REFERENCES layerVersions(layerKey, versionTag)", "FOREIGN KEY (decisionBlockHash, rowOrdinal) REFERENCES derivedAssertions(decisionBlockHash, rowOrdinal)"]
 		}
 	],
 	"indexList": [
@@ -246,6 +298,9 @@
 		"CREATE INDEX IF NOT EXISTS derivedAnswerEdgesByMeaning ON derivedAnswerEdges(meaningIri)",
 		"CREATE INDEX IF NOT EXISTS derivedAnswerEdgesBySubject ON derivedAnswerEdges(subjectStableId, hubSegment)",
 		"CREATE INDEX IF NOT EXISTS publishedManifestMembersByBlock ON publishedManifestMembers(schemaBlockRefId)",
-		"CREATE INDEX IF NOT EXISTS derivedHubCardsByHubDomain ON derivedHubCards(hubSegment, hubReleaseSegment, domainId, meaningIri)"
+		"CREATE INDEX IF NOT EXISTS derivedHubCardsByHubDomain ON derivedHubCards(hubSegment, hubReleaseSegment, domainId, meaningIri)",
+		"CREATE INDEX IF NOT EXISTS derivedAssertionsByAssertion ON derivedAssertions(decisionBlockHash, assertionId)",
+		"CREATE INDEX IF NOT EXISTS derivedAssertionsBySubject ON derivedAssertions(decisionBlockHash, subjectStableId)",
+		"CREATE INDEX IF NOT EXISTS derivedCuratedAssertionIdsByAssertion ON derivedCuratedAssertionIds(decisionBlockHash, assertionId, layerKey, versionTag)"
 	]
 }

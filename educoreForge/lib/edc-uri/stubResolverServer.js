@@ -9,8 +9,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // so http://edc.local:7931/EDUcore/layer/jev answers. Every parameter is REQUIRED (no default port, no default store):
 //     node lib/edc-uri/stubResolverServer.js --port=7931 --uriContractFilePath=<uriContract.sqlite>
 // ⟪ML3.1b⟫ EVERYTHING resolves from uriContract.sqlite ALONE (WORKORDER-ML3.1 section 3: "the stub resolves everything from
-// uriContract.sqlite alone"): the registry (layers, versions, status, agents), every decision schema block's frozen text, and the
-// uriContractReader (lib/uri-contract) the kind cases read schema blocks, manifests and computed relations through. No support store,
+// uriContract.sqlite alone"): the registry (layers, versions, status, agents) and the uriContractReader (lib/uri-contract) the kind
+// cases read schema blocks, manifests, computed relations and (assertionIndex-110226) one assertion row at a time through. No support store,
 // no decision store, no registry JSON is read. uriContract is opened READ-ONLY; this shell is the only place a store is touched
 // (stubResolver.js is pure). A JSON body always, with the HTTP status the resolution chose. The request path is passed VERBATIM
 // (never decoded). -help prints this header.
@@ -45,19 +45,13 @@ if (loaded.error) {
 	process.exit(1);
 }
 const { uriContractReader } = openedContract;
-// the frozen text of a decision schema block, verified on read, from uriContract (null when no published version holds it)
-const blockTextForHash = (decisionBlockHash, done) => {
-	const read = openedContract.uriContract.decisionSchemaBlockTextFor(decisionBlockHash);
-	done(read.error || '', read.error ? null : read.frozenText);
-};
-
 const server = http.createServer((request, response) => {
 	if (request.method !== 'GET') {
 		response.writeHead(405, { 'Content-Type': 'application/json' });
 		response.end(JSON.stringify({ error: `${request.method} is not served; the resolver answers GET` }));
 		return;
 	}
-	resolveEdcUri({ uriOrPath: request.url, registry: loaded.registry, blockTextForHash, uriContractReader }, (resolveError, resolved) => {
+	resolveEdcUri({ uriOrPath: request.url, registry: loaded.registry, uriContractReader }, (resolveError, resolved) => {
 		const httpStatus = resolveError ? 500 : resolved.httpStatus;
 		response.writeHead(httpStatus, { 'Content-Type': 'application/json; charset=utf-8' });
 		response.end(`${JSON.stringify(resolveError ? { error: resolveError } : resolved.body, null, 2)}\n`);

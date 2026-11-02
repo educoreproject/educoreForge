@@ -25,6 +25,8 @@ require('../../../test/testLib/testAppStartup')({ moduleName, helpText: helpText
 const crypto = require('crypto');
 const harness = require('../../../test/testLib/harness')(moduleName);
 const { resolveEdcUri, edcIriFor } = require('../stubResolver');
+const edcUri = require('../edcUri');
+const derivedIndexesLib = require('../../uri-contract/derivedIndexes');
 const assertionIdentity = require('../assertionIdentity');
 const { registryFor } = require('../../layer-registry/layerRegistry');
 
@@ -44,7 +46,14 @@ const decisionBlockHash = crypto.createHash('sha256').update(frozenText, 'utf8')
 const RATER_IRI = 'https://w3id.org/EDUcore/agent/raterPseudonym7';
 const curatedSetText = ['#object_source_version: "1.0"', ['subject_id', 'predicate_id', 'object_id', 'subject_source_version', 'author_id'].join('\t'), ['toy:property/Alpha', 'edc:bestMatch', 'https://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa', '1.2.3', RATER_IRI].join('\t')].join('\n') + '\n';
 const curatedSetHash = crypto.createHash('sha256').update(curatedSetText, 'utf8').digest('hex');
-const blockTextForHash = (requestedHash, done) => done('', requestedHash === decisionBlockHash ? frozenText : requestedHash === curatedSetHash ? curatedSetText : null);
+// ⟪assertionIndex-110226⟫ an IMPORTED set (it carries record_id; its subjects read through the import's prefix map): a prefixed subject, an
+// absolute one, one of a prefix the map does not name, and a row with no record_id
+const TOY_ELEMENT_BASE = 'https://w3id.org/EDUcore/Toy/1.2.3/';
+const importedAssertionIri = `https://w3id.org/EDUcore/assertion/${'a'.repeat(64)}/${'b'.repeat(64)}`;
+const importedSetText = [['record_id', 'subject_id', 'predicate_id', 'object_id', 'author_id'].join('\t'), [importedAssertionIri, 'tp:property/Alpha', 'skos:exactMatch', 'https://w3id.org/EDUcore/ToyHub/hub/1.0/aaaa', RATER_IRI].join('\t'), ['', `${TOY_ELEMENT_BASE}toy:property/Alpha`, 'skos:closeMatch', 'https://w3id.org/EDUcore/ToyHub/hub/1.0/bbbb', ''].join('\t'), [`${importedAssertionIri}0`, 'unknownPrefix:property/Alpha', 'skos:closeMatch', 'https://w3id.org/EDUcore/ToyHub/hub/1.0/cccc', RATER_IRI].join('\t')].join('\n') + '\n';
+const importedSetHash = crypto.createHash('sha256').update(importedSetText, 'utf8').digest('hex');
+const BLOCK_TEXT_BY_HASH = { [decisionBlockHash]: frozenText, [curatedSetHash]: curatedSetText, [importedSetHash]: importedSetText };
+const blockTextForHash = (requestedHash, done) => done('', BLOCK_TEXT_BY_HASH[requestedHash] === undefined ? null : BLOCK_TEXT_BY_HASH[requestedHash]);
 const memberBlockList = [{ pairKey: 'toyhub@1.0::toy@1.2.3::toyDerivedPlugin::inferred', decisionBlockHash }];
 const contentId = crypto.createHash('sha256').update(decisionBlockHash, 'utf8').digest('hex');
 // v0 is an EARLIER version over another block (its own content); v1 is the block above
@@ -61,7 +70,7 @@ const registryLoad = registryFor({
 	layerRegistry: {
 		registrationAuthorityIri: ORGANISATION_IRI,
 		registrarIri: ORGANISATION_IRI,
-		layerList: [{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [versionFor({ versionTag: 'v0', registrationStatus: 'Standard', publishedAt: '2026-09-01T00:00:00Z', versionMemberBlockList: earlierMemberBlockList }), versionFor({ versionTag: 'v1', registrationStatus: 'Standard', publishedAt: '2026-10-01T00:00:00Z' })], statusChangeList: [{ versionTag: 'v0', registrationStatus: 'Superseded', changedAt: '2026-10-02T00:00:00Z', changedBy: ORGANISATION_IRI, supersededByVersionTag: 'v1' }] }, { layerKey: 'toyRaters', displayName: 'toy raters', layerKind: 'curated', authorAgentIri: ORGANISATION_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [{ administrationRecord: { registrationAuthority: ORGANISATION_IRI, registrar: ORGANISATION_IRI, submitter: ORGANISATION_IRI, publishedAt: '2026-10-25T00:00:00Z', contentId: curatedSetHash, versionTag: 'r1' }, registrationStatus: 'Candidate', authorAgentIri: ORGANISATION_IRI, contentIdBasis: 'frozenSetBytes', wholeSetBlock: { pairKey: 'layerSet::toyRaters', decisionBlockHash: curatedSetHash }, memberBlockList: [{ pairKey: 'layerSet::toyRaters', decisionBlockHash: curatedSetHash }] }], statusChangeList: [] }],
+		layerList: [{ layerKey: 'toyJudge', displayName: 'a toy judge layer', layerKind: 'judge', authorAgentIri: JUDGE_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [versionFor({ versionTag: 'v0', registrationStatus: 'Standard', publishedAt: '2026-09-01T00:00:00Z', versionMemberBlockList: earlierMemberBlockList }), versionFor({ versionTag: 'v1', registrationStatus: 'Standard', publishedAt: '2026-10-01T00:00:00Z' })], statusChangeList: [{ versionTag: 'v0', registrationStatus: 'Superseded', changedAt: '2026-10-02T00:00:00Z', changedBy: ORGANISATION_IRI, supersededByVersionTag: 'v1' }] }, { layerKey: 'toyRaters', displayName: 'toy raters', layerKind: 'curated', authorAgentIri: ORGANISATION_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [{ administrationRecord: { registrationAuthority: ORGANISATION_IRI, registrar: ORGANISATION_IRI, submitter: ORGANISATION_IRI, publishedAt: '2026-10-25T00:00:00Z', contentId: curatedSetHash, versionTag: 'r1' }, registrationStatus: 'Candidate', authorAgentIri: ORGANISATION_IRI, contentIdBasis: 'frozenSetBytes', wholeSetBlock: { pairKey: 'layerSet::toyRaters', decisionBlockHash: curatedSetHash }, memberBlockList: [{ pairKey: 'layerSet::toyRaters', decisionBlockHash: curatedSetHash }] }], statusChangeList: [] }, { layerKey: 'toyImported', displayName: 'a toy import', layerKind: 'imported', authorAgentIri: ORGANISATION_IRI, standardList: [{ standardKey: 'toy', standardName: 'Toy', sourceIri: 'urn:educore:toy:' }], hubList: [{ hubKey: 'toyhub', hubName: 'ToyHub', sourceIri: 'urn:educore:hub:ToyHub:' }], versionList: [{ administrationRecord: { registrationAuthority: ORGANISATION_IRI, registrar: ORGANISATION_IRI, submitter: ORGANISATION_IRI, publishedAt: '2026-10-26T00:00:00Z', contentId: importedSetHash, versionTag: 'i1' }, registrationStatus: 'Candidate', authorAgentIri: ORGANISATION_IRI, contentIdBasis: 'frozenSetBytes', wholeSetBlock: { pairKey: 'layerSet::toyImported', decisionBlockHash: importedSetHash }, memberBlockList: [{ pairKey: 'layerSet::toyImported', decisionBlockHash: importedSetHash }], importRecord: { prefixExpansion: { tp: `${TOY_ELEMENT_BASE}toy:` } } }], statusChangeList: [] }],
 	},
 });
 harness.ok('the stated registry (a judge layer and, ML3.1c, a curated layer) loads', registryLoad.error === undefined, registryLoad.error);
@@ -179,11 +188,66 @@ const caseList = [
 harness.section('the stub answers by SPEC §5.3, for the kinds ML1 resolves');
 harness.equal('⟪ML3.1⟫ every kind of the scheme has a resolution (none answers 501 for want of a row)', require('../edcUri').KIND_LIST.filter((oneKind) => require('../stubResolver').RESOLUTION_BY_KIND[oneKind] === undefined).join(','), '');
 harness.equal('a w3id-spelled request path maps to the edc IRI', edcIriFor('/EDUcore/layer/jev'), 'https://w3id.org/EDUcore/layer/jev');
+// ⟪assertionIndex-110226⟫ THE SAME CASES, answered from the assertion index (the real derive functions over the same texts) and compared
+// byte for byte with the whole-block answers above; the toy version of gate G1, which runs this over every published block. The extra cases
+// reach what the list above does not: a URI naming the wrong standard or version, an imported set, an abstention's id, a stale address.
+const assertionIdOf = (subjectStableId, predicateCurie, objectStableId) => assertionIdentity.assertionIdFor({ decisionBlockHash, subjectStableId, subjectStandardName: 'Toy', subjectStandardVersion: '1.2.3', predicateCurie, objectStableId, objectStandardName: 'ToyHub', objectStandardVersion: '1.0' }).assertionId;
+const indexParityCaseList = caseList.map((oneCase) => ({ label: oneCase.label, uriOrPath: oneCase.uriOrPath, withReader: oneCase.withReader })).concat([
+	{ label: 'an abstention\'s id is no edge', uriOrPath: assertionIdOf('toy:property/Gamma', 'skos:mappingRelation', 'sssom:NoTermFound') },
+	{ label: 'a fan-out instance\'s assertion', uriOrPath: assertionIdOf('toy:field/Two', 'skos:closeMatch', 'https://w3id.org/EDUcore/ToyHub/hub/1.0/bbbb') },
+	{ label: 'a fan-out instance\'s interpretation', uriOrPath: '/EDUcore/Toy/1.2.3/toy:field/Two@toyJudge/v1' },
+	{ label: 'the judged subject of a fan-out is not one of its instances', uriOrPath: '/EDUcore/Toy/1.2.3/toy:question/Q@toyJudge/v1' },
+	{ label: 'an abstaining element', uriOrPath: '/EDUcore/Toy/1.2.3/toy:property/Gamma@toyJudge/v1' },
+	{ label: 'an element under the wrong version of its standard', uriOrPath: '/EDUcore/Toy/9.9.9/toy:property/Alpha@toyJudge/v1' },
+	{ label: 'a curated interpretation', uriOrPath: '/EDUcore/Toy/1.2.3/toy:property/Alpha@toyRaters/r1' },
+	{ label: 'a curated interpretation under the wrong version: its id follows the URI', uriOrPath: '/EDUcore/Toy/9.9.9/toy:property/Alpha@toyRaters/r1' },
+	{ label: 'a curated element holding no row', uriOrPath: '/EDUcore/Toy/1.2.3/toy:property/None@toyRaters/r1' },
+	{ label: 'an imported interpretation: prefixed and absolute subjects, in row order', uriOrPath: '/EDUcore/Toy/1.2.3/toy:property/Alpha@toyImported/i1' },
+	{ label: 'an imported element holding no row', uriOrPath: '/EDUcore/Toy/1.2.3/toy:property/None@toyImported/i1' },
+	{ label: 'an imported set answers its record_id', uriOrPath: `/EDUcore/assertion/${importedSetHash}/${'0'.repeat(64)}` },
+]);
+const derivedByHash = Object.keys(BLOCK_TEXT_BY_HASH).reduce((soFar, oneHash) => ({ ...soFar, [oneHash]: derivedIndexesLib.derivedRowsForDecisionBlock({ decisionBlockHash: oneHash, frozenText: BLOCK_TEXT_BY_HASH[oneHash] }) }), {});
+const rowFrom = (oneRow) => ({ rowOrdinal: oneRow.rowOrdinal, subjectStableId: oneRow.subjectStableId, assertionId: oneRow.assertionId, assertionRecord: oneRow.assertionRecordJson === null ? null : JSON.parse(oneRow.assertionRecordJson), interpretationEntry: oneRow.interpretationEntryJson === null ? null : JSON.parse(oneRow.interpretationEntryJson) });
+const curatedRatersRowList = derivedIndexesLib.derivedRowsForCuratedVersion({ decisionBlockHash: curatedSetHash, frozenText: curatedSetText, layerKey: 'toyRaters', versionTag: 'r1', standardList: [{ standardKey: 'toy', standardName: 'Toy' }], hubList: [{ hubName: 'ToyHub' }] }).curatedAssertionIdRowList;
+const indexReaderDouble = {
+	...uriContractReader,
+	decisionBlockFormFor: (requestedHash, done) => done('', derivedByHash[requestedHash] === undefined ? null : derivedByHash[requestedHash].blockFormRow),
+	assertionRowFor: ({ decisionBlockHash: requestedHash, assertionIri }, done) => done('', (() => { const found = derivedByHash[requestedHash].assertionRowList.find((oneRow) => oneRow.assertionId === assertionIri && oneRow.assertionRecordJson !== null); return found === undefined ? null : rowFrom(found); })()),
+	curatedAssertionRowFor: ({ decisionBlockHash: requestedHash, assertionIri, layerKey, versionTag }, done) => done('', (() => { const idRow = curatedRatersRowList.find((oneRow) => oneRow.decisionBlockHash === requestedHash && oneRow.assertionId === assertionIri && oneRow.layerKey === layerKey && oneRow.versionTag === versionTag); return idRow === undefined ? null : rowFrom(derivedByHash[requestedHash].assertionRowList.find((oneRow) => oneRow.rowOrdinal === idRow.rowOrdinal)); })()),
+	elementAssertionRowListFor: ({ decisionBlockHash: requestedHash, subjectStableIdList }, done) => done('', derivedByHash[requestedHash].assertionRowList.filter((oneRow) => subjectStableIdList.indexOf(oneRow.subjectStableId) !== -1).map(rowFrom)),
+};
+const assertionKindOf = (uriOrPath) => edcUri.parse(edcIriFor(uriOrPath)).kind;
+const ORACLE_KIND_LIST = ['assertion', 'interpretationPinned', 'interpretationFloating'];
+const runIndexParityCase = (caseIndex) => {
+	if (caseIndex >= indexParityCaseList.length) {
+		harness.section('the assertion index never reads a block');
+		const blockReadRefusingReader = { ...indexReaderDouble, decisionSchemaBlockFor: () => { throw new Error('the index path read a whole block'); } };
+		resolveEdcUri({ uriOrPath: `/EDUcore/Toy/1.2.3/toy:property/Alpha@toyJudge/v1`, registry, uriContractReader: blockReadRefusingReader }, (resolveError, resolved) => {
+			harness.ok('an interpretation answers with no block text in reach', !resolveError && resolved.httpStatus === 200, resolveError);
+			harness.report();
+		});
+		return;
+	}
+	if (caseIndex === 0) {
+		harness.section('every case, answered from the assertion index, byte-identical to the whole-block answer');
+	}
+	const oneCase = indexParityCaseList[caseIndex];
+	if (ORACLE_KIND_LIST.indexOf(assertionKindOf(oneCase.uriOrPath)) === -1) {
+		runIndexParityCase(caseIndex + 1);
+		return;
+	}
+	resolveEdcUri({ uriOrPath: oneCase.uriOrPath, registry, blockTextForHash }, (oracleError, oracleAnswer) =>
+		resolveEdcUri({ uriOrPath: oneCase.uriOrPath, registry, uriContractReader: indexReaderDouble }, (indexError, indexAnswer) => {
+			harness.equal(`parity: ${oneCase.label}`, JSON.stringify(indexError || indexAnswer), JSON.stringify(oracleError || oracleAnswer));
+			runIndexParityCase(caseIndex + 1);
+		}),
+	);
+};
 const runCase = (caseIndex) => {
 	if (caseIndex >= caseList.length) {
 		resolveEdcUri({ uriOrPath: '/EDUcore/layer/jev' }, (refusal) => {
-			harness.match('the resolver refuses to run without its injected lookups', refusal, /registry and blockTextForHash are required/);
-			harness.report();
+			harness.match('the resolver refuses to run without its injected lookups', refusal, /registry and a uriContractReader are required/);
+			runIndexParityCase(0);
 		});
 		return;
 	}
