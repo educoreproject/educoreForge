@@ -536,6 +536,14 @@ const tamperedOpen = uriContractLib.openUriContractFile({ uriContractFilePath: t
 harness.match('TWIN: a tampered assertion row is reported, naming its source and table', tamperedOpen.verifyDerivedIndexes().differenceList.join('; '), new RegExp(`decisionBlock ${curatedHash}: derivedAssertions rows differ from a recomputation`));
 harness.match('…and -rebuildUriContractIndexes refuses rather than repairs it', tamperedOpen.fillAbsentDerivedIndexes().error, /derived row set\(s\) differ from a recomputation/);
 tamperedOpen.close();
+const unparseableWorld = seededContract();
+unparseableWorld.uriContract.close();
+plantCorruption(unparseableWorld.uriContractFilePath, 'UPDATE derivedAssertions SET assertionRecordJson = ? WHERE decisionBlockHash = ?', ['{not json', curatedHash]);
+plantCorruption(unparseableWorld.uriContractFilePath, 'UPDATE derivedAssertionBlocks SET objectSourceVersionJson = ? WHERE decisionBlockHash = ?', ['{not json', curatedHash]);
+const unparseableOpen = uriContractLib.openUriContractFile({ uriContractFilePath: unparseableWorld.uriContractFilePath, accessMode: 'read' }).uriContract;
+harness.match('a stored row that no longer parses answers an error by name, never a thrown exception', unparseableOpen.elementAssertionRowListFor({ decisionBlockHash: curatedHash, subjectStableIdList: ['toy:a'] }).error, /assertion index row .* does not read/);
+harness.match('…and a stored form row likewise', unparseableOpen.decisionBlockFormFor(curatedHash).error, /assertion index row .* does not read/);
+unparseableOpen.close();
 const curatedTamperedWorld = seededContract();
 curatedTamperedWorld.uriContract.close();
 plantCorruption(curatedTamperedWorld.uriContractFilePath, 'UPDATE derivedCuratedAssertionIds SET assertionId = ? WHERE decisionBlockHash = ?', ['tampered', curatedHash]);

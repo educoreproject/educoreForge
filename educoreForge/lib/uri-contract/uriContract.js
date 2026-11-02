@@ -394,26 +394,39 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 	};
 	// ⟪assertionIndex-110226⟫ the assertion index: one row, by primary or secondary index, with no block text read
 	const assertionRowFrom = (storedRow) => ({ rowOrdinal: storedRow.rowOrdinal, subjectStableId: storedRow.subjectStableId, assertionId: storedRow.assertionId, assertionRecord: storedRow.assertionRecordJson === null ? null : JSON.parse(storedRow.assertionRecordJson), interpretationEntry: storedRow.interpretationEntryJson === null ? null : JSON.parse(storedRow.interpretationEntryJson) });
+	// indexReadOf — the one boundary where a stored index row that no longer parses (a corrupted file) becomes an error string
+	const indexReadOf = (decisionBlockHash, readWork) => {
+		const read = attemptSql(readWork);
+		return read.error ? { error: refusalText(`assertion index row of decision block ${decisionBlockHash} does not read (${read.error})`, 'a corrupted row is a defect to report; -rebuildUriContractIndexes names it; this file is never repaired') } : read.result;
+	};
 	const decisionBlockFormFor = (decisionBlockHash) => {
 		if (absentDerivedTablesFault()) {
 			return { error: absentDerivedTablesFault() };
 		}
 		const row = database.prepare('SELECT blockForm, subjectStandardName, subjectStandardVersion, edgeShapeFault, objectSourceVersionJson FROM derivedAssertionBlocks WHERE decisionBlockHash = ?').get(decisionBlockHash);
 		if (row !== undefined) {
-			return { blockForm: row };
+			return indexReadOf(decisionBlockHash, () => {
+				if (row.objectSourceVersionJson !== null) {
+					JSON.parse(row.objectSourceVersionJson);
+				}
+				return { blockForm: row };
+			});
 		}
 		const isHeld = database.prepare('SELECT 1 FROM decisionSchemaBlocks WHERE decisionSchemaBlockHash = ?').get(decisionBlockHash) !== undefined;
 		return isHeld ? { error: refusalText(`decision schema block ${decisionBlockHash} is held but was never indexed`, 'graphBuilder -rebuildUriContractIndexes fills a source never indexed') } : { blockForm: null };
 	};
 	const assertionRowFor = ({ decisionBlockHash, assertionIri }) => {
 		const row = database.prepare(ASSERTION_INDEX_SQL_BY_NAME.assertionRow).get(decisionBlockHash, assertionIri);
-		return { assertionRow: row === undefined ? null : assertionRowFrom(row) };
+		return indexReadOf(decisionBlockHash, () => ({ assertionRow: row === undefined ? null : assertionRowFrom(row) }));
 	};
 	const curatedAssertionRowFor = ({ decisionBlockHash, assertionIri, layerKey, versionTag }) => {
 		const row = database.prepare(ASSERTION_INDEX_SQL_BY_NAME.curatedAssertionRow).get(decisionBlockHash, assertionIri, layerKey, versionTag);
-		return { assertionRow: row === undefined ? null : assertionRowFrom(row) };
+		return indexReadOf(decisionBlockHash, () => ({ assertionRow: row === undefined ? null : assertionRowFrom(row) }));
 	};
-	const elementAssertionRowListFor = ({ decisionBlockHash, subjectStableIdList }) => ({ assertionRowList: database.prepare(ASSERTION_INDEX_SQL_BY_NAME.elementAssertionRowList(subjectStableIdList.length)).all(decisionBlockHash, ...subjectStableIdList).map(assertionRowFrom) });
+	const elementAssertionRowListFor = ({ decisionBlockHash, subjectStableIdList }) => {
+		const rowList = database.prepare(ASSERTION_INDEX_SQL_BY_NAME.elementAssertionRowList(subjectStableIdList.length)).all(decisionBlockHash, ...subjectStableIdList);
+		return indexReadOf(decisionBlockHash, () => ({ assertionRowList: rowList.map(assertionRowFrom) }));
+	};
 	const schemaBlockFor = (refId) => {
 		const row = database.prepare('SELECT * FROM schemaBlocks WHERE refId = ?').get(refId);
 		if (row === undefined) {
