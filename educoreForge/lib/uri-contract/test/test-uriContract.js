@@ -498,8 +498,13 @@ assertionTableNameList.slice().reverse().forEach((tableName) => olderHandle.exec
 olderHandle.close();
 const olderIdentityRowCount = () => { const handle = rawHandleFor(olderWorld.uriContractFilePath); const counted = handle.prepare('SELECT (SELECT COUNT(*) FROM decisionSchemaBlocks) + (SELECT COUNT(*) FROM layerVersions) + (SELECT COUNT(*) FROM derivedLayerVersionCounts) + (SELECT COUNT(*) FROM derivedIndexedSources) AS rowCount').get().rowCount; handle.close(); return counted; };
 const countBeforeAddition = olderIdentityRowCount();
-harness.match('a file older than the tables is refused to a reader, naming the action that adds them', uriContractLib.openUriContractFile({ uriContractFilePath: olderWorld.uriContractFilePath, accessMode: 'read' }).error, /only derived tables are absent: graphBuilder -rebuildUriContractIndexes adds and fills them/);
-harness.match('…and to a publish action', uriContractLib.openUriContractFile({ uriContractFilePath: olderWorld.uriContractFilePath, accessMode: 'publish', writerActionName: 'publishManifest' }).error, /only derived tables are absent/);
+const olderRead = uriContractLib.openUriContractFile({ uriContractFilePath: olderWorld.uriContractFilePath, accessMode: 'read' });
+harness.equal('a reader opens a file older than the tables: its identity rows are all it ever promised', olderRead.error, undefined);
+harness.ok('…and reads them', olderRead.uriContract.loadRegistry().error === undefined);
+harness.match('…what needs the index refuses, naming the action that adds it', olderRead.uriContract.decisionBlockFormFor(curatedHash).error, /predates the derived tables .*-rebuildUriContractIndexes adds and fills them/);
+harness.match('…as does -rebuildUriContractIndexes --verifyOnly, which adds nothing', olderRead.uriContract.verifyDerivedIndexes().error, /predates the derived tables/);
+olderRead.uriContract.close();
+harness.match('a publish action is refused: it would leave a source unindexed', uriContractLib.openUriContractFile({ uriContractFilePath: olderWorld.uriContractFilePath, accessMode: 'publish', writerActionName: 'publishManifest' }).error, /only derived tables are absent/);
 const addedOpen = uriContractLib.openUriContractFile({ uriContractFilePath: olderWorld.uriContractFilePath, accessMode: 'publish', writerActionName: 'rebuildUriContractIndexes' });
 harness.equal('the rebuild action adds the absent tables', addedOpen.error, undefined);
 const firstFill = addedOpen.uriContract.fillAbsentDerivedIndexes();

@@ -123,17 +123,27 @@ const addAbsentDerivedTables = (database) => {
 	return attemptSql(() => database.transaction(() => statementList.forEach((oneStatement) => database.exec(oneStatement)))());
 };
 
-// schemaRefusal(database) → '' | reason: every table with exactly its columns, every write-once trigger present
-const schemaRefusal = (database) => {
+// absentDerivedTableNameListOf(database) → the derived tables a file predates (a file published before they existed)
+const absentDerivedTableNameListOf = (database) => {
+	const heldTableNameSet = new Set(database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((oneRow) => oneRow.name));
+	return URI_CONTRACT_SCHEMA.tableList.filter((oneTable) => oneTable.rowRole === 'derived' && !heldTableNameSet.has(oneTable.tableName)).map((oneTable) => oneTable.tableName);
+};
+
+// schemaRefusal(database, { allowAbsentDerivedTables }) → '' | reason: every table with exactly its columns, every write-once trigger present.
+// A READER may open a file older than a derived table, whose identity rows are all it ever promised: whatever needs the absent table refuses
+// by name when it is asked. A writer may not (publishing into that file would leave a source unindexed)
+const schemaRefusal = (database, { allowAbsentDerivedTables } = {}) => {
+	const tableExemptionSet = new Set(allowAbsentDerivedTables ? absentDerivedTableNameListOf(database) : []);
 	const tableNameList = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all().map((oneRow) => oneRow.name);
 	const expectedTableNameList = URI_CONTRACT_SCHEMA.tableList.map((oneTable) => oneTable.tableName);
 	const strangerTableList = tableNameList.filter((tableName) => expectedTableNameList.indexOf(tableName) === -1);
-	const absentTableList = expectedTableNameList.filter((tableName) => tableNameList.indexOf(tableName) === -1);
+	const absentTableList = expectedTableNameList.filter((tableName) => tableNameList.indexOf(tableName) === -1 && !tableExemptionSet.has(tableName));
 	if (strangerTableList.length || absentTableList.length) {
 		const absentAreDerived = strangerTableList.length === 0 && absentTableList.every((tableName) => TABLE_BY_NAME[tableName].rowRole === 'derived');
 		return `the file's tables are not uriContract's (absent: ${absentTableList.join(', ') || 'none'}; not uriContract's: ${strangerTableList.join(', ') || 'none'})${absentAreDerived ? '; only derived tables are absent: graphBuilder -rebuildUriContractIndexes adds and fills them' : ''}`;
 	}
-	const columnFault = URI_CONTRACT_SCHEMA.tableList
+	const heldSchemaTableList = URI_CONTRACT_SCHEMA.tableList.filter((oneTable) => !tableExemptionSet.has(oneTable.tableName));
+	const columnFault = heldSchemaTableList
 		.map((oneTable) => {
 			const actual = database.prepare(`PRAGMA table_info(${oneTable.tableName})`).all().map((oneColumn) => oneColumn.name).join(',');
 			const expected = oneTable.columnList.map((oneColumn) => oneColumn.columnName).join(',');
@@ -144,7 +154,7 @@ const schemaRefusal = (database) => {
 		return columnFault;
 	}
 	const triggerNameSet = new Set(database.prepare("SELECT name FROM sqlite_master WHERE type = 'trigger'").all().map((oneRow) => oneRow.name));
-	const absentTriggerList = URI_CONTRACT_SCHEMA.tableList.reduce((soFar, oneTable) => soFar.concat(triggerNameListFor(oneTable)), []).filter((triggerName) => !triggerNameSet.has(triggerName));
+	const absentTriggerList = heldSchemaTableList.reduce((soFar, oneTable) => soFar.concat(triggerNameListFor(oneTable)), []).filter((triggerName) => !triggerNameSet.has(triggerName));
 	return absentTriggerList.length ? `the write-once triggers ${absentTriggerList.join(', ')} are absent (a uriContract without them can be edited)` : '';
 };
 
@@ -316,10 +326,14 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 			return { error: refusalText(`adding the absent derived tables: ${added.error}`, 'uriContractSchema.json') };
 		}
 	}
-	const schemaFault = schemaRefusal(database);
+	const schemaFault = schemaRefusal(database, { allowAbsentDerivedTables: accessMode === 'read' });
 	if (schemaFault) {
 		return { error: refusalText(schemaFault, 'a uriContract is created only by -seedUriContractFromRegistryJson, from uriContractSchema.json; nothing here converts or repairs a file') };
 	}
+
+	// a read-only open of a file older than a derived table: what needs the table says so, naming the action that adds it
+	const absentDerivedTableNameList = absentDerivedTableNameListOf(database);
+	const absentDerivedTablesFault = () => (absentDerivedTableNameList.length === 0 ? '' : refusalText(`this uriContract predates the derived tables ${absentDerivedTableNameList.join(', ')}`, 'graphBuilder -rebuildUriContractIndexes adds and fills them'));
 
 	// ----- READERS
 	const registryShape = () => {
@@ -373,6 +387,9 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 	// ⟪assertionIndex-110226⟫ the assertion index: one row, by primary or secondary index, with no block text read
 	const assertionRowFrom = (storedRow) => ({ rowOrdinal: storedRow.rowOrdinal, subjectStableId: storedRow.subjectStableId, assertionId: storedRow.assertionId, assertionRecord: storedRow.assertionRecordJson === null ? null : JSON.parse(storedRow.assertionRecordJson), interpretationEntry: storedRow.interpretationEntryJson === null ? null : JSON.parse(storedRow.interpretationEntryJson) });
 	const decisionBlockFormFor = (decisionBlockHash) => {
+		if (absentDerivedTablesFault()) {
+			return { error: absentDerivedTablesFault() };
+		}
 		const row = database.prepare('SELECT blockForm, subjectStandardName, subjectStandardVersion, edgeShapeFault, objectSourceVersionJson FROM derivedAssertionBlocks WHERE decisionBlockHash = ?').get(decisionBlockHash);
 		if (row !== undefined) {
 			return { blockForm: row };
@@ -536,6 +553,9 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		},
 	};
 	const derivedComparisonFor = () => {
+		if (absentDerivedTablesFault()) {
+			return { error: absentDerivedTablesFault() };
+		}
 		const listed = derivedSourceList();
 		if (listed.error) {
 			return { error: listed.error };
