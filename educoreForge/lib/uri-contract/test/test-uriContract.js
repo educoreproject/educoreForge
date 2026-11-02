@@ -490,6 +490,16 @@ harness.ok('a block the index refuses refuses the whole publish', refusedAppend.
 harness.equal('…and the block itself was rolled back with it (one transaction)', indexRead.decisionSchemaBlockTextFor(refusedBlockHash).frozenText, null);
 indexRead.close();
 
+// THE POINT OF THE INDEX IS THE PLAN: a block's rows sorted by rowOrdinal can be had by walking the primary sequence of the whole block, and
+// SQLite's planner takes that walk unless it is told otherwise (measured on the real store: 15,619 rows read, 4 ms, per element)
+const planWorld = seededContract();
+const planHandle = rawHandleFor(planWorld.uriContractFilePath);
+const planTextOf = (sqlText, parameterCount) => planHandle.prepare(`EXPLAIN QUERY PLAN ${sqlText}`).all(...Array.from({ length: parameterCount }, () => 'x')).map((oneStep) => oneStep.detail).join(' | ');
+const elementPlanSql = uriContractLib.ASSERTION_INDEX_SQL_BY_NAME.elementAssertionRowList(1);
+[['one assertion', uriContractLib.ASSERTION_INDEX_SQL_BY_NAME.assertionRow, 2, /derivedAssertionsByAssertion \(decisionBlockHash=\? AND assertionId=\?/], ['one curated assertion', uriContractLib.ASSERTION_INDEX_SQL_BY_NAME.curatedAssertionRow, 4, /derivedCuratedAssertionIdsByAssertion \(decisionBlockHash=\? AND assertionId=\? AND layerKey=\? AND versionTag=\?/], ["one element's rows", elementPlanSql, 2, /derivedAssertionsBySubject \(decisionBlockHash=\? AND subjectStableId=\?/]].forEach(([planLabel, sqlText, parameterCount, expectedPlan]) => harness.match(`${planLabel} seeks its own index, never walking the block`, planTextOf(sqlText, parameterCount), expectedPlan));
+planHandle.close();
+planWorld.uriContract.close();
+
 const assertionTableNameList = ['derivedAssertionSources', 'derivedAssertionBlocks', 'derivedAssertions', 'derivedCuratedAssertionIds'];
 const olderWorld = seededContract();
 olderWorld.uriContract.close();

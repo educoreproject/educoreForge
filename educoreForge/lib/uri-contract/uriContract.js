@@ -297,6 +297,14 @@ const identityRowsEqual = (leftRow, rightRow) => Object.keys(rightRow).every((co
 // THE STORE, over an injected handle
 // ---------------------------------------------------------------------
 
+// ASSERTION_INDEX_SQL_BY_NAME — the single-row reads of the assertion index. INDEXED BY is deliberate: unprompted, SQLite's planner satisfies
+// ORDER BY rowOrdinal by walking the primary sequence of the whole block, which is the scan this index exists to end (measured, and gated)
+const ASSERTION_INDEX_SQL_BY_NAME = Object.freeze({
+	assertionRow: 'SELECT * FROM derivedAssertions INDEXED BY derivedAssertionsByAssertion WHERE decisionBlockHash = ? AND assertionId = ? AND assertionRecordJson IS NOT NULL ORDER BY rowOrdinal LIMIT 1',
+	curatedAssertionRow: 'SELECT stored.* FROM derivedCuratedAssertionIds AS curated INDEXED BY derivedCuratedAssertionIdsByAssertion JOIN derivedAssertions AS stored ON stored.decisionBlockHash = curated.decisionBlockHash AND stored.rowOrdinal = curated.rowOrdinal WHERE curated.decisionBlockHash = ? AND curated.assertionId = ? AND curated.layerKey = ? AND curated.versionTag = ? ORDER BY curated.rowOrdinal LIMIT 1',
+	elementAssertionRowList: (subjectCount) => `SELECT * FROM derivedAssertions INDEXED BY derivedAssertionsBySubject WHERE decisionBlockHash = ? AND subjectStableId IN (${Array.from({ length: subjectCount }, () => '?').join(', ')}) ORDER BY rowOrdinal`,
+});
+
 const insertSqlFor = (tableName, row) => `INSERT INTO ${tableName} (${Object.keys(row).join(', ')}) VALUES (${Object.keys(row).map((columnName) => `@${columnName}`).join(', ')})`;
 
 const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
@@ -398,17 +406,14 @@ const uriContractFor = ({ database, accessMode, writerActionName } = {}) => {
 		return isHeld ? { error: refusalText(`decision schema block ${decisionBlockHash} is held but was never indexed`, 'graphBuilder -rebuildUriContractIndexes fills a source never indexed') } : { blockForm: null };
 	};
 	const assertionRowFor = ({ decisionBlockHash, assertionIri }) => {
-		const row = database.prepare('SELECT * FROM derivedAssertions WHERE decisionBlockHash = ? AND assertionId = ? AND assertionRecordJson IS NOT NULL ORDER BY rowOrdinal LIMIT 1').get(decisionBlockHash, assertionIri);
+		const row = database.prepare(ASSERTION_INDEX_SQL_BY_NAME.assertionRow).get(decisionBlockHash, assertionIri);
 		return { assertionRow: row === undefined ? null : assertionRowFrom(row) };
 	};
 	const curatedAssertionRowFor = ({ decisionBlockHash, assertionIri, layerKey, versionTag }) => {
-		const row = database.prepare('SELECT stored.* FROM derivedCuratedAssertionIds AS curated JOIN derivedAssertions AS stored ON stored.decisionBlockHash = curated.decisionBlockHash AND stored.rowOrdinal = curated.rowOrdinal WHERE curated.decisionBlockHash = ? AND curated.assertionId = ? AND curated.layerKey = ? AND curated.versionTag = ? ORDER BY curated.rowOrdinal LIMIT 1').get(decisionBlockHash, assertionIri, layerKey, versionTag);
+		const row = database.prepare(ASSERTION_INDEX_SQL_BY_NAME.curatedAssertionRow).get(decisionBlockHash, assertionIri, layerKey, versionTag);
 		return { assertionRow: row === undefined ? null : assertionRowFrom(row) };
 	};
-	const elementAssertionRowListFor = ({ decisionBlockHash, subjectStableIdList }) => {
-		const placeholderText = subjectStableIdList.map(() => '?').join(', ');
-		return { assertionRowList: database.prepare(`SELECT * FROM derivedAssertions WHERE decisionBlockHash = ? AND subjectStableId IN (${placeholderText}) ORDER BY rowOrdinal`).all(decisionBlockHash, ...subjectStableIdList).map(assertionRowFrom) };
-	};
+	const elementAssertionRowListFor = ({ decisionBlockHash, subjectStableIdList }) => ({ assertionRowList: database.prepare(ASSERTION_INDEX_SQL_BY_NAME.elementAssertionRowList(subjectStableIdList.length)).all(decisionBlockHash, ...subjectStableIdList).map(assertionRowFrom) });
 	const schemaBlockFor = (refId) => {
 		const row = database.prepare('SELECT * FROM schemaBlocks WHERE refId = ?').get(refId);
 		if (row === undefined) {
@@ -1048,4 +1053,4 @@ const uriContractReaderFor = ({ uriContractFilePath } = {}) => {
 	return { uriContractReader, uriContract };
 };
 
-module.exports = { openUriContractFile, uriContractFor, uriContractReaderFor, schemaSqlList, embeddingRefListOf, decisionBlockHashListOf, URI_CONTRACT_SCHEMA, URI_CONTRACT_RULES, moduleName };
+module.exports = { openUriContractFile, uriContractFor, uriContractReaderFor, schemaSqlList, ASSERTION_INDEX_SQL_BY_NAME, embeddingRefListOf, decisionBlockHashListOf, URI_CONTRACT_SCHEMA, URI_CONTRACT_RULES, moduleName };

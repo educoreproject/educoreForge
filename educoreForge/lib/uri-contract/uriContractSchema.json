@@ -299,8 +299,8 @@
 		"CREATE INDEX IF NOT EXISTS derivedAnswerEdgesBySubject ON derivedAnswerEdges(subjectStableId, hubSegment)",
 		"CREATE INDEX IF NOT EXISTS publishedManifestMembersByBlock ON publishedManifestMembers(schemaBlockRefId)",
 		"CREATE INDEX IF NOT EXISTS derivedHubCardsByHubDomain ON derivedHubCards(hubSegment, hubReleaseSegment, domainId, meaningIri)",
-		"CREATE INDEX IF NOT EXISTS derivedAssertionsByAssertion ON derivedAssertions(decisionBlockHash, assertionId)",
-		"CREATE INDEX IF NOT EXISTS derivedAssertionsBySubject ON derivedAssertions(decisionBlockHash, subjectStableId)",
-		"CREATE INDEX IF NOT EXISTS derivedCuratedAssertionIdsByAssertion ON derivedCuratedAssertionIds(decisionBlockHash, assertionId, layerKey, versionTag)"
+		"CREATE INDEX IF NOT EXISTS derivedAssertionsByAssertion ON derivedAssertions(decisionBlockHash, assertionId, rowOrdinal)",
+		"CREATE INDEX IF NOT EXISTS derivedAssertionsBySubject ON derivedAssertions(decisionBlockHash, subjectStableId, rowOrdinal)",
+		"CREATE INDEX IF NOT EXISTS derivedCuratedAssertionIdsByAssertion ON derivedCuratedAssertionIds(decisionBlockHash, assertionId, layerKey, versionTag, rowOrdinal)"
 	]
 }
