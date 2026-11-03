@@ -42,13 +42,22 @@ const splitCurie = (curieText) => {
 };
 
 const subjectCurieFor = ({ stableId, standardName, standardVersion } = {}) => {
-	const split = splitCurie(stableId);
+	const shapeCheck = splitCurie(stableId);
+	if (shapeCheck.error) {
+		return shapeCheck;
+	}
+	// ⟪cedsElementUri⟫ a stableId the scheme spells by a declared prefix is a CURIE here too, so the subject and the element IRI stay one spelling
+	const spelled = edcUri.elementSpellingFor({ standardName, elementStableId: stableId });
+	if (spelled.error) {
+		return spelled;
+	}
+	const split = splitCurie(spelled.elementSpelling);
 	if (split.error) {
 		return split;
 	}
-	// the whole stableId is encoded as the element path is, and the local part is what follows '<prefix>:' (':' is literal), so the
+	// the whole spelling is encoded as the element path is, and the local part is what follows '<prefix>:' (':' is literal), so the
 	// local part's pieces are exactly the path's pieces
-	const encodedPath = edcUri.encodeElementPath(stableId);
+	const encodedPath = edcUri.encodeElementPath(spelled.elementSpelling);
 	if (encodedPath.error) {
 		return { error: encodedPath.error };
 	}
@@ -71,7 +80,7 @@ const stableIdOfSubjectCurie = (subjectCurie) => {
 		return split;
 	}
 	const decoded = edcUri.decodeElementPath(split.localPart);
-	return decoded.error ? { error: decoded.error } : { stableId: `${split.prefix}:${decoded.text}` };
+	return decoded.error ? { error: decoded.error } : { stableId: edcUri.elementStableIdOfSpelling(`${split.prefix}:${decoded.text}`) };
 };
 
 module.exports = { subjectCurieFor, stableIdOfSubjectCurie, SUBJECT_CURIE_PREFIX_PATTERN, moduleName };

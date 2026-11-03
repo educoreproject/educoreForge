@@ -67,6 +67,8 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // each with its provenance (ruling (b), AMBER_JOURNEY 2026-10-26; defaultLayerByHub only settles a hub answered by two producers);
 // schemaBlock / decisionSchemaBlock → the frozen text, or for a licence-held standard 451 with the metadata and the reason (Q51, never
 // a bare 404); manifest kinds → 501 (ML5). Minted URIs keep their w3id spelling; the stub serves them under a private hostname.
+// ⟪cedsElementUri⟫ edcUri.parse hands every kind the STABLEID, even where the URI spells it by a declared prefix (CEDS/14.0.0.0/ceds:P000033 names
+// https://w3id.org/CEDStandards/terms/P000033), so the reader's rows and the answers are read and written in stableIds, and only a mint spells.
 
 const path = require('path');
 const edcUri = require(path.join(__dirname, 'edcUri'));
@@ -186,7 +188,8 @@ const interpretationOf = ({ kind, partByName, layerKey, version, registry, block
 	const { standardName, standardVersion, elementStableId } = partByName;
 	const elementMint = edcUri.mint({ kind: 'element', standardName, standardVersion, elementStableId });
 	const versionTag = version.administrationRecord.versionTag;
-	const standardKey = elementStableId.slice(0, elementStableId.indexOf(':'));
+	const elementSpelling = edcUri.elementSpellingFor({ standardName, elementStableId }).elementSpelling;
+	const standardKey = elementSpelling.slice(0, elementSpelling.indexOf(':'));
 	const isMachine = version.contentIdBasis === 'sortedMemberBlockHashList';
 	const blockList = isMachine ? version.memberBlockList.filter((oneMember) => oneMember.pairKey.split('::')[1].split('@')[0] === standardKey) : [version.wholeSetBlock];
 	const readingContext = { blockTextForHash, uriContractReader, isMachine, elementStableId, elementIri: elementMint.uri, standardName, standardVersion, layer: found.layer, version };
@@ -335,6 +338,9 @@ const elementAnswerFor = ({ partByName, iri, uriContractReader }, done) => {
 				return;
 			}
 			const elementUriOf = (stableId) => mintUriOf({ kind: 'element', standardName, standardVersion, elementStableId: stableId });
+			// a sibling the scheme gives no URI (a CEDS row outside its declared prefix) is named by its stableId, never left a null in the list
+			const siblingMintList = elementRecord.siblingStableIdList.map((oneStableId) => ({ stableId: oneStableId, uri: elementUriOf(oneStableId) }));
+			const siblingWithoutUriStableIdList = siblingMintList.filter((oneSibling) => oneSibling.uri === undefined).map((oneSibling) => oneSibling.stableId);
 			done(answer(200, {
 				kind: 'element',
 				element: iri,
@@ -343,7 +349,8 @@ const elementAnswerFor = ({ partByName, iri, uriContractReader }, done) => {
 				node: elementRecord.node,
 				schemaBlock: mintUriOf({ kind: 'schemaBlock', schemaBlockRefId: elementRecord.schemaBlockRefId }),
 				parent: elementRecord.parentStableId === null ? null : elementUriOf(elementRecord.parentStableId),
-				siblingList: elementRecord.siblingStableIdList.map(elementUriOf),
+				siblingList: siblingMintList.filter((oneSibling) => oneSibling.uri !== undefined).map((oneSibling) => oneSibling.uri),
+				...(siblingWithoutUriStableIdList.length === 0 ? {} : { siblingWithoutUriStableIdList }),
 				interpretationList: layerVersionList.map((oneLayerVersion) => ({ ...oneLayerVersion, pinned: mintUriOf({ kind: 'interpretationPinned', standardName, standardVersion, elementStableId, layerKey: oneLayerVersion.layerKey, versionTag: oneLayerVersion.versionTag }), floating: mintUriOf({ kind: 'interpretationFloating', standardName, standardVersion, elementStableId, layerKey: oneLayerVersion.layerKey }) })),
 			}));
 		});

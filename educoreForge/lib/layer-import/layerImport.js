@@ -151,10 +151,11 @@ const resolveImportRows = ({ sssomText, prefixExpansionByPrefix, goldCapture, im
 
 // layerEntryFor — the registry entry an import appends the first time it sees a slug: its standards and hubs are those its ACCEPTED rows name
 const layerEntryFor = ({ layerKey, slug, authorIri, acceptedList, goldCapture, importRules }) => {
-	const standardKeyOf = (stableId) => stableId.slice(0, stableId.indexOf(':'));
 	const standardByStandardKey = acceptedList.reduce((soFar, oneAccepted) => {
-		const standardKey = standardKeyOf(oneAccepted.subjectStableId);
-		return soFar[standardKey] !== undefined ? soFar : { ...soFar, [standardKey]: { standardKey, standardName: oneAccepted.standardName, sourceIri: oneAccepted.subjectIri.slice(0, oneAccepted.subjectIri.length - edcUri.encodeSegment(oneAccepted.subjectStableId.slice(standardKey.length + 1)).segmentText.length) } };
+		// ⟪cedsElementUri⟫ the spelling, not the stableId: a CEDS stableId is an absolute IRI, and its standard key is the prefix the scheme declares
+		const elementSpelling = edcUri.elementSpellingFor({ standardName: oneAccepted.standardName, elementStableId: oneAccepted.subjectStableId }).elementSpelling;
+		const standardKey = elementSpelling.slice(0, elementSpelling.indexOf(':'));
+		return soFar[standardKey] !== undefined ? soFar : { ...soFar, [standardKey]: { standardKey, standardName: oneAccepted.standardName, sourceIri: oneAccepted.subjectIri.slice(0, oneAccepted.subjectIri.length - edcUri.encodeSegment(elementSpelling.slice(standardKey.length + 1)).segmentText.length) } };
 	}, {});
 	const hubList = goldCapture.hubList
 		.filter((oneHub) => acceptedList.some((oneAccepted) => !oneAccepted.isAbstention && oneAccepted.objectIri.indexOf(oneHub.namespace) === 0))
@@ -261,4 +262,4 @@ const appendVersionToCandidate = ({ candidateLayerRegistry, layerKey, version, r
 	return reloaded.error ? { error: reloaded.error } : reloaded.registry.withAppendedVersion({ layerKey, version });
 };
 
-module.exports = { resolveImportRows, importLayer, LAYER_SET_PAIR_KEY_PREFIX, MANDATORY_COLUMN_LIST, moduleName };
+module.exports = { resolveImportRows, importLayer, layerEntryFor, LAYER_SET_PAIR_KEY_PREFIX, MANDATORY_COLUMN_LIST, moduleName };
