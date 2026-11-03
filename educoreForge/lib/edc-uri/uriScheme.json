@@ -10,6 +10,13 @@
 	},
 	"pathValuedPartName": "elementStableId",
 	"elementPathSuffixTemplateList": ["", "@{layerKey}", "@{layerKey}/{versionTag}"],
+	"elementPathPrefixDeclaration": {
+		"about": "(cedsElementUri-110326, TQ 2026-11-03) A standard whose stableIds are absolute IRIs cannot stand in the path-valued part: 'https://' holds an empty piece. A row here spells such a stableId as <curiePrefix>:<the rest>, under that one standard, and parsing reverses it exactly: {base}CEDS/14.0.0.0/ceds:P000033 names https://w3id.org/CEDStandards/terms/P000033. One prefix for one standard, in both directions: a stableId under a listed standard outside its stableIdExpansion is refused by name, and so is a listed curiePrefix under any other standard. ONLY the URI's spelling moves. The stableId in the store, in partByName and in every hash stays the IRI: assertionIdentity.nodeIriFor takes an absolute stableId as its own IRI and never mints it.",
+		"standardPartName": "standardName",
+		"declarationList": [
+			{ "standardName": "CEDS", "curiePrefix": "ceds", "stableIdExpansion": "https://w3id.org/CEDStandards/terms/" }
+		]
+	},
 	"partPatternByPartName": {
 		"about": "a part listed here must match its pattern at mint and at parse (Q43, Q51: a content hash is 64 lowercase hex, so a label can never pass for one)",
 		"manifestRefId": "^[0-9a-f]{64}$",

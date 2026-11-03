@@ -14,6 +14,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //   decodeSegment(segmentText)    → { text } | { error }               refuses a malformed escape or an unencoded character
 //   encodeElementPath(text)       → { pathText } | { error }           ⟪ML3.1⟫ the path-valued part: each '/'-piece encoded, '/' kept
 //   decodeElementPath(pathText)   → { text } | { error }               ⟪ML3.1⟫ its inverse, piece by piece
+//   elementSpellingFor({ standardName, elementStableId }) → { elementSpelling } | { error }   ⟪cedsElementUri⟫ what the URI writes for a stableId
+//   elementStableIdFor({ standardName, elementSpelling }) → { elementStableId } | { error }   its exact inverse, under one standard
+//   elementStableIdOfSpelling(elementSpelling) → elementStableId                              the inverse by prefix alone (a subject CURIE names no standard)
 //
 // TRAP: a stableId is NOT URI-safe (measured on the gold: spaces, commas, and '@' in 9,577 SIF ids). Inside a single-segment
 // value '/' and '@' are always encoded; inside the path-valued part (Q42) only '/' is literal, so '@' still ends the path.
@@ -112,6 +115,23 @@ const schemeLoadRefusalFor = (scheme) => {
 	if (strayPatternPart !== undefined) {
 		return `partPatternByPartName names '${strayPatternPart}', which no template carries or whose pattern is not anchored`;
 	}
+	// ⟪cedsElementUri⟫ one prefix for one standard, each stated in full, and every element template names the standard that owns its path
+	const prefixDeclaration = scheme.elementPathPrefixDeclaration;
+	if (prefixDeclaration === null || typeof prefixDeclaration !== 'object' || typeof prefixDeclaration.standardPartName !== 'string' || !Array.isArray(prefixDeclaration.declarationList)) {
+		return 'elementPathPrefixDeclaration is absent or malformed (standardPartName, declarationList; state [] for none)';
+	}
+	const badDeclaration = prefixDeclaration.declarationList.find((oneDeclaration) => typeof oneDeclaration.standardName !== 'string' || oneDeclaration.standardName.length === 0 || typeof oneDeclaration.curiePrefix !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(oneDeclaration.curiePrefix) || typeof oneDeclaration.stableIdExpansion !== 'string' || !scheme.absoluteIriPrefixList.some((onePrefix) => oneDeclaration.stableIdExpansion.indexOf(onePrefix) === 0));
+	if (badDeclaration !== undefined) {
+		return `elementPathPrefixDeclaration row ${JSON.stringify(badDeclaration)} needs a standardName, a curiePrefix the segment encoding keeps literal, and an absolute stableIdExpansion`;
+	}
+	const repeatedDeclarationField = ['standardName', 'curiePrefix', 'stableIdExpansion'].find((oneFieldName) => new Set(prefixDeclaration.declarationList.map((oneDeclaration) => oneDeclaration[oneFieldName])).size !== prefixDeclaration.declarationList.length);
+	if (repeatedDeclarationField !== undefined) {
+		return `elementPathPrefixDeclaration repeats a ${repeatedDeclarationField}: one prefix for one standard`;
+	}
+	const unownedPathKind = scheme.kindList.find((oneKindRow) => oneKindRow.template.indexOf(`{${pathValuedPartName}}`) !== -1 && oneKindRow.template.indexOf(`{${prefixDeclaration.standardPartName}}`) === -1);
+	if (unownedPathKind !== undefined) {
+		return `kind '${unownedPathKind.kind}' carries {${pathValuedPartName}} but not {${prefixDeclaration.standardPartName}}, so its element path has no owning standard`;
+	}
 	// ⟪ML3.1, Q5⟫ paging is declared: a fixed positive page size, the query parameter, and listing kinds the scheme carries
 	const listingPaging = scheme.listingPaging;
 	if (listingPaging === null || typeof listingPaging !== 'object' || !Number.isInteger(listingPaging.pageSize) || listingPaging.pageSize < 1 || !Number.isInteger(listingPaging.firstPageNumber) || typeof listingPaging.queryParameterName !== 'string' || !/^[a-z][A-Za-z]*$/.test(listingPaging.queryParameterName) || !Array.isArray(listingPaging.listingKindList)) {
@@ -178,6 +198,41 @@ const PART_PATTERN_BY_PART_NAME = Object.freeze(
 		.filter((onePartName) => onePartName !== 'about')
 		.reduce((soFar, onePartName) => ({ ...soFar, [onePartName]: new RegExp(URI_SCHEME.partPatternByPartName[onePartName]) }), {}),
 );
+
+// ⟪cedsElementUri⟫ the element's spelling in a URI. A standard with no declaration writes its stableId as it stands. elementSpellingFor need not
+// refuse a declared prefix under another standard: elementStableIdFor does, and every mint is checked by its own parse.
+const ELEMENT_PATH_PREFIX_DECLARATION = URI_SCHEME.elementPathPrefixDeclaration;
+const PREFIX_DECLARATION_BY_STANDARD_NAME = Object.freeze(ELEMENT_PATH_PREFIX_DECLARATION.declarationList.reduce((soFar, oneDeclaration) => ({ ...soFar, [oneDeclaration.standardName]: oneDeclaration }), {}));
+const PREFIX_DECLARATION_BY_CURIE_PREFIX = Object.freeze(ELEMENT_PATH_PREFIX_DECLARATION.declarationList.reduce((soFar, oneDeclaration) => ({ ...soFar, [oneDeclaration.curiePrefix]: oneDeclaration }), {}));
+const declarationForSpelling = (elementSpelling) => PREFIX_DECLARATION_BY_CURIE_PREFIX[elementSpelling.slice(0, Math.max(elementSpelling.indexOf(':'), 0))];
+
+const elementSpellingFor = ({ standardName, elementStableId }) => {
+	const ownDeclaration = PREFIX_DECLARATION_BY_STANDARD_NAME[standardName];
+	if (ownDeclaration === undefined) {
+		return { elementSpelling: elementStableId };
+	}
+	if (elementStableId.indexOf(ownDeclaration.stableIdExpansion) !== 0) {
+		return { error: refuse.byName({ moduleName, what: `the ${standardName} stableId '${elementStableId}' is outside ${ownDeclaration.stableIdExpansion}, so it has no element URI`, where: 'uriScheme.json elementPathPrefixDeclaration' }).message };
+	}
+	return { elementSpelling: `${ownDeclaration.curiePrefix}:${elementStableId.slice(ownDeclaration.stableIdExpansion.length)}` };
+};
+
+const elementStableIdOfSpelling = (elementSpelling) => {
+	const declaration = declarationForSpelling(elementSpelling);
+	return declaration === undefined ? elementSpelling : `${declaration.stableIdExpansion}${elementSpelling.slice(declaration.curiePrefix.length + 1)}`;
+};
+
+const elementStableIdFor = ({ standardName, elementSpelling }) => {
+	const ownDeclaration = PREFIX_DECLARATION_BY_STANDARD_NAME[standardName];
+	const spellingDeclaration = declarationForSpelling(elementSpelling);
+	if (ownDeclaration === undefined) {
+		return spellingDeclaration === undefined ? { elementStableId: elementSpelling } : { error: refuse.byName({ moduleName, what: `'${elementSpelling}' under standard '${standardName}': the prefix '${spellingDeclaration.curiePrefix}' belongs to standard '${spellingDeclaration.standardName}'`, where: 'uriScheme.json elementPathPrefixDeclaration (one prefix for one standard)' }).message };
+	}
+	if (spellingDeclaration !== ownDeclaration) {
+		return { error: refuse.byName({ moduleName, what: `'${elementSpelling}' under standard '${standardName}' does not begin with its prefix '${ownDeclaration.curiePrefix}:'`, where: 'uriScheme.json elementPathPrefixDeclaration (one spelling per element)' }).message };
+	}
+	return { elementStableId: elementStableIdOfSpelling(elementSpelling) };
+};
 
 const encodeSegment = (text) => {
 	if (typeof text !== 'string') {
@@ -338,7 +393,13 @@ const parse = (uriOrCurie) => {
 	if (matchList.length > 1) {
 		return { error: refuse.byName({ moduleName, what: `'${uriOrCurie}' is ambiguous: it matches ${matchList.map((oneCandidate) => oneCandidate.kind).join(' and ')}`, where: 'a URI names exactly one kind; uriScheme.json templates must stay disjoint' }).message };
 	}
-	return { kind: matchList[0].kind, partByName: matchList[0].matched.partByName };
+	const { partByName } = matchList[0].matched;
+	if (partByName[PATH_VALUED_PART_NAME] === undefined) {
+		return { kind: matchList[0].kind, partByName };
+	}
+	// the URI writes the spelling; partByName, like everything downstream, carries the stableId
+	const elementRead = elementStableIdFor({ standardName: partByName[ELEMENT_PATH_PREFIX_DECLARATION.standardPartName], elementSpelling: partByName[PATH_VALUED_PART_NAME] });
+	return elementRead.error ? { error: elementRead.error } : { kind: matchList[0].kind, partByName: { ...partByName, [PATH_VALUED_PART_NAME]: elementRead.elementStableId } };
 };
 
 const mint = ({ kind, ...partByName } = {}) => {
@@ -377,7 +438,11 @@ const mint = ({ kind, ...partByName } = {}) => {
 				segmentText += partText;
 				continue;
 			}
-			const encoded = oneToken.partName === PATH_VALUED_PART_NAME ? encodeElementPath(partText) : encodeSegment(partText);
+			const spelled = oneToken.partName === PATH_VALUED_PART_NAME ? elementSpellingFor({ standardName: partByName[ELEMENT_PATH_PREFIX_DECLARATION.standardPartName], elementStableId: partText.normalize('NFC') }) : {};
+			if (spelled.error) {
+				return { error: spelled.error };
+			}
+			const encoded = oneToken.partName === PATH_VALUED_PART_NAME ? encodeElementPath(spelled.elementSpelling) : encodeSegment(partText);
 			if (encoded.error) {
 				return { error: `${moduleName}: kind '${kind}' part '${oneToken.partName}': ${encoded.error}` };
 			}
@@ -399,4 +464,4 @@ const mint = ({ kind, ...partByName } = {}) => {
 	return { uri, curie: `${URI_SCHEME.curiePrefix}:${pathText}`, kind };
 };
 
-module.exports = { mint, parse, encodeSegment, decodeSegment, encodeElementPath, decodeElementPath, schemeLoadRefusalFor, KIND_LIST, RESERVED_WORD_LIST, URI_SCHEME, moduleName };
+module.exports = { mint, parse, encodeSegment, decodeSegment, encodeElementPath, decodeElementPath, elementSpellingFor, elementStableIdFor, elementStableIdOfSpelling, schemeLoadRefusalFor, KIND_LIST, RESERVED_WORD_LIST, URI_SCHEME, moduleName };
