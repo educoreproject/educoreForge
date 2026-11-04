@@ -30,6 +30,16 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //        domainName, domainUri, domainDefinition, cardCount }] }   ordered by domainId
 //   15 hubDomainCardListFor(manifestSelector, { hubSegment, hubReleaseSegment, domainId, pageNumber, pageSize }) → { totalCount, cardList:
 //        [{ meaningIri, label, definition, propertyName, propertyKey, referenceTier }] }   ordered by meaningIri
+//   16 meaningCardFor(meaningIri) → { meaningIri, hubName, hubVersion, hubSegment, hubReleaseSegment, label, definition, propertyName, propertyKey,
+//        referenceTier, domainId, domainName, domainUri, domainDefinition, manifestList: [{ manifestRefId, publicLabel, publishedAt, latestStatus }] }
+//   17 mappedElementPageFor(meaningIri, { pageNumber, pageSize }) → { totalCount, distinctElementCount, mappedElementList: [{ standardName, standardVersion,
+//        elementStableId, elementName, relationType, layerKey | null, versionTag | null, manifestRefIdList }] }   ordered by standard, then elementStableId
+//   18 manifestListHoldingElementFor({ standardName, standardVersion, elementStableId }) → [{ manifestRefId, publicLabel }]   empty: no published block holds it
+//   19 manifestHoldsHubFor({ manifestRefId }, { hubSegment }) → boolean
+//
+// WHAT "THE STORE KNOWS" MEANS. A card or element is known when a schema block a published manifest lists holds it. Manifests are only ever added and a block
+// never changes, so a thing once known stays known: a card that a later manifest leaves out still answers from the manifest that held it, and it names which do.
+// A listing asked for something its manifest does not hold (10, 15) answers null; a real hub with no domains (14) answers its empty page.
 //
 // DECISIONS stated once: pages are numbered from 1 and pageSize is 1..PAGE_SIZE_LIMIT (anything else refused by name); "latestStatus"
 // is always { registrationStatus, changedAt }; a decisionBlockHash names the layer version that FIRST published it among layers that
@@ -218,8 +228,12 @@ const uriContractRelationsFor = ({ database, uriContract }) => {
 		}
 		const fromSql = 'FROM derivedElementIndex AS elements JOIN publishedManifestMembers AS members ON members.schemaBlockRefId = elements.schemaBlockRefId WHERE members.manifestRefId = ? AND elements.standardName = ? AND elements.standardVersion = ?';
 		const parameterList = [found.manifestRow.manifestRefId, standardName, standardVersion];
+		const totalCount = database.prepare(`SELECT COUNT(DISTINCT elements.elementStableId) AS rowCount ${fromSql}`).get(...parameterList).rowCount;
+		if (totalCount === 0) {
+			return { answer: null };
+		}
 		const elementList = database.prepare(`SELECT DISTINCT elements.elementStableId AS elementStableId, json_extract(elements.nodeJson, '$.properties.role[0]') AS role ${fromSql} ORDER BY elements.elementStableId LIMIT ? OFFSET ?`).all(...parameterList, pageSize, (pageNumber - 1) * pageSize).map((oneRow) => ({ elementStableId: oneRow.elementStableId, role: oneRow.role === undefined ? null : oneRow.role }));
-		return { answer: { totalCount: database.prepare(`SELECT COUNT(DISTINCT elements.elementStableId) AS rowCount ${fromSql}`).get(...parameterList).rowCount, elementList } };
+		return { answer: { totalCount, elementList } };
 	};
 
 	// 11
@@ -264,6 +278,9 @@ const uriContractRelationsFor = ({ database, uriContract }) => {
 		}
 		const scopeSql = `${cardFromSql} AND cards.hubSegment = ? AND cards.hubReleaseSegment = ? AND cards.domainId IS NOT NULL`;
 		const parameterList = [found.manifestRow.manifestRefId, hubSegment, hubReleaseSegment];
+		if (database.prepare(`SELECT 1 AS isHeld ${cardFromSql} AND cards.hubSegment = ? AND cards.hubReleaseSegment = ? LIMIT 1`).get(...parameterList) === undefined) {
+			return { answer: null };
+		}
 		const domainList = database.prepare(`SELECT cards.domainId AS domainId, MIN(cards.domainName) AS domainName, MIN(cards.domainUri) AS domainUri, MIN(cards.domainDefinition) AS domainDefinition, COUNT(DISTINCT cards.meaningIri) AS cardCount ${scopeSql} GROUP BY cards.domainId ORDER BY cards.domainId LIMIT ? OFFSET ?`).all(...parameterList, pageSize, (pageNumber - 1) * pageSize);
 		return { answer: { totalCount: database.prepare(`SELECT COUNT(DISTINCT cards.domainId) AS rowCount ${scopeSql}`).get(...parameterList).rowCount, domainList } };
 	};
@@ -278,11 +295,65 @@ const uriContractRelationsFor = ({ database, uriContract }) => {
 		}
 		const scopeSql = `${cardFromSql} AND cards.hubSegment = ? AND cards.hubReleaseSegment = ? AND cards.domainId = ?`;
 		const parameterList = [found.manifestRow.manifestRefId, hubSegment, hubReleaseSegment, domainId];
+		const totalCount = database.prepare(`SELECT COUNT(DISTINCT cards.meaningIri) AS rowCount ${scopeSql}`).get(...parameterList).rowCount;
+		if (totalCount === 0) {
+			return { answer: null };
+		}
 		const cardList = database.prepare(`SELECT DISTINCT cards.meaningIri AS meaningIri, cards.label AS label, cards.definition AS definition, cards.propertyName AS propertyName, cards.propertyKey AS propertyKey, cards.referenceTier AS referenceTier ${scopeSql} ORDER BY cards.meaningIri LIMIT ? OFFSET ?`).all(...parameterList, pageSize, (pageNumber - 1) * pageSize);
-		return { answer: { totalCount: database.prepare(`SELECT COUNT(DISTINCT cards.meaningIri) AS rowCount ${scopeSql}`).get(...parameterList).rowCount, cardList } };
+		return { answer: { totalCount, cardList } };
 	};
 
-	return { manifestHubListFor, hubDomainListFor, hubDomainCardListFor, layerListFor, elementRecordFor, publishedLayerVersionListForStandard, mappingsToMeaningFor, layerHistoryFor, layerVersionRecordFor, manifestInventoryFor, rootCountsFor, publishedManifestListFor, manifestStandardListFor, manifestElementListFor, agentListFor };
+	// 16: a card's row, through the table's primary index (block, then card): each block a manifest lists is one probe, so no scan of the card table, whose only other
+	// index leads with the domain. A card two blocks hold answers from the block indexed first, as an element does (1).
+	const meaningCardFor = (meaningIri) => {
+		const cardRowList = database.prepare('SELECT cards.* FROM (SELECT DISTINCT schemaBlockRefId FROM publishedManifestMembers) AS listedBlocks CROSS JOIN derivedHubCards AS cards ON cards.schemaBlockRefId = listedBlocks.schemaBlockRefId AND cards.meaningIri = ? ORDER BY cards.rowid').all(meaningIri);
+		if (cardRowList.length === 0) {
+			return { answer: null };
+		}
+		const manifestRowList = database.prepare(`SELECT DISTINCT manifests.rowid AS manifestRowId, manifests.manifestRefId AS manifestRefId, manifests.publicLabel AS publicLabel, manifests.publishedAt AS publishedAt FROM publishedManifestMembers AS members JOIN publishedManifests AS manifests ON manifests.manifestRefId = members.manifestRefId WHERE members.schemaBlockRefId IN (${cardRowList.map(() => '?').join(', ')}) ORDER BY manifests.rowid`).all(...cardRowList.map((oneRow) => oneRow.schemaBlockRefId));
+		const { schemaBlockRefId, ...cardFacts } = cardRowList[0];
+		return { answer: { ...cardFacts, manifestList: manifestRowList.map(({ manifestRowId, ...oneManifest }) => ({ ...oneManifest, latestStatus: latestManifestStatusOf(oneManifest.manifestRefId) })) } };
+	};
+
+	// 17: one row per element, relation and decision block, however many manifests hold it; the name is the element's own property, from the block that indexed it first (1)
+	const mappedElementPageFor = (meaningIri, { pageNumber, pageSize } = {}) => {
+		const fault = pageRefusal({ pageNumber, pageSize });
+		if (fault) {
+			return { error: fault };
+		}
+		const loaded = loadedRegistry();
+		if (loaded.error) {
+			return loaded;
+		}
+		const versionByHash = firstPublishingVersionByHash(loaded.registry);
+		const groupedSql = 'FROM derivedAnswerEdges AS edges JOIN publishedManifestMembers AS members ON members.schemaBlockRefId = edges.schemaBlockRefId WHERE edges.meaningIri = ? GROUP BY edges.subjectStandardName, edges.subjectStandardVersion, edges.subjectStableId, edges.relationType, edges.decisionBlockHash';
+		const countRow = database.prepare(`SELECT COUNT(*) AS totalCount, COUNT(DISTINCT elementIdentity) AS distinctElementCount FROM (SELECT edges.subjectStandardName || char(0) || edges.subjectStandardVersion || char(0) || edges.subjectStableId AS elementIdentity ${groupedSql})`).get(meaningIri);
+		const rowList = database.prepare(`SELECT edges.subjectStandardName AS standardName, edges.subjectStandardVersion AS standardVersion, edges.subjectStableId AS elementStableId, edges.relationType AS relationType, edges.decisionBlockHash AS decisionBlockHash, group_concat(DISTINCT members.manifestRefId) AS manifestRefIdText,
+			(SELECT json_extract(elements.nodeJson, '$.properties.name[0]') FROM derivedElementIndex AS elements WHERE elements.standardName = edges.subjectStandardName AND elements.standardVersion = edges.subjectStandardVersion AND elements.elementStableId = edges.subjectStableId ORDER BY elements.rowid LIMIT 1) AS elementName
+			${groupedSql} ORDER BY edges.subjectStandardName, edges.subjectStableId, edges.relationType, edges.decisionBlockHash LIMIT ? OFFSET ?`).all(meaningIri, pageSize, (pageNumber - 1) * pageSize);
+		return {
+			answer: {
+				totalCount: countRow.totalCount,
+				distinctElementCount: countRow.distinctElementCount,
+				mappedElementList: rowList.map(({ decisionBlockHash, manifestRefIdText, ...oneRow }) => {
+					const publishingVersion = decisionBlockHash === null ? undefined : versionByHash[decisionBlockHash];
+					return { ...oneRow, layerKey: publishingVersion === undefined ? null : publishingVersion.layerKey, versionTag: publishingVersion === undefined ? null : publishingVersion.versionTag, manifestRefIdList: manifestRefIdText.split(',') };
+				}),
+			},
+		};
+	};
+
+	// 18
+	const manifestListHoldingElementFor = ({ standardName, standardVersion, elementStableId } = {}) => ({
+		answer: database.prepare('SELECT DISTINCT manifests.manifestRefId AS manifestRefId, manifests.publicLabel AS publicLabel FROM derivedElementIndex AS elements JOIN publishedManifestMembers AS members ON members.schemaBlockRefId = elements.schemaBlockRefId JOIN publishedManifests AS manifests ON manifests.manifestRefId = members.manifestRefId WHERE elements.standardName = ? AND elements.standardVersion = ? AND elements.elementStableId = ? ORDER BY manifests.rowid').all(standardName, standardVersion, elementStableId),
+	});
+
+	// 19: led by the hub's index, so a hub the store has never held costs one probe
+	const manifestHoldsHubFor = ({ manifestRefId } = {}, { hubSegment } = {}) => ({
+		answer: database.prepare('SELECT 1 AS isHeld FROM derivedHubCards AS cards WHERE cards.hubSegment = ? AND EXISTS (SELECT 1 FROM publishedManifestMembers AS members WHERE members.manifestRefId = ? AND members.schemaBlockRefId = cards.schemaBlockRefId) LIMIT 1').get(hubSegment, manifestRefId) !== undefined,
+	});
+
+	return { meaningCardFor, mappedElementPageFor, manifestListHoldingElementFor, manifestHoldsHubFor, manifestHubListFor, hubDomainListFor, hubDomainCardListFor, layerListFor, elementRecordFor, publishedLayerVersionListForStandard, mappingsToMeaningFor, layerHistoryFor, layerVersionRecordFor, manifestInventoryFor, rootCountsFor, publishedManifestListFor, manifestStandardListFor, manifestElementListFor, agentListFor };
 };
 
 module.exports = { uriContractRelationsFor, PAGE_SIZE_LIMIT, moduleName };

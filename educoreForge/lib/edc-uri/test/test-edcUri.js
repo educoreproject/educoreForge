@@ -195,6 +195,7 @@ harness.match('TWIN: a template with a segment after {elementStableId} is refuse
 harness.match('TWIN: a path part declared verbatim is refused at load', schemeLoadRefusalFor(plantedScheme({ kind: 'element', verbatimPartList: ['elementStableId'] })), /path-valued part 'elementStableId' as verbatim/);
 harness.match('TWIN: a closed value equal to a reserved word is refused at load', schemeLoadRefusalFor(plantedScheme({ kind: 'vocabularyTerm', closedValueListByPartName: { termName: ['bestMatch', 'hub'] } })), /reserved word 'hub'/);
 harness.match('TWIN (Q5): a paging rule naming a kind the scheme lacks is refused at load', schemeLoadRefusalFor({ ...URI_SCHEME, listingPaging: { ...URI_SCHEME.listingPaging, listingKindList: ['manifestList', 'ghostList'] } }), /names 'ghostList'/);
+harness.match('TWIN (cardUriAnswers): a page size for a kind that is no listing is refused at load', schemeLoadRefusalFor({ ...URI_SCHEME, listingPaging: { ...URI_SCHEME.listingPaging, pageSizeByKind: { manifest: 20 } } }), /pageSizeByKind is absent or malformed/);
 harness.match('TWIN (Q5): a page size of 0 is refused at load', schemeLoadRefusalFor({ ...URI_SCHEME, listingPaging: { ...URI_SCHEME.listingPaging, pageSize: 0 } }), /listingPaging is absent or malformed/);
 harness.match('TWIN: a hash pattern for a part no template carries is refused at load', schemeLoadRefusalFor({ ...URI_SCHEME, partPatternByPartName: { ...URI_SCHEME.partPatternByPartName, ghostRefId: '^x$' } }), /names 'ghostRefId'/);
 

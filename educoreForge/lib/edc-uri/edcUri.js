@@ -141,6 +141,10 @@ const schemeLoadRefusalFor = (scheme) => {
 	if (strayListingKind !== undefined) {
 		return `listingPaging.listingKindList names '${strayListingKind}', which is not a kind`;
 	}
+	const pageSizeByKind = listingPaging.pageSizeByKind;
+	if (pageSizeByKind === null || typeof pageSizeByKind !== 'object' || Object.keys(pageSizeByKind).some((oneKind) => !listingPaging.listingKindList.includes(oneKind) || !Number.isInteger(pageSizeByKind[oneKind]) || pageSizeByKind[oneKind] < 1)) {
+		return 'listingPaging.pageSizeByKind is absent or malformed (each row a listing kind and a positive integer)';
+	}
 	const reservedWordList = reservedWordListFor(scheme.kindList);
 	const seenKindSet = new Set();
 	for (let kindIndex = 0; kindIndex < scheme.kindList.length; kindIndex++) {
