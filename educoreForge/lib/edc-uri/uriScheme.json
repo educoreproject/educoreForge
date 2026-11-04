@@ -24,11 +24,12 @@
 		"decisionBlockHash": "^[0-9a-f]{64}$"
 	},
 	"listingPaging": {
-		"about": "(ML3.1 Q5) a listing kind answers one page at a time: <listing URI>?<queryParameterName>=N, N an integer from firstPageNumber; absent = the first page; 0, negative, non-integer or past the end is refused by name (no clamping). pageSize is FIXED (no client page size), so a cited page means the same slice for everyone.",
+		"about": "(ML3.1 Q5) a listing kind answers one page at a time: <listing URI>?<queryParameterName>=N, N an integer from firstPageNumber; absent = the first page; 0, negative, non-integer or past the end is refused by name (no clamping). pageSize is FIXED (no client page size), and a kind in pageSizeByKind answers that size instead, because a card's answer carries its facts and counts beside the elements that map to it and must stay small enough for a model to read, so a cited page means the same slice for everyone.",
 		"queryParameterName": "page",
 		"pageSize": 500,
+		"pageSizeByKind": { "meaning": 15 },
 		"firstPageNumber": 1,
-		"listingKindList": ["manifestList", "manifestElementList", "manifestElementListByContent", "agentList", "hubDomainList", "hubDomainListByContent", "hubDomainCardList", "hubDomainCardListByContent"]
+		"listingKindList": ["meaning", "manifestList", "manifestElementList", "manifestElementListByContent", "agentList", "hubDomainList", "hubDomainListByContent", "hubDomainCardList", "hubDomainCardListByContent"]
 	},
 	"absoluteIriPrefixList": ["https://", "http://"],
 	"predicatePrefixExpansion": {

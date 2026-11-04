@@ -57,14 +57,22 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //           domainName, domainUri, domainDefinition, cardCount }] } | null))   ordered by domainId (code point)
 //       hubDomainCardListFor(address, { hubSegment, hubReleaseSegment, domainId, pageNumber, pageSize }, cb(err, { totalCount,
 //           cardList: [{ meaningIri, label, definition, propertyName, propertyKey, referenceTier }] } | null))   ordered by meaningIri
+//     ⟪cardUriAnswers⟫ what a card is, who maps to it, and whether a thing asked about exists at all (uriContractRelations.js 16-19 say what "the store knows" means)
+//       meaningCardFor(meaningIri, cb(err, { meaningIri, hubName, hubVersion, hubSegment, hubReleaseSegment, label, definition, propertyName, propertyKey, referenceTier,
+//           domainId, domainName, domainUri, domainDefinition, manifestList: [{ manifestRefId, publicLabel, publishedAt, latestStatus }] } | null))
+//       mappedElementPageFor(meaningIri, { pageNumber, pageSize }, cb(err, { totalCount, distinctElementCount, mappedElementList: [{ standardName, standardVersion,
+//           elementStableId, elementName, relationType, layerKey | null, versionTag | null, manifestRefIdList }] }))
+//       manifestListHoldingElementFor({ standardName, standardVersion, elementStableId }, cb(err, [{ manifestRefId, publicLabel }]))
+//       manifestHoldsHubFor({ manifestRefId }, { hubSegment }, cb(err, isHeld))
 //       Every hash the reader hands over it has verified on read; null means "not published", never an error.
 //
 // ANSWERS: layer → its current STANDARD version (never merely the newest); layerVersion / layerVersionByContent → the version's
 // administration record, status and member blocks; assertion → the one record of its block whose recomputed assertion id is this
-// URI; agent kinds → the agent registry row; element / meaning → the parse (their graph lookup is not ML1's); ⟪ML3⟫ interpretation
-// (pinned and floating) → the version's assertions for the element, or an explicit NoTermFound; ⟪ML3.1⟫ question kinds (by label or
+// URI; agent kinds → the agent registry row; element / meaning without a reader → the parse; ⟪cardUriAnswers⟫ meaning with a reader → what the card is and who
+// maps to it, or 404 for a card no published manifest holds; ⟪ML3⟫ interpretation (pinned and floating) → the version's assertions for the element, an explicit NoTermFound
+// for a real element it does not map, or 404 for an element nothing holds; ⟪ML3.1⟫ question kinds (by label or
 // by manifest hash, with or without a hub) → the rows of the manifest's OWN relationship schema blocks whose from-node is the element,
-// each with its provenance (ruling (b), AMBER_JOURNEY 2026-10-26; defaultLayerByHub only settles a hub answered by two producers);
+// each with its provenance (ruling (b), AMBER_JOURNEY 2026-10-26; defaultLayerByHub only settles a hub answered by two producers), or 404 for an element or hub the manifest does not hold;
 // schemaBlock / decisionSchemaBlock → the frozen text, or for a licence-held standard 451 with the metadata and the reason (Q51, never
 // a bare 404); manifest kinds → 501 (ML5). Minted URIs keep their w3id spelling; the stub serves them under a private hostname.
 // ⟪cedsElementUri⟫ edcUri.parse hands every kind the STABLEID, even where the URI spells it by a declared prefix (CEDS/14.0.0.0/ceds:P000033 names
@@ -86,7 +94,7 @@ if (!Array.isArray(DOWNLOAD_ARTIFACTS_RULES.licenceHoldList)) {
 const LICENCE_HOLD_BY_STANDARD_KEY = Object.freeze(DOWNLOAD_ARTIFACTS_RULES.licenceHoldList.reduce((soFar, oneHold) => ({ ...soFar, [oneHold.bundleToken]: oneHold }), {}));
 const { NO_TERM_FOUND_OBJECT_ID } = derivedIndexesLib;
 const W3ID_PATH_PREFIX = `/${URI_SCHEME.baseIri.replace(/^https?:\/\/[^/]+\//, '')}`; // '/EDUcore/'
-const STUB_NOTE = 'answered by the LOCAL STUB resolver (lib/edc-uri/stubResolver.js); edc: URIs are not publicly registered (TQ, 2026-10-24)';
+const STUB_NOTE = 'w3id.org does not forward these names yet; this instance reads them at /edc/.'; // when forwarding goes live, this sentence is the one change
 
 const answer = (httpStatus, body) => ({ httpStatus, body: { ...body, stubNote: STUB_NOTE } });
 
@@ -106,7 +114,7 @@ const edcIriFor = (uriOrPath) => {
 // subject is the element; zero rows is an explicit NoTermFound answer, never another layer's answer. Machine versions read only the member
 // blocks of the element's standard (pairKey) and match on the from-node (the instance under fan-out); curated and imported versions read
 // their stored set: a curated row's id is the R-c' recipe (s p o author, scoped by the stored set), an imported row's subject resolves
-// through the prefix map its import recorded. What the stub cannot give without a graph (the meaning's definition text) is named.
+// through the prefix map its import recorded. The answer names each meaning by its card URI, and that URI answers its label and definition.
 // a member's assertions for the element, each way: reader(oneBlock, whenRead(faultAnswer | null, assertionList))
 const wholeBlockAssertionListReader = ({ blockTextForHash, isMachine, elementStableId, elementIri, standardName, standardVersion, layer, version }) => (oneBlock, whenRead) =>
 	blockTextForHash(oneBlock.decisionBlockHash, (readError, frozenText) => {
@@ -179,6 +187,7 @@ const indexedAssertionListReader = ({ uriContractReader, isMachine, elementStabl
 		});
 	});
 };
+const noBlockHoldsElementText = ({ standardName, standardVersion, elementStableId }) => `no published schema block holds ${standardName} ${standardVersion} element ${elementStableId}`;
 const interpretationOf = ({ kind, partByName, layerKey, version, registry, blockTextForHash, uriContractReader }, done) => {
 	const found = registry.layerFor(layerKey);
 	if (found.error) {
@@ -198,7 +207,7 @@ const interpretationOf = ({ kind, partByName, layerKey, version, registry, block
 	const readNext = (blockIndex) => {
 		if (blockIndex >= blockList.length) {
 			const mappedList = collected.filter((oneAssertion) => oneAssertion.object !== NO_TERM_FOUND_OBJECT_ID);
-			done(answer(200, {
+			const interpretation = answer(200, {
 				kind,
 				element: elementMint.uri,
 				layerVersion: edcUri.mint({ kind: 'layerVersion', layerKey, versionTag }).uri,
@@ -206,8 +215,20 @@ const interpretationOf = ({ kind, partByName, layerKey, version, registry, block
 				answer: mappedList.length === 0 ? NO_TERM_FOUND_OBJECT_ID : 'assertionList',
 				answerNote: mappedList.length === 0 ? `this layer, at version ${versionTag}, found no meaning for this element${collected.length ? ' (it abstained)' : ' (it holds no row for it)'}; never another layer's answer` : `${mappedList.length} meaning(s): an interpretation is a set`,
 				assertionList: collected,
-				notServed: 'the meaning\'s definition text and label need the graph; the stub answers from the frozen layer version alone',
-			}));
+				notServed: 'a meaning\'s label and definition are not repeated here; each object that is a card URI answers them',
+			});
+			// an element that no published block holds and no row of this layer names is not an element without a mapping: it is not there
+			if (collected.length > 0 || uriContractReader === undefined) {
+				done(interpretation);
+				return;
+			}
+			uriContractReader.manifestListHoldingElementFor({ standardName, standardVersion, elementStableId }, (holdingError, holdingList) => {
+				if (holdingError) {
+					done(answer(500, { kind, error: holdingError }));
+					return;
+				}
+				done(holdingList.length > 0 ? interpretation : answer(404, { kind, element: elementMint.uri, error: noBlockHoldsElementText({ standardName, standardVersion, elementStableId }) }));
+			});
 			return;
 		}
 		readAssertionList(blockList[blockIndex], (faultAnswer, assertionList) => {
@@ -310,7 +331,28 @@ const questionAnswerFor = ({ kind, partByName, iri, uriContractReader }, done) =
 				readNext(memberIndex + 1);
 			});
 		};
-		readNext(0);
+		// ⟪cardUriAnswers⟫ NoTermFound is a true answer about an element this manifest holds. An element or a hub it does not hold is refused here, before a block is read
+		uriContractReader.manifestListHoldingElementFor({ standardName, standardVersion, elementStableId }, (holdingError, holdingList) => {
+			if (holdingError) {
+				done(answer(500, { kind, error: holdingError }));
+				return;
+			}
+			if (!holdingList.some((oneManifest) => oneManifest.manifestRefId === manifest.manifestRefId)) {
+				done(answer(404, { kind, question: iri, error: holdingList.length === 0 ? noBlockHoldsElementText({ standardName, standardVersion, elementStableId }) : `manifest ${manifest.publicLabel} does not hold ${standardName} ${standardVersion} element ${elementStableId}; ${holdingList.map((oneManifest) => oneManifest.publicLabel).join(', ')} does` }));
+				return;
+			}
+			if (hubSegment === undefined) {
+				readNext(0);
+				return;
+			}
+			uriContractReader.manifestHoldsHubFor({ manifestRefId: manifest.manifestRefId }, { hubSegment }, (hubError, holdsHub) => {
+				if (hubError || !holdsHub) {
+					done(hubError ? answer(500, { kind, error: hubError }) : answer(404, { kind, question: iri, error: `manifest ${manifest.publicLabel} holds no hub ${hubSegment}` }));
+					return;
+				}
+				readNext(0);
+			});
+		});
 	});
 };
 const withReader = (kind, resolution) => (context, done) => (context.uriContractReader === undefined ? done(answer(501, { kind, error: NO_READER_ERROR(kind) })) : resolution(context, done));
@@ -374,13 +416,80 @@ const pageNumberFor = (queryText, kind) => {
 	return { pageNumber: Number(matched[1]) };
 };
 // pagedAnswer — totalCount, page position and next/previous URLs; a page past the end is refused by name, never clamped
+const pageSizeOf = (kind) => (LISTING_PAGING.pageSizeByKind[kind] === undefined ? LISTING_PAGING.pageSize : LISTING_PAGING.pageSizeByKind[kind]);
 const pagedAnswer = ({ kind, iri, pageNumber, totalCount, itemListName, itemList, extra }) => {
-	const pageCount = Math.max(1, Math.ceil(totalCount / LISTING_PAGING.pageSize));
+	const pageSize = pageSizeOf(kind);
+	const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
 	if (pageNumber > pageCount) {
-		return answer(400, { kind, error: `page ${pageNumber} is past the end: ${totalCount} item(s) in ${pageCount} page(s) of ${LISTING_PAGING.pageSize} (never clamped)` });
+		return answer(400, { kind, error: `page ${pageNumber} is past the end: ${totalCount} item(s) in ${pageCount} page(s) of ${pageSize} (never clamped)` });
 	}
 	const pageUrlOf = (oneNumber) => `${iri}?${LISTING_PAGING.queryParameterName}=${oneNumber}`;
-	return answer(200, { kind, listing: iri, ...extra, totalCount, pageSize: LISTING_PAGING.pageSize, pageNumber, pageCount, next: pageNumber < pageCount ? pageUrlOf(pageNumber + 1) : null, previous: pageNumber > LISTING_PAGING.firstPageNumber ? pageUrlOf(pageNumber - 1) : null, [itemListName]: itemList });
+	return answer(200, { kind, listing: iri, ...extra, totalCount, pageSize, pageNumber, pageCount, next: pageNumber < pageCount ? pageUrlOf(pageNumber + 1) : null, previous: pageNumber > LISTING_PAGING.firstPageNumber ? pageUrlOf(pageNumber - 1) : null, [itemListName]: itemList });
+};
+// ⟪cardUriAnswers, TQ Q38⟫ what a card is, who maps to it, and which manifests say so; a card no published manifest holds is refused by name.
+// mappingList keeps the store's per-manifest counts, written once where every manifest holding the card agrees; a row one manifest lacks names the ones it is in.
+const MEANING_COUNT_NOTE = 'distinctElementCount counts each element once. mappedElementCount counts an element once per manifest holding its mapping, so it grows with each manifest published. An element a standard uses in many places is counted once per place; an answer that rolls places up into one declaration, as standards_mappings does, shows fewer rows.';
+const onlyInFieldOf = ({ manifestRefIdList, heldManifestCount }) => (manifestRefIdList.length === heldManifestCount ? {} : { onlyInManifestRefIdList: manifestRefIdList });
+const layerVersionUriOf = ({ layerKey, versionTag }) => (layerKey === null ? null : mintUriOf({ kind: 'layerVersion', layerKey, versionTag }));
+const mappingCountListOf = ({ mappingRowList, heldManifestCount }) => {
+	const groupByIdentity = new Map();
+	mappingRowList.forEach(({ manifestRefId, ...oneRow }) => {
+		const groupIdentity = JSON.stringify(oneRow);
+		groupByIdentity.set(groupIdentity, { oneRow, manifestRefIdList: [...(groupByIdentity.has(groupIdentity) ? groupByIdentity.get(groupIdentity).manifestRefIdList : []), manifestRefId] });
+	});
+	return Array.from(groupByIdentity.values()).map(({ oneRow, manifestRefIdList }) => ({ standardName: oneRow.standardName, standardVersion: oneRow.standardVersion, layerVersion: layerVersionUriOf(oneRow), relationType: oneRow.relationType, elementCount: oneRow.elementCount, ...onlyInFieldOf({ manifestRefIdList, heldManifestCount }) }));
+};
+const mappedElementRowOf = ({ oneElement, heldManifestCount }) => {
+	const { standardName, standardVersion, elementStableId, elementName, relationType, manifestRefIdList } = oneElement;
+	const elementUri = mintUriOf({ kind: 'element', standardName, standardVersion, elementStableId });
+	return { ...(elementUri === undefined ? { elementStableId } : { element: elementUri }), name: elementName, standardName, relationType, layerVersion: layerVersionUriOf(oneElement), ...onlyInFieldOf({ manifestRefIdList, heldManifestCount }) };
+};
+const meaningAnswerFor = ({ partByName, iri, pageNumber, uriContractReader }, done) => {
+	const kind = 'meaning';
+	uriContractReader.meaningCardFor(iri, (cardError, card) => {
+		if (cardError || card === null) {
+			done(cardError ? answer(500, { kind, error: cardError }) : answer(404, { kind, meaning: iri, error: `no published manifest holds a card at ${iri}` }));
+			return;
+		}
+		uriContractReader.mappingsToMeaningFor(iri, (mappingError, mappingRowList) => {
+			if (mappingError) {
+				done(answer(500, { kind, error: mappingError }));
+				return;
+			}
+			uriContractReader.mappedElementPageFor(iri, { pageNumber, pageSize: pageSizeOf(kind) }, (pageError, page) => {
+				if (pageError) {
+					done(answer(500, { kind, error: pageError }));
+					return;
+				}
+				const heldManifestCount = card.manifestList.length;
+				done(pagedAnswer({
+					kind,
+					iri,
+					pageNumber,
+					totalCount: page.totalCount,
+					itemListName: 'mappedElementList',
+					extra: {
+						meaning: iri,
+						partByName,
+						label: card.label,
+						definition: card.definition,
+						propertyName: card.propertyName,
+						propertyKey: card.propertyKey,
+						referenceTier: card.referenceTier,
+						hubName: card.hubName,
+						hubVersion: card.hubVersion,
+						domain: card.domainId === null ? null : { domainId: card.domainId, domainName: card.domainName, domainUri: card.domainUri, domainDefinition: card.domainDefinition },
+						manifestList: card.manifestList.map((oneManifest) => ({ publicLabel: oneManifest.publicLabel, manifest: mintUriOf({ kind: 'manifestByContent', manifestRefId: oneManifest.manifestRefId }), latestStatus: oneManifest.latestStatus })),
+						mappedElementCount: mappingRowList.reduce((soFar, oneRow) => soFar + oneRow.elementCount, 0),
+						distinctElementCount: page.distinctElementCount,
+						countNote: MEANING_COUNT_NOTE,
+						mappingList: mappingCountListOf({ mappingRowList, heldManifestCount }),
+					},
+					itemList: page.mappedElementList.map((oneElement) => mappedElementRowOf({ oneElement, heldManifestCount })),
+				}));
+			});
+		});
+	});
 };
 const layerVersionRecordAnswerFor = ({ kind, layerKey, versionTag, uriContractReader }, done) =>
 	uriContractReader.layerVersionRecordFor({ layerKey, versionTag }, (readError, versionRecord) =>
@@ -573,14 +682,12 @@ const RESOLUTION_BY_KIND = Object.freeze({
 	vocabularyTerm: ({ partByName, iri }, done) => done(answer(200, { kind: 'vocabularyTerm', term: iri, termName: partByName.termName, definition: URI_SCHEME.vocabularyTermDefinitionByName[partByName.termName] })),
 	// ⟪ML3.1, Q4⟫ with a uriContract reader an element and a meaning answer their relations; without one, the parse as in ML1
 	element: (context, done) => (context.uriContractReader === undefined ? done(answer(200, { kind: 'element', partByName: context.partByName, note: 'parsed only: the stub was started without a uriContract reader' })) : elementAnswerFor(context, done)),
-	meaning: ({ partByName, iri, uriContractReader }, done) => {
+	meaning: ({ partByName, iri, pageNumber, uriContractReader }, done) => {
 		if (uriContractReader === undefined) {
 			done(answer(200, { kind: 'meaning', partByName, note: 'parsed only: the stub was started without a uriContract reader' }));
 			return;
 		}
-		uriContractReader.mappingsToMeaningFor(iri, (readError, mappingList) =>
-			done(readerAnswer({ kind: 'meaning', readError, found: mappingList, notFoundText: '' }, (found) => ({ meaning: iri, partByName, mappedElementCount: found.reduce((soFar, oneRow) => soFar + oneRow.elementCount, 0), mappingList: found.map((oneRow) => ({ ...oneRow, manifest: mintUriOf({ kind: 'manifestByContent', manifestRefId: oneRow.manifestRefId }), layerVersion: oneRow.layerKey === null ? null : mintUriOf({ kind: 'layerVersion', layerKey: oneRow.layerKey, versionTag: oneRow.versionTag }) })) }))),
-		);
+		meaningAnswerFor({ partByName, iri, pageNumber, uriContractReader }, done);
 	},
 	// ⟪ML3.1, Q4⟫ a manifest answers its inventory; ⟪Q5⟫ the discovery forms
 	manifest: withReader('manifest', ({ partByName, uriContractReader }, done) => manifestInventoryAnswerFor({ kind: 'manifest', manifestAddress: manifestAddressOf(partByName), uriContractReader }, done)),
