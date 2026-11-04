@@ -783,4 +783,4 @@ const resolveEdcUri = ({ uriOrPath, registry, blockTextForHash, uriContractReade
 	resolution({ partByName: parsed.partByName, iri: edcUri.mint({ kind: parsed.kind, ...parsed.partByName }).uri, registry, blockTextForHash, uriContractReader, pageNumber: paging.pageNumber }, (resolved) => callback('', resolved));
 };
 
-module.exports = { resolveEdcUri, edcIriFor, RESOLUTION_BY_KIND, LICENCE_HOLD_BY_STANDARD_KEY, AGENT_PROFILE_FIELD_LIST, W3ID_PATH_PREFIX, moduleName };
+module.exports = { resolveEdcUri, edcIriFor, RESOLUTION_BY_KIND, LICENCE_HOLD_BY_STANDARD_KEY, withheldAnswerFor, schemaBlockStandardKeyListFor, subjectPrefixOf, AGENT_PROFILE_FIELD_LIST, W3ID_PATH_PREFIX, moduleName };
