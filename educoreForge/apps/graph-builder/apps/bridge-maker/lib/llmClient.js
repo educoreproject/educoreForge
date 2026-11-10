@@ -553,6 +553,125 @@ const moduleFunction =
 		};
 		const postOnce = componentOverrides.postOnce || realPostOnce;
 
+		// ⟪feat/llmForcedTool, 2026-11-10⟫ the temperature rule, written once for every call this client makes (rerank's reasoning for it stands in rerank, below)
+		const applyTemperatureRule = (payload) => {
+			if (TEMPERATURE_ACCEPTING_MODEL_RE.test(cfg.wireModel)) {
+				payload.temperature = 0;
+			}
+		};
+
+		// ⟪feat/llmForcedTool, 2026-11-10 — THE ONE RETRY LOOP⟫ rerank and callForcedTool post through this: the same backoff
+		// table, the same transport retry, the same refusal of a 200 that cannot be priced, the same spend list. What differs
+		// is how a caller reads a 200, which it hands in:
+		//   readAnswer(parsed) → { refusalText } (refused by name, no retry)
+		//                      | { incompleteLabel, incompleteReasonText, answerOf } (incompleteLabel non-empty: retried while attempts remain, then answered as it stands)
+		//   answerOf({ attempts, spendCallList, retryReasons }) → what the caller's callback receives
+		// Moved here from rerank unchanged in behaviour; test-llmClientForcedTool.js holds rerank's answers and refusals to what they were.
+		const postWithRetries = ({ payload, maxRetries, callerName, readAnswer }, callback) => {
+			const backoffMs = [0, 500, 1200, 2500, 5000, 9000];
+			// ⟪FORENSICS, p9-judgmentPersistence 2026-07-31⟫ retryReasons — one entry per retried
+			// attempt, threaded into the success payload so the forensic match log can explain WHY a
+			// judgment took N attempts (⟪TQ RULING⟫ "support forensic examination to improve quality
+			// later"). Additive surplus: every existing caller destructures only the keys it reads.
+			const retryReasons = [];
+			// ⟪spend ledger R1, 2026-10-21⟫ spendCallList — one entry per PAID response (every 200), in the spend ledger's shape
+			// (lib/spend-ledger/spendRecord.js SPEND_CALL_FIELD_LIST). A judgmentIncomplete retry is a 200 that was billed; `usage`
+			// below reports only the accepted attempt, so before this list the earlier attempts' tokens were lost.
+			const spendCallList = [];
+			const tryAttempt = (attemptIndex) => {
+				postOnce({ payload }, (err, parsed, status) => {
+					const retriableTransport = status === 429 || (status >= 500 && status <= 599) || status === 0;
+					if ((err || retriableTransport) && attemptIndex + 1 < maxRetries) {
+						retryReasons.push(`transport (attempt ${attemptIndex + 1}): ${err || `status ${status}`}`);
+						const waitMs = backoffMs[Math.min(attemptIndex + 1, backoffMs.length - 1)];
+						setTimeout(() => tryAttempt(attemptIndex + 1), waitMs);
+						return;
+					}
+					if (err) {
+						callback(`${moduleName}.${callerName} failed after ${attemptIndex + 1} attempts: ${err}`);
+						return;
+					}
+					if (status !== 200) {
+						const apiMsg = parsed && parsed.error ? parsed.error.message : `status ${status}`;
+						callback(`${moduleName}.${callerName} API error (${status}): ${apiMsg}`);
+						return;
+					}
+					// a 200 without its accounting is refused by name: a response we cannot price is not one we accept
+					const wireUsage = parsed && parsed.usage ? parsed.usage : {};
+					if (!Number.isInteger(wireUsage.input_tokens) || wireUsage.input_tokens < 0 || !Number.isInteger(wireUsage.output_tokens) || wireUsage.output_tokens < 0) {
+						callback(`${moduleName}.${callerName}: the response (attempt ${attemptIndex + 1}) carries usage ${JSON.stringify(parsed && parsed.usage)}; input_tokens and output_tokens must be non-negative integers, or the call cannot be priced`);
+						return;
+					}
+					spendCallList.push({ provider: PROVIDER_NAME, model: cfg.wireModel, inputTokens: wireUsage.input_tokens, outputTokens: wireUsage.output_tokens });
+					const reading = readAnswer(parsed);
+					if (reading.refusalText) {
+						callback(`${moduleName}.${callerName}: ${reading.refusalText}`);
+						return;
+					}
+					if (reading.incompleteLabel && attemptIndex + 1 < maxRetries) {
+						retryReasons.push(`${reading.incompleteLabel} (attempt ${attemptIndex + 1}): ${reading.incompleteReasonText}`);
+						const waitMs = backoffMs[Math.min(attemptIndex + 1, backoffMs.length - 1)];
+						setTimeout(() => tryAttempt(attemptIndex + 1), waitMs);
+						return;
+					}
+					callback('', reading.answerOf({ attempts: attemptIndex + 1, spendCallList, retryReasons }));
+				});
+			};
+			tryAttempt(0);
+		};
+
+		// ⟪feat/llmForcedTool, 2026-11-10⟫ callForcedTool — one forced call of a tool the CALLER declares, for a caller that is not
+		// judging (educore's Rosetta interpreter: free text to a field list). Same key, transport, temperature rule, retry loop and
+		// spend list as rerank; rerank is untouched.
+		//   callForcedTool({ systemPrompt, userPrompt, tool: { name, description?, input_schema }, maxTokens, maxRetries }, callback)
+		//     → callback(err, { toolInput, stopReason, model, attempts, usage, spendCallList, retryReasons })
+		// maxTokens and maxRetries are REQUIRED, with no default: the right budget depends on what the caller asks for, and a forced
+		// call with too small a budget truncates silently (the last, long keys die first and look like omissions; 2026-07-30).
+		// A TRUNCATED ANSWER IS NEVER SALVAGED. stop_reason max_tokens gives toolInput null with stopReason 'max_tokens', even when
+		// the cut JSON happens to parse, and so does an answer with no call of the named tool. It is not retried: the same budget
+		// would cut the same answer, and each attempt is billed. The spend of that 200 is in spendCallList, for the caller to ledger.
+		const callForcedTool = (forcedToolOptions, callback) => {
+			const { systemPrompt, userPrompt, tool, maxTokens, maxRetries } = forcedToolOptions || {};
+			const optionFaultList = [
+				typeof systemPrompt === 'string' && systemPrompt.trim() ? '' : 'systemPrompt (non-empty text)',
+				typeof userPrompt === 'string' && userPrompt.trim() ? '' : 'userPrompt (non-empty text)',
+				tool && typeof tool.name === 'string' && tool.name && tool.input_schema && typeof tool.input_schema === 'object' ? '' : 'tool ({ name, input_schema })',
+				Number.isInteger(maxTokens) && maxTokens > 0 ? '' : 'maxTokens (a positive integer; there is no default)',
+				Number.isInteger(maxRetries) && maxRetries > 0 ? '' : 'maxRetries (a positive integer; there is no default)',
+			].filter(Boolean);
+			if (optionFaultList.length > 0) {
+				callback(`${moduleName}.callForcedTool: absent or bad: ${optionFaultList.join(', ')}`);
+				return;
+			}
+			const payload = {
+				model: cfg.wireModel,
+				max_tokens: maxTokens,
+				system: systemPrompt,
+				messages: [{ role: 'user', content: userPrompt }],
+				tools: [tool],
+				tool_choice: { type: 'tool', name: tool.name },
+			};
+			applyTemperatureRule(payload);
+			const readToolCall = (parsed) => {
+				const stopReason = parsed && parsed.stop_reason !== undefined ? parsed.stop_reason : null;
+				const toolUseBlock = parsed && Array.isArray(parsed.content) ? parsed.content.find((contentBlock) => contentBlock && contentBlock.type === 'tool_use' && contentBlock.name === tool.name) : undefined;
+				const toolInput = stopReason !== 'max_tokens' && toolUseBlock && toolUseBlock.input && typeof toolUseBlock.input === 'object' ? toolUseBlock.input : null;
+				return {
+					incompleteLabel: '',
+					answerOf: ({ attempts, spendCallList, retryReasons }) => ({
+						toolInput,
+						stopReason,
+						model: namespacedModel,
+						attempts,
+						usage: parsed && parsed.usage ? { inputTokens: parsed.usage.input_tokens, outputTokens: parsed.usage.output_tokens } : null,
+						spendCallList,
+						retryReasons,
+					}),
+				};
+			};
+			postWithRetries({ payload, maxRetries, callerName: 'callForcedTool', readAnswer: readToolCall }, callback);
+		};
+
 		// ⟪R-a REAL-RUN FINDING, 2026-07-30⟫ a live LIF --rebridge against real Opus failed in Phase C:
 		// "evidenceSelect: llmClient did not supply a rationale for its pick — refusing rather than
 		// fabricating one." ⟪Quoted VERBATIM, old name and all. `evidenceSelect` was the CONSUMER module
@@ -642,21 +761,9 @@ const moduleFunction =
 			// exactly the failure its own comment warned about, arriving from the other direction.
 			// Inverted: a model must be NAMED as accepting temperature. An unknown model gets none, so a new
 			// release arrives as "not yet enabled" rather than as a broken run.
-			// ⟪JOB 1⟫ WIRE USE (b) of two: this tests wireModel, NOT the namespaced identity.
-			if (TEMPERATURE_ACCEPTING_MODEL_RE.test(cfg.wireModel)) {
-				payload.temperature = 0;
-			}
+			// ⟪JOB 1⟫ WIRE USE (b) of two: this tests wireModel, NOT the namespaced identity. (The test is applyTemperatureRule's, shared with callForcedTool.)
+			applyTemperatureRule(payload);
 
-			const backoffMs = [0, 500, 1200, 2500, 5000, 9000];
-			// ⟪FORENSICS, p9-judgmentPersistence 2026-07-31⟫ retryReasons — one entry per retried
-			// attempt, threaded into the success payload so the forensic match log can explain WHY a
-			// judgment took N attempts (⟪TQ RULING⟫ "support forensic examination to improve quality
-			// later"). Additive surplus: every existing caller destructures only the keys it reads.
-			const retryReasons = [];
-			// ⟪spend ledger R1, 2026-10-21⟫ spendCallList — one entry per PAID response (every 200), in the spend ledger's shape
-			// (lib/spend-ledger/spendRecord.js SPEND_CALL_FIELD_LIST). A judgmentIncomplete retry is a 200 that was billed; `usage`
-			// below reports only the accepted attempt, so before this list the earlier attempts' tokens were lost.
-			const spendCallList = [];
 			// ⟪R-a SECOND REAL-RUN FINDING, 2026-07-30⟫ a strict schema `required` alone did not reach
 			// 100%: a live run failed on a DIFFERENT source than the first finding, with the
 			// identical refusal — real Opus INTERMITTENTLY omits a schema-required field (roughly 1 call in
@@ -669,58 +776,28 @@ const moduleFunction =
 			// STILL lib/bridge-framework/judgeComponent.js's job alone (see this file's own R-a header, unchanged: exactly
 			// ONE enforcer). ⟪JOB 0, 2026-09-07: this condition is now evaluated on EVERY judgment. It was
 			// previously skipped whenever the retired option was falsy — which was the DEFAULT.⟫
-			const tryAttempt = (attemptIndex) => {
-				postOnce({ payload }, (err, parsed, status) => {
-					const retriableTransport = status === 429 || (status >= 500 && status <= 599) || status === 0;
-					if ((err || retriableTransport) && attemptIndex + 1 < maxRetries) {
-						retryReasons.push(`transport (attempt ${attemptIndex + 1}): ${err || `status ${status}`}`);
-						const waitMs = backoffMs[Math.min(attemptIndex + 1, backoffMs.length - 1)];
-						setTimeout(() => tryAttempt(attemptIndex + 1), waitMs);
-						return;
-					}
-					if (err) {
-						callback(`${moduleName}.rerank failed after ${attemptIndex + 1} attempts: ${err}`);
-						return;
-					}
-					if (status !== 200) {
-						const apiMsg = parsed && parsed.error ? parsed.error.message : `status ${status}`;
-						callback(`${moduleName}.rerank API error (${status}): ${apiMsg}`);
-						return;
-					}
-					// a 200 without its accounting is refused by name: a response we cannot price is not one we accept
-					const wireUsage = parsed && parsed.usage ? parsed.usage : {};
-					if (!Number.isInteger(wireUsage.input_tokens) || wireUsage.input_tokens < 0 || !Number.isInteger(wireUsage.output_tokens) || wireUsage.output_tokens < 0) {
-						callback(`${moduleName}.rerank: the response (attempt ${attemptIndex + 1}) carries usage ${JSON.stringify(parsed && parsed.usage)}; input_tokens and output_tokens must be non-negative integers, or the call cannot be priced`);
-						return;
-					}
-					spendCallList.push({ provider: PROVIDER_NAME, model: cfg.wireModel, inputTokens: wireUsage.input_tokens, outputTokens: wireUsage.output_tokens });
-					const choice = extractChoice(parsed, choiceEnum);
-					if (choice === null) {
-						callback(`${moduleName}.rerank: could not extract a choice from the response`);
-						return;
-					}
-					const { category, rationale, sourceElementIdeaList, candidateIdeaList, sortedCandidateList, ideaCoverage } = extractCategoryAndRationale(parsed);
-					// ⟪R-a THIRD REAL-RUN FIX⟫ BELT: parsed.stop_reason === 'max_tokens'
-					// means the model's tool_use JSON was cut off mid-emission — the SAME structural fault
-					// judgmentIncomplete already catches (rationale, emitted last, is what gets truncated),
-					// folded into the identical condition so it is counted the SAME way, not mistaken for
-					// ordinary model sloppiness. With JUDGMENT_MAX_TOKENS's headroom this should never fire;
-					// if it ever does, it stays VISIBLE in `attempts` rather than silently masquerading as a
-					// missing-field omission.
-					const truncated = !!(parsed && parsed.stop_reason === 'max_tokens');
-					// ⟪B3b, 2026-09-28⟫ a predicate the rule asks for and the model did not validly supply joins the same retry
-					const predicateByFieldName = extractPredicate(parsed, predicateField);
-					const predicateMissing = predicateField !== null && predicateByFieldName[predicateField.fieldName] === undefined;
-					const judgmentIncomplete = category === undefined || rationale === undefined || predicateMissing || truncated;
-					if (judgmentIncomplete && attemptIndex + 1 < maxRetries) {
-						retryReasons.push(
-							`judgmentIncomplete (attempt ${attemptIndex + 1}): ` +
-								`${truncated ? 'stop_reason max_tokens (tool JSON truncated)' : `category ${category === undefined ? 'missing' : 'ok'}, rationale ${rationale === undefined ? 'missing' : 'ok'}${predicateField === null ? '' : `, predicate ${predicateMissing ? 'missing' : 'ok'}`}`}`,
-						);
-						const waitMs = backoffMs[Math.min(attemptIndex + 1, backoffMs.length - 1)];
-						setTimeout(() => tryAttempt(attemptIndex + 1), waitMs);
-						return;
-					}
+			// ⟪feat/llmForcedTool, 2026-11-10⟫ the loop itself is postWithRetries, shared with callForcedTool; what is rerank's own is how it reads an answer, below.
+			const readJudgment = (parsed) => {
+				const choice = extractChoice(parsed, choiceEnum);
+				if (choice === null) {
+					return { refusalText: 'could not extract a choice from the response' };
+				}
+				const { category, rationale, sourceElementIdeaList, candidateIdeaList, sortedCandidateList, ideaCoverage } = extractCategoryAndRationale(parsed);
+				// ⟪R-a THIRD REAL-RUN FIX⟫ BELT: parsed.stop_reason === 'max_tokens'
+				// means the model's tool_use JSON was cut off mid-emission — the SAME structural fault
+				// judgmentIncomplete already catches (rationale, emitted last, is what gets truncated),
+				// folded into the identical condition so it is counted the SAME way, not mistaken for
+				// ordinary model sloppiness. With JUDGMENT_MAX_TOKENS's headroom this should never fire;
+				// if it ever does, it stays VISIBLE in `attempts` rather than silently masquerading as a
+				// missing-field omission.
+				const truncated = !!(parsed && parsed.stop_reason === 'max_tokens');
+				// ⟪B3b, 2026-09-28⟫ a predicate the rule asks for and the model did not validly supply joins the same retry
+				const predicateByFieldName = extractPredicate(parsed, predicateField);
+				const predicateMissing = predicateField !== null && predicateByFieldName[predicateField.fieldName] === undefined;
+				const judgmentIncomplete = category === undefined || rationale === undefined || predicateMissing || truncated;
+				return {
+					incompleteLabel: judgmentIncomplete ? 'judgmentIncomplete' : '',
+					incompleteReasonText: `${truncated ? 'stop_reason max_tokens (tool JSON truncated)' : `category ${category === undefined ? 'missing' : 'ok'}, rationale ${rationale === undefined ? 'missing' : 'ok'}${predicateField === null ? '' : `, predicate ${predicateMissing ? 'missing' : 'ok'}`}`}`,
 					// ⟪FORENSICS, p9-judgmentPersistence 2026-07-31⟫ usage/stopReason — the Anthropic
 					// response envelope's own accounting (usage.input_tokens/output_tokens are present in
 					// every Messages response; ⟪TQ⟫ "you get the costs in the return"), threaded up ADDITIVELY
@@ -728,17 +805,13 @@ const moduleFunction =
 					// envelope without usage yields null. Existing callers (the scalar path read only
 					// .choice; lib/bridge-framework/judgeComponent.js reads choice/category/rationale) are unaffected —
 					// proven in test-llm-client.js's forensics section.
-					const usage =
-						parsed && parsed.usage
-							? { inputTokens: parsed.usage.input_tokens, outputTokens: parsed.usage.output_tokens }
-							: null;
-					callback('', {
+					answerOf: ({ attempts, spendCallList, retryReasons }) => ({
 						choice,
 						// ⟪JOB 1⟫ the IDENTITY, not the wire name. This is a CONTRACT MEMBER of rerank's result
 						// (JUDGE_PROVIDER_SHAPE.rerank.resultKeys) and must agree with client.model, or the same
 						// client would report two identities for one judgment.
 						model: namespacedModel,
-						attempts: attemptIndex + 1,
+						attempts,
 						category,
 						rationale,
 						// ⟪B3b, 2026-09-28⟫ present only under a rule with a predicate slot
@@ -750,14 +823,14 @@ const moduleFunction =
 						ideaCoverage,
 						// ⟪campaign P3, W-B-3⟫ a text model reports a category word, not numbers: no judge summary
 						judgeSummary: null,
-						usage,
+						usage: parsed && parsed.usage ? { inputTokens: parsed.usage.input_tokens, outputTokens: parsed.usage.output_tokens } : null,
 						spendCallList,
 						stopReason: parsed && parsed.stop_reason !== undefined ? parsed.stop_reason : null,
 						retryReasons,
-					});
-				});
+					}),
+				};
 			};
-			tryAttempt(0);
+			postWithRetries({ payload, maxRetries, callerName: 'rerank', readAnswer: readJudgment }, callback);
 		};
 
 		// ⟪JOB 1⟫ describe() — required by JUDGE_PROVIDER_SHAPE and INSTANCE-DERIVED, never a constant: it
@@ -774,7 +847,7 @@ const moduleFunction =
 		// form renders identically, so its identity does not depend on the form (the variant's rendererVersion and promptHash
 		// keep the forms' cache rows apart). JUDGE_PROVIDER_SHAPE requires every provider to answer it.
 		const modelForChoiceQuestionForm = () => ({ model: namespacedModel });
-		return { name: PROVIDER_NAME, wireModel: cfg.wireModel, model: namespacedModel, maxConcurrency, rerank, describe, modelForChoiceQuestionForm, keySource: cfg.keySource, judgeConfig };
+		return { name: PROVIDER_NAME, wireModel: cfg.wireModel, model: namespacedModel, maxConcurrency, rerank, callForcedTool, describe, modelForChoiceQuestionForm, keySource: cfg.keySource, judgeConfig };
 	};
 
 // END OF moduleFunction() ============================================================
