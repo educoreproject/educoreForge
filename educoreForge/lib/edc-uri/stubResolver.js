@@ -94,9 +94,8 @@ if (!Array.isArray(DOWNLOAD_ARTIFACTS_RULES.licenceHoldList)) {
 const LICENCE_HOLD_BY_STANDARD_KEY = Object.freeze(DOWNLOAD_ARTIFACTS_RULES.licenceHoldList.reduce((soFar, oneHold) => ({ ...soFar, [oneHold.bundleToken]: oneHold }), {}));
 const { NO_TERM_FOUND_OBJECT_ID } = derivedIndexesLib;
 const W3ID_PATH_PREFIX = `/${URI_SCHEME.baseIri.replace(/^https?:\/\/[^/]+\//, '')}`; // '/EDUcore/'
-const STUB_NOTE = 'w3id.org does not forward these names yet; this instance reads them at /edc/.'; // when forwarding goes live, this sentence is the one change
-
-const answer = (httpStatus, body) => ({ httpStatus, body: { ...body, stubNote: STUB_NOTE } });
+// ⟪fix/stubNoteLive, TQ 2026-11-09⟫ an answer is its status and body, nothing stamped on: the stub-era stubNote ("w3id.org does not forward these names yet") went when w3id.org began forwarding these names
+const answer = (httpStatus, body) => ({ httpStatus, body });
 
 // edcIriFor(uriOrPath) → the edc IRI a request names: a full IRI or CURIE as given, or a request path under '/EDUcore/' or '/'
 const edcIriFor = (uriOrPath) => {
