@@ -235,7 +235,7 @@ const JUDGE_PREDICATE_RULE_LIST = Object.freeze([PREDICATE_RULE_CATEGORY_TABLE_V
 // 'derivedJudgeSlot' is the derived text under its own renderer version, so a judgeSlot-v1 prompt never shares a
 // promptHash (and so a cache row) with a categoryTable-v1 one. ⟪lane JEVQ, 2026-10-13⟫ 'derivedJudgeSlotOwningDefinition' is
 // derivedJudgeSlot's text with the owning-definition split question (evidenceRenderer.js); derivedJudgeSlot stays registered.
-const JUDGE_PROMPT_VARIANT_LIST = Object.freeze(['crosswalk', 'derived', 'derivedJudgeSlot', 'derivedJudgeSlotOwningDefinition']);
+const JUDGE_PROMPT_VARIANT_LIST = Object.freeze(['crosswalk', 'derived', 'derivedJudgeSlot', 'derivedJudgeSlotOwningDefinition', 'rosettaMeaning']);
 // OWNING_CONSTRUCT_DEFINITION_VARIANT_LIST — the variants whose split question carries the owning construct's definition, so
 // a plugin resolving to one MUST declare owningConstructDefinitionSource, and a plugin resolving to any other must NOT (it
 // would be read by nothing). evidenceRenderer's rows say the same in requiresOwningConstructDefinitionSource; the suite
