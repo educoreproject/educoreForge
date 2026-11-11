@@ -20,7 +20,7 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //     → { systemPrompt, userPrompt, promptHash, renderedPoolStableIdList, choiceEnum, rendererVersion, judgePredicateRule,
 //         cardCollapseList, qualifiedCardStableIdList } | { error }
 //
-// FOUR REGISTERED VARIANTS, one row each (RULING §11.1) — never a branch on the variant name:
+// FIVE REGISTERED VARIANTS, one row each (RULING §11.1) — never a branch on the variant name:
 //
 //   crosswalk  the shipped rendering, BYTE-FROZEN. Every candidate is headlined by its canonicalKey and the
 //              subject prints its stableId, because for a key-filtered pool those ARE the shared join key the
@@ -39,6 +39,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //              for predicateRule judgeSlot-v1, whose judge also names the relation; that request lives in the tool
 //              schema, not in these prompts. The separate version keeps its promptHash, and so its cache rows, apart
 //              from the derived variant's, and leaves DERIVED_RENDERER_VERSION where it was.
+//
+//   rosettaMeaning  ⟪educore rosettaMeanings R4⟫ the derived data framed as MEANINGS for educore's Rosetta, its words in
+//              rosettaMeaningPromptText.json (below, at its builders).
 //
 //   derivedJudgeSlotOwningDefinition  ⟪lane JEVQ, 2026-10-13⟫ derivedJudgeSlot's TEXT prompt byte for byte, with a
 //              different SPLIT question (the one Jev reads): the source element carries its owning construct's
@@ -352,6 +355,43 @@ const owningConstructDefinitionRefusalFor = ({ sourceElement, variantRow, judgeP
 	return '';
 };
 
+// ---------------------------------------------------------------------
+// ⟪educore rosettaMeanings R4, 2026-11-10⟫ rosettaMeaning variant — the derived rendering's DATA (the same allow-listed subject and
+// candidate objects, the same collapse, the same split question), framed as MEANINGS: each candidate is headed by the idea it
+// names, its property of its class, and the judge chooses which meaning the source expresses. Its WORDS are data, in
+// rosettaMeaningPromptText.json, read once here; a file missing a word refuses at load. Only educore's Rosetta selects it (its
+// judgePromptVariant); no bridge declares it, so no forge cache row is keyed by it, and every other row renders as before.
+// ---------------------------------------------------------------------
+// read as text and parsed, not required: the forge's twin harnesses load this module's source through a loader that compiles every required file as JavaScript
+const ROSETTA_MEANING_PROMPT_TEXT = JSON.parse(require('fs').readFileSync(path.join(__dirname, 'rosettaMeaningPromptText.json'), 'utf8'));
+const ROSETTA_MEANING_TEXT_NAME_LIST = Object.freeze(['rendererVersion', 'systemPrompt', 'candidateListHeadingWord', 'candidateIndexLineTemplate', 'meaningLineTemplateWithClass', 'meaningLineTemplateWithoutClass', 'answerLineSuffix']);
+const ROSETTA_MEANING_LINE_LIST_NAME_LIST = Object.freeze(['subjectLineList', 'candidateListPreambleLineList']);
+const absentRosettaMeaningTextList = ROSETTA_MEANING_TEXT_NAME_LIST.filter((textName) => typeof ROSETTA_MEANING_PROMPT_TEXT[textName] !== 'string' || ROSETTA_MEANING_PROMPT_TEXT[textName] === '')
+	.concat(ROSETTA_MEANING_LINE_LIST_NAME_LIST.filter((listName) => !Array.isArray(ROSETTA_MEANING_PROMPT_TEXT[listName]) || ROSETTA_MEANING_PROMPT_TEXT[listName].some((oneLine) => typeof oneLine !== 'string')));
+if (absentRosettaMeaningTextList.length > 0) {
+	throw new Error(`${moduleName} REFUSED AT LOAD: rosettaMeaningPromptText.json gives no ${absentRosettaMeaningTextList.join(', ')}; each of ${ROSETTA_MEANING_TEXT_NAME_LIST.join(', ')} is a non-empty string and each of ${ROSETTA_MEANING_LINE_LIST_NAME_LIST.join(', ')} a list of strings`);
+}
+// filledTemplate — a {slotName} is replaced by its value; a slot with no value is refused, never left as braces in a prompt
+const TEMPLATE_SLOT_PATTERN = /\{([A-Za-z]+)\}/g;
+const filledTemplate = (templateText, valueBySlotName) => templateText.replace(TEMPLATE_SLOT_PATTERN, (wholeSlot, slotName) => {
+	if (typeof valueBySlotName[slotName] !== 'string' || valueBySlotName[slotName] === '') {
+		throw new Error(`${moduleName}: the rosettaMeaning template slot {${slotName}} has no value`);
+	}
+	return valueBySlotName[slotName];
+});
+const rosettaMeaningSubjectLineList = ({ sourceElement, renderingAllowList }) =>
+	ROSETTA_MEANING_PROMPT_TEXT.subjectLineList.concat(renderKeyValueLines(derivedSubjectData({ sourceElement, renderingAllowList }), '  '));
+// the meaning line reads the RENDERED candidate (allow-listed, qualifier in the name, the hub's prose rule applied), so it can say nothing the block below it does not
+const rosettaMeaningCandidateLineList = ({ oneSeat, seatIndex, renderingAllowList, renderedProseIdentifierRule }) => {
+	const candidateData = derivedCandidateData({ oneSeat, renderingAllowList, renderedProseIdentifierRule });
+	const className = typeof candidateData.domainName === 'string' && candidateData.domainName !== '' ? candidateData.domainName : '';
+	const meaningLineTemplate = className === '' ? ROSETTA_MEANING_PROMPT_TEXT.meaningLineTemplateWithoutClass : ROSETTA_MEANING_PROMPT_TEXT.meaningLineTemplateWithClass;
+	return [
+		filledTemplate(ROSETTA_MEANING_PROMPT_TEXT.candidateIndexLineTemplate, { seatNumber: String(seatIndex + 1) }),
+		filledTemplate(meaningLineTemplate, { propertyName: candidateData.name, className }),
+	].concat(renderKeyValueLines(candidateData, '      '));
+};
+
 // CROSSWALK_SUBJECT_MATERIAL_NAME_LIST — the subject-node properties the crosswalk variant lifts into
 // sourceElement.material. BYTE-FROZEN with the rest of that variant: this list decides what appears in the
 // prompt, so adding a name here re-keys every crosswalk prompt.
@@ -434,6 +474,18 @@ const JUDGE_PROMPT_VARIANT_REGISTRY = Object.freeze({
 		choiceQuestionFormName: CHOICE_QUESTION_FORM_NAME_OWNING_DEFINITION_STATE,
 		requiresOwningConstructDefinitionSource: true,
 		choiceStatePreimageSegmentListFor: ({ choiceQuestion }) => [JSON.stringify(choiceQuestion.stateObject)],
+	}),
+	// ⟪educore rosettaMeanings R4⟫ derivedJudgeSlot's data and predicate rule, its own words and version (rosettaMeaningPromptText.json)
+	rosettaMeaning: Object.freeze({
+		...DERIVED_VARIANT_ROW,
+		rendererVersion: ROSETTA_MEANING_PROMPT_TEXT.rendererVersion,
+		systemPrompt: ROSETTA_MEANING_PROMPT_TEXT.systemPrompt,
+		subjectLineList: rosettaMeaningSubjectLineList,
+		candidateLineList: rosettaMeaningCandidateLineList,
+		candidateListPreambleLineList: Object.freeze(ROSETTA_MEANING_PROMPT_TEXT.candidateListPreambleLineList.slice()),
+		candidateListHeadingWord: ROSETTA_MEANING_PROMPT_TEXT.candidateListHeadingWord,
+		answerLineSuffix: ROSETTA_MEANING_PROMPT_TEXT.answerLineSuffix,
+		judgePredicateRule: 'judgeSlot-v1',
 	}),
 });
 // ⟪lane QUAL⟫ VARIANT_ROW_BOOLEAN_MEMBER_LIST — the switches every variant row DECLARES, true or false. An absent member would
