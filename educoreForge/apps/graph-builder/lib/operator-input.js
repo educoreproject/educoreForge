@@ -83,7 +83,7 @@ const moduleFunction =
 					const flagName = bareMatch[1];
 					if (!isBareSwitchFlagName(flagName)) {
 						return (
-							`${prefixFor(actionLabel)} --${flagName} was given without '=' . Parameters are typed --${flagName}=<value>; ` +
+							`${prefixFor(actionLabel)} --${flagName} was given without '='. Parameters are typed --${flagName}=<value>; ` +
 							`the space form hands the parser the NEXT token as the value (${isLastToken ? 'here there is none, so it would read as the boolean true' : `here '${tokenList[tokenIndex + 1]}'`}), which is how a flag or an action goes missing without a word.`
 						);
 					}
