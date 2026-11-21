@@ -11,8 +11,11 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 // and is never logged, echoed, returned, or written anywhere.
 //
 //   const embedder = require('./embedding-client')({ configFilePath, providerName });
-//     configFilePath?  the .ini holding [voyageEmbedding]; default = the canonical project config
-//                      named at the top of this file.
+//     configFilePath   REQUIRED: the .ini holding [voyageEmbedding]. graphBuilder passes [forger]
+//                      voyageConfigFilePath from graphBuilder.ini. No default (deep review 2026-11-21, F-37:
+//                      the old default was a path on one Mac).
+//     cacheFilePath    REQUIRED: the vector cache file, or false to disable caching. graphBuilder passes
+//                      [stores] vectorCacheFilePath (or --embeddingCacheFilePath). No default, as above.
 //     providerName?    which provider in ./providers/ makes the vectors. DEFAULT: 'voyage'.
 //                      Legitimately optional and DOCUMENTED HERE, which is what §6 requires of a
 //                      default: voyage is the only provider on disk, the registry is a discovery
@@ -60,17 +63,11 @@ const configFileProcessor = require('qtools-config-file-processor');
 // stated in the module's interface. It is stated there.
 const DEFAULT_PROVIDER_NAME = 'voyage';
 
-// canonical config home for this project (DECISIONS §3; secrets live ONLY here)
-const defaultConfigFilePath =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/configs/instanceSpecific/qbook/voyageEmbedding.ini';
-
-// canonical home of the ONE shared vector cache (dataStores; written by the forger's embed passes, no bridge embeds).
-// A DOCUMENTED default standing behind an optional module parameter — polyArch2 §6 permits exactly
-// that: the cache is ON by default because a vector is a once-ever cost and isolating it per build is
-// waste, and a caller (the test suite) turns it OFF or redirects it by passing cacheFilePath. Passing
-// `false` disables caching entirely (pure provider path); passing another path redirects it.
-const defaultCacheFilePath =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/vectorCache/vectorCache.sqlite3';
+// ⟪deep review 2026-11-21, Build 13, F-37⟫ the credentials ini and the vector cache USED to default to two paths in one
+// Mac's home directory. Both are now named by the caller, and refused by name when absent: on the educore server those paths do
+// not exist, and a defaulted cache path there would have started a COLD cache (re-buying every embedding) without a word.
+// graphBuilder never relied on either default: the forger passes [forger] voyageConfigFilePath, and build.js always hands
+// the forger a cache path or false (resolveEmbeddingCacheFilePath).
 
 // =====================================================================
 // PROVIDER REGISTRY — auto-discovered from ./providers/ (registry, not switch)
@@ -113,9 +110,9 @@ const cacheOnlyFor = ({ cacheOnly }) => {
 const moduleFunction =
 	({ moduleName } = {}) =>
 	({
-		configFilePath = defaultConfigFilePath,
+		configFilePath,
 		providerName = DEFAULT_PROVIDER_NAME,
-		cacheFilePath = defaultCacheFilePath,
+		cacheFilePath,
 		// componentOverrides.provider (spend ledger R1, 2026-10-21) — a TEST SEAM, the componentOverrides idiom llmClient and the
 		// judge registry use: an object answering embed(texts, resolvedConfig, cb) stands in for the discovered provider so a
 		// suite can prove the spend record without a socket or a bill. Production passes nothing and takes providerName's.
@@ -139,6 +136,21 @@ const moduleFunction =
 				`embedding-client: unknown provider '${providerName}'. Available providers ` +
 					`(discovered in ./providers/): ${Object.keys(providers).sort().join(', ')}. It was ` +
 					`NOT quietly replaced with the default.`,
+			);
+		}
+		if (typeof configFilePath !== 'string' || configFilePath.trim() === '') {
+			throw new Error(
+				`embedding-client: configFilePath is ${JSON.stringify(configFilePath)}. It names the .ini holding ` +
+					`[voyageEmbedding] (the embedding CREDENTIALS) and has NO default: graphBuilder passes [forger] ` +
+					`voyageConfigFilePath from graphBuilder.ini; a direct caller passes the path itself.`,
+			);
+		}
+		if (cacheFilePath !== false && (typeof cacheFilePath !== 'string' || cacheFilePath.trim() === '')) {
+			throw new Error(
+				`embedding-client: cacheFilePath is ${JSON.stringify(cacheFilePath)}. It names the vector cache and has NO ` +
+					`default: graphBuilder passes [stores] vectorCacheFilePath from graphBuilder.ini (or ` +
+					`--embeddingCacheFilePath); pass false to disable caching. A defaulted path would start a cold cache ` +
+					`wherever it pointed.`,
 			);
 		}
 
