@@ -158,6 +158,11 @@ taskList.push((args, next) => {
 		caseLabel: 'saveObject (its pipe runs inside getData)',
 		startCall: (oneCallback) => args.acceptingTableRef.saveObject({ label: 'throwFromCallback' }, rawOpts, oneCallback),
 	});
+	// pass 2's third site (T0 2.1): checkTableExists had the same shape
+	throwOnceCase({
+		caseLabel: 'checkTableExists',
+		startCall: (oneCallback) => args.dbInstance.checkTableExists('acceptingGateTable', oneCallback),
+	});
 	next('', args);
 });
 

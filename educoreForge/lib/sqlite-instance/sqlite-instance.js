@@ -624,23 +624,24 @@ const moduleFunction = function ({ unused }) {
 	const checkTableExistsActual = (db) => (tableName, callback) => {
 		const query = "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name=?";
 
+		// F-16 (pass 2's third site): the callback runs OUTSIDE the try (see runStatementActual)
+		let checkError = null;
+		let exists = false;
 		try {
 			const result = db.prepare(query).get(tableName);
-			const exists = result && result.count > 0;
-
-			if (callback) {
-				callback(null, exists);
-			} else {
-				return exists;
-			}
+			exists = result && result.count > 0;
 		} catch (err) {
-			xLog.error(`Error checking table existence for ${tableName}: ${err.toString()}`);
-			if (callback) {
-				callback(err.toString(), false);
-			} else {
-				return false;
-			}
+			checkError = err.toString();
+			xLog.error(`Error checking table existence for ${tableName}: ${checkError}`);
 		}
+		if (!callback) {
+			return checkError ? false : exists;
+		}
+		if (checkError) {
+			callback(checkError, false);
+			return;
+		}
+		callback(null, exists);
 	};
 
 	// =====================================================================
