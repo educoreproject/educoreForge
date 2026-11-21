@@ -140,6 +140,25 @@ if (registryPresent) {
 }
 
 // =====================================================================
+harness.section('F-2 sibling — the --rebridge scope: unknown bare token, duplicate, blank (build.js, in process)');
+// =====================================================================
+
+const buildStatics = require('../lib/build');
+const scopeBridgeList = [{ source: 'edfi', hub: 'ceds' }, { source: 'edfi', hub: 'ctdl' }, { source: 'ctdlasn', hub: 'ctdl' }];
+const scopeRefusalFor = (rebridgeScope) => buildStatics.rebridgeScopeRefusalFor({ rebridgeScope, bridgeList: scopeBridgeList, hubTokenList: ['ceds', 'ctdl'] });
+const scopeFromCommandLine = (rebridgeValueList) => buildStatics.resolveRebridge({ commandLineParameters: { switches: { build: true }, values: { rebridge: rebridgeValueList } } });
+
+harness.equal('every currently valid form is admitted: a bare source, a pair, both, all, none', [['edfi'], ['EdFi'], ['edfi:ctdl'], ['edfi:ctdl', 'ctdlasn'], 'all', []].map((oneScope) => scopeRefusalFor(oneScope)).join('|'), '|||||');
+harness.match('a bare token naming no source of the recipe is REFUSED by name (it would rebridge nothing)', scopeRefusalFor(['sif']), /--rebridge token 'sif' names no source of this recipe[\s\S]*\(its sources: ctdlasn, edfi\)/);
+harness.match('  including a hub named as if it were a source', scopeRefusalFor(['ceds']), /--rebridge token 'ceds' names no source of this recipe/);
+harness.equal('resolveRebridge: the command-line list resolves as before', JSON.stringify((scopeFromCommandLine(['edfi', 'ctdlasn:ctdl']) || {}).value), '["edfi","ctdlasn:ctdl"]');
+harness.equal("resolveRebridge: 'all' resolves as before", (scopeFromCommandLine(['all']) || {}).value, 'all');
+harness.match('resolveRebridge: a DUPLICATED token is REFUSED by name', (scopeFromCommandLine(['edfi', 'EDFI']) || {}).error || '', /--rebridge names 'edfi' twice/);
+harness.match('resolveRebridge: a BLANK element is REFUSED by name, not filtered out', (scopeFromCommandLine(['edfi', ' ']) || {}).error || '', /--rebridge carries a blank token/);
+harness.match('resolveRebridge: a bare --rebridge that reached it (the boolean true) is REFUSED by name, not a TypeError', (scopeFromCommandLine(true) || {}).error || '', /--rebridge was given with no value/);
+harness.match('resolveRebridge: an injected deps.rebridge with a duplicate is REFUSED the same way', (buildStatics.resolveRebridge({ rebridge: ['edfi', 'edfi'] }) || {}).error || '', /--rebridge names 'edfi' twice/);
+
+// =====================================================================
 // THE OPEN-STDIN HANG — asynchronous: spawn with a pipe that is never closed
 // =====================================================================
 

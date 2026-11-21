@@ -921,10 +921,28 @@ const resolveEmbeddingCacheFilePath = (deps, { supportStoreFilePath } = {}) => {
 // an array of source tokens (['ctdl']), the string 'all', or absent/empty (none). A supplied-but-wrong-typed
 // deps.rebridge is refused BY NAME rather than silently corrected. Returns { value } (a normalized scope:
 // 'all' | string[] ) or { error }; no throw, so build() routes a refusal through its callback.
+// ⟪deep review 2026-11-21, Build 2, F-2 sibling⟫ a token list is refused, by name, when a token is blank (it used to be
+// filtered out silently, so --rebridge=ctdl, read as ctdl) or names the same source twice (matching is case-insensitive,
+// so EDFI and edfi are the same token). Shared by both channels, the injected deps.rebridge included.
+const rebridgeTokenListRefusal = (tokenList) => {
+	if (tokenList.some((oneToken) => `${oneToken}`.trim() === '')) {
+		return `graphBuilder build: --rebridge carries a blank token (${JSON.stringify(tokenList)}). It was NOT filtered out: name each source once, comma-separated (--rebridge=<token>[,<token>...]).`;
+	}
+	const lowerTokenList = tokenList.map((oneToken) => `${oneToken}`.trim().toLowerCase());
+	const duplicatedToken = lowerTokenList.find((oneToken, tokenIndex) => lowerTokenList.indexOf(oneToken) !== tokenIndex);
+	if (duplicatedToken !== undefined) {
+		return `graphBuilder build: --rebridge names '${duplicatedToken}' twice (${JSON.stringify(tokenList)}). Name each source once; a repeat is refused rather than collapsed, because it is usually a typo for a source that was meant.`;
+	}
+	return '';
+};
 const resolveRebridge = (deps) => {
 	if (deps.rebridge !== undefined) {
-		if (deps.rebridge === 'all' || Array.isArray(deps.rebridge)) {
+		if (deps.rebridge === 'all') {
 			return { value: deps.rebridge };
+		}
+		if (Array.isArray(deps.rebridge)) {
+			const injectedRefusal = rebridgeTokenListRefusal(deps.rebridge);
+			return injectedRefusal ? { error: injectedRefusal } : { value: deps.rebridge };
 		}
 		return {
 			error:
@@ -933,17 +951,30 @@ const resolveRebridge = (deps) => {
 				`to a default.`,
 		};
 	}
+	// deps.commandLineParameters is the hermetic seam its sibling resolvers already take; production passes none
 	const commandLineParameters =
-		(process.global && process.global.commandLineParameters) || { values: {}, switches: {} };
-	const scopeValues = (commandLineParameters.values && commandLineParameters.values.rebridge) || [];
-	// --rebridge=all OR --rebridge=ctdl,lif OR repeated --rebridge=ctdl --rebridge=lif; absent -> [] (none).
-	if (scopeValues.some((oneValue) => `${oneValue}`.trim().toLowerCase() === 'all')) {
-		return { value: 'all' };
+		deps.commandLineParameters || (process.global && process.global.commandLineParameters) || { values: {}, switches: {} };
+	const scopeValues = (commandLineParameters.values || {}).rebridge;
+	if (scopeValues === undefined) {
+		return { value: [] };
 	}
+	if (!Array.isArray(scopeValues)) {
+		// the entry (operator-input.js) refuses a bare --rebridge first; this is the second line, and it used to be a TypeError
+		return { error: `graphBuilder build: --rebridge was given with no value (${JSON.stringify(scopeValues)}). Give --rebridge=all or --rebridge=<token>[,<token>...], or leave it out.` };
+	}
+	// --rebridge=all OR --rebridge=ctdl,lif (comma-separated is the ONE list form). A REPEATED --rebridge=ctdl --rebridge=lif
+	// was never honoured: qtools-parse-command-line keeps only the last (code fact, deepReview-112126/pass2/T0 1.1), and the
+	// entry now refuses any repeated flag by name. Absent -> [] (none).
 	const tokens = scopeValues
 		.reduce((soFar, oneValue) => soFar.concat(`${oneValue}`.split(',')), [])
-		.map((oneToken) => oneToken.trim())
-		.filter((oneToken) => oneToken !== '');
+		.map((oneToken) => oneToken.trim());
+	const tokenListRefusal = rebridgeTokenListRefusal(tokens);
+	if (tokenListRefusal) {
+		return { error: tokenListRefusal };
+	}
+	if (tokens.some((oneToken) => oneToken.toLowerCase() === 'all')) {
+		return { value: 'all' };
+	}
 	return { value: tokens };
 };
 
@@ -973,12 +1004,21 @@ const pairInRebridgeScope = (rebridgeScope, bridge) => {
 	});
 };
 
-// rebridgeScopeRefusalFor — '' or the refusal for a pair token the recipe cannot honour: malformed (not exactly
-// <source>:<hub>, both non-empty), naming a hub the recipe does not mint, or naming no bridge of the recipe (it would
-// rebridge nothing, silently). Bare tokens and 'all' keep today's behaviour and are not checked here.
+// rebridgeScopeRefusalFor — '' or the refusal for a token the recipe cannot honour: a BARE token naming no source of the
+// recipe (⟪deep review 2026-11-21, Build 2⟫ it used to be admitted and rebridge nothing, silently), or a pair token that is
+// malformed (not exactly <source>:<hub>, both non-empty), names a hub the recipe does not mint, or names no bridge of the
+// recipe. 'all' and the empty scope are admitted.
 const rebridgeScopeRefusalFor = ({ rebridgeScope, bridgeList, hubTokenList }) => {
 	if (!Array.isArray(rebridgeScope)) {
 		return '';
+	}
+	const recipeSourceTokenList = bridgeList
+		.map((oneBridge) => `${oneBridge.source}`.toLowerCase())
+		.filter((oneSource, sourceIndex, sourceList) => sourceList.indexOf(oneSource) === sourceIndex)
+		.sort();
+	const unknownBareToken = rebridgeScope.find((oneToken) => `${oneToken}`.indexOf(REBRIDGE_PAIR_TOKEN_SEPARATOR) === -1 && recipeSourceTokenList.indexOf(`${oneToken}`.toLowerCase()) === -1);
+	if (unknownBareToken !== undefined) {
+		return `graphBuilder build: --rebridge token '${unknownBareToken}' names no source of this recipe, so it would rebridge nothing (its sources: ${recipeSourceTokenList.join(', ')}). It was NOT ignored.`;
 	}
 	const pairTokenList = rebridgeScope.filter((oneToken) => `${oneToken}`.indexOf(REBRIDGE_PAIR_TOKEN_SEPARATOR) !== -1);
 	for (let tokenIndex = 0; tokenIndex < pairTokenList.length; tokenIndex++) {
