@@ -1180,8 +1180,11 @@ const stageRebridgeWiring = () => {
 	// what lets the suite keep every real build OUT of the canonical home. (Observed red by inverting
 	// the default expectation — DEVLOG Phase 4 K3b.)
 	harness.section('BUILD-LOG ROOT — deps > --buildLogsDirPath > documented default; empty refused by name');
-	harness.equal('resolveBuildLogsDirPath: nothing supplied -> the documented canonical home', buildStatics.resolveBuildLogsDirPath({}).value, buildStatics.BUILD_LOGS_DIR_PATH);
-	harness.match('  and that home is dataStores/buildLogs (the help text names it)', buildStatics.BUILD_LOGS_DIR_PATH, /\/system\/dataStores\/buildLogs$/);
+	// ⟪deep review 2026-11-21, Build 13⟫ was: nothing supplied -> the in-code BUILD_LOGS_DIR_PATH (a path on one Mac). The home
+	// is now the SETTING [stores] buildLogsDirPath; its absence is refused (gated in lib/required-setting/test/test-portability.js)
+	const configuredBuildLogsDirPath = (process.global.getConfig('stores') || {}).buildLogsDirPath;
+	harness.equal('resolveBuildLogsDirPath: nothing supplied -> the configured [stores] buildLogsDirPath', buildStatics.resolveBuildLogsDirPath({}).value, configuredBuildLogsDirPath);
+	harness.ok('  and that setting is present in graphBuilder.ini', typeof configuredBuildLogsDirPath === 'string' && configuredBuildLogsDirPath.trim() !== '', `${configuredBuildLogsDirPath}`);
 	harness.equal('resolveBuildLogsDirPath: deps.buildLogsDirPath wins', buildStatics.resolveBuildLogsDirPath({ buildLogsDirPath: '/scratch/root' }).value, '/scratch/root');
 	harness.match('resolveBuildLogsDirPath: an EMPTY deps value is REFUSED by name (not corrected to the default)', buildStatics.resolveBuildLogsDirPath({ buildLogsDirPath: '' }).error, /buildLogsDirPath is ""[\s\S]*not corrected silently/);
 	harness.match('resolveBuildLogsDirPath: a non-string deps value is REFUSED by name', buildStatics.resolveBuildLogsDirPath({ buildLogsDirPath: 7 }).error, /buildLogsDirPath is 7/);
@@ -1203,7 +1206,7 @@ const stageRebridgeWiring = () => {
 		} else {
 			delete cliValues.buildLogsDirPath;
 		}
-		harness.equal('  and after restoring the CLI, the documented default is back', buildStatics.resolveBuildLogsDirPath({}).value, buildStatics.BUILD_LOGS_DIR_PATH);
+		harness.equal('  and after restoring the CLI, the configured setting is back', buildStatics.resolveBuildLogsDirPath({}).value, (process.global.getConfig('stores') || {}).buildLogsDirPath);
 	})();
 
 	harness.section('REBRIDGE WIRING — --rebridge scope resolution + per-pair threading (§6 no-silent-default)');

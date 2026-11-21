@@ -38,8 +38,12 @@ const firstValue = (commandLineParameters, name) => (commandLineParameters.value
 // --containerName is REQUIRED and has no default: a fidelity measurement is always OF one
 // materialized graph, and there is no meaningful "whichever graph happens to be running".
 
-const CEDS_ROUND_TRIP_DEFAULT_DIR_PATH =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/cedsRoundTrip';
+// ⟪deep review 2026-11-21, Build 13, F-37⟫ the default output home of -roundTripCompile is the SETTING [stores]
+// cedsRoundTripDirPath in graphBuilder.ini, read only when --outPath or --reportPath is absent and refused by name when it
+// is missing; it used to be a constant naming a path on one Mac.
+const { readRequiredSetting } = require(path.join(__dirname, '..', '..', '..', 'lib', 'required-setting', 'required-setting'));
+const cedsRoundTripDirPathFor = (getConfig) =>
+	readRequiredSetting({ getConfig, sectionName: 'stores', settingName: 'cedsRoundTripDirPath', whatItNames: "the default home of -roundTripCompile's emitted RDF and fidelity report", askedBy: 'graphBuilder -roundTripCompile --standard=ceds' });
 
 const requireCedsRoundTripCompiler = () => require(path.join(__dirname, 'roundTripCompiler'));
 const requireCedsRoundTripDiff = () => require(path.join(__dirname, 'roundTripDiff'));
@@ -94,9 +98,17 @@ const runRoundTripCompile = ({ xLog, commandLineParameters }, callback) => {
 		return;
 	}
 
+	const outputDirResolution =
+		firstValue(commandLineParameters, 'outPath') !== undefined && firstValue(commandLineParameters, 'reportPath') !== undefined
+			? { value: '[stores] cedsRoundTripDirPath' }
+			: cedsRoundTripDirPathFor(process.global && process.global.getConfig);
+	if (outputDirResolution.error) {
+		callback(outputDirResolution.error);
+		return;
+	}
 	const outResolution = optionalPath({
 		parameterName: 'outPath',
-		defaultPath: path.join(CEDS_ROUND_TRIP_DEFAULT_DIR_PATH, `${containerName}.emitted.rdf`),
+		defaultPath: path.join(outputDirResolution.value, `${containerName}.emitted.rdf`),
 	});
 	if (outResolution.error) {
 		callback(outResolution.error);
@@ -104,7 +116,7 @@ const runRoundTripCompile = ({ xLog, commandLineParameters }, callback) => {
 	}
 	const reportResolution = optionalPath({
 		parameterName: 'reportPath',
-		defaultPath: path.join(CEDS_ROUND_TRIP_DEFAULT_DIR_PATH, `${containerName}.roundTrip.txt`),
+		defaultPath: path.join(outputDirResolution.value, `${containerName}.roundTrip.txt`),
 	});
 	if (reportResolution.error) {
 		callback(reportResolution.error);
@@ -398,4 +410,4 @@ const runRoundTripGates = ({ xLog, commandLineParameters }, callback) => {
 	});
 };
 
-module.exports = { runRoundTripCompile, runRoundTripGates, moduleName };
+module.exports = { runRoundTripCompile, runRoundTripGates, moduleName, cedsRoundTripDirPathFor };

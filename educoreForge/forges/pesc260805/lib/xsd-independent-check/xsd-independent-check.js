@@ -57,9 +57,12 @@ const COMPARE_SCRIPT_PATH = path.join(__dirname, 'lib', 'xsdComponentCompare.py'
 // The virtual environment lives in dataStores, NOT in the code tree and NOT in the user's python.
 // It is disposable: delete the directory and the next run rebuilds it. Same siting rule as
 // lib/rdf-independent-check, for the same reason.
-const VENV_DIR_PATH =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/xsdIndependentCheck/venv';
-const VENV_PYTHON_PATH = path.join(VENV_DIR_PATH, 'bin', 'python');
+// ⟪deep review 2026-11-21, Build 13, F-37⟫ the environment's home is the SETTING [independentCheck] xsdVenvDirPath in
+// graphBuilder.ini, read when the check runs and refused by name when absent (the check then reads UNMEASURED, as for a
+// missing python3); it used to be a constant naming a path on one Mac.
+const { readRequiredSetting } = require(path.join(__dirname, '..', '..', '..', '..', 'lib', 'required-setting', 'required-setting'));
+const venvDirPathFor = (getConfig) =>
+	readRequiredSetting({ getConfig, sectionName: 'independentCheck', settingName: 'xsdVenvDirPath', whatItNames: 'the Python environment (xmlschema) the independent XSD check creates on first use and runs in; on a new machine the first run creates it there and pip-installs into it', askedBy: moduleName });
 
 // Measured: 64 independent compilations run about 24 seconds per corpus, and this compares two.
 const COMPARE_TIMEOUT_MS = 600000;
@@ -70,8 +73,15 @@ const xsdIndependentCheck = () => {
 	// ensureEnvironment — python3 + an xmlschema venv, or a NAMED refusal
 	// -----------------------------------------------------------------
 	const ensureEnvironment = (callback) => {
-		if (fs.existsSync(VENV_PYTHON_PATH)) {
-			callback('', { pythonPath: VENV_PYTHON_PATH, created: false });
+		const venvDirPathResolution = venvDirPathFor(process.global && process.global.getConfig);
+		if (venvDirPathResolution.error) {
+			callback(venvDirPathResolution.error);
+			return;
+		}
+		const venvDirPath = venvDirPathResolution.value;
+		const venvPythonPath = path.join(venvDirPath, 'bin', 'python');
+		if (fs.existsSync(venvPythonPath)) {
+			callback('', { pythonPath: venvPythonPath, created: false });
 			return;
 		}
 		execFile('python3', ['--version'], (versionError) => {
@@ -83,25 +93,25 @@ const xsdIndependentCheck = () => {
 				);
 				return;
 			}
-			fs.mkdirSync(path.dirname(VENV_DIR_PATH), { recursive: true });
-			execFile('python3', ['-m', 'venv', VENV_DIR_PATH], (venvError) => {
+			fs.mkdirSync(path.dirname(venvDirPath), { recursive: true });
+			execFile('python3', ['-m', 'venv', venvDirPath], (venvError) => {
 				if (venvError) {
-					callback(`${moduleName}: could not create venv at ${VENV_DIR_PATH}: ${venvError.message}`);
+					callback(`${moduleName}: could not create venv at ${venvDirPath}: ${venvError.message}`);
 					return;
 				}
 				execFile(
-					path.join(VENV_DIR_PATH, 'bin', 'pip'),
+					path.join(venvDirPath, 'bin', 'pip'),
 					['install', '--quiet', '--no-cache-dir', 'xmlschema'],
 					{ timeout: COMPARE_TIMEOUT_MS },
 					(installError) => {
 						if (installError) {
 							callback(
-								`${moduleName}: could not install xmlschema into ${VENV_DIR_PATH}: ` +
+								`${moduleName}: could not install xmlschema into ${venvDirPath}: ` +
 									`${installError.message}`,
 							);
 							return;
 						}
-						callback('', { pythonPath: VENV_PYTHON_PATH, created: true });
+						callback('', { pythonPath: venvPythonPath, created: true });
 					},
 				);
 			});
@@ -322,8 +332,9 @@ const xsdIndependentCheck = () => {
 		// EXPORTED SO THE RED-EVIDENCE LEVER CAN DRIVE THE REAL GUARD rather than a copy of it.
 		refuseUnlessProcessorIsXsd11,
 		COMPARE_SCRIPT_PATH,
-		VENV_DIR_PATH,
+		venvDirPathFor,
 	};
 };
 
 module.exports = xsdIndependentCheck;
+module.exports.venvDirPathFor = venvDirPathFor;

@@ -90,8 +90,13 @@ const requireMatchForensics = () =>
 // constant in place would have left a second, code-invented home for the cache that nothing consulted
 // but that the next reader would reasonably believe in. The forensic match log is a DIRECTORY of JSON,
 // not a SQLite family, so it is not one of the five and keeps its own home.
-const MATCH_FORENSICS_DEFAULT_DIR_PATH =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/matchForensics';
+//
+// ⟪deep review 2026-11-21, Build 13, F-37⟫ the home is the SETTING [stores] matchForensicsDirPath in graphBuilder.ini,
+// refused by name when absent and the flag is not given; it used to be a constant naming a path on one Mac, which a
+// build on the educore server would have CREATED (resolvePersistencePath prepares the default) as a fresh empty tree.
+const { readRequiredSetting } = require(path.join(__dirname, '..', '..', '..', 'lib', 'required-setting', 'required-setting'));
+const matchForensicsDefaultDirPathFor = (getConfig) =>
+	readRequiredSetting({ getConfig, sectionName: 'stores', settingName: 'matchForensicsDirPath', whatItNames: 'the home of the forensic match log (every judge prompt and answer, kept because a judgment is spent money)', askedBy: 'graphBuilder -build' });
 
 // resolvePersistencePath — shared resolution for both P9 stores. Returns
 // { filePath } (a path to open), { disabled: true } ('false' was passed), or { error } (blank).
@@ -665,11 +670,18 @@ const build = (callback) => {
 		.filter((onePlan) => onePlan.referenceResolution.filePath !== undefined)
 		.map((onePlan) => ({ familyName: onePlan.familyName, databaseFilePath: onePlan.databaseFilePath, referenceFilePath: onePlan.referenceResolution.filePath }));
 
+	// the setting is read only when the flag is absent: a run naming its own forensic home needs no configured one
+	const matchForensicsExplicitValue = firstValue(process.global.commandLineParameters, 'matchForensicsDirPath');
+	const matchForensicsDefaultResolution = matchForensicsExplicitValue === undefined ? matchForensicsDefaultDirPathFor(process.global.getConfig) : { value: '[stores] matchForensicsDirPath' };
+	if (matchForensicsDefaultResolution.error) {
+		callback(matchForensicsDefaultResolution.error);
+		return;
+	}
 	const matchForensicsPathResolution = resolvePersistencePath({
-		explicitValue: firstValue(process.global.commandLineParameters, 'matchForensicsDirPath'),
-		defaultPath: MATCH_FORENSICS_DEFAULT_DIR_PATH,
+		explicitValue: matchForensicsExplicitValue,
+		defaultPath: matchForensicsDefaultResolution.value,
 		parameterName: 'matchForensicsDirPath',
-		prepareDir: MATCH_FORENSICS_DEFAULT_DIR_PATH,
+		prepareDir: matchForensicsDefaultResolution.value,
 	});
 	if (matchForensicsPathResolution.error) {
 		callback(matchForensicsPathResolution.error);
@@ -2196,6 +2208,8 @@ return {
 	// ⟪campaign P2, W-C-10⟫ the GOLD_EVAL kind gate and the -build lineage flag, for their hermetic gates
 	promotionKindRefusal,
 	resolveBasedOnManifestRefId,
+	// ⟪Build 13⟫ for test-portability's hermetic gate
+	matchForensicsDefaultDirPathFor,
 };
 };
 

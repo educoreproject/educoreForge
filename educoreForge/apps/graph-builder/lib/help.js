@@ -264,8 +264,9 @@ OPTIONS
      --buildLogsDirPath=<dir>
                            The ROOT under which this build's RUN DIRECTORY (<recipeName>_<stamp>/,
                            holding each hub's reports and the round-trip stage verdicts +
-                           certification summary) is created. OPTIONAL, DEFAULTS TO the canonical
-                           home system/dataStores/buildLogs. Name a scratch root to keep a test or
+                           certification summary) is created. OPTIONAL, DEFAULTS TO the setting
+                           [stores] buildLogsDirPath in graphBuilder.ini, which is REQUIRED
+                           when the flag is absent (no in-code default). Name a scratch root to keep a test or
                            probe build out of the canonical home (the suite does). An empty value
                            is refused by name, never corrected to the default.
      --judgmentCacheFilePath=<path> | --judgmentCacheFilePath=false
@@ -289,8 +290,9 @@ OPTIONS
                            <dir>/<pairKey>/<generation>.jsonl; the bridge framework ALSO lands there
                            a MappingReview record when two plugins on one pairing disagree about a
                            source subject, and each frozen block's SSSOM/TSV export at
-                           <dir>/<pairKey>/<blockId>.sssom.tsv. OPTIONAL, ON BY DEFAULT at
-                           system/dataStores/matchForensics. Pass a path to redirect, or 'false'
+                           <dir>/<pairKey>/<blockId>.sssom.tsv. OPTIONAL, ON BY DEFAULT at the
+                           setting [stores] matchForensicsDirPath in graphBuilder.ini, REQUIRED
+                           when the flag is absent (no in-code default). Pass a path to redirect, or 'false'
                            to disable — a --rebridge REFUSES to run without it (every judgment lands
                            in the trail); a plain build needs it only for the export. A forensics
                            write failure never kills a build (logged loudly and the run continues);
@@ -362,7 +364,9 @@ OPTIONS
                            of being asked of the live judge, and the run stops at the first one: use it
                            for a rebuild that is meant to cost nothing (lane REFORGE, 2026-10-08), and to
                            learn BEFORE spending whether a run would spend. PROVIDER-NEUTRAL: it wraps
-                           whichever judge [judgeProvider] selects; the cache key and the judge identity
+                           whichever judge [judgeProvider] selects (its credentials ini is the setting
+                           [judgeProviderConfigFilePath] <providerName>, REQUIRED for the selected
+                           judge; the debug judge needs none); the cache key and the judge identity
                            are that judge's own. A hit is served and re-verified exactly as without it.
                            REFUSED without an active --rebridge scope (nothing would be judged) and with
                            --useDebugJudge (the debug judge never reads the cache). Only 'true' and
@@ -473,11 +477,12 @@ OPTIONS
                            source that does not exist is refused by name -- a measurement without a
                            source is not a smaller measurement, it is no measurement at all.
      --outPath=<path>      Where the compiled RDF/XML is written. OPTIONAL for -roundTripCompile:
-                           DEFAULTS to system/dataStores/cedsRoundTrip/<containerName>.emitted.rdf.
+                           DEFAULTS to <[stores] cedsRoundTripDirPath>/<containerName>.emitted.rdf.
                            The emission is kept, not thrown away, so a reported number can always
                            be traced back to the exact document that produced it.
      --reportPath=<path>   Where the readable report is written. OPTIONAL for -roundTripCompile:
-                           DEFAULTS to system/dataStores/cedsRoundTrip/<containerName>.roundTrip.txt.
+                           DEFAULTS to <[stores] cedsRoundTripDirPath>/<containerName>.roundTrip.txt
+                           (that setting is REQUIRED when either flag is absent).
                            The JSON SIDECAR is written beside it with the same stem and a .json
                            extension. The report text and the sidecar are rendered from the SAME
                            report object and never recompute anything, so the two can never
