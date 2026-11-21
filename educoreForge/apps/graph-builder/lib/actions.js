@@ -455,8 +455,12 @@ const scanAvailableForges = ({ forgesDir } = {}) => {
 // SHARED — resolve the recipe path, then load / summarize / validate it
 // ---------------------------------------------------------------------
 
-const firstValue = (commandLineParameters, name) =>
-	(commandLineParameters.values[name] || [])[0];
+// ⟪deep review 2026-11-21, Build 2, F-2⟫ firstValue was `(values[name] || [])[0]`, which read a blank command-line flag (the
+// parser's boolean true) as ABSENT and let the reader take its default: for the store flag, the store of record. Operator
+// input is now audited once at the entry (operator-input.js operatorInputRefusal, both channels), so a blank never reaches
+// here; this reader is the second line, and throws on a member that is not a list rather than reading a string's first letter.
+const { firstFlagValueOf } = require('./operator-input');
+const firstValue = (commandLineParameters, name) => firstFlagValueOf(commandLineParameters, name);
 
 // resolveBasedOnManifestRefId — ⟪campaign P2, W-C-8⟫ the optional -build --basedOnManifestRefId: absent -> {} (no parent
 // named, recorded as such); present -> a non-blank value, else refused by name (a blank flag is not "no parent").

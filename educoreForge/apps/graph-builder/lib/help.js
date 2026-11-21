@@ -11,6 +11,9 @@
 
 const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 
+// the open-stdin wait is stated here from the same data startup.js applies, so the two cannot disagree
+const { STDIN_FIRST_CHUNK_WAIT_MILLISECONDS: stdinFirstChunkWaitMilliseconds } = require('./startup')();
+
 // START OF moduleFunction() ============================================================
 
 const moduleFunction =
@@ -39,6 +42,7 @@ SYNOPSIS
                                    --reforgeEvidencePath=<reforgeCompare -summarize output>
      graphBuilder   -spendLedger [--since=YYYY-MM-DD] [--recipe=<recipeName>] [--lifetimeLedgerFilePath=<path>]
      graphBuilder   -foldStore --sourceFilePath=<a delta or a store> --targetFilePath=<the store of record> [--apply=true]
+     graphBuilder   -truncateStore [--standardsDatabaseFilePath=<the store to empty>]
      graphBuilder   -publishLayer --layerKey=<key> --versionTag=<tag> --sssomPath=<set.sssom.tsv>
                                    --decisionStoreFilePath=<path> --sssomValidatorPath=<sssom-py's sssom binary>
                                    [--authorIri=<edc agent IRI>] [--uriContractFilePath=<path>]
@@ -57,7 +61,7 @@ SYNOPSIS
                                    [--uriContractFilePath=<path>]
      graphBuilder   -replayOldest [--uriContractFilePath=<path>] [--live=true --exportStoreFilePath=<a NEW scratch store>]
      graphBuilder   -rebuildUriContractIndexes [--verifyOnly=true] [--uriContractFilePath=<path>]
-     graphBuilder   -help
+     graphBuilder   -help | -h
 
      ... | graphBuilder                (JSON on stdin REPLACES command-line parameters)
 
@@ -84,6 +88,29 @@ INPUT
          { "switches": { "build": true },
            "values":   { "recipePath": ["/path/to/recipe.goldenRecipe.jsonc"] },
            "fileList":  [] }
+
+     ONE ACTION PER INVOCATION, AND INPUT THAT CANNOT BE MISREAD (deep review 2026-11-21).
+     Before any action runs or any config is read, the input is checked once, on both
+     channels, and anything below is REFUSED BY NAME with exit 1:
+       - an unknown switch (-biuld), or more than one action (-deps -validate);
+       - parameters with no action (an invocation with NO arguments still prints this help,
+         exit 0);
+       - a blank parameter: --name= on the command line (the parser would read it as true,
+         or swallow the next token -- a flag, the action, a recipe path -- as its value), or
+         a blank string on stdin. A blank is never read as absent, because absent means
+         "take the default", and for a store the default is the store of record;
+       - a parameter typed without '=' (--name value: the parser takes the next token,
+         whatever it is). Only --useDebugJudge may be bare, and only as the LAST token;
+       - a parameter given twice (the parser keeps only the last). A list is typed once,
+         comma-separated: --rebridge=a,b;
+       - a parameter whose name ends in Path carrying a comma (it names ONE path, and the
+         parser splits on commas);
+       - a switch with a value (-build=1: the parser drops the =1);
+       - on stdin: a switch whose value is not true, and a values member that is not a
+         non-empty list of non-blank strings ("recipePath": "x" is refused, not read as "x").
+     stdin that is an open pipe and sends NOTHING for ${stdinFirstChunkWaitMilliseconds} ms is set aside: the command
+     line is used (a line on stderr says so), or, with no command line at all, the run is
+     refused rather than answered with this help. Once stdin sends a byte, it is read to the end.
 
 COMMANDS
      -build       Build the graph described by the recipe. Returns { manifestId, boltUrl }.
@@ -457,6 +484,7 @@ OPTIONS
                            disagree about a number.
      -verbose              Emit verbose diagnostic detail on stderr.
      -quiet                Suppress progress; results and errors only.
+     -silent               Suppress progress and errors (qtools-x-log); only results reach stdout.
 
      -foldStore --sourceFilePath=<path> --targetFilePath=<path> [--apply=true]
                   Return a store's novel rows to the store of record (EC3). READS both, and WITHOUT
@@ -475,6 +503,17 @@ OPTIONS
                   educoreForgeStoreFold.lock, one fold per machine). The target's tables are created by
                   their OWNING modules, never by the fold. Exit 0 a clean plan or an applied fold;
                   1 a plan with conflicts, or refused.
+     -truncateStore [--standardsDatabaseFilePath=<path>]
+                  EMPTY the support store's tables (blocks, manifests, manifestBlocks, decisionBlocks,
+                  vectors, vectorCacheEntries, judgmentCacheEntries) behind a PROVEN backup: it takes a
+                  timestamped VACUUM INTO copy beside the store (<store>.beforeTruncate-<time>.backup),
+                  OPENS the copy, counts every table it is about to empty, and requires the counts to
+                  equal the live store's. A copy that cannot be opened, a missing table or one count
+                  that disagrees is REFUSED BY NAME and the live store is left as it was. Rows are
+                  DELETEd; every table's schema stays as its owning module declared it. The store is
+                  --standardsDatabaseFilePath, else [stores] graphBuilderSupportFilePath: WITHOUT THE
+                  FLAG THIS EMPTIES THE CONFIGURED STORE OF RECORD. A store that does not exist, or a
+                  backup path that already exists, is refused.
      -stampPromotion
                   RUN AFTER A GRAPH IS PROMOTED (renamed to its GNC-001 name). Writes the graph's REAL
                   name into GraphProvenance.graphName (the scratch name is kept as scratchGraphName) and
@@ -726,8 +765,11 @@ OUTPUT
                 lost statements per predicate with their subject ids.
 
 EXIT STATUS
-     0    the requested action succeeded (a -validate verdict of valid, a completed build)
-     1    the recipe was rejected, a required parameter was missing, or the build failed
+     0    the requested action succeeded (a -validate verdict of valid, a completed build), or
+          help was asked for (-help, -h, or no arguments at all)
+     1    the input was refused (an unknown switch, two actions, a blank, bare or repeated
+          parameter, parameters with no action), the recipe was rejected, a required parameter
+          was missing, or the action failed
 `;
 		return { helpText };
 	};

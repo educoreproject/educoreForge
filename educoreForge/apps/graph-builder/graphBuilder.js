@@ -16,7 +16,9 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 //
 //   lib/help.js       the help text (the control surface IS the contract)
 //   lib/startup.js    parameter resolution (CLI or JSON-on-stdin) + process.global
-//   lib/actions.js    -build / -validate / -deps, returned as functions to execute
+//   lib/graphBuilderActionRegistry.json   the actions and switches, as data (the dispatch)
+//   lib/operator-input.js  the ONE audit of operator input, both channels, before any action
+//   lib/actions.js    the action functions the registry names
 //   lib/recipe.js     load / summarize / validate (Layers 1 and 2)
 //   lib/build.js      the phase pipeline over the component modules
 //
@@ -37,6 +39,17 @@ const moduleName = __filename.replace(__dirname + '/', '').replace(/.js$/, '');
 const { helpText } = require('./lib/help')();
 const { resolveParameters, bootstrapGlobal } = require('./lib/startup')();
 const actions = require('./lib/actions')();
+const actionRegistry = require('./lib/graphBuilderActionRegistry.json');
+const operatorInput = require('./lib/operator-input')({ actionRegistry });
+
+// ⟪deep review 2026-11-21, Build 2, F-38⟫ THE DISPATCH IS DATA. lib/graphBuilderActionRegistry.json lists the actions; each
+// names a function of the actions module, checked here once at load so a registry row without its function fails at
+// the first run of any command rather than on the day someone types it. test-operatorInput.js holds the registry, the
+// exports and the help to each other both ways.
+const missingActionFunctionList = actionRegistry.actionList.map((oneAction) => oneAction.switchName).filter((switchName) => typeof actions[switchName] !== 'function');
+if (missingActionFunctionList.length > 0) {
+	throw new Error(`graphBuilder: graphBuilderActionRegistry.json names actions the actions module does not export: ${missingActionFunctionList.join(', ')}`);
+}
 
 const finish = (xLog) => (err, outcome) => {
 	if (err) {
@@ -51,64 +64,43 @@ const finish = (xLog) => (err, outcome) => {
 	process.exit(outcome.exitCode);
 };
 
+const refuse = (refusalText) => {
+	process.stderr.write(`${refusalText}\n`);
+	process.exit(1);
+};
+
 const run = () => {
-	resolveParameters((err, commandLineParameters) => {
+	resolveParameters((err, commandLineParameters, inputChannel) => {
 		if (err) {
-			console.error(err);
-			process.exit(1);
+			refuse(err);
 			return;
 		}
 
-		const switches = commandLineParameters.switches || {};
-		const chosenAction = switches.build
-			? actions.build
-			: switches.validate
-			? actions.validate
-			: switches.deps
-			? actions.deps
-			: switches.replay
-			? actions.replay
-			: switches.retrievalMetrics
-			? actions.retrievalMetrics
-			: switches.roundTripCompile
-			? actions.roundTripCompile
-			: switches.roundTripGates
-			? actions.roundTripGates
-			: switches.goldEvalCheck
-			? actions.goldEvalCheck
-			: switches.truncateStore
-			? actions.truncateStore
-			: switches.foldStore
-			? actions.foldStore
-			: switches.stampPromotion
-			? actions.stampPromotion
-			: switches.spendLedger
-			? actions.spendLedger
-			: switches.publishLayer
-			? actions.publishLayer
-			: switches.importLayer
-			? actions.importLayer
-			: switches.seedUriContractFromRegistryJson
-			? actions.seedUriContractFromRegistryJson
-			: switches.publishManifest
-			? actions.publishManifest
-			: switches.appendManifestStatus
-			? actions.appendManifestStatus
-			: switches.replayOldest
-			? actions.replayOldest
-			: switches.rebuildUriContractIndexes
-			? actions.rebuildUriContractIndexes
-			: null;
+		// help first, and before any config is read: -help and -h always answer, whatever else was typed
+		if (operatorInput.helpIsRequested(commandLineParameters.switches)) {
+			process.stdout.write(`${helpText()}\n`);
+			process.exit(0);
+			return;
+		}
 
-		// help is the default: an invocation that names no action is a question, not an error
-		if (switches.help || switches.h || !chosenAction) {
+		// THE ONE AUDIT of operator input, both channels: blank, bare and repeated flags, wrong-shaped stdin members,
+		// unknown or doubled switches, parameters with no action. Refused by name, exit 1 (lib/operator-input.js).
+		const inputRefusal = operatorInput.operatorInputRefusal({ commandLineParameters, commandLineTokenList: inputChannel.commandLineTokenList });
+		if (inputRefusal) {
+			refuse(inputRefusal);
+			return;
+		}
+
+		// an invocation that names nothing at all is a question, not an error: the help, exit 0
+		const actionSwitchName = operatorInput.chosenActionSwitchName(commandLineParameters.switches);
+		if (!actionSwitchName) {
 			process.stdout.write(`${helpText()}\n`);
 			process.exit(0);
 			return;
 		}
 
 		bootstrapGlobal(commandLineParameters);
-		chosenAction(finish(process.global.xLog));
+		actions[actionSwitchName](finish(process.global.xLog));
 	});
 };
 

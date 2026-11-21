@@ -3,7 +3,7 @@
 // startup.js — graphBuilder's plumbing: work out WHAT was asked, then stand up the process
 // environment the rest of the app assumes. Nothing here decides anything about graphs.
 //
-//   resolveParameters(callback) -> callback(errString, commandLineParameters)
+//   resolveParameters(callback) -> callback(errString, commandLineParameters, inputChannel)
 //   bootstrapGlobal(commandLineParameters)   // sets and FREEZES process.global
 //
 // Two input channels, one shape. Parameters arrive either as command-line flags or as a JSON
@@ -79,24 +79,60 @@ const stdinEnvelopeError = (parsed) => {
 const moduleFunction =
 	({ moduleName } = {}) =>
 	(unusedDeps = {}) => {
+// THE OPEN-PIPE WAIT (deep review 2026-11-21, the stdin hang). stdin used to be read until 'end', with no limit, so an
+// open pipe that never closed (a parent process holding it, a harness, `sleep 600 | graphBuilder -deps`) hung the run for
+// ever. Now: if NOTHING arrives within this many milliseconds, the pipe is set aside. Once any byte arrives the read runs to
+// 'end' unhurried, so a slow-but-real JSON producer that starts writing in time is never cut off. Nothing sets this value;
+// it is a constant, exported so -help prints the same number. (It lives here, not in the action registry, because
+// test-startup.js runs this file ALONE in throwaway trees: startup.js must require nothing of its siblings.)
+const STDIN_FIRST_CHUNK_WAIT_MILLISECONDS = 2000;
+
+// resolveParameters(callback) -> callback(errString, commandLineParameters, inputChannel)
+//   inputChannel: { inputChannelName: 'commandLine' | 'stdin', commandLineTokenList } where commandLineTokenList is the raw
+//   argument list when the command line is the channel and [] when stdin replaced it. The raw list goes to
+//   operator-input.js, which alone can see what the parser lost (a blank flag swallowing the next token).
 const resolveParameters = (callback) => {
 	const cliParameters = commandLineParser.getParameters({ noFunctions: true });
+	const commandLineTokenList = process.argv.slice(2);
+	const commandLineChannel = { inputChannelName: 'commandLine', commandLineTokenList };
+	const stdinChannel = { inputChannelName: 'stdin', commandLineTokenList: [] };
 
 	if (process.stdin.isTTY) {
 		// attached to a terminal -> there is no piped stdin
-		callback('', cliParameters);
+		callback('', cliParameters, commandLineChannel);
 		return;
 	}
 
 	let buffer = '';
+	// the timer and the 'end' handler are exclusive: the timer removes the stream's listeners before it answers, and
+	// 'end' (or the first chunk) clears the timer, so exactly one of them calls back
+	const openPipeTimer = setTimeout(() => {
+		process.stdin.removeAllListeners('data');
+		process.stdin.removeAllListeners('end');
+		process.stdin.destroy();
+		if (commandLineTokenList.length === 0) {
+			callback(
+				`graphBuilder: stdin is an open pipe that sent nothing in ${STDIN_FIRST_CHUNK_WAIT_MILLISECONDS} ms, and there is no command line either, so there is nothing to do. ` +
+					`Pipe the JSON envelope and close the pipe, give the command on the command line, or run with </dev/null for the help. ` +
+					`Refused rather than printing the help with exit 0, which a program would read as success.`,
+			);
+			return;
+		}
+		require('qtools-x-log').status(`graphBuilder: stdin is an open pipe that sent nothing in ${STDIN_FIRST_CHUNK_WAIT_MILLISECONDS} ms; it is set aside and the command line is used.`);
+		callback('', cliParameters, commandLineChannel);
+	}, STDIN_FIRST_CHUNK_WAIT_MILLISECONDS);
+
 	process.stdin.setEncoding('utf8');
 	process.stdin.on('data', (chunk) => {
+		// a producer that has started writing is waited for to the end, however long it takes
+		clearTimeout(openPipeTimer);
 		buffer += chunk;
 	});
 	process.stdin.on('end', () => {
+		clearTimeout(openPipeTimer);
 		if (!buffer.trim()) {
 			// non-TTY but nothing piped (e.g. </dev/null) -> fall back to the command line
-			callback('', cliParameters);
+			callback('', cliParameters, commandLineChannel);
 			return;
 		}
 		let parsed;
@@ -113,11 +149,15 @@ const resolveParameters = (callback) => {
 			callback(envelopeError);
 			return;
 		}
-		callback('', {
-			switches: parsed.switches || {},
-			values: parsed.values || {},
-			fileList: parsed.fileList || [],
-		});
+		callback(
+			'',
+			{
+				switches: parsed.switches || {},
+				values: parsed.values || {},
+				fileList: parsed.fileList || [],
+			},
+			stdinChannel,
+		);
 	});
 };
 
@@ -227,7 +267,7 @@ const bootstrapGlobal = (commandLineParameters) => {
 	Object.freeze(process.global);
 };
 
-return { resolveParameters, bootstrapGlobal, loadConfig };
+return { resolveParameters, bootstrapGlobal, loadConfig, STDIN_FIRST_CHUNK_WAIT_MILLISECONDS };
 };
 
 // END OF moduleFunction() ============================================================

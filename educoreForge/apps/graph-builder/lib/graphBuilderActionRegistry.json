@@ -1,0 +1,28 @@
+{
+	"_comment": "graphBuilder's command surface as DATA (deep review 2026-11-21, Build 2, F-38). actionList: every action switch, in help order; graphBuilder.js runs actions[switchName], and test-operatorInput.js holds this list, the actions module's exports and the help SYNOPSIS/COMMANDS to each other both ways. helpSwitchNameList: the switches that print help and exit 0 before anything else is read. modifierSwitchNameList: the switches that are not actions (qtools-x-log reads them from process.argv). bareSwitchFlagNameList: the --flags documented as usable with no value (--name[=<value>]); bare, one is admitted only as the LAST token, because the parser hands a bare flag the next token as its value. Every other --flag must be typed --name=<value>. singleValueFlagNameSuffixList: a flag whose name ends with one of these names ONE path, so a comma in it (which the parser splits into two values) is refused rather than half-read.",
+	"actionList": [
+		{ "switchName": "build" },
+		{ "switchName": "validate" },
+		{ "switchName": "replay" },
+		{ "switchName": "deps" },
+		{ "switchName": "retrievalMetrics" },
+		{ "switchName": "roundTripCompile" },
+		{ "switchName": "roundTripGates" },
+		{ "switchName": "goldEvalCheck" },
+		{ "switchName": "stampPromotion" },
+		{ "switchName": "spendLedger" },
+		{ "switchName": "foldStore" },
+		{ "switchName": "truncateStore" },
+		{ "switchName": "publishLayer" },
+		{ "switchName": "importLayer" },
+		{ "switchName": "seedUriContractFromRegistryJson" },
+		{ "switchName": "publishManifest" },
+		{ "switchName": "appendManifestStatus" },
+		{ "switchName": "replayOldest" },
+		{ "switchName": "rebuildUriContractIndexes" }
+	],
+	"helpSwitchNameList": ["help", "h"],
+	"modifierSwitchNameList": ["verbose", "quiet", "silent"],
+	"bareSwitchFlagNameList": ["useDebugJudge"],
+	"singleValueFlagNameSuffixList": ["Path"]
+}
