@@ -70,12 +70,13 @@ const forgeCensusGateLib = require(path.join(__dirname, 'forge-census-gate'));
 // ⟪campaign P2, W-A-3⟫ the frozen decision block header carries the frameworkFingerprint the passport reports
 const decisionBlockLib = require(path.join(__dirname, '..', '..', '..', 'lib', 'bridge-framework', 'decisionBlock'));
 
-// the canonical home of per-run build reports (the same documented-default convention as the
-// judgment cache and match-forensics homes in actions.js): hub prose-divergence and skip
-// reports land under ONE run directory per build invocation, so "no report file" always means
-// "the fold did not run", never "the report went somewhere else".
-const BUILD_LOGS_DIR_PATH =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/buildLogs';
+// the home of per-run build reports: hub prose-divergence and skip reports land under ONE run directory per build
+// invocation, so "no report file" always means "the fold did not run", never "the report went somewhere else".
+// ⟪deep review 2026-11-21, Build 13, F-37⟫ it is the SETTING [stores] buildLogsDirPath in graphBuilder.ini, refused by
+// name when absent; it used to be a constant naming a path on one Mac, which on the educore server would have been a
+// fresh, empty tree nobody chose.
+const { readRequiredSetting } = require(path.join(__dirname, '..', '..', '..', 'lib', 'required-setting', 'required-setting'));
+const BUILD_LOGS_SETTING = Object.freeze({ sectionName: 'stores', settingName: 'buildLogsDirPath', whatItNames: 'the home of every build run directory (build reports, spend, round-trip verdicts)' });
 
 // resolveBuildLogsDirPath — WHERE THIS BUILD'S RUN DIRECTORY GOES (root-and-branch Phase 4, K3b:
 // the suite was writing run dirs into the canonical home on every run — the embedded end-to-end
@@ -86,20 +87,22 @@ const BUILD_LOGS_DIR_PATH =
 // canonical home above (help.js says so). A supplied-but-empty value is refused BY NAME, never
 // silently corrected to the default — an operator who typed it believes it took effect. Returns
 // { value } or { error }; no throw, so build() routes a refusal through its callback.
-const resolveBuildLogsDirPath = (deps) => {
+// injectedGetConfig is the hermetic seam (the injectedCommandLineParameters idiom); production passes none and reads
+// process.global.getConfig.
+const resolveBuildLogsDirPath = (deps, injectedGetConfig) => {
 	const commandLineParameters =
 		(process.global && process.global.commandLineParameters) || { values: {} };
 	const commandLineValue = (commandLineParameters.values.buildLogsDirPath || [])[0];
 	const supplied = deps.buildLogsDirPath !== undefined ? deps.buildLogsDirPath : commandLineValue;
 	if (supplied === undefined) {
-		return { value: BUILD_LOGS_DIR_PATH };
+		return readRequiredSetting({ ...BUILD_LOGS_SETTING, getConfig: injectedGetConfig || (process.global && process.global.getConfig), askedBy: 'graphBuilder build' });
 	}
 	if (typeof supplied !== 'string' || supplied.trim() === '') {
 		return {
 			error:
 				`build: buildLogsDirPath is ${JSON.stringify(supplied)}. When supplied (deps.buildLogsDirPath ` +
-				`or --buildLogsDirPath) it must be a non-empty directory path; omit it to use the documented ` +
-				`default ${BUILD_LOGS_DIR_PATH}. It is not corrected silently.`,
+				`or --buildLogsDirPath) it must be a non-empty directory path; omit it to use [stores] ` +
+				`buildLogsDirPath from graphBuilder.ini. It is not corrected silently.`,
 		};
 	}
 	return { value: supplied };
@@ -371,11 +374,25 @@ const spendMeteredInferenceConfigFor = ({ inferenceConfig, spendPricer }) => {
 // or at the moment the window is applied. Two readers would be two chances to disagree.
 const { parsePositiveInteger, namedSetShapeErrorFor, bothSelectorsRefusalText } = require(path.join(__dirname, '..', 'apps', 'bridge-maker', 'lib', 'sourceWindow'));
 
-// canonical [anthropicAi] config home (the twin of embedding-client's [voyageEmbedding] path). The real
-// llmClient reads the key from here OR from ANTHROPIC_API_KEY, and THROWS BY NAME at construction if neither
-// resolves (§6 no-silent-default). Absolute, so both trees name the one file that holds the secret.
-const ANTHROPIC_CONFIG_FILE_PATH =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/configs/instanceSpecific/qbook/anthropicAi.ini';
+// ⟪deep review 2026-11-21, Build 13, F-37⟫ EVERY judge provider's credentials ini is the SETTING
+// [judgeProviderConfigFilePath] <providerName> in graphBuilder.ini, keyed by the registry's provider names (data, not a
+// branch per provider). It used to be ONE constant for anthropic, a path on one Mac; jev, jevOpus and ollama were handed
+// nothing and fell to their clients' own defaults (paths on the same Mac). Now every provider with a configured line is
+// handed its path, and the SELECTED provider without one is refused by name, so on this path no client default is ever
+// consulted. The clients' constants stay (apps/bridge-maker/lib is inside decisionBlock.js FINGERPRINT_ROOT_LIST, so
+// editing them moves the frameworkFingerprint): open for the next fingerprint-moving build.
+const JUDGE_PROVIDER_CONFIG_SECTION_NAME = 'judgeProviderConfigFilePath';
+const resolveJudgeProviderConfigFilePathByProviderName = ({ selectedProviderName, deps = {}, getConfig }) => {
+	const injectedByProviderName = deps.judgeProviderConfigFilePathByProviderName || {};
+	const configuredByProviderName = typeof getConfig === 'function' ? getConfig(JUDGE_PROVIDER_CONFIG_SECTION_NAME) || {} : {};
+	const configFilePathByProviderName = { ...configuredByProviderName, ...injectedByProviderName };
+	// an unselected or unknown provider name is the registry's to refuse (constructJudgeProvider names the selectable ones)
+	if (typeof selectedProviderName !== 'string' || !judgeProviderRegistryLib.KNOWN_PROVIDER_NAME_LIST.includes(selectedProviderName) || selectedProviderName === judgeProviderRegistryLib.DEBUG_JUDGE_PROVIDER_NAME || injectedByProviderName[selectedProviderName] !== undefined) {
+		return { value: configFilePathByProviderName };
+	}
+	const selectedResolution = readRequiredSetting({ getConfig, sectionName: JUDGE_PROVIDER_CONFIG_SECTION_NAME, settingName: `${selectedProviderName}`, whatItNames: `the credentials ini of the '${selectedProviderName}' judge, the judge [judgeProvider] judgeProviderName selects`, askedBy: 'graphBuilder build' });
+	return selectedResolution.error ? { error: selectedResolution.error } : { value: configFilePathByProviderName };
+};
 
 // Label vocabulary — BARE NAMES. The colons in ':BridgedRelation:' are Cypher notation, not part
 // of the name; a constant carrying them would create a label literally called ':BridgedRelation:'.
@@ -921,10 +938,28 @@ const resolveEmbeddingCacheFilePath = (deps, { supportStoreFilePath } = {}) => {
 // an array of source tokens (['ctdl']), the string 'all', or absent/empty (none). A supplied-but-wrong-typed
 // deps.rebridge is refused BY NAME rather than silently corrected. Returns { value } (a normalized scope:
 // 'all' | string[] ) or { error }; no throw, so build() routes a refusal through its callback.
+// ⟪deep review 2026-11-21, Build 2, F-2 sibling⟫ a token list is refused, by name, when a token is blank (it used to be
+// filtered out silently, so --rebridge=ctdl, read as ctdl) or names the same source twice (matching is case-insensitive,
+// so EDFI and edfi are the same token). Shared by both channels, the injected deps.rebridge included.
+const rebridgeTokenListRefusal = (tokenList) => {
+	if (tokenList.some((oneToken) => `${oneToken}`.trim() === '')) {
+		return `graphBuilder build: --rebridge carries a blank token (${JSON.stringify(tokenList)}). It was NOT filtered out: name each source once, comma-separated (--rebridge=<token>[,<token>...]).`;
+	}
+	const lowerTokenList = tokenList.map((oneToken) => `${oneToken}`.trim().toLowerCase());
+	const duplicatedToken = lowerTokenList.find((oneToken, tokenIndex) => lowerTokenList.indexOf(oneToken) !== tokenIndex);
+	if (duplicatedToken !== undefined) {
+		return `graphBuilder build: --rebridge names '${duplicatedToken}' twice (${JSON.stringify(tokenList)}). Name each source once; a repeat is refused rather than collapsed, because it is usually a typo for a source that was meant.`;
+	}
+	return '';
+};
 const resolveRebridge = (deps) => {
 	if (deps.rebridge !== undefined) {
-		if (deps.rebridge === 'all' || Array.isArray(deps.rebridge)) {
+		if (deps.rebridge === 'all') {
 			return { value: deps.rebridge };
+		}
+		if (Array.isArray(deps.rebridge)) {
+			const injectedRefusal = rebridgeTokenListRefusal(deps.rebridge);
+			return injectedRefusal ? { error: injectedRefusal } : { value: deps.rebridge };
 		}
 		return {
 			error:
@@ -933,17 +968,30 @@ const resolveRebridge = (deps) => {
 				`to a default.`,
 		};
 	}
+	// deps.commandLineParameters is the hermetic seam its sibling resolvers already take; production passes none
 	const commandLineParameters =
-		(process.global && process.global.commandLineParameters) || { values: {}, switches: {} };
-	const scopeValues = (commandLineParameters.values && commandLineParameters.values.rebridge) || [];
-	// --rebridge=all OR --rebridge=ctdl,lif OR repeated --rebridge=ctdl --rebridge=lif; absent -> [] (none).
-	if (scopeValues.some((oneValue) => `${oneValue}`.trim().toLowerCase() === 'all')) {
-		return { value: 'all' };
+		deps.commandLineParameters || (process.global && process.global.commandLineParameters) || { values: {}, switches: {} };
+	const scopeValues = (commandLineParameters.values || {}).rebridge;
+	if (scopeValues === undefined) {
+		return { value: [] };
 	}
+	if (!Array.isArray(scopeValues)) {
+		// the entry (operator-input.js) refuses a bare --rebridge first; this is the second line, and it used to be a TypeError
+		return { error: `graphBuilder build: --rebridge was given with no value (${JSON.stringify(scopeValues)}). Give --rebridge=all or --rebridge=<token>[,<token>...], or leave it out.` };
+	}
+	// --rebridge=all OR --rebridge=ctdl,lif (comma-separated is the ONE list form). A REPEATED --rebridge=ctdl --rebridge=lif
+	// was never honoured: qtools-parse-command-line keeps only the last (code fact, deepReview-112126/pass2/T0 1.1), and the
+	// entry now refuses any repeated flag by name. Absent -> [] (none).
 	const tokens = scopeValues
 		.reduce((soFar, oneValue) => soFar.concat(`${oneValue}`.split(',')), [])
-		.map((oneToken) => oneToken.trim())
-		.filter((oneToken) => oneToken !== '');
+		.map((oneToken) => oneToken.trim());
+	const tokenListRefusal = rebridgeTokenListRefusal(tokens);
+	if (tokenListRefusal) {
+		return { error: tokenListRefusal };
+	}
+	if (tokens.some((oneToken) => oneToken.toLowerCase() === 'all')) {
+		return { value: 'all' };
+	}
 	return { value: tokens };
 };
 
@@ -973,12 +1021,21 @@ const pairInRebridgeScope = (rebridgeScope, bridge) => {
 	});
 };
 
-// rebridgeScopeRefusalFor — '' or the refusal for a pair token the recipe cannot honour: malformed (not exactly
-// <source>:<hub>, both non-empty), naming a hub the recipe does not mint, or naming no bridge of the recipe (it would
-// rebridge nothing, silently). Bare tokens and 'all' keep today's behaviour and are not checked here.
+// rebridgeScopeRefusalFor — '' or the refusal for a token the recipe cannot honour: a BARE token naming no source of the
+// recipe (⟪deep review 2026-11-21, Build 2⟫ it used to be admitted and rebridge nothing, silently), or a pair token that is
+// malformed (not exactly <source>:<hub>, both non-empty), names a hub the recipe does not mint, or names no bridge of the
+// recipe. 'all' and the empty scope are admitted.
 const rebridgeScopeRefusalFor = ({ rebridgeScope, bridgeList, hubTokenList }) => {
 	if (!Array.isArray(rebridgeScope)) {
 		return '';
+	}
+	const recipeSourceTokenList = bridgeList
+		.map((oneBridge) => `${oneBridge.source}`.toLowerCase())
+		.filter((oneSource, sourceIndex, sourceList) => sourceList.indexOf(oneSource) === sourceIndex)
+		.sort();
+	const unknownBareToken = rebridgeScope.find((oneToken) => `${oneToken}`.indexOf(REBRIDGE_PAIR_TOKEN_SEPARATOR) === -1 && recipeSourceTokenList.indexOf(`${oneToken}`.toLowerCase()) === -1);
+	if (unknownBareToken !== undefined) {
+		return `graphBuilder build: --rebridge token '${unknownBareToken}' names no source of this recipe, so it would rebridge nothing (its sources: ${recipeSourceTokenList.join(', ')}). It was NOT ignored.`;
 	}
 	const pairTokenList = rebridgeScope.filter((oneToken) => `${oneToken}`.indexOf(REBRIDGE_PAIR_TOKEN_SEPARATOR) !== -1);
 	for (let tokenIndex = 0; tokenIndex < pairTokenList.length; tokenIndex++) {
@@ -1312,11 +1369,16 @@ const resolveInferenceConfig = (deps, rebridgeScope, debugJudgeRule, callback) =
 	// ollamaJudgeClient, kitLoader.buildKit and bridgeMaker.run already use — passed straight through. A suite
 	// can double one provider's transport, point a row at a throwaway ini, or replace the row list entirely,
 	// and every one of those goes through the SAME construction protocol the real run uses.
+	const judgeConfigResolution = resolveJudgeProviderConfigFilePathByProviderName({ selectedProviderName, deps, getConfig: process.global && process.global.getConfig });
+	if (judgeConfigResolution.error) {
+		callback(`graphBuilder build: --rebridge is scoped active but the judge provider has no credentials ini: ${judgeConfigResolution.error}`);
+		return;
+	}
 	judgeProviderRegistryLib.constructJudgeProvider(
 		{
 			providerName: selectedProviderName,
 			debugJudgeRuleName: debugJudgeRule,
-			configFilePathByProviderName: { anthropic: ANTHROPIC_CONFIG_FILE_PATH, ...(deps.judgeProviderConfigFilePathByProviderName || {}) },
+			configFilePathByProviderName: judgeConfigResolution.value,
 			componentOverrides: deps.judgeProviderComponentOverrides || {},
 		},
 		(constructionError, judgeProvider) => {
@@ -3080,4 +3142,5 @@ module.exports.resolveHeapAdequacy = resolveHeapAdequacy;
 // refusal of an empty value are gated directly (test-build) — and so the suite can point every
 // real build at a scratch root instead of the canonical dataStores/buildLogs home.
 module.exports.resolveBuildLogsDirPath = resolveBuildLogsDirPath;
-module.exports.BUILD_LOGS_DIR_PATH = BUILD_LOGS_DIR_PATH;
+module.exports.BUILD_LOGS_SETTING = BUILD_LOGS_SETTING;
+module.exports.resolveJudgeProviderConfigFilePathByProviderName = resolveJudgeProviderConfigFilePathByProviderName;

@@ -139,7 +139,10 @@ if (resolved.error) {
 }
 const embedder = vectorize
 	? require(path.join(TREE_LIB, 'embedding', 'embedding-client'))({
-			configFilePath: forgerModule.resolveVoyageConfigPath({}),
+			// ⟪deep review 2026-11-21, Build 13⟫ resolveVoyageConfigPath answers { configFilePath } | { error }: the whole object used
+			// to be passed as the path. The vector cache is now named explicitly (embedding-client has no default): the configured one.
+			configFilePath: forgerModule.resolveVoyageConfigPath({}).configFilePath,
+			cacheFilePath: process.global.getConfig('stores').vectorCacheFilePath,
 		})
 	: null;
 

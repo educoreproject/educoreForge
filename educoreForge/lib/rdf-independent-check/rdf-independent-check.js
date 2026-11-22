@@ -41,9 +41,12 @@ const COMPARE_SCRIPT_PATH = path.join(__dirname, 'lib', 'rdfTripleCompare.py');
 
 // The virtual environment lives in dataStores, NOT in the code tree and NOT in the user's
 // python. It is disposable: delete the directory and the next run rebuilds it.
-const VENV_DIR_PATH =
-	'/Users/tqwhite/Documents/webdev/educoreForge/system/dataStores/rdfIndependentCheck/venv';
-const VENV_PYTHON_PATH = path.join(VENV_DIR_PATH, 'bin', 'python');
+// ⟪deep review 2026-11-21, Build 13, F-37⟫ the environment's home is the SETTING [independentCheck] rdfVenvDirPath in
+// graphBuilder.ini, read when the check runs and refused by name when absent (the check then reads UNMEASURED, as for a
+// missing python3); it used to be a constant naming a path on one Mac.
+const { readRequiredSetting } = require(path.join(__dirname, '..', 'required-setting', 'required-setting'));
+const venvDirPathFor = (getConfig) =>
+	readRequiredSetting({ getConfig, sectionName: 'independentCheck', settingName: 'rdfVenvDirPath', whatItNames: 'the Python environment (rdflib) the independent RDF check creates on first use and runs in; on a new machine the first run creates it there and pip-installs into it', askedBy: moduleName });
 
 // Parsing a 19MB RDF/XML document twice is not fast. Measured ~90s for the CEDS pair.
 const COMPARE_TIMEOUT_MS = 600000;
@@ -54,8 +57,15 @@ const rdfIndependentCheck = () => {
 	// ensureEnvironment — python3 + an rdflib venv, or a NAMED refusal
 	// -----------------------------------------------------------------
 	const ensureEnvironment = (callback) => {
-		if (fs.existsSync(VENV_PYTHON_PATH)) {
-			callback('', { pythonPath: VENV_PYTHON_PATH, created: false });
+		const venvDirPathResolution = venvDirPathFor(process.global && process.global.getConfig);
+		if (venvDirPathResolution.error) {
+			callback(venvDirPathResolution.error);
+			return;
+		}
+		const venvDirPath = venvDirPathResolution.value;
+		const venvPythonPath = path.join(venvDirPath, 'bin', 'python');
+		if (fs.existsSync(venvPythonPath)) {
+			callback('', { pythonPath: venvPythonPath, created: false });
 			return;
 		}
 		execFile('python3', ['--version'], (versionError) => {
@@ -67,25 +77,25 @@ const rdfIndependentCheck = () => {
 				);
 				return;
 			}
-			fs.mkdirSync(path.dirname(VENV_DIR_PATH), { recursive: true });
-			execFile('python3', ['-m', 'venv', VENV_DIR_PATH], (venvError) => {
+			fs.mkdirSync(path.dirname(venvDirPath), { recursive: true });
+			execFile('python3', ['-m', 'venv', venvDirPath], (venvError) => {
 				if (venvError) {
-					callback(`${moduleName}: could not create venv at ${VENV_DIR_PATH}: ${venvError.message}`);
+					callback(`${moduleName}: could not create venv at ${venvDirPath}: ${venvError.message}`);
 					return;
 				}
 				execFile(
-					path.join(VENV_DIR_PATH, 'bin', 'pip'),
+					path.join(venvDirPath, 'bin', 'pip'),
 					['install', '--quiet', 'rdflib'],
 					{ timeout: COMPARE_TIMEOUT_MS },
 					(installError) => {
 						if (installError) {
 							callback(
-								`${moduleName}: could not install rdflib into ${VENV_DIR_PATH}: ` +
+								`${moduleName}: could not install rdflib into ${venvDirPath}: ` +
 									`${installError.message}`,
 							);
 							return;
 						}
-						callback('', { pythonPath: VENV_PYTHON_PATH, created: true });
+						callback('', { pythonPath: venvPythonPath, created: true });
 					},
 				);
 			});
@@ -212,8 +222,9 @@ const rdfIndependentCheck = () => {
 		renderComparisonText,
 		ensureEnvironment,
 		COMPARE_SCRIPT_PATH,
-		VENV_DIR_PATH,
+		venvDirPathFor,
 	};
 };
 
 module.exports = rdfIndependentCheck;
+module.exports.venvDirPathFor = venvDirPathFor;

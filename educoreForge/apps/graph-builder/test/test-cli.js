@@ -117,6 +117,12 @@ harness.match('-help documents the JSON-stdin channel', helpRun.stdout, /JSON on
 const noArgsRun = runCli([]);
 harness.equal('no action prints help rather than failing silently', noArgsRun.status, 0);
 harness.match('no action prints the same help', noArgsRun.stdout, /SYNOPSIS/);
+// ⟪deep review 2026-11-21, Build 2⟫ no ARGUMENTS is a question (help, exit 0); a MISSPELLED action is a mistake, and used to
+// get the same help and exit 0, which a script reads as success
+const misspelledActionRun = runCli(['-biuld', '--recipePath=' + goodRecipe('edfiOnly')]);
+harness.equal('a misspelled action (-biuld) exits 1', misspelledActionRun.status, 1);
+harness.match('  refused by name as an unknown switch', misspelledActionRun.stderr, /unknown switch -biuld/);
+harness.ok('  and prints no help on stdout', !/SYNOPSIS/.test(misspelledActionRun.stdout), misspelledActionRun.stdout.slice(0, 120));
 
 // =====================================================================
 harness.section('-deps — environment discovery');
@@ -322,9 +328,17 @@ harness.ok(
 );
 harness.match('-help documents that parameter', helpRun.stdout, /--standardsDatabaseFilePath=/);
 
-// keep the old variable name alive for the validation-verdict assertions below: they only ever needed
-// a run that printed its recipe verdict and then refused BEFORE provisioning anything.
-const buildNoStore = buildBlankStore;
+// the validation-verdict assertions below only ever need a run that printed its recipe verdict and then refused BEFORE
+// provisioning anything. ⟪deep review 2026-11-21, Build 2⟫ buildBlankStore no longer is one: a blank is now refused at the
+// entry, before the recipe is read. So this run names a scratch support store and a vector cache that does not exist,
+// which the store resolver refuses (explicitPathMustExist) after the recipe verdict and before anything is opened.
+const buildNoStore = runCli([
+	'-build',
+	'--recipePath=' + goodRecipe('edfiOnly'),
+	'--standardsDatabaseFilePath=' + scratchStore,
+	'--embeddingCacheFilePath=' + path.join(scratchDir, 'noSuchVectorCache.sqlite3'),
+]);
+harness.match('  (the verdict run stops at the absent vector cache, before provisioning)', buildNoStore.stderr, /vectorCache store '\S+noSuchVectorCache\.sqlite3' does not exist/);
 
 // The recipe is still read and summarized before the refusal, so the validation verdict for a
 // fully-resolvable recipe is observable without running the pipeline.
@@ -431,14 +445,16 @@ harness.ok(
 //
 // It also asserts the OLD refusal is GONE. A gate that only checked the new behavior arrived would still
 // pass if the retired refusal had survived alongside it and fired first.
-// The blank judgment-cache path likewise has to travel by stdin — see the parser note above; a
-// command-line `--judgmentCacheFilePath=` would parse to the boolean true and read as absent, taking
-// the documented default instead of refusing.
+// ⟪deep review 2026-11-21, Build 2⟫ THE STOPPER CHANGED, THE GATE DID NOT. This run used a blank judgment-cache path as the
+// early stop after the support store resolved from config; a blank is now refused at the entry, before any store is
+// resolved, so it can no longer stop a run THERE. A vector cache that does not exist does: the store resolver refuses it
+// (explicitPathMustExist) after the support store has resolved from config and before any store is opened.
+const absentVectorCacheFilePath = path.join(scratchDir, 'gateOneNoSuchVectorCache.sqlite3');
 const buildFromConfig = runCli(
 	[],
 	JSON.stringify({
 		switches: { build: true },
-		values: { recipePath: [goodRecipe('edfiOnly')], judgmentCacheFilePath: [''] },
+		values: { recipePath: [goodRecipe('edfiOnly')], embeddingCacheFilePath: [absentVectorCacheFilePath] },
 		fileList: [],
 	}),
 );
@@ -456,9 +472,9 @@ harness.match(
 if (configuredPathSaid && fs.existsSync(configuredPathSaid)) {
 	harness.match('  the configured store EXISTS, so the run says it resolved it from config', buildFromConfig.stderr, /graphBuilder: support store at \S+ \(resolved from config\)/);
 	harness.match(
-		'  and it stopped on the BLANK judgment cache path, before the support store was ever opened',
+		'  and it stopped on the ABSENT vector cache, before the support store was ever opened',
 		buildFromConfig.stderr,
-		/--judgmentCacheFilePath was given but blank/,
+		/vectorCache store '\S+gateOneNoSuchVectorCache\.sqlite3' does not exist/,
 	);
 } else {
 	harness.match(

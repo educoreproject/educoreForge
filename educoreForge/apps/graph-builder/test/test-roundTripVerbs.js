@@ -57,7 +57,8 @@ harness.ok('(d) and it exports runRoundTripCompile and runRoundTripGates', typeo
 harness.section('(f) the CEDS-named switches are gone');
 ['-cedsRoundTrip', '-cedsGates'].forEach((oldSwitch) => {
 	const oldRun = runGraphBuilder([oldSwitch, '--containerName=DEV_never']);
-	harness.ok(`(f) ${oldSwitch} is no longer an action (help, exit 0, nothing measured)`, oldRun.status === 0 && /SYNOPSIS/.test(outputOf(oldRun)) && !/(measuring|reading) 'DEV_never'/.test(outputOf(oldRun)), `exit ${oldRun.status}`);
+	// ⟪deep review 2026-11-21, Build 2⟫ was 'help, exit 0': an unknown switch is now refused by name, exit 1
+	harness.ok(`(f) ${oldSwitch} is no longer an action (refused as an unknown switch, exit 1, nothing measured)`, oldRun.status === 1 && new RegExp(`unknown switch ${oldSwitch}\\b`).test(outputOf(oldRun)) && !/(measuring|reading) 'DEV_never'/.test(outputOf(oldRun)), `exit ${oldRun.status}`);
 });
 
 harness.report();

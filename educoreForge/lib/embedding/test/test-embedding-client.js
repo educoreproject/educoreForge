@@ -104,14 +104,14 @@ harness.section('MODEL — required, validated, and the ONE value both sent and 
 
 harness.rejects(
 	'an ABSENT model is refused, naming the key, the section and the file',
-	thrownMessage(() => embeddingClient({ configFilePath: iniWith(['embeddingDims=1024']) }).resolveEmbeddingIdentity()),
+	thrownMessage(() => embeddingClient({ cacheFilePath: false, configFilePath: iniWith(['embeddingDims=1024']) }).resolveEmbeddingIdentity()),
 	/\[voyageEmbedding\]\.model.*voyageEmbedding-\d+\.ini/s,
 );
 
 harness.rejects(
 	'an INVALID (blank) model is refused, naming what was given',
 	thrownMessage(() =>
-		embeddingClient({ configFilePath: iniWith(['model=   ', 'embeddingDims=1024']) }).resolveEmbeddingIdentity(),
+		embeddingClient({ cacheFilePath: false, configFilePath: iniWith(['model=   ', 'embeddingDims=1024']) }).resolveEmbeddingIdentity(),
 	),
 	/\[voyageEmbedding\]\.model/,
 );
@@ -120,6 +120,7 @@ harness.equal(
 	'a CONFIGURED model is honoured verbatim — the positive control',
 	identityOrError(() =>
 		embeddingClient({
+			cacheFilePath: false,
 			configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']),
 		}).resolveEmbeddingIdentity(),
 	).model,
@@ -128,9 +129,9 @@ harness.equal(
 
 harness.ok(
 	'no in-code stamped model constant survives on the module surface',
-	embeddingClient({ configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']) })
+	embeddingClient({ cacheFilePath: false, configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']) })
 		.stampedModelVersion === undefined,
-	typeof embeddingClient({ configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']) })
+	typeof embeddingClient({ cacheFilePath: false, configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']) })
 		.stampedModelVersion,
 );
 
@@ -147,7 +148,7 @@ harness.section('EMBEDDING DIMS — required, validated, and never quietly corre
 harness.rejects(
 	'an ABSENT embeddingDims is refused, naming the key, the section and the file',
 	thrownMessage(() =>
-		embeddingClient({ configFilePath: iniWith(['model=voyage-4-large']) }).resolveEmbeddingIdentity(),
+		embeddingClient({ cacheFilePath: false, configFilePath: iniWith(['model=voyage-4-large']) }).resolveEmbeddingIdentity(),
 	),
 	/\[voyageEmbedding\]\.embeddingDims.*voyageEmbedding-\d+\.ini/s,
 );
@@ -156,6 +157,7 @@ harness.rejects(
 	'a MISTYPED embeddingDims=102o is refused, naming what was given (never truncated to 102)',
 	thrownMessage(() =>
 		embeddingClient({
+			cacheFilePath: false,
 			configFilePath: iniWith(['model=voyage-4-large', 'embeddingDims=102o']),
 		}).resolveEmbeddingIdentity(),
 	),
@@ -166,6 +168,7 @@ harness.rejects(
 	'an OUT-OF-RANGE embeddingDims=0 is refused rather than replaced',
 	thrownMessage(() =>
 		embeddingClient({
+			cacheFilePath: false,
 			configFilePath: iniWith(['model=voyage-4-large', 'embeddingDims=0']),
 		}).resolveEmbeddingIdentity(),
 	),
@@ -176,6 +179,7 @@ harness.equal(
 	'a CONFIGURED embeddingDims is honoured verbatim as a number — the positive control',
 	identityOrError(() =>
 		embeddingClient({
+			cacheFilePath: false,
 			configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=512']),
 		}).resolveEmbeddingIdentity(),
 	).embeddingDims,
@@ -210,32 +214,32 @@ const GOOD_INI = () => iniWith(['model=voyage-context-3', 'embeddingDims=1024'])
 
 harness.rejects(
 	'an UNKNOWN providerName is refused AT CONSTRUCTION, naming it and what IS available',
-	thrownMessage(() => embeddingClient({ configFilePath: GOOD_INI(), providerName: 'nosuchprovider' })),
+	thrownMessage(() => embeddingClient({ cacheFilePath: false, configFilePath: GOOD_INI(), providerName: 'nosuchprovider' })),
 	/nosuchprovider[\s\S]*voyage/,
 );
 
 harness.rejects(
 	'a BLANK providerName is refused too — a blank name is not a name',
-	thrownMessage(() => embeddingClient({ configFilePath: GOOD_INI(), providerName: '  ' })),
+	thrownMessage(() => embeddingClient({ cacheFilePath: false, configFilePath: GOOD_INI(), providerName: '  ' })),
 	/providerName/,
 );
 
 harness.rejects(
 	'a non-string providerName is refused, naming what was given',
-	thrownMessage(() => embeddingClient({ configFilePath: GOOD_INI(), providerName: 7 })),
+	thrownMessage(() => embeddingClient({ cacheFilePath: false, configFilePath: GOOD_INI(), providerName: 7 })),
 	/providerName/,
 );
 
 harness.equal(
 	'an OMITTED providerName takes the DOCUMENTED default — the positive control',
-	identityOrError(() => embeddingClient({ configFilePath: GOOD_INI() }).providerName()),
+	identityOrError(() => embeddingClient({ cacheFilePath: false, configFilePath: GOOD_INI() }).providerName()),
 	'voyage',
 );
 
 harness.equal(
 	'  and naming it explicitly reaches the same provider',
 	identityOrError(() =>
-		embeddingClient({ configFilePath: GOOD_INI(), providerName: 'voyage' }).providerName(),
+		embeddingClient({ cacheFilePath: false, configFilePath: GOOD_INI(), providerName: 'voyage' }).providerName(),
 	),
 	'voyage',
 );
@@ -277,6 +281,7 @@ harness.rejects(
 	'a MISSING apiKey THROWS, naming the key, the section and the file',
 	thrownMessage(() =>
 		embeddingClient({
+			cacheFilePath: false,
 			configFilePath: keyless(['model=voyage-context-3', 'embeddingDims=1024']),
 		}).embedText({ text: 'anything' }, () => {}),
 	),
@@ -287,6 +292,7 @@ harness.rejects(
 	'a BLANK apiKey throws too — a blank credential is not a credential',
 	thrownMessage(() =>
 		embeddingClient({
+			cacheFilePath: false,
 			configFilePath: keyless(['apiKey=', 'model=voyage-context-3', 'embeddingDims=1024']),
 		}).embedText({ text: 'anything' }, () => {}),
 	),
@@ -297,6 +303,7 @@ harness.rejects(
 	'embedTexts uses the SAME reading and the SAME channel',
 	thrownMessage(() =>
 		embeddingClient({
+			cacheFilePath: false,
 			configFilePath: keyless(['model=voyage-context-3', 'embeddingDims=1024']),
 		}).embedTexts({ texts: ['anything'] }, () => {}),
 	),
@@ -309,7 +316,7 @@ harness.rejects(
 		iniSerial += 1;
 		const filePath = path.join(tempDir, `voyageNoSection-${iniSerial}.ini`);
 		fs.writeFileSync(filePath, '[somethingElse]\nunrelated=1\n');
-		embeddingClient({ configFilePath: filePath }).embedText({ text: 'anything' }, () => {});
+		embeddingClient({ cacheFilePath: false, configFilePath: filePath }).embedText({ text: 'anything' }, () => {});
 	}),
 	/\[voyageEmbedding\]/,
 );
@@ -326,6 +333,7 @@ harness.ok(
 
 const operationalErrors = [];
 embeddingClient({
+			cacheFilePath: false,
 	configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']),
 }).embedText({ text: '   ' }, (err) => operationalErrors.push(err));
 
@@ -337,6 +345,7 @@ harness.match(
 
 const operationalListErrors = [];
 embeddingClient({
+			cacheFilePath: false,
 	configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']),
 }).embedTexts({ texts: [] }, (err) => operationalListErrors.push(err));
 
@@ -357,7 +366,7 @@ harness.section('ENCODE VECTOR — a non-vector is refused, never coerced to an 
 // that fabricates a payload from a typo is worth closing. NOTE flagged in the report, not
 // reclassified on my own authority.
 
-const client = () => embeddingClient({ configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']) });
+const client = () => embeddingClient({ cacheFilePath: false, configFilePath: iniWith(['model=voyage-context-3', 'embeddingDims=1024']) });
 
 harness.rejects(
 	'encodeVector(null) is REFUSED, not silently encoded as an empty vector',
