@@ -258,7 +258,12 @@ const TREE_ROOT = path.resolve(toyScenario.FRAMEWORK_DIR, '..', '..');
 // full suite at ec/economy 758006b9 (8/13). CENSUS over the 7 seam files: apps/graph-builder/apps/replay-manager/replayManager.js 66/4
 // (EC1: the exit watchdog launched reparented and immune to TERM/INT/HUP; scratch volumes mounted anonymous but labelled
 // educoreForge.scratchGraph; create sweeps dangling labelled volumes first). Other six untouched; seam file list unchanged.
-const PRE_MIGRATION_REF = 'postEcGSeamUntouched-102526'; // re-anchored by VELVET_RIDGE (EC1; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-11-22 (SINCERE_STATUETTE; deep review 2026-11-21 fix merges, granted by TQ: "merge all the way to a single, tested main") ═══
+// postEcGSeamUntouched-102526 -> postDeepReviewGSeamUntouched-112226, tag cut ON this commit. Observed RED first by the full suite on
+// fix/operatorInput f4bfd079 (8/13) and on main a6280299. CENSUS over the 7 seam files: apps/graph-builder/lib/build.js 92/29 ONLY (Build 2: the
+// operator-input check at graphBuilder's entry; Build 13, F-37: buildLogsDirPath and the judge provider config paths become required settings).
+// Other six untouched; seam file list unchanged.
+const PRE_MIGRATION_REF = 'postDeepReviewGSeamUntouched-112226'; // re-anchored by SINCERE_STATUETTE (deep review fixes; census in the block above); the tag is cut ON this commit
 const SEAM_FILE_LIST = Object.freeze([
 	'apps/graph-builder/apps/forger/forger.js',
 	'apps/graph-builder/lib/build.js',

@@ -1149,7 +1149,13 @@ const composeVerdictOf = ({ status, text, stderr }, untracked) => {
 // postUcPescComposeB-102926, tag cut ON this commit. Observed RED first at fb983131. CENSUS over this gate's paths (numstat from the postUc tag):
 // lib/bridge-framework/test/test-bgNosub.js 6/1 ONLY (its PHASE3_ANCHOR_TAG correction B). No bridge-framework, bridge-maker, build, interfaces
 // or vocabulary source.
-const P1_BASELINE_COMMIT = 'postUcPescComposeB-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge, correction B; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-11-22 (SINCERE_STATUETTE; deep review 2026-11-21 fix merges, granted by TQ: "merge all the way to a single, tested main") ═══
+// postUcPescComposeB-102926 -> postDeepReviewPescCompose-112226, tag cut ON this commit. This gate was already RED on main 76561f24 (25/26), by the
+// rosettaMeaning judge work merged without a re-anchor; this re-anchor sanctions that too. CENSUS over this gate's paths (numstat from the postUcB
+// tag): apps/graph-builder/apps/bridge-maker/lib/llmClient.js 150/77 (callForcedTool), lib/bridge-framework/bridgePluginContract.js 1/1,
+// evidenceRenderer.js 53/1, rosettaMeaningPromptText.json 12/0 (NEW), test/test-rosettaMeaningVariant.js 128/0 (NEW) (feat/rosettaMeaningPrompt);
+// apps/graph-builder/lib/build.js 92/29 (deep review Builds 2 and 13).
+const P1_BASELINE_COMMIT = 'postDeepReviewPescCompose-112226'; // re-anchored by SINCERE_STATUETTE (deep review fixes; census in the block above); the tag is cut ON this commit
 // the twin range: where the DERIVED order really did move lib/bridge-framework. The same range B4 used.
 const MOVED_RANGE = `${expectedCompose.edfiPluginAcceptedCommitRecorded}..${expectedCompose.b4BaselineCommit}`;
 

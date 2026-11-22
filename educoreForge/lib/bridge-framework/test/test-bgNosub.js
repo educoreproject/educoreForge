@@ -567,7 +567,11 @@ const POST_D1_BASE_TAG = 'postUcVocabularyIi-102926'; // re-anchored by RADIANT_
 // SHADOW_MEADOW 2026-10-29) ═══ PHASE0_ANCHOR_TAG postEcForgeFrameworkIii-102526 -> postUcForgeFrameworkIii-102926, tag cut ON this
 // commit. Observed RED first on uc/build ae711375. CENSUS (lib/forge-framework/, numstat from the EC tag): test/test-gStandardMetadata.js 12/0
 // (conjuncts y and z: the UseCase family and the useCaseCorpus kind admitted, and their twins). No forge-framework source.
-const PHASE0_ANCHOR_TAG = 'postUcForgeFrameworkIii-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge Phase 2a; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-11-22 (SINCERE_STATUETTE; deep review 2026-11-21 fix merges, granted by TQ; the follow-on of G-SEAM-UNTOUCHED's re-anchor in the
+// same commit) ═══ PHASE0_ANCHOR_TAG postUcForgeFrameworkIii-102926 -> postDeepReviewForgeFrameworkIii-112226, tag cut ON this commit. Observed RED
+// first at f2c1b8a4, the first cut of this commit, amended before use. CENSUS over lib/forge-framework/ (numstat from the postUc tag): test/test-gSeamUntouched.js 6/1 ONLY (its PRE_MIGRATION_REF
+// re-anchor). No forge-framework source.
+const PHASE0_ANCHOR_TAG = 'postDeepReviewForgeFrameworkIii-112226'; // re-anchored by SINCERE_STATUETTE (deep review fixes; census in the block above); the tag is cut ON this commit
 // PHASE 1 RE-ANCHOR — RULING FJ-P1-1, and it moves seamDiffEmpty ALONE.
 //
 // WHY IT HAD TO MOVE. SEAM_PATH_LIST watches forges/*/forge*.js, forges/*/lib/*Declaration.js and
@@ -1194,7 +1198,13 @@ const PHASE1_ANCHOR_TAG = 'postCedsForgeMigration-082926'; // superseded as seam
 // dea0f19a. CENSUS (numstat from the postUc tag): apps/graph-builder/apps/replay-manager/lib/finishing/test/test-schemaViewContractProjection.js
 // 2/1 ONLY (its (e) twin admits the Uc* residue, found by the full suite at e4bc58ea, as wave 3's lane admitted Oneroster*, Medbiq*). No build,
 // forger, replay or replay-manager source. Allowed-path list NOT widened.
-const PHASE3_ANCHOR_TAG = 'postUcSeamDiffEmptyB-102926'; // re-anchored by RADIANT_HAVEN (useCaseForge, correction B; census in the block above); the tag is cut ON this commit
+// ═══ RE-ANCHOR, 2026-11-22 (SINCERE_STATUETTE; deep review 2026-11-21 fix merges, granted by TQ: "merge all the way to a single, tested main") ═══
+// PHASE3_ANCHOR_TAG postUcSeamDiffEmptyB-102926 -> postDeepReviewSeamDiffEmpty-112226, tag cut ON this commit. Observed RED first by the full
+// suite on fix/operatorInput f4bfd079 (59/64) and on main a6280299. CENSUS (numstat from the postUcSeamDiffEmptyB tag): apps/graph-builder/lib/build.js
+// 92/29 (Builds 2 and 13); apps/graph-builder/apps/forger/test/capture-baseline.js 4/1, apps/graph-builder/apps/replay-manager/test/integration-harvest.js
+// 4/1, integration-init.js 4/1 (Build 13: they passed resolveVoyageConfigPath's result object as the path; now .configFilePath plus the configured
+// vector cache). No forger, replay or replay-manager source. Allowed-path list NOT widened.
+const PHASE3_ANCHOR_TAG = 'postDeepReviewSeamDiffEmpty-112226'; // re-anchored by SINCERE_STATUETTE (deep review fixes; census in the block above); the tag is cut ON this commit
 const GIT_PREFIX = String(spawnSync('git', ['rev-parse', '--show-prefix'], { cwd: TREE_ROOT, encoding: 'utf8' }).stdout || '').trim();
 const cloneJson = scenarioLib.cloneJson;
 const CROSSWALK_PLUGIN_PATH = path.join(scenarioLib.FIXTURE_FORGES_DIR, 'toy', 'bridges', 'toyCrosswalkPlugin.js');
