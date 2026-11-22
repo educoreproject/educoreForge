@@ -1746,6 +1746,34 @@ const stampPromotionAction = (callback) => {
 const truncateStoreAction = (callback, injectedDeps = {}) => {
 	const { xLog } = process.global;
 
+	// ⟪F-20 ORDER HAZARD, pass 2 T0 3.2; SINCERE_STATUETTE ruling 2026-11-21⟫ A BLANK OR SWALLOWED STORE FLAG IS REFUSED HERE,
+	// in this verb, whatever the shared resolution does. The command-line parser turns `--standardsDatabaseFilePath=` into the
+	// boolean true (last argument) or takes the NEXT token as the value (`--standardsDatabaseFilePath= -truncateStore`), and the
+	// shared resolver reads both as "absent" and takes the configured store of record. Until F-20 this verb then died at a
+	// table that store does not have; with the table list right, an unset shell variable would empty the store of record.
+	// This guard must not wait on the blank-flag fix in the other lane. An ABSENT flag still resolves from configuration, as
+	// before: whether this verb should refuse a configured store or require a confirmation is TQ's question, not built here.
+	const commandLineValues = (process.global.commandLineParameters || {}).values || {};
+	if (Object.prototype.hasOwnProperty.call(commandLineValues, 'standardsDatabaseFilePath')) {
+		const givenStorePathList = commandLineValues.standardsDatabaseFilePath;
+		const givenStorePath = Array.isArray(givenStorePathList) ? givenStorePathList[0] : undefined;
+		const storeFlagFault =
+			!Array.isArray(givenStorePathList) || givenStorePathList.length !== 1
+				? `parsed as ${JSON.stringify(givenStorePathList)}, not one path (a blank --standardsDatabaseFilePath= on the command line parses to true)`
+				: typeof givenStorePath !== 'string' || givenStorePath.trim() === ''
+					? `blank (${JSON.stringify(givenStorePath)})`
+					: /^-/.test(givenStorePath)
+						? `'${givenStorePath}', which begins with '-': a blank --standardsDatabaseFilePath= swallowed the next argument as its value`
+						: '';
+		if (storeFlagFault) {
+			callback(
+				`graphBuilder -truncateStore: REFUSED — --standardsDatabaseFilePath is ${storeFlagFault}. ` +
+					`This verb empties a store; a flag that names no store is never read as "use the configured one". Nothing was read or written.`,
+			);
+			return;
+		}
+	}
+
 	const supportStoreResolution = resolveStoreFamilyPath({ familyName: 'standardsDatabase', commandLineParameters: process.global.commandLineParameters, storesConfig: process.global.getConfig('stores'), actionName: '-truncateStore' }); // W-C-11: a configured store must exist
 	if (supportStoreResolution.error) {
 		callback(supportStoreResolution.error);
@@ -1761,28 +1789,39 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 		return;
 	}
 
-	// The tables emptied are DATA, one row per owning family, so adding a family is a row here rather
-	// than a new branch — and the backup verification therefore covers exactly the tables the
-	// truncation touches, with no chance of the two lists drifting apart. sqlite_sequence is
-	// deliberately absent: it is sqlite's own AUTOINCREMENT registry, not any family's data, and
-	// emptying it would restart the seq numbering that decision-store reads as an append order.
-	const truncatableTables = [
-		{ tableName: 'blocks', owningFamily: 'standards-database' },
-		{ tableName: 'manifests', owningFamily: 'standards-database' },
-		{ tableName: 'manifestBlocks', owningFamily: 'standards-database' },
-		{ tableName: 'decisionBlocks', owningFamily: 'decision-store' },
-		{ tableName: 'vectors', owningFamily: 'vector-store' },
-		{ tableName: 'vectorCacheEntries', owningFamily: 'vectorCache' },
-		{ tableName: 'judgmentCacheEntries', owningFamily: 'judgment-cache' },
-	];
+	// ⟪F-20, SINCERE_STATUETTE ruling 2026-11-21⟫ EVERY TABLE A SUPPORT STORE MAY HOLD, AS DATA: its owning family and whether
+	// this verb empties it. The STORE'S OWN sqlite_master decides which of these are present; a table it holds that is not
+	// named here is REFUSED by name before anything is written, because emptying or keeping a table nobody has declared is a
+	// decision this verb cannot make. A declared table absent from the store is reported in the plan, never counted (the old
+	// fixed list counted vectorCacheEntries, which moved to its own file on 2026-10-06, and died on the store of record).
+	// Row order is the DELETE order: manifestBlocks before the blocks and manifests it refers to.
+	//   truncate  the families' data. judgmentFillingSpend is the judgment cache's spend sidecar: kept beside an emptied cache
+	//             it would hold stale cost rows that its INSERT OR IGNORE then protects from the refill's true cost.
+	//   retain    the *Ops operation logs (an audit trail of the store, not its data) and sqlite_sequence (sqlite's
+	//             AUTOINCREMENT registry; emptying it would restart the seq numbering decision-store reads as an append order).
+	const TRUNCATE_STORE_TABLE_REGISTRY = Object.freeze([
+		{ tableName: 'manifestBlocks', owningFamily: 'standards-database', disposition: 'truncate' },
+		{ tableName: 'manifests', owningFamily: 'standards-database', disposition: 'truncate' },
+		{ tableName: 'blocks', owningFamily: 'standards-database', disposition: 'truncate' },
+		{ tableName: 'decisionBlocks', owningFamily: 'decision-store', disposition: 'truncate' },
+		{ tableName: 'vectors', owningFamily: 'vector-store', disposition: 'truncate' },
+		{ tableName: 'vectorCacheEntries', owningFamily: 'vectorCache', disposition: 'truncate' },
+		{ tableName: 'judgmentCacheEntries', owningFamily: 'judgment-cache', disposition: 'truncate' },
+		{ tableName: 'judgmentFillingSpend', owningFamily: 'judgment-cache', disposition: 'truncate' },
+		{ tableName: 'standardsDatabaseOps', owningFamily: 'standards-database', disposition: 'retain' },
+		{ tableName: 'decisionStoreOps', owningFamily: 'decision-store', disposition: 'retain' },
+		{ tableName: 'vectorStoreOps', owningFamily: 'vector-store', disposition: 'retain' },
+		{ tableName: 'vectorCacheOps', owningFamily: 'vectorCache', disposition: 'retain' },
+		{ tableName: 'judgmentCacheOps', owningFamily: 'judgment-cache', disposition: 'retain' },
+		{ tableName: 'sqlite_sequence', owningFamily: 'sqlite', disposition: 'retain' },
+	]);
 
 	const runSqliteCli =
 		injectedDeps.runSqliteCli ||
 		require('../apps/store-migration/migrateCachesIntoSupportStore')({ xLog }).runSqliteCli;
 
-	const countEveryTableText = truncatableTables
-		.map((oneTable) => `SELECT '${oneTable.tableName}', count(*) FROM ${oneTable.tableName};`)
-		.join(' ');
+	const countStatementFor = (tableList) =>
+		tableList.map((oneTable) => `SELECT '${oneTable.tableName}', count(*) FROM ${oneTable.tableName};`).join(' ');
 	const countsFromCliOutput = (output) => {
 		const counts = {};
 		`${output}`
@@ -1794,16 +1833,58 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 			});
 		return counts;
 	};
+	const countListText = (tableList, counts) => tableList.map((oneTable) => `${oneTable.tableName}=${counts[oneTable.tableName]}`).join(' ');
 
 	const backupFilePath = `${storeFilePath}.beforeTruncate-${timestampForFileName()}.backup`;
 
 	const taskList = new taskListPlus();
 
-	// 1 — count every truncatable table in the LIVE store. This is the expectation the backup must
-	//     satisfy, measured now and never remembered from a previous run.
+	// 0 — READ THE STORE'S OWN TABLE LIST and hold it against the registry. An undeclared table refuses the whole run.
 	taskList.push((args, next) => {
 		runSqliteCli(
-			{ databaseFilePath: storeFilePath, statementText: countEveryTableText },
+			{ databaseFilePath: storeFilePath, statementText: `SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;` },
+			(err, output) => {
+				if (err) {
+					next(`graphBuilder -truncateStore: reading the store's table list: ${err}`);
+					return;
+				}
+				const storeTableNameList = `${output}`.split('\n').map((oneLine) => oneLine.trim()).filter((oneLine) => oneLine !== '');
+				const declaredTableNameList = TRUNCATE_STORE_TABLE_REGISTRY.map((oneTable) => oneTable.tableName);
+				const undeclaredTableNameList = storeTableNameList.filter((oneTableName) => declaredTableNameList.indexOf(oneTableName) === -1);
+				if (undeclaredTableNameList.length > 0) {
+					next(
+						`graphBuilder -truncateStore: REFUSED — the store '${storeFilePath}' holds table(s) ` +
+							`[${undeclaredTableNameList.join(', ')}] that the truncation registry does not declare, so whether to empty or ` +
+							`keep them is undecided. Declare each (owning family, truncate or retain) before truncating this store. ` +
+							`Nothing was written; the live store is untouched.`,
+					);
+					return;
+				}
+				const presentTableList = TRUNCATE_STORE_TABLE_REGISTRY.filter((oneTable) => storeTableNameList.indexOf(oneTable.tableName) !== -1);
+				const truncatableTableList = presentTableList.filter((oneTable) => oneTable.disposition === 'truncate');
+				if (truncatableTableList.length === 0) {
+					next(
+						`graphBuilder -truncateStore: REFUSED — the store '${storeFilePath}' holds none of the tables this verb empties ` +
+							`(${TRUNCATE_STORE_TABLE_REGISTRY.filter((oneTable) => oneTable.disposition === 'truncate').map((oneTable) => oneTable.tableName).join(', ')}). ` +
+							`Reporting success would imply there was something to truncate.`,
+					);
+					return;
+				}
+				next('', {
+					...args,
+					truncatableTableList,
+					retainedTableList: presentTableList.filter((oneTable) => oneTable.disposition === 'retain'),
+					absentTableList: TRUNCATE_STORE_TABLE_REGISTRY.filter((oneTable) => storeTableNameList.indexOf(oneTable.tableName) === -1),
+				});
+			},
+		);
+	});
+
+	// 1 — count every present declared table in the LIVE store, and PRINT THE PLAN before anything is written. The truncatable
+	//     counts are the expectation the backup must satisfy, measured now and never remembered from a previous run.
+	taskList.push((args, next) => {
+		runSqliteCli(
+			{ databaseFilePath: storeFilePath, statementText: countStatementFor(args.truncatableTableList.concat(args.retainedTableList)) },
 			(err, output) => {
 				if (err) {
 					next(`graphBuilder -truncateStore: counting the live store: ${err}`);
@@ -1811,10 +1892,9 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 				}
 				const liveCounts = countsFromCliOutput(output);
 				xLog.status(
-					`graphBuilder -truncateStore: live store holds ` +
-						truncatableTables
-							.map((oneTable) => `${oneTable.tableName}=${liveCounts[oneTable.tableName]}`)
-							.join(' '),
+					`graphBuilder -truncateStore: '${storeFilePath}' — will EMPTY ${countListText(args.truncatableTableList, liveCounts)}; ` +
+						`will RETAIN ${countListText(args.retainedTableList, liveCounts) || '(none present)'}; ` +
+						`declared but not in this store: ${args.absentTableList.map((oneTable) => `${oneTable.tableName} (${oneTable.owningFamily})`).join(', ') || '(none)'}`,
 				);
 				next('', { ...args, liveCounts });
 			},
@@ -1843,8 +1923,8 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 		);
 	});
 
-	// 3 — VERIFY THE BACKUP. Open it, read a count from every table, require exact agreement. This is
-	//     the gate; everything before it is preparation and everything after it is cleanup.
+	// 3 — VERIFY THE BACKUP. Open it, read a count from every table to be emptied, require exact agreement. This is the gate;
+	//     everything before it is preparation and everything after it is cleanup.
 	taskList.push((args, next) => {
 		if (!fs.existsSync(backupFilePath)) {
 			next(
@@ -1854,7 +1934,7 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 			return;
 		}
 		runSqliteCli(
-			{ databaseFilePath: backupFilePath, statementText: countEveryTableText },
+			{ databaseFilePath: backupFilePath, statementText: countStatementFor(args.truncatableTableList) },
 			(err, output) => {
 				if (err) {
 					next(
@@ -1866,7 +1946,7 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 				}
 				const backupCounts = countsFromCliOutput(output);
 
-				const unaccountedTables = truncatableTables
+				const unaccountedTables = args.truncatableTableList
 					.filter((oneTable) => backupCounts[oneTable.tableName] === undefined)
 					.map((oneTable) => oneTable.tableName);
 				if (unaccountedTables.length > 0) {
@@ -1878,7 +1958,7 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 					return;
 				}
 
-				const disagreements = truncatableTables
+				const disagreements = args.truncatableTableList
 					.filter(
 						(oneTable) => backupCounts[oneTable.tableName] !== args.liveCounts[oneTable.tableName],
 					)
@@ -1899,7 +1979,7 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 
 				xLog.status(
 					`graphBuilder -truncateStore: backup VERIFIED — opened, and all ` +
-						`${truncatableTables.length} table counts agree exactly with the live store.`,
+						`${args.truncatableTableList.length} table counts agree exactly with the live store.`,
 				);
 				next('', { ...args, backupCounts });
 			},
@@ -1911,7 +1991,7 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 		runSqliteCli(
 			{
 				databaseFilePath: storeFilePath,
-				statementText: truncatableTables
+				statementText: args.truncatableTableList
 					.map((oneTable) => `DELETE FROM ${oneTable.tableName};`)
 					.join(' '),
 			},
@@ -1925,22 +2005,24 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 		);
 	});
 
-	// 5 — confirm the store really is empty. A truncation that reported success without emptying
-	//     anything is the exact mirror of a backup nobody opened.
+	// 5 — confirm the store really is empty. A truncation that reported success without emptying anything is the exact
+	//     mirror of a backup nobody opened. Every emptied table must ANSWER with 0: a table missing from the answer is not
+	//     "empty" (pass 1, R02 B15).
 	taskList.push((args, next) => {
 		runSqliteCli(
-			{ databaseFilePath: storeFilePath, statementText: countEveryTableText },
+			{ databaseFilePath: storeFilePath, statementText: countStatementFor(args.truncatableTableList) },
 			(err, output) => {
 				if (err) {
 					next(`graphBuilder -truncateStore: confirming the truncation: ${err}`);
 					return;
 				}
-				const stillPopulated = Object.entries(countsFromCliOutput(output))
-					.filter(([, oneCount]) => oneCount !== 0)
-					.map(([oneTableName, oneCount]) => `${oneTableName}=${oneCount}`);
+				const afterCounts = countsFromCliOutput(output);
+				const stillPopulated = args.truncatableTableList
+					.filter((oneTable) => afterCounts[oneTable.tableName] !== 0)
+					.map((oneTable) => `${oneTable.tableName}=${afterCounts[oneTable.tableName]}`);
 				if (stillPopulated.length > 0) {
 					next(
-						`graphBuilder -truncateStore: rows REMAIN after the delete: ` +
+						`graphBuilder -truncateStore: rows REMAIN (or no count came back) after the delete: ` +
 							`${stillPopulated.join(' ')}. The backup at '${backupFilePath}' is verified and intact.`,
 					);
 					return;
@@ -1963,7 +2045,8 @@ const truncateStoreAction = (callback, injectedDeps = {}) => {
 					backupFilePath,
 					backupVerified: true,
 					rowsPreservedInBackup: args.backupCounts,
-					tablesEmptied: truncatableTables.map((oneTable) => oneTable.tableName),
+					tablesEmptied: args.truncatableTableList.map((oneTable) => oneTable.tableName),
+					tablesRetained: args.retainedTableList.map((oneTable) => oneTable.tableName),
 				},
 				null,
 				2,

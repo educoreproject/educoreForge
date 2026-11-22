@@ -49,11 +49,17 @@ const moduleFunction = () => {
 		return checksumByRelativePath;
 	};
 
+	// F-27 (deep review 2026-11-21): file order is by UTF-16 code unit, never by the host's locale. localeCompare with no
+	// locale followed LANG, so the same snapshot was walked in three different orders under en_US, cs_CZ and lt_LT. Harvest
+	// re-sorts before hashing, so the schema block id did not move; the forged stream's order did. Same comparator as
+	// lib/forge-framework/fingerprint.js compareStrings.
+	const compareByCodeUnit = (leftText, rightText) => (leftText < rightText ? -1 : leftText > rightText ? 1 : 0);
+
 	const listFilesRecursively = (directoryPath) => {
 		const filePathList = [];
 		const walkDirectory = (currentPath) => {
 			fs.readdirSync(currentPath, { withFileTypes: true })
-				.sort((left, right) => left.name.localeCompare(right.name))
+				.sort((left, right) => compareByCodeUnit(left.name, right.name))
 				.forEach((directoryEntry) => {
 					const entryPath = path.join(currentPath, directoryEntry.name);
 					if (directoryEntry.isDirectory()) {
