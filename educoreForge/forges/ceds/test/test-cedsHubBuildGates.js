@@ -137,7 +137,15 @@ const forger = forgerModule();
 const forgeOnce = (runLabel, callback) => {
 	xLog.status(`==== FORGE RUN ${runLabel} BEGINS (ceds, vectorize ON, deriveHub) ====`);
 	forger.forge(
-		{ standard: 'ceds', version: 'current', vectorize: true, deriveHub: true },
+		// ⟪2026-11-24, SINCERE_STATUETTE⟫ embedding-client has no default cache since F-37 (be56f823): name the configured
+		// one, as capture-baseline does. An absent [stores] vectorCacheFilePath reaches embedding-client, which refuses by name.
+		{
+			standard: 'ceds',
+			version: 'current',
+			vectorize: true,
+			deriveHub: true,
+			embeddingCacheFilePath: process.global.getConfig('stores').vectorCacheFilePath,
+		},
 		(forgeError, forgeReport) => {
 			if (forgeError) {
 				callback(`forge run ${runLabel}: ${forgeError}`);
